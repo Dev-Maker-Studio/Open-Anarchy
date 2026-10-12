@@ -45,7 +45,6 @@ public class BlackKnightsFortress extends QuestOutline {
 	public final static int RUINED_CAULDRON = 3;
 	public final static int QUEST_COMPLETE = 4;
 
-	// Animations
 	public final static int TOSS_CABBAGE = 9705;
 	public final static int CRY = 860;
 	public final static int LISTEN_GRILL = 4195;
@@ -53,17 +52,14 @@ public class BlackKnightsFortress extends QuestOutline {
 	public final static int CAULDRON_EXPLOSION_GFX = 773;
 	public final static int CABBAGE_PROJECTILE = 772;
 
-	// Varbits
 	protected final static int CAULDRON_STATUS_VAR = 2494;
 
-	// Objects
 	protected final static int GRILL_LISTEN = 2342;
 	protected final static int CAULDRON = 17163;
 	protected final static int CABBAGE_HOLE = 2336;
 	protected final static int FORTRESS_FRONT_DOOR = 2337;
 	protected final static int FORTRESS_MEETING_ROOM_DOOR = 2338;
 
-	// Black knight fortress chunks
 	protected final static Set<Integer> FORTRESS_CHUNKS = new HashSet<>(Arrays.asList(6180280, 6163896, 6196656, 6196664));
 
 	@Override
@@ -163,7 +159,7 @@ public class BlackKnightsFortress extends QuestOutline {
 			handleDoor(p, e.getObj());
 			return;
 		}
-		if (p.getEquipment().getHatId() != 1139 || p.getEquipment().getChestId() != 1101) {//bronze med iron chainbody
+		if (p.getEquipment().getHatId() != 1139 || p.getEquipment().getChestId() != 1101) {
 			p.startConversation(new Conversation(p) {
 				{
 					addNPC(4604, HeadE.SKEPTICAL, "Password?");
@@ -181,7 +177,7 @@ public class BlackKnightsFortress extends QuestOutline {
 		if (p.getQuestManager().getStage(Quest.BLACK_KNIGHTS_FORTRESS) != STARTED)
 			return;
 		p.setNextAnimation(new Animation(LISTEN_GRILL));
-		p.startConversation(new Conversation(p) {//610 black knight, 611 witch
+		p.startConversation(new Conversation(p) {
 			{
 				addNPC(610, HeadE.CALM_TALK, "So... how's the secret weapon coming along?");
 				addNPC(611, HeadE.HAPPY_TALKING, "The invincibility potion is almost ready...");
@@ -191,7 +187,7 @@ public class BlackKnightsFortress extends QuestOutline {
 				addNPC(611, HeadE.HAPPY_TALKING, "The soil there is slightly magical and it gives the cabbages slight magical properties...");
 				addNPC(611, HeadE.HAPPY_TALKING, "...not to mention the trees!");
 				addNPC(611, HeadE.AMAZED_MILD, "Now, remember, Greldo, only a Draynor Manor cabbage will do! Don't get lazy and bring any old cabbage. THAT" + " would ENITERELY wreck the potion!");
-				addNPC(612, HeadE.CHILD_CALM_TALK, "Yeth, mithtreth");//random goblin
+				addNPC(612, HeadE.CHILD_CALM_TALK, "Yeth, mithtreth");
 				addNext(() -> {
 					p.getQuestManager().setStage(Quest.BLACK_KNIGHTS_FORTRESS, HEARD_PLAN);
 					p.setNextAnimation(new Animation(FINISH_LISTEN_GRILL));
@@ -244,7 +240,7 @@ public class BlackKnightsFortress extends QuestOutline {
 					});
 
 				if (tick == KNIGHT_CAPTAIN_DIALOGUE1)
-					p.startConversation(new Conversation(p) {//610: black knight captain
+					p.startConversation(new Conversation(p) {
 						{
 							addNPC(610, HeadE.SKEPTICAL_THINKING, "What's that noise?");
 							addNPC(611, HeadE.AMAZED_MILD, "Hopefully Greldo with that cabbage... yes look here it co....NOOOOOoooo!");
@@ -263,7 +259,7 @@ public class BlackKnightsFortress extends QuestOutline {
 
 				if (tick == POTION_RUINED) {
 					p.getVars().setVarBit(CAULDRON_STATUS_VAR, 1);
-					p.startConversation(new Conversation(p) {//610 black knight captain, 611 witch
+					p.startConversation(new Conversation(p) {
 						{
 							addNPC(611, HeadE.AMAZED_MILD, "My potion!");
 							addNPC(610, HeadE.SCARED, "Oh boy, this doesn't look good!");

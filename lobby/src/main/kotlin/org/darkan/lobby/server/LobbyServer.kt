@@ -166,8 +166,6 @@ class LobbyServer(val js5: JS5Server) {
         }
 
         if (!pendingLogins.add(username)) return output.finish(ResponseOpcode.LOGIN_LIMIT_EXCEEDED)
-        // Whatever happens below, the username must not stay in pendingLogins - a throwing decode
-        // used to leave it there for good and lock the account out until restart.
         val account = try {
             if (HeadlessClient.isHeadless(request.fingerprint) && username.isBotName())
                 authenticateBot(username, ip, output) ?: return
@@ -185,11 +183,6 @@ class LobbyServer(val js5: JS5Server) {
         lobbyPlayer.login(input)
     }
 
-    /**
-     * Resolves and verifies the account for a login attempt. Returns null after writing the
-     * response when the login must be refused. Argon2 is authoritative; the older SHA-1/AES
-     * credentials are only consulted until the account has been upgraded by a successful login.
-     */
     private suspend fun authenticate(username: String, password: String, output: ByteWriteChannel): Account? {
         val account = try {
             Accounts.find(username)
@@ -214,7 +207,6 @@ class LobbyServer(val js5: JS5Server) {
                 output.finish(ResponseOpcode.INVALID_CREDENTIALS)
                 return null
             }
-            //Drop any AES/SHA-1 credential left behind by an earlier upgrade
             if (account.password != null || account.legacyPass != null) {
                 account.password = null
                 account.legacyPass = null
@@ -279,7 +271,6 @@ class LobbyServer(val js5: JS5Server) {
         if (sensitiveData.readUByte().toInt() != 10) return output.finish(ResponseOpcode.BAD_SESSION_ID)
         val isaacKeys = IntArray(4) { sensitiveData.readInt() }
 
-        //read 10 random ints and a random short
         for (i in 1..10)
             sensitiveData.readInt()
         sensitiveData.readUShort()
@@ -293,23 +284,12 @@ class LobbyServer(val js5: JS5Server) {
         val gameId = xtea.readUByte()
         val randomDat = xtea.readByteArray(24)
         if (xtea.readBoolean())
-            xtea.readRSString() //loginServerToken?
+            xtea.readRSString()
         val machineInfo = MachineInformation.parse(xtea)
 
-//        if (loginServerToken != EnvVars.loginServerToken) {
-//            logError("Login server token mismatch: ${EnvVars.loginServerToken}, $loginServerToken from $username")
-//            //return output.finish(ResponseOpcode.GAME_UPDATE)
-//        }
-//
         if (js5ServerToken != EnvVars.js5ServerToken) {
             logError("JS5 server token mismatch: ${EnvVars.js5ServerToken}, $js5ServerToken from $ip")
-            //return output.finish(ResponseOpcode.GAME_UPDATE)
         }
-//
-//        if (clientKey != EnvVars.clientKey) {
-//            logError("Client key mismatch: ${EnvVars.clientKey}, $clientKey from $username")
-//            //return output.finish(ResponseOpcode.GAME_UPDATE)
-//        }
 
         logInfo("Account creation session started from $ip")
         val session = initSession(output, isaacKeys, ip, codec)
@@ -323,8 +303,6 @@ class LobbyServer(val js5: JS5Server) {
     }
 
     private companion object {
-        // The client retries NO_REPLY_FROM_LOGIN_SERVER by itself, so a login rush waits its turn
-        // rather than being told its password is insecure, which is what response 11 renders as.
         const val MAX_LOGINS_IN_FLIGHT = 20
         const val INDEX_CRCS_CHECKED = 32
     }

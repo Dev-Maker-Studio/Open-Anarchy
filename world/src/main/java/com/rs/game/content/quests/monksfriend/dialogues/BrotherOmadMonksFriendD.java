@@ -180,11 +180,6 @@ public class BrotherOmadMonksFriendD extends Conversation {
 		}
 	}
 
-	/**
-	 * Every 4 ticks make a monk dance. Each 4 is 0 1 2 3 0 1 2 3 0 1 2 3 with modulus...
-	 *
-	 * @param p
-	 */
 	public static void partyTime(Player p) {
 		p.lock();
 		p.getTempAttribs().setL("last_party_time", System.currentTimeMillis());

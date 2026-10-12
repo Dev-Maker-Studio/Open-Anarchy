@@ -20,20 +20,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * The eight indices `MiscCodecs` claims, each unpacked and packed back through its own codec.
- *
- * The strongest form of the check there is short of a whole tree: every archive of every one of these
- * indices is decoded, written to disk exactly as an unpack would write it, read back off disk and packed,
- * and the group that comes out has to be the group that went in - **byte for byte, chunk table and all**.
- * So it proves the decoders, the encoders, the JSON mapper, the file layout and, for index 0, the three
- * chunk split, all at once, and it reports the per index numbers `docs/cache-source.md` quotes.
- *
- * The bar is every archive identical and no pristine sidecar. Both are asserted, so a residual cannot
- * appear without the build going red, and neither can grow.
- *
- * Skipped when there is no cache to test against, like the other whole-cache tests.
- */
 class MiscCodecTest {
 
     @Test
@@ -41,8 +27,6 @@ class MiscCodecTest {
         val packed = cacheDirectory() ?: return
         SourceCodecs.reset()
         val cache = FileCache.load(packed.absolutePath)
-        // Index 0's codec reads the skeletons to lay its nodes out; point it at this cache rather
-        // than letting it open a second one through Cache.get.
         AnimationFrameCodec.cache = { cache }
         val work = Files.createTempDirectory(scratch(), "misc-codec")
         var archives = 0
@@ -89,11 +73,6 @@ class MiscCodecTest {
         }
     }
 
-    /**
-     * Index 0's groups are stored in three chunks and the codec derives the split from the frames rather
-     * than carrying it in `index.json`, so it is worth saying out loud what the split is: the four byte
-     * header, the flag byte per transform, and the transform values.
-     */
     @Test
     fun `an animation frame group keeps its three chunks`() {
         val packed = cacheDirectory() ?: return
@@ -132,11 +111,6 @@ class MiscCodecTest {
         }
     }
 
-    /**
-     * Index 23's directory names are the archives' recovered names, and a name is only a name because it
-     * hashes to what the reference table holds. That is checked on every unpack; this is the check that
-     * the table covers the cache rather than only agreeing with itself.
-     */
     @Test
     fun `every world map archive name hashes to the cache's own`() {
         val packed = cacheDirectory() ?: return
@@ -173,7 +147,6 @@ class MiscCodecTest {
                 "${IndexNames.name(index)} still has the fallback codec"
             )
         }
-        // The layouts, spelled out so a rename shows up here rather than as a rebuilt tree.
         assertEquals(12, AnimationFrameCodec.archiveOf("12${AnimationFrameCodec.EXTENSION}"))
         assertEquals(
             12,
@@ -195,7 +168,6 @@ class MiscCodecTest {
         assertEquals(1, huffman.archiveOf("huffman.json"))
     }
 
-    /** One index, archive by archive, through its own codec and a real directory. */
     private fun index(cache: Cache, index: Int, directory: Path): Counts {
         val codec = SourceCodecs.codec(index)
         Files.createDirectories(directory)
@@ -232,7 +204,6 @@ class MiscCodecTest {
         return counts
     }
 
-    /** Say which archive differed and where, so a failure names the byte rather than the index. */
     private fun report(
         index: Int,
         archive: Int,
@@ -274,7 +245,6 @@ class MiscCodecTest {
 
     private companion object {
 
-        /** The indices `MiscCodecs` claims, ascending. */
         private val INDICES = intArrayOf(
             Index.ANIMATION_FRAMES,
             Index.ANIMATION_SKELETONS,
@@ -287,15 +257,8 @@ class MiscCodecTest {
             Index.CUTSCENES
         )
 
-        /** What vanilla 727 shipped: 4,085 + 3,535 + 1 + 86 + 2 + 2 + 6 + 31 + 16. */
         private const val VANILLA_ARCHIVES = 7764
 
-        /**
-         * What vanilla 727 shipped: 4,085 + 3,535 + 1 + 1,181 + 1,372 + 86 + 6 + 31 + 16.
-         *
-         * Index 0 is 4,085 files rather than 490,049 because a frame set is one glTF animation
-         * (`anims/<archive>.glb`) rather than a JSON file per frame - see *anims*.
-         */
         private const val VANILLA_FILES = 10313
 
         private const val FRAME_CHUNKS = 3

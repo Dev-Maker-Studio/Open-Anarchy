@@ -12,45 +12,41 @@ import com.rs.plugin.kts.onItemClick
 
 const val DEFAULT_CHARGES = 50
 
-//TODO please add way more locations
 val RESOURCE_MAP = mapOf(
-    /**
-     * Tier 1
-     */
-    29 to Resource(1, arrayOf( //Copper
+    29 to Resource(1, arrayOf(
         Tile.of(3227, 3148, 0),
         Tile.of(3285, 3366, 0),
         Tile.of(3041, 9782, 0),
         Tile.of(3024, 9801, 0),
         Tile.of(2968, 3233, 0),
     )),
-    30 to Resource(1, arrayOf( //Tin
+    30 to Resource(1, arrayOf(
         Tile.of(3227, 3148, 0),
         Tile.of(3285, 3366, 0),
         Tile.of(3051, 9779, 0),
         Tile.of(2977, 3232, 0),
     )),
-    31 to Resource(1, arrayOf( //Iron
+    31 to Resource(1, arrayOf(
         Tile.of(3179, 3367, 0),
         Tile.of(3285, 3366, 0),
         Tile.of(3039, 9775, 0),
         Tile.of(2711, 3330, 0),
         Tile.of(2977, 3232, 0),
     )),
-    13 to Resource(1, arrayOf( //Oak trees
+    13 to Resource(1, arrayOf(
         Tile.of(3257, 3363, 0),
         Tile.of(2706, 3317, 0),
         Tile.of(2783, 3439, 0),
         Tile.of(2751, 3463, 0),
         Tile.of(3157, 3228, 0),
     )),
-    14 to Resource(1, arrayOf( //Willow trees
+    14 to Resource(1, arrayOf(
         Tile.of(3090, 3232, 0),
         Tile.of(2718, 3324, 0),
         Tile.of(2783, 3429, 0),
         Tile.of(2714, 3510, 0),
     )),
-    2 to Resource(1, arrayOf( //Herblore secondaries 1
+    2 to Resource(1, arrayOf(
         Tile.of(2709, 3671, 0),
         Tile.of(2786, 3467, 0),
         Tile.of(3210, 3110, 0),
@@ -60,7 +56,7 @@ val RESOURCE_MAP = mapOf(
         Tile.of(2419, 3508, 0),
         Tile.of(3177, 3174, 0),
     )),
-    6 to Resource(1, arrayOf( //Fish 1
+    6 to Resource(1, arrayOf(
         Tile.of(3090, 3232, 0),
         Tile.of(3243, 3155, 0),
         Tile.of(3273, 3144, 0),
@@ -69,45 +65,39 @@ val RESOURCE_MAP = mapOf(
         Tile.of(2718, 3532, 0),
         Tile.of(2990, 3174, 0),
     )),
-    /**
-     * Tier 2
-     */
-    32 to Resource(2, arrayOf( //Silver
+    32 to Resource(2, arrayOf(
         Tile.of(3179, 3367, 0),
         Tile.of(3299, 3314, 0),
         Tile.of(4621, 5091, 0),
     )),
-    33 to Resource(2, arrayOf( //Clay
+    33 to Resource(2, arrayOf(
         Tile.of(3179, 3367, 0),
         Tile.of(3028, 9810, 0),
         Tile.of(2977, 3232, 0),
     )),
-    15 to Resource(2, arrayOf( //Maple trees
+    15 to Resource(2, arrayOf(
         Tile.of(2751, 3463, 0),
         Tile.of(2722, 3469, 0),
         Tile.of(2728, 3502, 0),
     )),
-    16 to Resource(2, arrayOf( //Special logs
+    16 to Resource(2, arrayOf(
         Tile.of(2465, 2860, 0),
         Tile.of(2606, 2975, 0),
         Tile.of(2337, 3050, 0),
         Tile.of(3059, 3073, 0),
     )),
-    /**
-     * Tier 3
-     */
-    34 to Resource(3, arrayOf( //Gold
+    34 to Resource(3, arrayOf(
         Tile.of(4621, 5091, 0),
         Tile.of(2733, 3225, 0),
         Tile.of(3322, 2874, 0),
         Tile.of(2977, 3232, 0),
     )),
-    35 to Resource(3, arrayOf( //Mithril
+    35 to Resource(3, arrayOf(
         Tile.of(3024, 3802, 0),
         Tile.of(3055, 3942, 0),
         Tile.of(3039, 9768, 0),
     )),
-    17 to Resource(3, arrayOf( //Yew trees
+    17 to Resource(3, arrayOf(
         Tile.of(3257, 3363, 0),
         Tile.of(2711, 3462, 0),
         Tile.of(2757, 3431, 0),
@@ -115,7 +105,7 @@ val RESOURCE_MAP = mapOf(
         Tile.of(3157, 3228, 0),
         Tile.of(3212, 3502, 0),
     )),
-    4 to Resource(3, arrayOf( //Herblore secondaries 2
+    4 to Resource(3, arrayOf(
         Tile.of(3216, 3815, 0),
         Tile.of(2909, 9804, 0),
         Tile.of(3465, 9482, 2),
@@ -124,25 +114,22 @@ val RESOURCE_MAP = mapOf(
         Tile.of(2543, 3763, 0),
         Tile.of(2512, 3085, 0),
     )),
-    8 to Resource(3, arrayOf( //Fish 2
+    8 to Resource(3, arrayOf(
         Tile.of(2924, 3173, 0),
         Tile.of(2841, 3433, 0),
     )),
-    /**
-     * Tier 4
-     */
-    36 to Resource(4, arrayOf( //Adamant
+    36 to Resource(4, arrayOf(
         Tile.of(3300, 3314, 0),
         Tile.of(3300, 3314, 0),
         Tile.of(3018, 3797, 0),
         Tile.of(3055, 3942, 0),
         Tile.of(3039, 9768, 0),
     )),
-    37 to Resource(4, arrayOf( //Runite
+    37 to Resource(4, arrayOf(
         Tile.of(3059, 3884, 0),
         Tile.of(3045, 10263, 0),
     )),
-    18 to Resource(4, arrayOf( //Magic trees
+    18 to Resource(4, arrayOf(
         Tile.of(2693, 3425, 0),
         Tile.of(2702, 3397, 0),
         Tile.of(3370, 3314, 0),

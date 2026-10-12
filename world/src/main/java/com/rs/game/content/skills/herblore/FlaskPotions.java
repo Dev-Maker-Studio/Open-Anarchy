@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.herblore;
 
 import com.rs.game.model.entity.player.Player;
@@ -32,10 +16,7 @@ public class FlaskPotions {
 		initializePotions();
 	}
 
-	/**
-	 * In order of the Herblore skill menu
-	 */
-	private enum Flasks {//[FLASK], [DOSES {1,2,3,4}]
+	private enum Flasks {
 		SERUM207(23549 , new int[] {3414, 3412, 3410, 3408}),
 		SERUM208(23603 , new int[] { 3419, 3418, 3417, 3416}),
 
@@ -90,7 +71,6 @@ public class FlaskPotions {
 		SUPER_PRAYER(23525 , new int[] { 15331, 15330, 15329, 15328}),
 		PRAYER_RENEWAL(23609 , new int[] { 21636, 21634, 21632, 21630}),
 		OVERLOAD(23531 , new int[] { 15335, 15334, 15333, 15332});
-		// ( , new int[] {}),
 		public final int flaskId;
 		public final int[] potions;
 
@@ -147,7 +127,7 @@ public class FlaskPotions {
 					p.getInventory().replace(e.getUsedWith(usedOnFlask), new Item(Flasks.getFlaskIdFromPotionId(potionId), 1));
 					break;
 				}
-				if (dosesLeft -Flasks.getDose(potionId) == 0) { // base case
+				if (dosesLeft -Flasks.getDose(potionId) == 0) {
 					p.getInventory().deleteItem(potionId, 1);
 					p.getInventory().addItem(EMPTY_POTION, 1);
 					p.getInventory().addItem(EMPTY_POTION, 1);

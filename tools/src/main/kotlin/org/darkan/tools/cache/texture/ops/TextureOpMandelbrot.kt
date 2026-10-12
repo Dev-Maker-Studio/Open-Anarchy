@@ -3,9 +3,6 @@ package org.darkan.tools.cache.texture.ops
 import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 
-/**
- * Type 31: Generates Mandelbrot fractal patterns.
- */
 class TextureOpMandelbrot : TextureOperation(0, true) {
     private var offsetX: Int = 0
     private var offsetY: Int = 0

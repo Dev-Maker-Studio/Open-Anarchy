@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.ge;
 
 import com.rs.game.model.entity.player.BotContainment;
@@ -76,7 +60,6 @@ public class GE {
             return;
 
         switch (e.getComponentId()) {
-            //Buy box selection
             case 31 -> {
 
                 openBuy(e.getPlayer(), 0);
@@ -103,7 +86,6 @@ public class GE {
                 e.getPlayer().soundEffect(2266, false);
 
 
-                //Sell box selection
             }
             case 32 -> openSell(e.getPlayer(), 0);
             case 48 -> openSell(e.getPlayer(), 1);
@@ -122,7 +104,6 @@ public class GE {
             case 200 -> {
                 clickBox(e.getPlayer(), e.getPlayer().getVars().getVar(VAR_CURR_BOX), true);
                 e.getPlayer().soundEffect(4039, true);
-                //Back button
             }
             case 128 -> {
                 open(e.getPlayer());
@@ -131,7 +112,6 @@ public class GE {
 
             case 206, 208 -> collectItems(e.getPlayer(), e.getPlayer().getVars().getVar(VAR_CURR_BOX), e.getComponentId() == 206 ? 0 : 1, e.getOpNum() == 1);
 
-            //Amount adjustments
             case 155 -> {
                 e.getPlayer().getVars().setVar(VAR_ITEM_AMOUNT, Utils.clampI(e.getPlayer().getVars().getVar(VAR_ITEM_AMOUNT) - 1, 0, Integer.MAX_VALUE));
                 e.getPlayer().soundEffect(4041, false);
@@ -158,7 +138,6 @@ public class GE {
             }
             case 168 -> e.getPlayer().sendInputInteger("Enter amount", amount -> e.getPlayer().getVars().setVar(VAR_ITEM_AMOUNT, Utils.clampI(amount, 0, Integer.MAX_VALUE)));
 
-            //Price adjustments
             case 169 -> {
                 e.getPlayer().getVars().setVar(VAR_FOR_PRICE_TEXT, Utils.clampI(e.getPlayer().getVars().getVar(VAR_FOR_PRICE_TEXT) - 1, 0, Integer.MAX_VALUE));
                 e.getPlayer().soundEffect(4041, false);
@@ -182,12 +161,10 @@ public class GE {
             case 177 ->
                     e.getPlayer().sendInputInteger("Enter desired price", price -> e.getPlayer().getVars().setVar(VAR_FOR_PRICE_TEXT, Utils.clampI(price, 0, Integer.MAX_VALUE)));
 
-            //Confirm offer
             case 186 -> {
                 confirmOffer(e.getPlayer());
                 e.getPlayer().soundEffect(4044, false);
 
-                //Search item
             }
             case 190 -> {
                 e.getPlayer().getPackets().openGESearch();
@@ -484,7 +461,7 @@ public class GE {
                         player.jingle(284);
                         player.soundEffect(4042, false);
                         player.sendMessage("One or more of your grand exchange offers has been updated.");
-                    } else if ((System.currentTimeMillis() - player.getTempAttribs().getL("GENotificationTime")) > 1000 * 60) { //1 minute
+                    } else if ((System.currentTimeMillis() - player.getTempAttribs().getL("GENotificationTime")) > 1000 * 60) {
                         player.getTempAttribs().setL("GENotificationTime", System.currentTimeMillis());
                         player.jingle(284);
                         player.soundEffect(4042, false);

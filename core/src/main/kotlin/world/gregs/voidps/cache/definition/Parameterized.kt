@@ -7,12 +7,6 @@ interface Parameterized {
 
     var params: Map<Int, Any>?
 
-    /**
-     * Reads an opcode 249 record into [params] and returns its parameters in file order.
-     *
-     * [params] keeps only the last value of each id, so a file that lists an id twice loses a record; the
-     * returned list is what an encoder needs to write the record back unchanged.
-     */
     fun readParameterRecords(buffer: Reader): List<KeyedValue> {
         val length = buffer.readUnsignedByte()
         if (length == 0) {

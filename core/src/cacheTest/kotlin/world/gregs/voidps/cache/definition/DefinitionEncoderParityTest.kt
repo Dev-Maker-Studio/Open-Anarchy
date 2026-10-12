@@ -33,14 +33,6 @@ import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/**
- * Decodes every definition file of indices 16 to 22 and encodes it straight back, byte for byte.
- *
- * The cache source tree (`docs/cache-source.md`) stores these types as editable JSON, and only keeps the
- * original bytes beside a file - the pristine fallback - when its encoder cannot reproduce them. So anything
- * short of byte identity here is a file that can never be edited as JSON. The bar is 100% of every file, and
- * the comparison is against the shipped bytes, not against a re-decode.
- */
 class DefinitionEncoderParityTest {
 
     @Test
@@ -78,14 +70,6 @@ class DefinitionEncoderParityTest {
         parity("varbit", Index.VAR_BIT, 10, VarBitDecoder(), VarBitEncoder()) { VarBitDefinition(it) }
     }
 
-    /**
-     * Walks every file the index holds - through the reference table, not through the decoder's `size`, which
-     * rounds up to whole archives and so invents ids that have no file - and compares the encoder's output to
-     * the bytes the cache shipped.
-     *
-     * @param bits how many low bits of a definition id are its file id within the archive
-     * @param residuals how many files are known not to reproduce, asserted so a regression still fails
-     */
     private fun <T> parity(
         name: String,
         index: Int,
@@ -147,7 +131,6 @@ class DefinitionEncoderParityTest {
         assertEquals(files, identical + differing, "$name files were not all compared")
     }
 
-    /** The opcode whose record covers [offset], for explaining a differing byte. */
     private fun <T : Definition> opcodeAt(decoder: DefinitionDecoder<T>, definition: T, data: ByteArray, offset: Int): Int {
         var opcode = -1
         decoder.readLoopTraced(definition, BufferReader(data)) { current, position ->

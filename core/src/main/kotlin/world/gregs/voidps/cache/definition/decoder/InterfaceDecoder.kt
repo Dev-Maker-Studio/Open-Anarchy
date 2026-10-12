@@ -46,7 +46,6 @@ class InterfaceDecoder : DefinitionDecoder<InterfaceDefinition>(INTERFACES) {
     }
 
     fun InterfaceComponentDefinition.read(buffer: Reader) {
-        // 255 marks the original if3 format, anything else is a later revision of it
         var format = buffer.readUnsignedByte()
         if (format == 255) {
             format = -1
@@ -57,9 +56,6 @@ class InterfaceDecoder : DefinitionDecoder<InterfaceDefinition>(INTERFACES) {
             unknown = buffer.readString()
         }
         contentType = buffer.readUnsignedShort()
-        // Base positions are signed; components are routinely offset by negative amounts from
-        // their anchor. Base sizes are unsigned. Reading these the other way around wraps
-        // negative offsets to ~65k and pushes the component off screen.
         basePositionX = buffer.readShort()
         basePositionY = buffer.readShort()
         baseWidth = buffer.readUnsignedShort()
@@ -145,9 +141,6 @@ class InterfaceDecoder : DefinitionDecoder<InterfaceDefinition>(INTERFACES) {
             keyRepeats = ByteArray(11)
             keyCodes = ByteArray(11)
             keyModifiers = IntArray(11)
-            // Each binding is four bytes; the first packs the slot into the high nibble (stored as
-            // slot + 1, so a zero byte terminates the list) and the top nibble of a 12 bit repeat
-            // delay into the low nibble. The second byte holds the rest of the delay.
             while (mod != 0) {
                 val index = (mod shr 4) - 1
                 mod = ((mod shl 8) or buffer.readUnsignedByte()) and 0xfff
@@ -236,9 +229,6 @@ class InterfaceDecoder : DefinitionDecoder<InterfaceDefinition>(INTERFACES) {
     }
 
     companion object {
-        /**
-         * Reads an event hook; the first value is the script to run, the rest are the arguments bound to it.
-         */
         private fun InterfaceComponentDefinition.decodeScript(buffer: Reader): InterfaceComponentHook? {
             val length = buffer.readUnsignedByte()
             if (length == 0) {

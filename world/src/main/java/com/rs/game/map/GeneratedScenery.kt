@@ -12,13 +12,8 @@ import java.util.concurrent.ConcurrentHashMap
 private const val REGION_SIZE = 64
 private const val REGION_CACHE_LIMIT = 64
 
-/**
- * The trees and rocks of a generated world are objects the server spawns when a chunk loads, not part of the map in the cache,
- * so they behave like any other spawned object: felling one removes it, and no client bakes a shadow into the terrain for it.
- */
 object GeneratedScenery {
 
-    /** A region's scenery, kept while its 64 chunks load one after another; the generator builds a whole region at a time. */
     private val regions = ConcurrentHashMap<Int, List<MapObject>>()
 
     @JvmStatic

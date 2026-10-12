@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.model.entity.player;
 
 import com.rs.Settings;
@@ -146,55 +130,55 @@ public final class Skills {
 
 	public static int getTargetIdByComponentId(int componentId) {
         return switch (componentId) {
-            case 150 -> // Attack
+            case 150 ->
                     0;
-            case 9 -> // Strength
+            case 9 ->
                     1;
-            case 40 -> // Range
+            case 40 ->
                     2;
-            case 71 -> // Magic
+            case 71 ->
                     3;
-            case 22 -> // Defence
+            case 22 ->
                     4;
-            case 145 -> // Constitution
+            case 145 ->
                     5;
-            case 58 -> // Prayer
+            case 58 ->
                     6;
-            case 15 -> // Agility
+            case 15 ->
                     7;
-            case 28 -> // Herblore
+            case 28 ->
                     8;
-            case 46 -> // Theiving
+            case 46 ->
                     9;
-            case 64 -> // Crafting
+            case 64 ->
                     10;
-            case 84 -> // Runecrafting
+            case 84 ->
                     11;
-            case 140 -> // Mining
+            case 140 ->
                     12;
-            case 135 -> // Smithing
+            case 135 ->
                     13;
-            case 34 -> // Fishing
+            case 34 ->
                     14;
-            case 52 -> // Cooking
+            case 52 ->
                     15;
-            case 130 -> // Firemaking
+            case 130 ->
                     16;
-            case 125 -> // Woodcutting
+            case 125 ->
                     17;
-            case 77 -> // Fletching
+            case 77 ->
                     18;
-            case 90 -> // Slayer
+            case 90 ->
                     19;
-            case 96 -> // Farming
+            case 96 ->
                     20;
-            case 102 -> // Construction
+            case 102 ->
                     21;
-            case 108 -> // Hunter
+            case 108 ->
                     22;
-            case 114 -> // Summoning
+            case 114 ->
                     23;
-            case 120 -> // Dungeoneering
+            case 120 ->
                     24;
             default -> -1;
         };
@@ -202,55 +186,55 @@ public final class Skills {
 
 	public static int getSkillIdByTargetId(int targetId) {
         return switch (targetId) {
-            case 0 -> // Attack
+            case 0 ->
                     Constants.ATTACK;
-            case 1 -> // Strength
+            case 1 ->
                     Constants.STRENGTH;
-            case 2 -> // Range
+            case 2 ->
                     Constants.RANGE;
-            case 3 -> // Magic
+            case 3 ->
                     Constants.MAGIC;
-            case 4 -> // Defence
+            case 4 ->
                     Constants.DEFENSE;
-            case 5 -> // Constitution
+            case 5 ->
                     Constants.HITPOINTS;
-            case 6 -> // Prayer
+            case 6 ->
                     Constants.PRAYER;
-            case 7 -> // Agility
+            case 7 ->
                     Constants.AGILITY;
-            case 8 -> // Herblore
+            case 8 ->
                     Constants.HERBLORE;
-            case 9 -> // Thieving
+            case 9 ->
                     Constants.THIEVING;
-            case 10 -> // Crafting
+            case 10 ->
                     Constants.CRAFTING;
-            case 11 -> // Runecrafting
+            case 11 ->
                     Constants.RUNECRAFTING;
-            case 12 -> // Mining
+            case 12 ->
                     Constants.MINING;
-            case 13 -> // Smithing
+            case 13 ->
                     Constants.SMITHING;
-            case 14 -> // Fishing
+            case 14 ->
                     Constants.FISHING;
-            case 15 -> // Cooking
+            case 15 ->
                     Constants.COOKING;
-            case 16 -> // Firemaking
+            case 16 ->
                     Constants.FIREMAKING;
-            case 17 -> // Woodcutting
+            case 17 ->
                     Constants.WOODCUTTING;
-            case 18 -> // Fletching
+            case 18 ->
                     Constants.FLETCHING;
-            case 19 -> // Slayer
+            case 19 ->
                     Constants.SLAYER;
-            case 20 -> // Farming
+            case 20 ->
                     Constants.FARMING;
-            case 21 -> // Construction
+            case 21 ->
                     Constants.CONSTRUCTION;
-            case 22 -> // Hunter
+            case 22 ->
                     Constants.HUNTER;
-            case 23 -> // Summoning
+            case 23 ->
                     Constants.SUMMONING;
-            case 24 -> // Dungeoneering
+            case 24 ->
                     Constants.DUNGEONEERING;
             default -> -1;
         };
@@ -378,8 +362,6 @@ public final class Skills {
 
 	@Deprecated
 	public static ButtonClickHandler handleSkillGuideButtons = new ButtonClickHandler(1218, e -> {
-//		if ((e.getComponentId() >= 33 && e.getComponentId() <= 55) || e.getComponentId() == 120 || e.getComponentId() == 151 || e.getComponentId() == 189)
-//			e.getPlayer().getInterfaceManager().setInterface(false, 1218, 1, 1217);
 	});
 
 	public void refreshEnabledSkillsTargets() {
@@ -879,7 +861,6 @@ public final class Skills {
 		if (newLevel > oldLevel) {
 			level[skill] += levelDiff;
 			markedForLevelUp = skill;
-			//gold fireworks 2589, 2599
 			player.setNextSpotAnim(new SpotAnim(2456, 0, 254));
 			player.setNextSpotAnim(new SpotAnim(2457, 25, 254));
 			player.setNextSpotAnim(new SpotAnim(2456, 50, 220));
@@ -935,7 +916,6 @@ public final class Skills {
 		if (newLevel > oldLevel) {
 			level[skill] += levelDiff;
 			markedForLevelUp = skill;
-			//gold fireworks 2589, 2599
 			player.setNextSpotAnim(new SpotAnim(2456, 0, 254));
 			player.setNextSpotAnim(new SpotAnim(2457, 25, 254));
 			player.setNextSpotAnim(new SpotAnim(2456, 50, 220));
@@ -1015,7 +995,6 @@ public final class Skills {
 		if (newLevel > oldLevel) {
 			level[skill] += levelDiff;
 			markedForLevelUp = skill;
-			//gold fireworks 2589, 2599
 			player.setNextSpotAnim(new SpotAnim(2456, 0, 254));
 			player.setNextSpotAnim(new SpotAnim(2457, 25, 254));
 			player.setNextSpotAnim(new SpotAnim(2456, 50, 220));

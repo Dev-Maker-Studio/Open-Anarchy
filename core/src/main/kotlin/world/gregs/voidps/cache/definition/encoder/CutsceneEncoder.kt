@@ -7,19 +7,9 @@ import world.gregs.voidps.cache.definition.data.CutsceneCameraMovementRecord
 import world.gregs.voidps.cache.definition.data.CutsceneDefinition
 import world.gregs.voidps.cache.definition.data.CutsceneEntityMovementRecord
 
-/**
- * Writes an index 35 cutscene back, byte for byte, from what
- * [world.gregs.voidps.cache.definition.decoder.CutsceneDecoder] read.
- *
- * The file has no opcode ordering to reproduce past its two entry header, so the whole thing is one
- * straight pass in the decoder's order. Every field the decoder kept is raw, so nothing is re-derived
- * here; a field a record's [CutsceneActionRecord.type] needs and does not carry is an error naming the
- * cutscene, the action and the field rather than a null pointer or a short file.
- */
 class CutsceneEncoder : DefinitionEncoder<CutsceneDefinition> {
 
     override fun Writer.encode(definition: CutsceneDefinition) {
-        // The header the client's `readValueLoop` reads: opcode 0 carries the viewport, 255 ends it.
         writeByte(0)
         writeShort(definition.viewportHeight)
         writeShort(definition.viewportWidth)
@@ -131,7 +121,6 @@ class CutsceneEncoder : DefinitionEncoder<CutsceneDefinition> {
                 writeShort(int("entityIndex", action.entityIndex))
                 writeInt(int("packedPos", action.packedPos))
                 writeByte(int("plane", action.plane))
-                // The signed smart the client's `readSmart` reads; see the decoder.
                 writeSignedSmart(int("direction", action.direction))
             }
             11 -> writeShort(int("entityIndex", action.entityIndex))

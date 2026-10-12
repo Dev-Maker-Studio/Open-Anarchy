@@ -18,13 +18,9 @@ class IdentityKitDecoder : ConfigDecoder<IdentityKitDefinition>(IDENTITY_KIT) {
         when (opcode) {
             1 -> bodyPartId = buffer.readUnsignedByte()
             2 -> {
-                // Model ids are big smarts, not shorts (client IdkType). Read as shorts they
-                // desync the rest of the file: 29 of the 652 shipped files ran off the end.
                 val length = buffer.readUnsignedByte()
                 modelIds = IntArray(length) { buffer.readBigSmart() }
             }
-            // Not in the client's IdkType, but 13 of the shipped files carry it, always a 2 byte
-            // payload immediately before the model list (0x0103, 0x0104, 0x0105).
             3 -> unknown3 = buffer.readUnsignedShort()
             40 -> readColours(buffer)
             41 -> readTextures(buffer)

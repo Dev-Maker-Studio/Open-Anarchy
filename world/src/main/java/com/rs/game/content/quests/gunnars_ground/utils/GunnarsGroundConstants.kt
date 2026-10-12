@@ -2,7 +2,6 @@ package com.rs.game.content.quests.gunnars_ground.utils
 
 import org.darkan.core.model.Item
 
-// Quest Stages
 const val STAGE_UNSTARTED = 0
 const val STAGE_RECEIVED_LOVE_POEM = 1
 const val STAGE_RECEIVED_RING = 2
@@ -18,7 +17,6 @@ const val STAGE_RECEIVED_GUNNARS_GROUND_POEM = 11
 const val STAGE_POST_CUTSCENES = 12
 const val STAGE_COMPLETE = 13
 
-// Items
 val RING_FROM_JEFFERY = Item(19770)
 val DORORANS_ENGRAVED_RING = Item(19771)
 val GUNNARS_GROUND_POEM = Item(19772)
@@ -27,7 +25,6 @@ val CHISEL = Item(1755)
 val SWANKY_BOOTS = Item(19776)
 val ANTIQUE_LAMP = Item(19775)
 
-// NPCs
 const val JEFFERY = 637
 const val QUESTING_DORORAN = 1168
 const val CUTSCENE_DORORAN = 2863
@@ -42,7 +39,6 @@ const val CUTSCENE_KJELL = 2875
 const val QUESTING_HAAKON = 3090
 const val CUTSCENE_HAAKON = 3091
 
-// Animations
 const val ANIM_CHIEFTAIN_SPEECH = 14734
 const val ANIM_HAAKON_CHEER = 14739
 const val ANIM_KJELL_CHEER = 1531
@@ -53,7 +49,6 @@ const val ANIM_CHISEL_RING = 14736
 const val ANIM_GIVE_ITEM = 14737
 const val ANIM_TAKE_ITEM = 14738
 
-// Varbits
 const val BARB_VILLAGE_VARBIT = 5819
 const val DORORAN_BARB_VILLAGE_VARBIT = 5820
 const val DORORAN_PRE_COMPLETE_BARB_VILLAGE_VARBIT = 8242
@@ -62,7 +57,6 @@ const val GUDRUN_BARB_VILLAGE_VARBIT = 6664
 const val GUDRUN_PRE_COMPLETE_BARB_VILLAGE_VARBIT = 8243
 const val GUDRUN_VARROCK_VARBIT = 6666
 
-// Music & Sounds
 const val GUNNARSGRUNN_MUSIC_ID = 896
 const val CUTSCENE_HUG_MUSIC_ID = 897
 const val CUTSCENE_MUSIC_ID = 898

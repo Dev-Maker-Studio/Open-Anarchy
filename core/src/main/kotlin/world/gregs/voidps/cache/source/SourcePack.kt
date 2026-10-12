@@ -12,29 +12,13 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 
-/** One archive rebuilt from the tree: the container bytes and the table entry describing them. */
 internal class PackedContainer(
     val bytes: ByteArray,
     val entry: ArchiveEntry
 )
 
-/**
- * Turning a source tree's files back into containers and reference tables.
- *
- * Shared by [Packer], [Builder] and [Verifier] so that a full pack, an incremental rebuild and a
- * parity check all produce the same bytes by construction rather than by three implementations
- * agreeing. Everything derivable is derived here and nowhere else.
- */
 internal object SourcePack {
 
-    /**
-     * Rebuild [archive] from [directory].
-     *
-     * Compression, gzip OS byte, bzip2 variant, version and keys all come from [metadata]; the
-     * group comes from the codec, except for an opaque archive, whose container was never opened
-     * and is stored whole. The CRC and, where the table needs it, the whirlpool cover the
-     * container without its version trailer, which is the range the client checks.
-     */
     fun container(
         directory: Path,
         archive: Int,
@@ -79,7 +63,6 @@ internal object SourcePack {
         return PackedContainer(bytes, entry)
     }
 
-    /** The index's reference table over [entries], which must be ascending by archive id. */
     fun table(metadata: IndexMetadata, entries: List<ArchiveEntry>): ReferenceTable {
         val table = ReferenceTable(metadata.format, metadata.revision, metadata.named, metadata.whirlpool)
         for (entry in entries) {
@@ -88,7 +71,6 @@ internal object SourcePack {
         return table
     }
 
-    /** The reference table's container bytes, which carry no version trailer. */
     fun tableContainer(metadata: IndexMetadata, table: ReferenceTable): ByteArray =
         Container.compress(table.encode(), metadata.compression, null, 0, metadata.bzip2).encode()
 
@@ -101,6 +83,5 @@ internal object SourcePack {
         return output
     }
 
-    /** Every archive container in indices 0-35 ends in one. */
     private const val TRAILER = 2
 }

@@ -6,16 +6,10 @@ import java.security.SecureRandom
 
 object RSA {
 
-    /**
-     * Encrypt/decrypts bytes with key and modulus
-     */
     fun crypt(data: ByteArray, modulus: BigInteger, exponent: BigInteger): ByteArray {
         return BigInteger(data).modPow(exponent, modulus).toByteArray()
     }
 
-    /**
-     * Encrypt/decrypts [ByteBuffer] with key and modulus
-     */
     fun crypt(data: ByteBuffer, modulus: BigInteger, key: BigInteger): ByteBuffer {
         return ByteBuffer.wrap(BigInteger(data.array()).modPow(key, modulus).toByteArray())
     }
@@ -25,9 +19,6 @@ object RSA {
         generateRsa()
     }
 
-    /**
-     * Generates rsa values
-     */
     private fun generateRsa() {
         val bits = 1024
         val random = SecureRandom()

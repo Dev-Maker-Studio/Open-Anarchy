@@ -22,7 +22,6 @@ object Virus : NexAttack {
         return nex.attackSpeed
     }
 
-    /** The infection jumps from carrier to carrier, so anyone in a chain of adjacent players catches it. */
     private fun spread(nex: Nex, patientZero: Entity) {
         val healthy = nex.possibleTargets.toMutableList()
         val carriers = ArrayDeque(listOf(patientZero))

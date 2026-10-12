@@ -41,18 +41,6 @@ import java.io.File
 import kotlin.test.Test
 import kotlin.test.fail
 
-/**
- * Decodes every file of every decoded index 2 (`config`) archive, encodes the definition straight
- * back and compares the result to the shipped bytes.
- *
- * This is the bar the cache source tree's `DefinitionJsonCodec` needs: a type whose
- * `encode(decode(bytes)) == bytes` for every file can be stored as editable JSON with no pristine
- * copy beside it. Anything less and the source tree has to keep the original bytes, so byte
- * identity - not field identity - is what is asserted here.
- *
- * Files are enumerated through [Cache.files], not a decoder's `size`, so an archive with holes in
- * its id space is walked exactly as the cache holds it.
- */
 class ConfigEncoderParityTest {
 
     @Test
@@ -113,8 +101,6 @@ class ConfigEncoderParityTest {
         for (file in files) {
             val data = cache.data(Index.CONFIGS, archive, file) ?: continue
             val definition = definitions[file]
-            // readLoop, never load: a codec decodes with the read path alone, and changeValues derives
-            // values that are not in the file. Everything the encoder needs is recorded by readLoop.
             decoder.readLoop(definition, BufferReader(data))
             if (definition.opcodeOrder != null) {
                 ordered++
@@ -143,10 +129,6 @@ class ConfigEncoderParityTest {
         return Parity(name, archive, files.size, identical, differing, ordered, shadowed, examples.toString())
     }
 
-    /**
-     * The opcode of the shipped file that owns [offset], found by walking the file with the decoder
-     * again and noting where each opcode's byte sat.
-     */
     private fun <T : Definition> opcodeAt(
         decoder: DefinitionDecoder<T>,
         definition: T,
@@ -172,15 +154,12 @@ class ConfigEncoderParityTest {
         val files: Int,
         val identical: Int,
         val differing: Int,
-        /** Files that had to keep their opcode order because it was not the canonical one. */
         val ordered: Int,
-        /** Files that had to keep a payload a repeated opcode overwrote. */
         val shadowed: Int,
         val examples: String,
     )
 
     private companion object {
-        /** The largest shipped config file is a struct of a few kb; give the writer headroom. */
         private const val CAPACITY = 64 * 1024
         private const val EXAMPLE_LIMIT = 5
         private const val HEX_LIMIT = 64

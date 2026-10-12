@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.minigames.domtower;
 
 import org.darkan.core.cache.NPCDefinitions;
@@ -192,7 +176,6 @@ public final class DominionTower {
 			new Boss("Evil Chicken", "Bwak bwak bwak", 3375),
 			new Boss("The Black Knight Titan", "Kill kill kill!", 14436),
 			new Boss("Bouncer", "Grrr", 14483),
-			// custom bosses
 			new Boss("Jad", "Roarrrrrrrrrrrrrrrrrrrrrrrrrr", 2745),
 			new Boss("Kalphite Queen", null, 1158),
 			new Boss("King Black Dragon", "Grrrr", 50),
@@ -314,11 +297,6 @@ public final class DominionTower {
 	}
 
 	public void loss(final int mode) {
-		/*
-		 * if(mapBaseCoords == null) { //died on logout
-		 * player.tele(Tile.of(3744, 6425, 0));
-		 * player.getControllerManager().removeControllerWithoutCheck(); return; }
-		 */
 		removeItem();
 		nextBossIndex = -1;
 		player.lock();
@@ -398,12 +376,6 @@ public final class DominionTower {
 		});
 	}
 
-	/*
-	 * 4928 15936
-	 */
-	/*
-	 * 4960, 15968
-	 */
 
 	public void destroyArena(final boolean logout, int mode) {
 		Tile tile = Tile.of(3744, 6425, 0);
@@ -446,23 +418,17 @@ public final class DominionTower {
 
 	public void openClimberMode() {
 		player.sendMessage("Only endurance mode is currently working.");
-		// player.getInterfaceManager().sendScreenInterface(96, 1163);
-		// selectBoss();
-		// player.getPackets().sendIComponentText(1163, 32, "0"); // you leave
-		// with
 	}
 
 	public void openEnduranceMode() {
 		selectBoss();
 		player.getInterfaceManager().setFullscreenInterface(96, 1173);
-		player.getPackets().setIFText(1173, 25, BOSSES[getNextBossIndex()].name); // current
-		player.getPackets().setIFText(1173, 38, String.valueOf(progress + 1)); // current
-		player.getPackets().setIFText(1173, 52, "None. Good luck!"); // current
-		player.getPackets().setIFText(1173, 29, String.valueOf(dominionFactor)); // current
-		player.getPackets().setIFText(1173, 31, dominionFactor == MAX_FACTOR ? "" : String.valueOf(getBossesTotalLevel() * 10)); // on
-		// win
-		player.getPackets().setIFText(1173, 33, String.valueOf(dominionFactor)); // on
-		// death
+		player.getPackets().setIFText(1173, 25, BOSSES[getNextBossIndex()].name);
+		player.getPackets().setIFText(1173, 38, String.valueOf(progress + 1));
+		player.getPackets().setIFText(1173, 52, "None. Good luck!");
+		player.getPackets().setIFText(1173, 29, String.valueOf(dominionFactor));
+		player.getPackets().setIFText(1173, 31, dominionFactor == MAX_FACTOR ? "" : String.valueOf(getBossesTotalLevel() * 10));
+		player.getPackets().setIFText(1173, 33, String.valueOf(dominionFactor));
 	}
 
 	public int getBossesTotalLevel() {
@@ -474,12 +440,10 @@ public final class DominionTower {
 
 	public void openSpecialMode() {
 		player.sendMessage("Only endurance mode is currently working.");
-		// player.getInterfaceManager().sendScreenInterface(96, 1170);
 	}
 
 	public void openFreeStyleMode() {
 		player.sendMessage("Only endurance mode is currently working.");
-		// player.getInterfaceManager().sendScreenInterface(96, 1168);
 	}
 
 	public void talkToFace() {

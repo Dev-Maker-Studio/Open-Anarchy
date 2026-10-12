@@ -150,7 +150,6 @@ fun mapNatureSpirit() {
         e.player.npcDialogue(FILLIMAN, HeadE.CONFUSED, "Hmm, that doesn't seem quite right.")
     }
 
-    //Bless silver sickle on grotto/altar of nature
     onItemOnObject(objectNamesOrIds = arrayOf(3520, 3521), itemNamesOrIds = arrayOf(2961)) { e ->
         if (e.player.getQuestStage(Quest.NATURE_SPIRIT) < STAGE_KILL_GHASTS) {
             e.player.sendMessage("You haven't been given permission to use the grotto yet.")

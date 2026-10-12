@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.summoning;
 
 import org.darkan.core.model.Bonus;
@@ -61,10 +45,6 @@ import java.util.*;
 import static com.rs.game.model.entity.npc.combat.CombatScript.*;
 
 public enum Scroll {
-	/**
-	 * Hello leecher. Nice to see you here. You're welcome for doing all the hard work for you.
-	 * I hope you'll notice the license above :)
-	 */
 	HOWL(12425, ScrollTarget.COMBAT, "Scares non-player opponents, causing them to retreat. However, this lasts for only a few seconds.", 0.1, 3) {
 		@Override
 		public int attack(Player owner, Familiar familiar, Entity target) {
@@ -741,7 +721,6 @@ public enum Scroll {
 	RISE_FROM_THE_ASHES(14622, ScrollTarget.COMBAT, "This special is a pain in the ass to code.", 8, 5) {
 		@Override
 		public int attack(Player owner, Familiar familiar, Entity target) {
-			//TODO
 			return Familiar.CANCEL_SPECIAL;
 		}
 	},

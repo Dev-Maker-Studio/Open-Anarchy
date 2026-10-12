@@ -198,7 +198,6 @@ open class ObjectDecoder(
         }
     }
 
-    /** Keeps an option record as the file held it; [ObjectDefinition.options] merges 30 to 34 with 150 to 154. */
     private fun ObjectDefinition.rawOption(index: Int, option: String) {
         val raw = rawOptions ?: arrayOfNulls<String>(10).also { rawOptions = it }
         raw[index] = option

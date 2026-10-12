@@ -9,22 +9,8 @@ import world.gregs.voidps.cache.definition.data.SynthInstrument
 import world.gregs.voidps.cache.definition.data.SynthShape
 import world.gregs.voidps.cache.definition.data.SynthSoundDefinition
 
-/**
- * Index 4's synth sounds, read exactly as the client's `SoundEffect` reads them.
- *
- * There is no opcode loop here - the format is a fixed sequence, so there is no
- * [world.gregs.voidps.cache.definition.OpcodeOrdered] shape to record - and every value the file
- * carries lands on a field, including the two the client derives away
- * ([SynthFilter.varying] and a pair's end values), so [SynthSoundEncoder]
- * writes the file back byte for byte.
- *
- * A slot's presence is a single byte: the client peeks it, and a non-zero byte is the first byte of
- * an instrument (its pitch envelope's `form`, never zero) rather than a marker. The same peek
- * decides each of the three optional envelope pairs.
- */
 class SynthSoundDecoder {
 
-    /** [data] into [definition], which must be a fresh definition of the right id. */
     fun read(definition: SynthSoundDefinition, data: ByteArray) = read(definition, BufferReader(data))
 
     fun read(definition: SynthSoundDefinition, buffer: Reader) {
@@ -43,7 +29,6 @@ class SynthSoundDecoder {
         }
     }
 
-    /** One instrument, whose pitch envelope's form byte [form] the caller has already read. */
     private fun instrument(buffer: Reader, form: Int): SynthInstrument {
         val pitch = envelope(buffer, form)
         val volume = envelope(buffer)
@@ -54,8 +39,6 @@ class SynthSoundDecoder {
         val pitches = IntArray(SynthInstrument.OSCILLATORS)
         val delays = IntArray(SynthInstrument.OSCILLATORS)
         for (oscillator in 0..SynthInstrument.OSCILLATORS) {
-            // The terminating zero is read before the array is indexed, so a file with five
-            // oscillators still carries one; a sixth non-zero volume would overrun the client.
             val volume = buffer.readSmart()
             if (volume == 0) {
                 break
@@ -87,7 +70,6 @@ class SynthSoundDecoder {
         )
     }
 
-    /** An optional envelope pair: a zero in place of the first form byte means neither is there. */
     private fun pair(buffer: Reader): Pair<SynthEnvelope, SynthEnvelope>? {
         val form = buffer.readUnsignedByte()
         if (form == 0) {
@@ -96,7 +78,6 @@ class SynthSoundDecoder {
         return envelope(buffer, form) to envelope(buffer)
     }
 
-    /** An envelope: form, the range it sweeps, then its shape. [form] may already have been read. */
     private fun envelope(buffer: Reader, form: Int = buffer.readUnsignedByte()): SynthEnvelope {
         val start = buffer.readInt()
         val end = buffer.readInt()
@@ -115,14 +96,6 @@ class SynthSoundDecoder {
         return SynthShape(durations, peaks)
     }
 
-    /**
-     * The filter, whose first byte packs the two directions' pair counts.
-     *
-     * A zero there is the whole filter. Otherwise the two gains and the mask come next, then every
-     * pair's start values in direction order, then the end values of the pairs the mask names, and
-     * last the sweep envelope's shape - which the client reads whenever the mask is non-zero or the
-     * two gains differ, so its presence is a function of what came before it and is not recorded.
-     */
     private fun filter(buffer: Reader): SynthFilter {
         val counts = buffer.readUnsignedByte()
         if (counts == 0) {
@@ -163,7 +136,6 @@ class SynthSoundDecoder {
     }
 
     private companion object {
-        /** The client's filter arrays hold four pole pairs per direction, and the mask four bits. */
         private const val PAIRS = 4
     }
 }

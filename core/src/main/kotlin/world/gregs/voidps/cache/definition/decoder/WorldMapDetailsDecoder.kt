@@ -31,9 +31,9 @@ class WorldMapDetailsDecoder : DefinitionDecoder<WorldMapDefinition>(WORLD_MAP) 
         map = buffer.readString()
         name = buffer.readString()
         position = buffer.readInt()
-        anInt9542 = buffer.readInt()// Size?
+        anInt9542 = buffer.readInt()
         static = buffer.readUnsignedBoolean()
-        anInt9547 = buffer.readUnsignedByte()// Always zero except "Braindeath Island" which is -1
+        anInt9547 = buffer.readUnsignedByte()
         rawZoom = anInt9547
         mapSizeId = buffer.readUnsignedByte()
 

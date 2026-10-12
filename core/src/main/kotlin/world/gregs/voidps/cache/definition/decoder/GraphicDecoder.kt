@@ -7,20 +7,6 @@ import world.gregs.voidps.cache.Index.GRAPHICS
 import world.gregs.voidps.cache.definition.data.GraphicDefinition
 import world.gregs.voidps.cache.definition.data.IndexedGraphic
 
-/**
- * A graphic group, read the way the client reads it and losslessly.
- *
- * The client's `SpriteType.decode` is the model for everything here: the file is read back to
- * front - the frame count from the last two bytes, then the trailer, then the palette, then the
- * pixels from offset 0 - and the derived fields ([IndexedGraphic.deltaWidth], the normalised
- * [IndexedGraphic.palette]) are exactly what it computes.
- *
- * Three things the client keeps nothing of are recorded beside them, because
- * [world.gregs.voidps.cache.definition.encoder.GraphicEncoder] cannot rebuild the file without
- * them: the per frame format byte ([IndexedGraphic.flags]), the palette as the file spells it
- * ([GraphicDefinition.rawPalette]) and whether the file wrote an explicit entry 0
- * ([GraphicDefinition.paletteZeroEntry]). See `docs/cache-source.md`, "graphics".
- */
 class GraphicDecoder : DefinitionDecoder<GraphicDefinition>(GRAPHICS) {
 
     override fun size(cache: Cache): Int {
@@ -75,8 +61,6 @@ class GraphicDecoder : DefinitionDecoder<GraphicDefinition>(GRAPHICS) {
         for (index in 1 until paletteSize) {
             raw[index] = buffer.readUnsignedMedium()
             palette[index] = raw[index]
-            // The client's transparent colour is 0, so a palette entry that really is black is
-            // nudged to 1 - which is why the raw entry has to be kept beside the normalised one.
             if (palette[index] == 0) {
                 palette[index] = 1
             }
@@ -139,8 +123,6 @@ class GraphicDecoder : DefinitionDecoder<GraphicDefinition>(GRAPHICS) {
             }
         }
 
-        // Everything between the pixels and the palette is padding the client seeks over. The
-        // only shape of it in the 727 cache is an explicit `000000` entry 0, three bytes wide.
         val padding = paletteStart - buffer.position()
         paletteZeroEntry = when (padding) {
             0 -> false

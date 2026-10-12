@@ -13,14 +13,6 @@ import java.io.File
 import kotlin.test.Test
 import kotlin.test.fail
 
-/**
- * Encodes every component of every interface in the cache with [InterfaceEncoder] and compares the
- * result to the shipped bytes.
- *
- * [InterfaceEncoderRoundTripTest] proves the encoder's output decodes back to the same fields; this
- * proves it is the same file. That is what the cache source tree's `DefinitionJsonCodec` needs
- * before it can store interfaces as editable JSON with no pristine copy beside them.
- */
 class InterfaceEncoderParityTest {
 
     @Test
@@ -81,9 +73,6 @@ class InterfaceEncoderParityTest {
         }
     }
 
-    /**
-     * The bytes around [offset], so a difference is readable without dumping a whole component.
-     */
     private fun hex(data: ByteArray, offset: Int): String {
         val from = maxOf(0, offset - CONTEXT)
         val to = minOf(data.size, offset + CONTEXT)

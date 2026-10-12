@@ -30,16 +30,10 @@ subprojects {
         }
     }
 
-    // Two suites per module. `test` is the fast one every build runs, held to a time budget of
-    // test time (the JUnit XML sum, JVM start-up excluded). `cacheTest` (src/cacheTest) holds
-    // everything that opens the packed cache or a source tree: whole-cache round trips, encoder and
-    // codec parity. Minutes long, opt-in only - nothing in build, check or CI runs it.
     tasks.withType<Test>().configureEach {
         workingDir = rootDir
         maxHeapSize = "4g"
         testLogging.showStandardStreams = true
-        // A test never requires a packed cache: without one the world boots on empty definition
-        // tables instead of dying, and `cacheTest` says so itself by failing its own assertions.
         systemProperty("darkan.cache.optional", "true")
     }
 
@@ -98,7 +92,6 @@ subprojects {
     dependencies {
         val implementation = configurations["implementation"]
 
-        //Kotlin
         implementation("org.jetbrains.kotlin:kotlin-stdlib:${findProperty("ktVersion")}")
         implementation("org.jetbrains.kotlin:kotlin-stdlib-common:${findProperty("ktVersion")}")
         implementation("org.jetbrains.kotlin:kotlin-scripting-common:${findProperty("ktVersion")}")
@@ -108,7 +101,6 @@ subprojects {
         implementation("org.jetbrains.kotlin:kotlin-script-runtime:${findProperty("ktVersion")}")
         implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
-        //Ktor
         implementation("io.ktor:ktor-server-core-jvm:${findProperty("ktorVersion")}")
         implementation("io.ktor:ktor-network-jvm:${findProperty("ktorVersion")}")
         implementation("io.ktor:ktor-server-netty-jvm:${findProperty("ktorVersion")}")

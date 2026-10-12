@@ -16,13 +16,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * Indices 30 and 31 - the two indices whose archives and files have names - through their codecs.
- *
- * The point of both codecs is the name, so the test measures two things: that every archive and
- * every file gets one (no `<id>.dat` fallbacks left over), and that packing the named tree back
- * reproduces every archive byte for byte.
- */
 class NativeAssetCodecTest {
 
     @Test
@@ -86,7 +79,6 @@ class NativeAssetCodecTest {
         }
     }
 
-    /** The metadata the two codecs read back: which archive is named what, and which file is. */
     private fun write(directory: Path, cache: Cache, index: Int) {
         val table = cache.referenceTable(index)!!
         val metadata = IndexMetadata(index = index, format = table.format, revision = table.revision, named = true)

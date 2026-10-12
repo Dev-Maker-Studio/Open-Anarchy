@@ -4,10 +4,6 @@ import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 import kotlin.math.sqrt
 
-/**
- * Type 33: Color edge detection filter.
- * Outputs edge normals as RGB colors.
- */
 class TextureOpColorEdgeDetector : TextureOperation(1, false) {
     private var normalized: Boolean = true
     private var strength: Int = 4096

@@ -10,19 +10,6 @@ import world.gregs.voidps.cache.definition.data.TextureOp
 import world.gregs.voidps.cache.definition.data.TextureOpcode
 import world.gregs.voidps.cache.definition.data.TextureShape
 
-/**
- * Index 9's procedural texture graphs, read losslessly.
- *
- * The client (`TextureType`, `TextureTypeList.listOperation`) reads exactly this and throws the
- * payloads into per-operation fields it has already scaled, so nothing it keeps can be written
- * back. This keeps the records as the file spells them - see [TextureOpcode] - which makes the
- * whole file a data structure and [world.gregs.voidps.cache.definition.encoder.TextureEncoder]
- * its exact inverse.
- *
- * Two things the client ignores are checked or kept rather than dropped: every operation leads
- * with its own index in the list, which is asserted, and whatever follows the three output indices
- * is kept in [TextureDefinition.trailer].
- */
 class TextureDecoder : DefinitionDecoder<TextureDefinition>(TEXTURES) {
 
     override fun size(cache: Cache): Int {
@@ -67,8 +54,6 @@ class TextureDecoder : DefinitionDecoder<TextureDefinition>(TEXTURES) {
     private fun readOpcodes(id: Int, type: Int, buffer: Reader): List<TextureOpcode> {
         val count = buffer.readUnsignedByte()
         val opcodes = ArrayList<TextureOpcode>(count)
-        // Perlin noise's step count is read by one opcode and used as a length by another, in
-        // whichever order the file gives them, so it is state for the length of one operation.
         var steps = TextureOpFormat.PERLIN_STEPS
         for (position in 0 until count) {
             val opcode = buffer.readUnsignedByte()
@@ -91,14 +76,12 @@ class TextureDecoder : DefinitionDecoder<TextureDefinition>(TEXTURES) {
         return opcodes
     }
 
-    /** An interpolation mode and a point count, then that many `x, y` shorts. */
     private fun curve(opcode: Int, buffer: Reader): TextureOpcode {
         val interpolation = buffer.readUnsignedByte()
         val points = buffer.readUnsignedByte()
         return TextureOpcode(opcode, interpolation, IntArray(points * 2) { buffer.readUnsignedShort() })
     }
 
-    /** A preset, or a stop count and that many `position` short plus `r`, `g`, `b` byte stops. */
     private fun gradient(opcode: Int, buffer: Reader): TextureOpcode {
         val preset = buffer.readUnsignedByte()
         if (preset != CUSTOM_GRADIENT) {
@@ -115,7 +98,6 @@ class TextureDecoder : DefinitionDecoder<TextureDefinition>(TEXTURES) {
         return TextureOpcode(opcode, preset, values)
     }
 
-    /** A shape count, then that many shapes; [TextureShape] is the record. */
     private fun raster(id: Int, opcode: Int, buffer: Reader): TextureOpcode {
         val count = buffer.readUnsignedByte()
         val shapes = ArrayList<TextureShape>(count)
@@ -129,7 +111,6 @@ class TextureDecoder : DefinitionDecoder<TextureDefinition>(TEXTURES) {
         return TextureOpcode(opcode, null, null, shapes)
     }
 
-    /** A signed amplitude and, when it is negative, one multiplier per noise step. */
     private fun perlin(opcode: Int, steps: Int, buffer: Reader): TextureOpcode {
         val amplitude = buffer.readUnsignedShort()
         if (amplitude < NEGATIVE) {
@@ -149,16 +130,12 @@ class TextureDecoder : DefinitionDecoder<TextureDefinition>(TEXTURES) {
     private companion object {
         private const val PERLIN_NOISE = 34
 
-        /** Perlin noise's opcode 1, which sets the step count opcode 2 reads that many shorts for. */
         private const val PERLIN_STEP_COUNT = 1
 
-        /** A colour gradient preset of 0 means the stops are in the file. */
         private const val CUSTOM_GRADIENT = 0
 
-        /** A gradient stop is a position and three colour channels. */
         private const val GRADIENT_STOP = 4
 
-        /** The unsigned short at which a signed short turns negative. */
         private const val NEGATIVE = 0x8000
 
         private val DIGITS = "0123456789abcdef".toCharArray()

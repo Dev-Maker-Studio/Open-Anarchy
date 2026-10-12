@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.world;
 
 import org.darkan.core.cache.EnumDefinitions;
@@ -45,7 +29,7 @@ public class LoyaltyShop {
 			player.getPackets().setIFRightClickOps(1143, tab.getBuyComponent(), 0, map.getSize(), 0, 1);
 			player.getPackets().setIFRightClickOps(1143, tab.getFavoriteComponent(), 0, map.getSize(), 0, 1);
 		}
-		player.getPackets().setIFRightClickOps(1143, 40, 0, 4, 0, 1); //costume color select
+		player.getPackets().setIFRightClickOps(1143, 40, 0, 4, 0, 1);
 	}
 
 	public static void open(Player player) {
@@ -196,16 +180,6 @@ public class LoyaltyShop {
 		}
 	}
 
-	/*
-	 * player.getPackets().sendHideIComponent(interfaceId, 56, false);
-	 * https://i.imgur.com/wnU2rJr.png
-	 *
-	 * player.getPackets().sendHideIComponent(interfaceId, 57, false);
-	 * https://i.imgur.com/50Rt2Rg.png
-	 *
-	 * player.getPackets().sendHideIComponent(interfaceId, 58, false);
-	 * https://i.imgur.com/pqeRgOA.png
-	 */
 
 	public static void closeMessage(Player player) {
 		player.getPackets().setIFHidden(1143, 16, true);
@@ -214,7 +188,6 @@ public class LoyaltyShop {
 	public static void sendMessage(Player player, String title, String message) {
 		player.getPackets().setIFHidden(1143, 16, false);
 		player.getPackets().setIFHidden(1143, 56, true);
-		//player.getPackets().sendHideIComponent(1143, 57, false);
 		player.getPackets().setIFHidden(1143, 58, false);
 		player.getPackets().setIFText(1143, 161, title);
 		player.getPackets().setIFText(1143, 162, message);
@@ -295,7 +268,7 @@ public class LoyaltyShop {
 		player.getVars().setVar(2542, getFavoriteFlags(player, Tab.EFFECTS)[0]);
 		player.getVars().setVar(2392, getFavoriteFlags(player, Tab.EMOTES)[0]);
 		player.getVars().setVar(2393, getFavoriteFlags(player, Tab.COSTUMES)[0]);
-		player.getVars().setVar(2541, 0, true); //refresh
+		player.getVars().setVar(2541, 0, true);
 	}
 
 	public static void refreshOwned(Player player) {
@@ -311,6 +284,6 @@ public class LoyaltyShop {
 		player.getVars().setVar(2540, getUnlockedFlags(player, Tab.EFFECTS)[0]);
 		player.getVars().setVar(2230, getUnlockedFlags(player, Tab.EMOTES)[0]);
 		player.getVars().setVar(2231, getUnlockedFlags(player, Tab.COSTUMES)[0]);
-		player.getVars().setVar(2541, 0, true); //refresh
+		player.getVars().setVar(2541, 0, true);
 	}
 }

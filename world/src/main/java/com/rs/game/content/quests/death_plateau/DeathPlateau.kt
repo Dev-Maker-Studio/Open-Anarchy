@@ -121,9 +121,6 @@ fun mapDeathPlateauInteractions() {
     }
 }
 
-/*
- * Sets various VarBits relating to Death Plateau quest.
- */
 fun setDeathPlateauVarBits(player: Player) {
     val deathPlateauStage = player.questManager.getStage(Quest.DEATH_PLATEAU)
     val deliveredSuppliesAmount = player.getI(DEATH_PLATEAU_SUPPLY_TASKS)

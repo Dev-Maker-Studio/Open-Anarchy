@@ -20,9 +20,7 @@ class SpotAnimDecoder : DefinitionDecoder<SpotAnimDefinition>(SPOTANIMS) {
 
     override fun SpotAnimDefinition.read(opcode: Int, buffer: Reader) {
         when (opcode) {
-            // Opcode 1: model ID (bigSmart for rev 727)
             1 -> modelId = buffer.readBigSmart()
-            // Opcode 2: animation/sequence ID (bigSmart for rev 727)
             2 -> animationId = buffer.readBigSmart()
             4 -> sizeXY = buffer.readUnsignedShort()
             5 -> sizeZ = buffer.readUnsignedShort()

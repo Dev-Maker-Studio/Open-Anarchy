@@ -20,25 +20,12 @@ import javax.imageio.ImageIO
 
 abstract class Engine(config: WindowConfig = WindowConfig()) {
     private companion object {
-        /**
-         * Largest single GPU-upload slice taken while the loading screen is up.
-         * This bounds how long input can go unpolled, not how much work a "frame"
-         * gets: the loop takes as many slices as fit before the next repaint.
-         */
         const val LOADING_DRAIN_SLICE_NANOS = 25_000_000L
 
-        /**
-         * The loading screen repaints at `4x` its own cost, so it never claims more
-         * than a quarter of the load, clamped to stay between ~7 and 20 Hz.
-         */
         const val LOADING_RENDER_COST_MULTIPLE = 4
         const val LOADING_RENDER_MIN_INTERVAL_NANOS = 50_000_000L
         const val LOADING_RENDER_MAX_INTERVAL_NANOS = 150_000_000L
 
-        /**
-         * A loop iteration this short means the upload queue had nothing to give,
-         * so the GL thread backs off rather than spinning against the loader pool.
-         */
         const val LOADING_IDLE_ITERATION_NANOS = 1_000_000L
         const val LOADING_IDLE_SLEEP_MILLIS = 1L
     }
@@ -65,7 +52,6 @@ abstract class Engine(config: WindowConfig = WindowConfig()) {
     private var frameCount = 0
     private var fpsTimer = 0f
 
-    /** How long the last loading-screen repaint took, used to pace the next one. */
     private var loadingRenderCostNanos = 0L
     private var lastLoadingRenderNanos = 0L
 
@@ -113,20 +99,11 @@ abstract class Engine(config: WindowConfig = WindowConfig()) {
 
     private var loopFrameCount = 0
 
-    // Offscreen capture hook. `-Ddarkan.capture=<file.png>` grabs the back buffer
-    // once the scene has had `-Ddarkan.captureAfter=<seconds>` (default 12) to settle
-    // and then closes the window. Reading the framebuffer directly beats screenshotting
-    // the X window: the result is exactly what this process drew, with no dependence on
-    // stacking order, focus or another process happening to sit on top of it.
     private val capturePath: String? = System.getProperty("darkan.capture")
     private val captureAfterSeconds: Float = System.getProperty("darkan.captureAfter", "12").toFloat()
     private var captureElapsed = 0f
     private var captureDone = false
 
-    /**
-     * Read the back buffer into a PNG at [path]. GL rows run bottom-up, so the
-     * rows are flipped while copying into the [BufferedImage].
-     */
     protected fun captureBackBuffer(path: String) {
         val w = window.width
         val h = window.height
@@ -176,21 +153,13 @@ abstract class Engine(config: WindowConfig = WindowConfig()) {
                 window.resized = false
             }
 
-            // Drain GPU upload queue with adaptive budget.
-            //
-            // While the loading screen is up the queue is the only thing standing
-            // between the user and a finished map, so it gets a whole slice rather
-            // than a sliver: the overlay is repainted on its own timer below, and
-            // every iteration in between is pure upload. Once the map is live the
-            // budget goes back to a sliver, sized so a drain cannot cost a frame.
             val gpuBudgetNanos = if (isInitialLoading) {
                 LOADING_DRAIN_SLICE_NANOS
             } else {
-                // Adaptive: more budget when frames are fast, less when tight
                 when {
-                    deltaTime < 0.010f -> 6_000_000L   // <10ms frame: 6ms budget
-                    deltaTime < 0.014f -> 4_000_000L   // 10-14ms: 4ms budget
-                    else -> 2_000_000L                  // >14ms: 2ms budget
+                    deltaTime < 0.010f -> 6_000_000L
+                    deltaTime < 0.014f -> 4_000_000L
+                    else -> 2_000_000L
                 }
             }
             onDrainGpuUploads(gpuBudgetNanos)
@@ -198,9 +167,6 @@ abstract class Engine(config: WindowConfig = WindowConfig()) {
             handleInput()
             onUpdate(deltaTime)
 
-            // Repainting the loading screen means redrawing the partially built
-            // scene, which costs more than a whole upload slice. Do it on a timer
-            // instead of every iteration; the frames in between are spent uploading.
             val renderNow = !isInitialLoading ||
                 (currentTime - lastLoadingRenderNanos) >= loadingRenderIntervalNanos()
 
@@ -222,8 +188,6 @@ abstract class Engine(config: WindowConfig = WindowConfig()) {
                 System.out.flush()
             }
 
-            // Only ever grabbed straight after a render: skipped iterations leave
-            // undefined contents in the back buffer.
             if (capturePath != null && !captureDone) {
                 captureElapsed += deltaTime
                 if (renderNow && captureElapsed >= captureAfterSeconds) {
@@ -236,21 +200,14 @@ abstract class Engine(config: WindowConfig = WindowConfig()) {
 
             input.update()
             if (renderNow) {
-                // Timed because with V-Sync the wait for the previous present does not
-                // reliably land here: the driver is free to park it in whichever GL call
-                // next needs the pipeline, which makes that call look expensive in the
-                // render-thread timings. Reporting both halves is what makes the split
-                // legible -- see RenderMetrics.gpuSyncWaitMs.
                 val presentStart = System.nanoTime()
                 window.update()
                 RenderMetrics.presentTimeMs = (System.nanoTime() - presentStart) / 1_000_000.0
             } else {
-                // No new image to present, but the window still has to stay alive.
                 glfwPollEvents()
             }
 
             if (isInitialLoading && System.nanoTime() - currentTime < LOADING_IDLE_ITERATION_NANOS) {
-                // Queue was empty - yield to the loader threads instead of spinning.
                 Thread.sleep(LOADING_IDLE_SLEEP_MILLIS)
             }
 
@@ -262,11 +219,6 @@ abstract class Engine(config: WindowConfig = WindowConfig()) {
         }
     }
 
-    /**
-     * How long to leave the loading screen on screen before repainting it, derived
-     * from what the last repaint actually cost so the overlay's share of the load
-     * stays bounded no matter how heavy the half-built scene is.
-     */
     private fun loadingRenderIntervalNanos(): Long =
         (loadingRenderCostNanos * LOADING_RENDER_COST_MULTIPLE)
             .coerceIn(LOADING_RENDER_MIN_INTERVAL_NANOS, LOADING_RENDER_MAX_INTERVAL_NANOS)
@@ -293,13 +245,6 @@ abstract class Engine(config: WindowConfig = WindowConfig()) {
     protected open fun onInput() {}
     protected open fun onCleanup() {}
 
-    /**
-     * Called once, on the frame the offscreen capture is taken, before the pixels are read.
-     *
-     * A capture run is headless by construction, so anything a subclass would otherwise show
-     * in a debug panel (draw counts, batch counts) has no way out. Overriding this is how a
-     * viewer gets those numbers onto stdout next to the image they describe.
-     */
     protected open fun onCapture() {}
 
     private fun cleanup() {

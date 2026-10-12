@@ -5,33 +5,6 @@ import java.io.ByteArrayOutputStream
 import org.darkan.core.net.prot.packet.*
 import kotlin.reflect.KClass
 
-/**
- * Encodes a list of zone [ServerProt] sub-packets into a [ByteArray] suitable for
- * embedding in [UpdateZonePartialEnclosed].
- *
- * Each sub-packet is written as:
- *   1. One byte: the ordinal of the zone packet type (from the UpdateZonePacket enum)
- *   2. The encoded body bytes matching exactly what the Rev727 codec produces
- *
- * Ordinal mapping (must match client's UpdateZonePacket enum):
- * ```
- *  0 = CustomizeObject     (CUSTOMIZE_OBJECT)
- *  1 = RemoveGroundItem    (REMOVE_GROUND_ITEM)
- *  2 = CreateGroundItem    (CREATE_GROUND_ITEM)
- *  3 = DestroyObject       (DESTROY_OBJECT)
- *  4 = CreateObject        (CREATE_OBJECT)
- *  5 = MapProjAnim         (MAP_PROJANIM)
- *  6 = MapProjAnimHalfSq   (MAP_PROJANIM_HALFSQ)
- *  7 = ObjectPrefetch      (OBJECT_PREFETCH)
- *  8 = GroundItemReveal    (GROUND_ITEM_REVEAL)
- *  9 = GroundItemCount     (GROUND_ITEM_COUNT)
- * 10 = SoundEffectTile     (MIDI_SONG_LOCATION, 8 bytes)
- * 11 = TileMessage         (TILE_MESSAGE)
- * 12 = ObjAnim             (OBJ_ANIM)
- * 13 = SoundAreaTile       (SOUND_AREA, 9 bytes)
- * 14 = SpotAnim            (SPOT_ANIM)
- * ```
- */
 object ZonePacketEncoder {
 
     fun encodeZoneSubPackets(packets: List<ServerProt>): ByteArray {
@@ -84,9 +57,7 @@ object ZonePacketEncoder {
         }
     }
 
-    // --- Individual encoders matching Rev727ServerCodecsZone.kt exactly ---
 
-    // opcode 84, VarByte
     private fun encodeCustomizeObject(out: ByteArrayOutputStream, p: CustomizeObject) {
         writeInt(out, p.objectId)
         writeByteAdd(out, (p.shape shl 2) or (p.rotation and 0x3))
@@ -107,33 +78,28 @@ object ZonePacketEncoder {
         }
     }
 
-    // opcode 125, size 3
     private fun encodeRemoveGroundItem(out: ByteArrayOutputStream, p: RemoveGroundItem) {
         writeByteInverse(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
         writeShortAddLittle(out, p.itemId)
     }
 
-    // opcode 27, size 5
     private fun encodeCreateGroundItem(out: ByteArrayOutputStream, p: CreateGroundItem) {
         writeShortAddLittle(out, p.amount)
         writeShortAdd(out, p.itemId)
         writeByteInverse(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
     }
 
-    // opcode 69, size 2
     private fun encodeDestroyObject(out: ByteArrayOutputStream, p: DestroyObject) {
         writeByteAdd(out, (p.shape shl 2) or (p.rotation and 0x3))
         writeByte(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
     }
 
-    // opcode 117, size 6
     private fun encodeCreateObject(out: ByteArrayOutputStream, p: CreateObject) {
         writeInt(out, p.objectId)
         writeByteSubtract(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
         writeByteSubtract(out, (p.shape shl 2) or (p.rotation and 0x3))
     }
 
-    // opcode 143, size 16
     private fun encodeMapProjAnim(out: ByteArrayOutputStream, p: MapProjAnim) {
         val flags = (if (p.useFloorHeight) 0x80 else 0) or ((p.localX and 0x7) shl 3) or (p.localY and 0x7)
         writeByte(out, flags)
@@ -149,7 +115,6 @@ object ZonePacketEncoder {
         writeShort(out, p.slope)
     }
 
-    // opcode 95, size 19
     private fun encodeMapProjAnimHalfSq(out: ByteArrayOutputStream, p: MapProjAnimHalfSq) {
         val coords = ((p.localX and 0xF) shl 4) or (p.localY and 0xF)
         writeByte(out, coords)
@@ -173,13 +138,11 @@ object ZonePacketEncoder {
         writeShort(out, p.slope)
     }
 
-    // opcode 88, size 5
     private fun encodeObjectPrefetch(out: ByteArrayOutputStream, p: ObjectPrefetch) {
         writeInt(out, p.objectId)
         writeByte(out, p.typeIndex)
     }
 
-    // opcode 107, size 7
     private fun encodeGroundItemReveal(out: ByteArrayOutputStream, p: GroundItemReveal) {
         writeShort(out, p.playerId)
         writeByte(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
@@ -187,7 +150,6 @@ object ZonePacketEncoder {
         writeShortAddLittle(out, p.itemId)
     }
 
-    // opcode 3, size 7
     private fun encodeGroundItemCount(out: ByteArrayOutputStream, p: GroundItemCount) {
         writeByte(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
         writeShort(out, p.itemId)
@@ -195,7 +157,6 @@ object ZonePacketEncoder {
         writeShort(out, p.newAmount)
     }
 
-    // opcode 128, size 8
     private fun encodeSoundEffectTile(out: ByteArrayOutputStream, p: SoundEffectTile) {
         writeByte(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
         writeShort(out, if (p.soundId == -1) 65535 else p.soundId)
@@ -205,7 +166,6 @@ object ZonePacketEncoder {
         writeShort(out, p.sampleRate)
     }
 
-    // ordinal 13 only, 9 bytes
     private fun encodeSoundAreaTile(out: ByteArrayOutputStream, p: SoundAreaTile) {
         writeByte(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
         writeShort(out, if (p.soundId == -1) 65535 else p.soundId)
@@ -216,9 +176,8 @@ object ZonePacketEncoder {
         writeByte(out, if (p.voice) 1 else 0)
     }
 
-    // opcode 114, VarByte
     private fun encodeTileMessage(out: ByteArrayOutputStream, p: TileMessage) {
-        writeByte(out, 0) // Unused
+        writeByte(out, 0)
         writeByte(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
         writeShort(out, p.priority)
         writeByte(out, p.duration)
@@ -226,14 +185,12 @@ object ZonePacketEncoder {
         writeRSString(out, p.message)
     }
 
-    // opcode 113, size 6
     private fun encodeObjAnim(out: ByteArrayOutputStream, p: ObjAnim) {
         writeByteSubtract(out, (p.shape shl 2) or (p.rotation and 0x3))
         writeByteSubtract(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
         writeIntLittle(out, p.animationId)
     }
 
-    // opcode 139, size 8
     private fun encodeSpotAnim(out: ByteArrayOutputStream, p: SpotAnim) {
         writeByte(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
         writeShort(out, if (p.spotAnimId == -1) 65535 else p.spotAnimId)
@@ -242,7 +199,6 @@ object ZonePacketEncoder {
         writeByte(out, p.rotation)
     }
 
-    // --- Byte-level write helpers matching JagExtensions.kt transformations ---
 
     private fun writeByte(out: ByteArrayOutputStream, value: Int) {
         out.write(value)
@@ -303,8 +259,6 @@ object ZonePacketEncoder {
     }
 
     private fun writeRSString(out: ByteArrayOutputStream, value: String) {
-        // Cp1252, not UTF-8: the protocol is one byte per character, and a wider encoding would
-        // both corrupt the text and desync the enclosing sub-packet stream.
         out.write(Cp1252.encode(value))
         out.write(0)
     }

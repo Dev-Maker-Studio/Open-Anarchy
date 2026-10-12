@@ -19,29 +19,16 @@ interface Transforms {
         }
         var last = -1
         if (isLast) {
-            // Legacy uses readBigSmart() for the "last" object ID
             last = buffer.readBigSmart()
         }
-        // Legacy: newProtocol (>= 910) uses readSmart(), old uses readUnsignedByte()
-        // Revision 727 < 910, so use readUnsignedByte()
         val length = buffer.readUnsignedByte()
         transforms = IntArray(length + 2)
         for (count in 0..length) {
-            // Legacy uses readBigSmart() for transform IDs
             transforms!![count] = buffer.readBigSmart()
         }
         transforms!![length + 1] = last
     }
 
-    /**
-     * Resolves this definition's varbit/varp transform against [vars], returning the id a definition
-     * whose own id is [defaultId] presents as.
-     *
-     * Legacy `getIdForPlayer(VarManager)`, identical on both `ObjectDefinitions` and `NPCDefinitions`.
-     * [transforms] holds one target id per var value, plus - as its last element - the id to fall back
-     * to when the var selects nothing, which is also what a null [vars] gets. A target of -1 means the
-     * definition is not shown at all for that var value, so it falls back too.
-     */
     fun getIdForVars(defaultId: Int, vars: Vars?): Int {
         val transforms = transforms
         if (transforms == null || transforms.isEmpty()) {

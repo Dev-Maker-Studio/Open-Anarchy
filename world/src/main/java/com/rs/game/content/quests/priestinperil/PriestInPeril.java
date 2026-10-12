@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.quests.priestinperil;
 
 import org.darkan.core.cache.ItemDefinitions;
@@ -52,13 +36,13 @@ import static com.rs.game.content.world.doors.Doors.handleGate;
 public class PriestInPeril extends QuestOutline {
 
 	public enum Monuments{
-		N(3494, Tile.of(3423, 9895, 0), 2347,2949, "Saradomin is the hammer that crushes evil everywhere."), //Hammer
-		NE(3497, Tile.of(3427,9894,0),2944,2945, "Saradomin is the key that unlocks the mysteries of life"), //Key
-		E(3495, Tile.of(3428,9890, 0), 314,2950, "Saradomin is the delicate touch that brushes us with love."), //Feather
-		SE(3498, Tile.of(3427, 9885, 0), 1970,2946, "Saradomin is the spark that lights the fire in our hearts."), //Tinderbox
-		S(3496, Tile.of(3422, 9884, 0), 1733,2951, "Saradomin is the needle that binds our lives together."), //Needle
-		W(3493, Tile.of(3416, 9890, 0), 1931,2948, "Saradomin is the vesel that keeps us safe from harm."), //Pot
-		NW(3499, Tile.of(3418,9894, 0), 36,2947, "Saradomin is the light that shines throughout our lives."); //Candle
+		N(3494, Tile.of(3423, 9895, 0), 2347,2949, "Saradomin is the hammer that crushes evil everywhere."),
+		NE(3497, Tile.of(3427,9894,0),2944,2945, "Saradomin is the key that unlocks the mysteries of life"),
+		E(3495, Tile.of(3428,9890, 0), 314,2950, "Saradomin is the delicate touch that brushes us with love."),
+		SE(3498, Tile.of(3427, 9885, 0), 1970,2946, "Saradomin is the spark that lights the fire in our hearts."),
+		S(3496, Tile.of(3422, 9884, 0), 1733,2951, "Saradomin is the needle that binds our lives together."),
+		W(3493, Tile.of(3416, 9890, 0), 1931,2948, "Saradomin is the vesel that keeps us safe from harm."),
+		NW(3499, Tile.of(3418,9894, 0), 36,2947, "Saradomin is the light that shines throughout our lives.");
 
 		private final int monumentID;
 

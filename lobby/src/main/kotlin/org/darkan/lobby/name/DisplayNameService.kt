@@ -14,11 +14,6 @@ enum class DisplayNameRefusal(val message: String) {
     UNKNOWN_ACCOUNT("No such account."),
 }
 
-/**
- * The one place a display name is judged and written, so the lobby screen, the website and a
- * moderator all apply the same rules. A profane or reserved name is refused as [TAKEN]: telling a
- * player which word tripped the filter only teaches them how to get around it.
- */
 object DisplayNameService {
 
     suspend fun available(displayName: String): DisplayNameRefusal? {
@@ -30,7 +25,6 @@ object DisplayNameService {
         return null
     }
 
-    /** Whether [displayName] is free, ignoring the name [self] already holds. */
     suspend fun claimable(displayName: String, self: Account? = null): DisplayNameRefusal? {
         available(displayName)?.let { return it }
         val holder = Accounts.findByDisplayName(displayName.formatPlayerNameForProtocol().formatPlayerNameForDisplay())

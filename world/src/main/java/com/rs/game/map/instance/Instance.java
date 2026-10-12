@@ -36,7 +36,6 @@ public class Instance {
 
     private final transient AtomicBoolean destroyed;
 
-    //No-args constructor that should never be used other than by GSON's hacky BS.
     private Instance() {
         this.copyMulti = false;
         this.returnTo = Settings.getConfig().getPlayerStartTile();
@@ -273,9 +272,6 @@ public class Instance {
         return chunkIds;
     }
 
-    /**
-     * Only the instance builder should be setting this value.
-     */
     @Deprecated
     public void setChunkBase(int[] chunkBase) {
         this.chunkBase = chunkBase;

@@ -58,7 +58,6 @@ open class WorldObject(
     val level: Int
         get() = tile.level
 
-    /** Legacy alias for [level]. */
     val plane: Int
         get() = tile.level
 

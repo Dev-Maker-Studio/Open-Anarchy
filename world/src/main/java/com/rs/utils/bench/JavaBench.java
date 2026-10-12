@@ -26,14 +26,12 @@ public class JavaBench {
         }
         service.shutdown();
 
-        //System.out.println("Calculated " + RouteFinder.COUNT + " routes across Burthorpe.");
         System.out.println("Java executor service: "+results.stream().mapToDouble(a -> a).average().getAsDouble()+" ms");
     }
 
     private static void test() {
         CompletableFuture[] futures = new CompletableFuture[1000];
         for (int i = 0;i < futures.length;i++) {
-            //futures[i] = CompletableFuture.runAsync(() -> RouteFinder.find(2888, 3452, 0, 1, new FixedTileStrategy(2917, 3524), true), service);
         }
         CompletableFuture.allOf(futures).join();
         for (CompletableFuture f : futures)

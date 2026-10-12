@@ -1,6 +1,3 @@
-/**
- * Payload types carried by the friends list, ignore list and friends chat packets.
- */
 package org.darkan.core.net.prot.dto
 
 import kotlinx.serialization.Serializable

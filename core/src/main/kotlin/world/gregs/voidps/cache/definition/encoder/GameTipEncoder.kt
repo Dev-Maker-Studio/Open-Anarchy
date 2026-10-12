@@ -5,17 +5,6 @@ import world.gregs.voidps.cache.DefinitionEncoder
 import world.gregs.voidps.cache.definition.data.GameTipDefinition
 import world.gregs.voidps.cache.definition.data.GameTipElementRecord
 
-/**
- * Index 33, the loading screens, written back exactly as
- * [world.gregs.voidps.cache.definition.decoder.GameTipDecoder] read them.
- *
- * The index carries no opcodes, so there is no record order to preserve and nothing to terminate: the
- * whole file is one fixed layout and the encoder is the decoder read backwards. The archive id picks the
- * layout, exactly as it does on the way in.
- *
- * The only thing the file holds that the client's decoded state does not is how widely a big smart id was
- * packed; [GameTipElementRecord.wideFileIds] carries it, and this writes it back.
- */
 class GameTipEncoder : DefinitionEncoder<GameTipDefinition> {
 
     override fun Writer.encode(definition: GameTipDefinition) {
@@ -160,14 +149,6 @@ class GameTipEncoder : DefinitionEncoder<GameTipDefinition> {
     private fun GameTipElementRecord.field(name: String, value: Int?): Int =
         value ?: throw IllegalArgumentException("Game tip element of type $type has no $name.")
 
-    /**
-     * Writes one element's big smart ids at the widths the file used, from
-     * [GameTipElementRecord.wideFileIds].
-     *
-     * [world.gregs.voidps.buffer.write.Writer.writeBigSmart] always picks the narrowest form the value
-     * fits, so an id the file spent four bytes on although two would have done is written wide by hand
-     * here; the four byte form is the value with the top bit set, which the reader masks back off.
-     */
     private class BigSmarts(private val writer: Writer, private val wide: Int) {
 
         private var index = 0
@@ -184,7 +165,6 @@ class GameTipEncoder : DefinitionEncoder<GameTipDefinition> {
     }
 
     private companion object {
-        /** The archive that holds the master stage table rather than a screen. */
         const val MASTER = 0
 
         const val BACKGROUND = 0

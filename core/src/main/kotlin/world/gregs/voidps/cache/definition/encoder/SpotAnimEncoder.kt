@@ -5,12 +5,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.SpotAnimDefinition
 
-/**
- * Writes an index 21 spotanim file.
- *
- * Opcodes 9 and 11 to 16 all set the same brightness/fade pair, so which of them a definition came from is
- * recovered from the pair's value; none of them appear in 727, where only 1, 2, 4 to 8, 10 and 40 are used.
- */
 class SpotAnimEncoder : OpcodeEncoder<SpotAnimDefinition>() {
 
     override fun opcodes(definition: SpotAnimDefinition): IntArray {

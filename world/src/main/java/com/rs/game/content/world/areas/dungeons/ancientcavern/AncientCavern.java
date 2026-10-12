@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.world.areas.dungeons.ancientcavern;
 
 import org.darkan.core.map.pathfinder.Direction;
@@ -57,20 +41,6 @@ public class AncientCavern {
 	public static ObjectClickHandler handleDownStepsMithDrags = new ObjectClickHandler(new Object[] { 25340 }, e -> e.getPlayer().tele(Tile.of(1778, 5346, 0)));
 
 	public static ObjectClickHandler handleUpStepsMithDrags = new ObjectClickHandler(new Object[] { 25339 }, e -> e.getPlayer().tele(Tile.of(1778, 5343, 1)));
-
-//	public static ObjectClickHandler handleDownStepsKuradal = new ObjectClickHandler(new Object[] { 39468 }) {
-//		@Override
-//		public void handle(ObjectClickEvent e) {
-//			e.getPlayer().tele(Tile.of(1744, 5325, 0));
-//		}
-//	};
-
-//	public static ObjectClickHandler handleUpStepsKuradal = new ObjectClickHandler(new Object[] { 25337 }) {
-//		@Override
-//		public void handle(ObjectClickEvent e) {
-//			e.getPlayer().tele(e.getPlayer().isQuestComplete(Quest.WHILE_GUTHIX_SLEEPS) ? Tile.of(1774, 5321, 1) : Tile.of(1694, 5296, 1));
-//		}
-//	};
 
 	public static ObjectClickHandler handleWhirlpool = new ObjectClickHandler(new Object[] { 67966 }, e -> {
 		e.getPlayer().lock();

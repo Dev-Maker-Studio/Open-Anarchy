@@ -18,25 +18,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/**
- * Indices 7, 27 and 29 through a real source tree: unpack them, pack the tree back, and demand
- * that every container and every reference table comes out byte for byte as it went in.
- *
- * Heavy: it writes every model in the cache to disk as a `.glb`. Run it deliberately, not as part
- * of a routine `:core:test`.
- *
- * [ModelCodecParityTest] proves the codecs reproduce every archive in memory; this proves the tree
- * on disk does - the file names map back to their archives, `index.json` carries what the layout
- * cannot, the group is rebuilt from the files and the container recompresses to the same bytes -
- * which is the guarantee `docs/cache-source.md` makes and the only place it can be shown. It also
- * reports what unpacking and packing index 7 costs and how big the tree is, which are the numbers
- * that document quotes.
- *
- * Only three indices, so the derived version table is not compared: it is a function of all
- * thirty-seven reference tables and [WholeCacheSourceTest] is where the whole cache is checked.
- *
- * Skipped when there is no cache to test against, like the other whole-cache tests.
- */
 class ModelSourceTreeTest {
 
     @Test
@@ -114,15 +95,6 @@ class ModelSourceTreeTest {
         }
     }
 
-    /**
-     * Move one vertex of one model and rebuild: exactly one archive may be repacked, and the built
-     * cache must decode the moved vertex.
-     *
-     * This is the whole point of the codec - a model is a file somebody edits, in a format Blender
-     * opens - and the incremental build is what makes editing one of tens of thousands of them cheap, so both
-     * are checked in one go. The edit goes through [ModelGltf] rather than through a text
-     * substitution, which is what an editor would do to a `.glb` too.
-     */
     private fun edit(tree: SourceTree, output: File) {
         val file = tree.indexDirectory(Index.MODELS).resolve("$EDITED${ModelCodec.EXTENSION}")
         val model = ModelGltf.read(Files.readAllBytes(file), EDITED)
@@ -144,13 +116,6 @@ class ModelSourceTreeTest {
         }
     }
 
-    /**
-     * A cache that admits to only some of its indices, so an unpack of three of them writes three
-     * directories and a `verify` compares three reference tables.
-     *
-     * [Unpacker] asks a cache for each index's reference table and skips an index that has none,
-     * which is the one seam a partial unpack needs; everything else is the cache's own.
-     */
     private class PartialCache(private val cache: Cache, indices: IntArray) : Cache by cache {
         private val kept = indices.toSet()
 
@@ -187,7 +152,6 @@ class ModelSourceTreeTest {
         return stamps
     }
 
-    /** A gigabyte of model JSON does not belong in a tmpfs; the build directory is on disk. */
     private fun scratch(): Path {
         val directory = File("core/build/tmp").absoluteFile
         directory.mkdirs()
@@ -204,22 +168,14 @@ class ModelSourceTreeTest {
     }
 
     private companion object {
-        /** Models, the particle configs their footers emit, and the billboard configs they pin. */
         private val INDICES = intArrayOf(Index.MODELS, Index.PARTICLES, Index.BILLBOARDS)
 
-        /** What vanilla 727 shipped: 73,417 models, 2 particle archives and 1 billboard archive. */
         private const val VANILLA_ARCHIVES = 73_420
 
-        /** How many indices the tree describes, so `cache.json` says what the real cache says. */
         private const val INDICES_IN_CACHE = IndexNames.COUNT
 
-        /** A model whose first vertex the edit test moves: 3253 is a plain untextured mesh. */
         private const val EDITED = 3253
 
-        /**
-         * A multiple of four, because a model older than version 13 is stored at quarter scale and
-         * a value that is not a multiple of four could not come back out of one.
-         */
         private const val EDITED_X = 1232
     }
 }

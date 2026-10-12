@@ -36,12 +36,10 @@ public class KnightsSword extends QuestOutline {
 	public static final int GET_MATERIALS = 4;
 	public static final int QUEST_COMPLETE = 6;
 
-	//NPCs
 	protected static final int RELDO = 647;
 	protected static final int THURGO = 604;
 	protected static final int SIR_VYVIN = 605;
 	protected static final int SQUIRE = 606;
-	//items
 	protected static final int PORTRAIT = 666;
 	protected static final int BLURITE_SWORD = 667;
 	protected static final int BLURITE_ORE = 668;
@@ -49,7 +47,6 @@ public class KnightsSword extends QuestOutline {
 
 	protected static final int REDBERRY_PIE = 2325;
 
-	//objects
 	protected static final int CUPBOARD = 2271;
 
 	@Override

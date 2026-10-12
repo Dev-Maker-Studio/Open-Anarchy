@@ -11,16 +11,13 @@ import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onObjectClick
 import com.rs.utils.Ticks
 
-/**
- * interface 893-894 fungal storage
- */
 
 @ServerStartupEvent
 fun mapPolypore() {
 	data class Vine(val objectId: Int, val x: Int, val y: Int, val targetTile: Tile, val down: Boolean)
 
 	fun useStairs(player: Player, tile: Tile, down: Boolean) {
-		player.useStairs(if (down) 15458 else 15456, tile, 2, 3) // TODO find correct emote
+		player.useStairs(if (down) 15458 else 15456, tile, 2, 3)
 		player.tasks.schedule(1) { player.anim(if (down) 15459 else 15457) }
 	}
 
@@ -57,7 +54,6 @@ fun mapPolypore() {
 		Vine(64361, 4702, 5611, Tile.of(4702, 5613, 1), false)
 	).associateBy { Triple(it.objectId, it.x, it.y) }
 
-	//handlePolyporeEntrance
 	onObjectClick(63093, 63094) { e ->
 		when (e.objectId) {
 			63093 -> e.player.useStairs(-1, Tile.of(4620, 5458, 3), 0, 1)

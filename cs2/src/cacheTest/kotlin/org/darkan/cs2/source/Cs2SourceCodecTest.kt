@@ -20,19 +20,6 @@ import world.gregs.voidps.cache.source.codec.SourceArchive
 import world.gregs.voidps.cache.source.codec.SourceCodecs
 import world.gregs.voidps.cache.store.ArchiveGroup
 
-/**
- * The parity proof for index 12 as TypeScript.
- *
- * Every one of the 6,569 clientscripts is unpacked into a temporary directory through
- * [Cs2SourceCodec] - one `.ts` each, no sidecar and no guard - and compiled straight back out of
- * it. Every one has to compile: 5,504 back to the cache's own bytes and the 1,065 the decompiler
- * normalises back to equivalent bytecode, which is what [Cs2SourceCodec.functional] declares and
- * what `cache verify` counts as recompiled. An archive the compiler cannot produce bytecode for
- * is a script lost. That is the contract the cache source tree rests on for this index
- * (`docs/cache-source.md`).
- *
- * Skips with a message when there is no cache to read.
- */
 class Cs2SourceCodecTest {
 
     @Test
@@ -56,7 +43,6 @@ class Cs2SourceCodecTest {
         val ids = cache.archives(Index.CLIENT_SCRIPTS).sortedArray()
         assertTrue(ids.isNotEmpty(), "index ${Index.CLIENT_SCRIPTS} has no archives")
 
-        // --- unpack -------------------------------------------------------------------------
         val metadata = HashMap<Int, ArchiveMetadata>(ids.size * 2)
         val groups = HashMap<Int, ByteArray>(ids.size * 2)
         val unpackStart = System.nanoTime()
@@ -88,10 +74,6 @@ class Cs2SourceCodecTest {
         }
         val unpackMillis = (System.nanoTime() - unpackStart) / 1_000_000
 
-        // --- the index's own files ------------------------------------------------------------
-        // The project files belong to the index, not to any archive, so they come out of
-        // unpackIndex - which is also what claims them, since the unpacker deletes everything
-        // under the directory that neither an archive nor this call accounted for.
         val projectFiles = Cs2SourceCodec.unpackIndex(directory, Index.CLIENT_SCRIPTS, ids)
         for (file in projectFiles) {
             Files.write(directory.resolve(file.path), file.bytes)
@@ -115,7 +97,6 @@ class Cs2SourceCodecTest {
             )
         }
 
-        // --- the layout ---------------------------------------------------------------------
         for (name in listOf(
             Cs2Declarations.OPCODES_FILE,
             Cs2Declarations.GAMEVALS_FILE,
@@ -138,7 +119,6 @@ class Cs2SourceCodecTest {
         }
         assertEquals(emptyList(), sidecars(directory), "unpacking writes no pristine sidecar")
 
-        // --- a sidecar left over from an older tree is inert ----------------------------------
         val stray = SourceFiles.pristine(Cs2Layout.pathOf(ids[0]))
         Files.write(directory.resolve(stray), byteArrayOf(1, 2, 3))
         assertEquals(null, Cs2SourceCodec.archiveOf(directory, stray), "$stray belongs to no archive")
@@ -149,9 +129,6 @@ class Cs2SourceCodecTest {
             "$stray is not an input of clientscript ${ids[0]}"
         )
 
-        // --- pack ---------------------------------------------------------------------------
-        // Nothing in the pack may touch a cache: this is the configuration a server building a
-        // tree is in, and the corpus the analysis would read is the cache the build is producing.
         Cs2SourceCodec.cache = {
             throw IllegalStateException("pack must not open a cache; the tree is the only input")
         }
@@ -181,7 +158,6 @@ class Cs2SourceCodecTest {
         assertEquals(groups.size, identical + recompiled, "every archive has to compile back")
     }
 
-    /** Every `.pristine` file under [directory], as tree relative paths. */
     private fun sidecars(directory: Path): List<String> =
         Files.walk(directory).use { stream ->
             stream.filter { Files.isRegularFile(it) && SourceFiles.isPristine(it.fileName.toString()) }
@@ -189,20 +165,17 @@ class Cs2SourceCodecTest {
                 .toList()
         }
 
-    /** Index 12 claims [Cs2SourceCodec] by being on the classpath, with nothing registering it. */
     @Test
     fun `the provider claims index 12`() {
         assertEquals(Cs2SourceCodec, SourceCodecs.codec(Index.CLIENT_SCRIPTS))
         assertTrue(SourceCodecs.registered().contains(Index.CLIENT_SCRIPTS))
     }
 
-    /** Index 12's parity is functional, which is what lets a verify count a recompile as parity. */
     @Test
     fun `the codec declares itself functional`() {
         assertTrue(Cs2SourceCodec.functional, "index ${Index.CLIENT_SCRIPTS} is compiled on every pack")
     }
 
-    /** Project files belong to no archive, and a script's path resolves to its id. */
     @Test
     fun `paths map to the archives they belong to`() {
         for (name in listOf("cs2.d.ts", "gamevals.d.ts", "vars.d.ts", "tsconfig.json", "dead-code.md")) {
@@ -214,7 +187,6 @@ class Cs2SourceCodecTest {
         assertEquals(0, Cs2SourceCodec.archiveOf("${Cs2Layout.LEGACY_PREFIX}0.ts"))
     }
 
-    /** The prepacked cache, opened directly, or null with a message when it is not there. */
     private fun cache(): Cache? {
         val path = File(EnvVars.prepackedCachePath)
         if (!File(path, "main_file_cache.dat2").isFile) {

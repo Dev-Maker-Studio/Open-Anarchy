@@ -3,53 +3,23 @@ package org.darkan.cs2.vm
 import org.darkan.cs2.Cs2Context
 import world.gregs.voidps.cache.definition.data.InterfaceComponentHook
 
-/**
- * Event data a hook can ask for.
- *
- * Bound hook arguments are not all literal: the compiler stores sentinel values
- * where the mouse position, the source component or the typed key should go, and
- * the client substitutes the live values when the event fires. Anything left at
- * its default here substitutes as -1, which is what the client does when the
- * event carries no such value.
- */
 data class Cs2Event(
     val mouseX: Int = -1,
     val mouseY: Int = -1,
-    /** Packed id of the component the event happened on. */
     val source: Int = -1,
     val sourceSlot: Int = -1,
-    /** Packed id of the component being dropped onto, for drag and use events. */
     val target: Int = -1,
     val targetSlot: Int = -1,
     val clickedOption: Int = -1,
     val keyCode: Int = -1,
     val keyChar: Int = -1,
-    /** Replaces the `event_opbase` string argument. */
     val optionName: String = "",
 )
 
-/**
- * Runs the callbacks bound to component events.
- *
- * The sentinel values below are the client's; see `CS2Executor.executeHookInternal`.
- * They are ordinary ints in the bytecode, which is why they have to be replaced
- * on the way in rather than resolved by the virtual machine.
- */
 class Cs2HookDispatcher(
     private val context: Cs2Context,
     private val host: Cs2Host,
 ) {
-    /**
-     * One machine per level of nesting.
-     *
-     * A hook can run while another is already running - a script writes a var, the
-     * host turns that into a transmit dispatch, and that script writes another -
-     * and [Cs2Vm.execute] clears its stacks and frames on entry, so sharing one
-     * machine would wipe the outer script's state mid-instruction. The client has
-     * exactly this arrangement: `getNextScriptExecutor` hands out `CS2Executor`s
-     * from a pool indexed by depth and grows it on demand, which also means each
-     * nesting level gets its own operand stacks *and* its own global arrays.
-     */
     private val machines = ArrayList<Cs2Vm>(4)
     private var depth = 0
 
@@ -65,7 +35,6 @@ class Cs2HookDispatcher(
         }
     }
 
-    /** Runs [hook], substituting event data for the sentinel arguments. */
     fun dispatch(hook: InterfaceComponentHook, event: Cs2Event): Cs2Values? {
         val script = context.script(hook.script) ?: run {
             host.onError("Hook targets missing script ${hook.script}")
@@ -85,7 +54,6 @@ class Cs2HookDispatcher(
         return withMachine { it.execute(script, ints, strings, longs, hook.script) }
     }
 
-    /** Runs the same [hook] shape held directly by the virtual machine. */
     fun dispatch(hook: Cs2Hook, event: Cs2Event): Cs2Values? {
         val script = context.script(hook.scriptId) ?: run {
             host.onError("Hook targets missing script ${hook.scriptId}")
@@ -128,7 +96,6 @@ class Cs2HookDispatcher(
 
         const val OPTION_NAME = "event_opbase"
 
-        /** True when an argument is a placeholder the event fills in. */
         fun isSentinel(value: Int) = value in MOUSE_X..KEY_CHAR
     }
 }

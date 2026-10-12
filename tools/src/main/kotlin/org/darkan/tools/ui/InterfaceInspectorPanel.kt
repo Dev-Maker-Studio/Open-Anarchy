@@ -15,51 +15,14 @@ import org.darkan.tools.rsinterface.MediaType
 import world.gregs.voidps.cache.definition.data.InterfaceComponentDefinition
 import world.gregs.voidps.cache.definition.data.InterfaceComponentHook
 
-/**
- * The property sheet for the selected component.
- *
- * ### Authored versus resolved
- *
- * Every geometry row shows two numbers: the `basePositionX` an author typed and
- * the `x` / `screenX` the layout pass produced from it. They are usually the
- * same, and when they are not it is because a position or size *mode* did
- * something - inset from the parent, centred, proportional. The gap between the
- * two columns is the whole diagnosis of "why is this component not where I put
- * it", so the panel refuses to show one without the other, and the modes are
- * named rather than numbered because `verticalPositionMode = 5` tells nobody
- * anything.
- *
- * ### Why the widgets hold no state
- *
- * The obvious property sheet copies the component into a set of buffers when the
- * selection changes and writes them back on edit, and then has to work out when
- * to re-sync: after an undo, after a script wrote the field, after a structural
- * edit renumbered everything. Every one of those is a bug waiting to happen. The
- * fields here are built fresh from the definition each frame instead - ImGui
- * keeps its own buffer for whichever widget is being typed into, so feeding it
- * the model value every frame is harmless, and the panel can never show a stale
- * value. Text is the one exception: [ImString] owns a byte buffer that would be
- * overwritten mid-keystroke, so those are cached and re-seeded when the
- * selection or the document revision changes.
- *
- * ### Undo granularity
- *
- * Every write goes through [InterfaceEditContext] with a coalesce key naming the
- * field and the component, so a drag across a slider is one undo step rather
- * than sixty, and [ImGui.isItemDeactivatedAfterEdit] closes the step on release
- * so the next gesture starts a new one.
- */
 class InterfaceInspectorPanel(
     private val context: InterfaceEditContext,
     private val assets: AssetPicker,
-    /** Fires an event on a component through the interaction runtime. */
     private val onRunHook: (Int, InterfaceEvent) -> Unit,
-    /** Exports and opens a clientscript's source through the reload panel. */
     private val onOpenScript: (Int) -> Unit,
 ) {
     var visible: Boolean = true
 
-    /** Cached text buffers, re-seeded when the selection or the document changes. */
     private val strings = HashMap<String, ImString>()
     private var stringsFor = -1
     private var stringsRevision = -1
@@ -113,7 +76,6 @@ class InterfaceInspectorPanel(
         ImGui.end()
     }
 
-    // ---------------------------------------------------------------- header
 
     private fun header(index: Int, definition: InterfaceComponentDefinition, state: ComponentState?) {
         val selection = context.selection.size
@@ -160,7 +122,6 @@ class InterfaceInspectorPanel(
         ImGui.separator()
     }
 
-    // ---------------------------------------------------------------- layout
 
     private fun layout(index: Int, definition: InterfaceComponentDefinition, state: ComponentState?) {
         ImGuiText.disabled("authored")
@@ -209,7 +170,6 @@ class InterfaceInspectorPanel(
         }
     }
 
-    // ------------------------------------------------------------ appearance
 
     private fun appearance(index: Int, definition: InterfaceComponentDefinition) {
         val hidden = ImBoolean(definition.hidden)
@@ -254,7 +214,6 @@ class InterfaceInspectorPanel(
         ImGuiText.disabled("0 = opaque")
     }
 
-    // ----------------------------------------------------------------- types
 
     private fun hasTypeSection(type: Int): Boolean = when (type) {
         ComponentType.FIGURE, ComponentType.TEXT, ComponentType.GRAPHIC,
@@ -379,11 +338,6 @@ class InterfaceInspectorPanel(
         itemRow(index)
     }
 
-    /**
-     * The item slot. It is not a definition field - only `IF_SETOBJECT` sets it -
-     * so it writes to the live state and is lost on the next re-seed, which is
-     * why it is labelled as a preview rather than as a property.
-     */
     private fun itemRow(index: Int) {
         val state = context.state(index) ?: return
         if (state.type != ComponentType.GRAPHIC && state.type != ComponentType.MODEL &&
@@ -404,7 +358,6 @@ class InterfaceInspectorPanel(
         }
     }
 
-    // ----------------------------------------------------------- interaction
 
     @Suppress("LongMethod")
     private fun interaction(index: Int, definition: InterfaceComponentDefinition) {
@@ -477,11 +430,6 @@ class InterfaceInspectorPanel(
         keyBindings(index, definition)
     }
 
-    /**
-     * The eleven keyboard bindings, printed against what each array really holds
-     * rather than what the decoder named it: `keyRepeats` is the key code,
-     * `keyCodes` is the modifier mask and `keyModifiers` is the repeat count.
-     */
     private fun keyBindings(index: Int, definition: InterfaceComponentDefinition) {
         ImGui.separator()
         val codes = definition.keyRepeats
@@ -516,7 +464,6 @@ class InterfaceInspectorPanel(
         }
     }
 
-    // ----------------------------------------------------------------- hooks
 
     private fun hooks(index: Int, definition: InterfaceComponentDefinition) {
         val hooks = definition.hooks()
@@ -600,14 +547,7 @@ class InterfaceInspectorPanel(
         }
     }
 
-    // -------------------------------------------------------------- advanced
 
-    /**
-     * Every declared field, straight off the definition. Read only on purpose:
-     * the grouped sections above are the supported way to change anything, and a
-     * reflective setter over a hundred fields is a very efficient way to corrupt
-     * a component. This is here to answer "what is actually in this thing".
-     */
     private fun advanced(definition: InterfaceComponentDefinition) {
         val toggle = ImBoolean(showAdvanced)
         if (ImGui.checkbox("Show defaults too", toggle)) {
@@ -623,7 +563,6 @@ class InterfaceInspectorPanel(
         }
     }
 
-    // --------------------------------------------------------------- widgets
 
     private fun intRow(
         label: String,
@@ -703,7 +642,6 @@ class InterfaceInspectorPanel(
     private fun string(key: String, current: String): ImString =
         strings.getOrPut(key) { ImString(current, STRING_CAPACITY) }
 
-    /** Closes the undo step when a widget loses focus, so one gesture is one step. */
     private fun closeOnRelease() {
         if (ImGui.isItemDeactivatedAfterEdit()) {
             context.endEdit()
@@ -757,7 +695,6 @@ class InterfaceInspectorPanel(
 
         private val TYPE_NAMES = Array(10) { ComponentType.name(it) }
 
-        /** Size modes, as [org.darkan.tools.rsinterface.InterfaceInstance] resolves them. */
         private val SIZE_MODES = arrayOf(
             "0 absolute",
             "1 inset from parent",
@@ -766,7 +703,6 @@ class InterfaceInspectorPanel(
             "4 aspect of other axis",
         )
 
-        /** Position modes, from the client's componentPositionAdjustment. */
         private val POSITION_MODES = arrayOf(
             "0 absolute",
             "1 centred + offset",
@@ -792,7 +728,6 @@ class InterfaceInspectorPanel(
             "9 worn female",
         )
 
-        /** Definition field name to the event that fires it. */
         private val EVENT_BY_FIELD: Map<String, InterfaceEvent> =
             InterfaceEvent.entries.mapNotNull { event -> event.field?.let { it to event } }.toMap()
     }

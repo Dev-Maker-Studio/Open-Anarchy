@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.magic;
 
 import com.rs.engine.quest.Quest;
@@ -39,7 +23,7 @@ public class TeleportTabs {
 		FALADOR(8009, Tile.of(2965, 3379, 0)),
 		CAMELOT(8010, Tile.of(2758, 3478, 0)),
 		ARDOUGNE(8011, Tile.of(2660, 3306, 0)),
-		WATCHTOWER(8012, Tile.of(2549, 3114, 2)), // Deafult Watchtower tele loc
+		WATCHTOWER(8012, Tile.of(2549, 3114, 2)),
 		HOUSE(8013, null),
 
 		RIMMINGTON(18809, Tile.of(2954, 3225, 0)),
@@ -58,7 +42,7 @@ public class TeleportTabs {
 		FIRE_ALTAR(13603, Tile.of(3309, 3251, 0)),
 		BODY_ALTAR(13604, Tile.of(3051, 3441, 0)),
 		COSMIC_ALTAR(13605, Tile.of(2407, 4383, 0)),
-		CHAOS_ALTAR(13606, Tile.of(2281, 4837, 0)), //Did not feel like adding separate logic to add wilderness controller and a dialogue safety prompt.
+		CHAOS_ALTAR(13606, Tile.of(2281, 4837, 0)),
 		NATURE_ALTAR(13607, Tile.of(2865, 3022, 0)),
 		LAW_ALTAR(13608, Tile.of(2857, 3379, 0)),
 		DEATH_ALTAR(13609, Tile.of(1864, 4638, 0)),
@@ -105,7 +89,7 @@ public class TeleportTabs {
 			}
 
 			Tile teleportTile;
-			if (e.getItem().getId() == 8012) { // Watchtower tele tab
+			if (e.getItem().getId() == 8012) {
 				teleportTile = getWatchtowerTeleportTile(e.getPlayer());
 			} else {
 				TeleTab t = TeleTab.forId(e.getItem().getId());

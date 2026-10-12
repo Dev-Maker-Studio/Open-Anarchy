@@ -4,16 +4,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * The client's single byte charset, mirrored from the 727 client
- * (`Class490.aCharArray5766` / `Utils.UNICODE_TABLE`, `Utils.byteForChar`, `Packet.writeString`).
- */
 class Cp1252Test {
 
-    /**
-     * Byte to character for the whole `0x80`-`0x9f` range, straight out of the client.
-     * The unused slots ([UNUSED_SLOTS]) are absent; they decode to '?'.
-     */
     private val extendedRange = mapOf(
         0x80 to '€',
         0x82 to '‚',
@@ -63,7 +55,6 @@ class Cp1252Test {
         val value = "Hello, world! 0123456789 ~!@#$%^&*()_+-=[]{}|;':\",./<>?"
         val encoded = Cp1252.encode(value)
         assertEquals(value.length, encoded.size)
-        // Byte identical to the previous UTF-8 behaviour, which is what pure ascii traffic used.
         assertTrue(encoded.contentEquals(value.toByteArray(Charsets.UTF_8)))
         assertEquals(value, decodeAll(encoded))
     }
@@ -105,8 +96,6 @@ class Cp1252Test {
 
     @Test
     fun `unencodable characters fall back to a single substitute byte`() {
-        // Outside latin-1 and not in the 0x80-0x9f table: cjk, latin extended-A, a lone surrogate,
-        // a box drawing glyph, and the ascii control character the protocol uses as a terminator.
         val unencodable = listOf('中', 'Ā', '\ud83d', '─', '\u0000')
         for (char in unencodable) {
             assertEquals(Cp1252.SUBSTITUTE.code.toByte(), Cp1252.encode(char), "encode ${char.code}")
@@ -135,7 +124,6 @@ class Cp1252Test {
     private fun decodeAll(bytes: ByteArray) = String(CharArray(bytes.size) { Cp1252.decode(bytes[it]) })
 
     private companion object {
-        /** `0x80`-`0x9f` slots the client leaves empty. */
         val UNUSED_SLOTS = listOf(0x81, 0x8d, 0x8f, 0x90, 0x9d)
     }
 }

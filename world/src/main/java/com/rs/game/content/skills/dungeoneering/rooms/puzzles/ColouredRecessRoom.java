@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.rooms.puzzles;
 
 import com.rs.engine.dialogue.Dialogue;
@@ -35,7 +19,6 @@ public class ColouredRecessRoom extends PuzzleRoom {
 
 	public static final int[] SHELVES = { 35243, 35242, 35241, 35245, 35246 };
 
-	//+1-4 for colors
 	public static final int[] BASE_BLOCKS = { 13024, 13029, 13034, 13039, 13044 };
 
 	public static final int[][] LOCATIONS = {
@@ -93,7 +76,6 @@ public class ColouredRecessRoom extends PuzzleRoom {
 		}
 
 		public void handle(final Player player, final boolean push) {
-			//TODO: make sure 2 players can't move 2 statues ontop of eachother in the same tick? although it doesn't really matter
 			boolean pull = !push;
 
 			int[] nPos = manager.getRoomPos(getTile());

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.npcs;
 
 import com.rs.game.World;
@@ -88,7 +72,6 @@ public class YkLagorThunderous extends DungeonBoss {
 
 	private final static String[] QUOTES = { "We will break you!", "You've outlived your use!", "You do not belong here.", "Your soul belongs to us!", "Mah zodas'bakh me'ah." };
 
-	//private final static int[] QUOTES_SOUNDS = { 1899, 1903, 1902, 1901, 1900 };
 
 	public YkLagorMage[] getMages() {
 		return mysteriousMages;
@@ -117,7 +100,6 @@ public class YkLagorThunderous extends DungeonBoss {
 				setNextAnimation(new Animation(14443));
 				setNextSpotAnim(new SpotAnim(166));
 				setNextForceTalk(new ForceTalk("MY TURN!"));
-				//playSound(1935, 1);
 				playMusic();
 				startCountdown = 10;
 				return;
@@ -130,7 +112,6 @@ public class YkLagorThunderous extends DungeonBoss {
 					return;
 				int index = Utils.random(QUOTES.length);
 				mage.setNextForceTalk(new ForceTalk(QUOTES[index]));
-				//mage.playSound(QUOTES_SOUNDS[index], 1);
 			}
 
 			return;

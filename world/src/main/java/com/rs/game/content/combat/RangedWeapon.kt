@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.combat
 
 import com.rs.game.World
@@ -375,7 +359,7 @@ enum class RangedWeapon {
     GUTHIX_BOW(intArrayOf(19146, 19148), AmmoType.SARADOMIN_ARROWS, AmmoType.GUTHIX_ARROWS, AmmoType.ZAMORAK_ARROWS),
     ZAMORAK_BOW(intArrayOf(19149, 19151), AmmoType.SARADOMIN_ARROWS, AmmoType.GUTHIX_ARROWS, AmmoType.ZAMORAK_ARROWS),
 
-    DECIMATION(intArrayOf(24456), 1066, 2962),  //3191 spec gfx
+    DECIMATION(intArrayOf(24456), 1066, 2962),
     BOOGIE_BOW(intArrayOf(24474), 3196, 3195),
     CRYSTAL_BOW(intArrayOf(4212, 4214, 4215, 4216, 4217, 4218, 4219, 4220, 4221, 4222, 4223), 249, 250),
     SLING(intArrayOf(19830, 15597), 32, -1),
@@ -416,7 +400,7 @@ enum class RangedWeapon {
     ADAMANT_KNIFE(true, intArrayOf(867, 875, 5659, 5666), 217),
     RUNE_KNIFE(true, intArrayOf(868, 876, 5660, 5667), 218),
 
-    HOLY_WATER(true, intArrayOf(732), 192, 193),  //52/53 white holy water?
+    HOLY_WATER(true, intArrayOf(732), 192, 193),
 
     TOKTZ_XIL_UL(true, intArrayOf(6522), 442),
 

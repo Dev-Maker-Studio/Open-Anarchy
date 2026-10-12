@@ -11,8 +11,6 @@ import com.rs.plugin.handlers.NPCClickHandler;
 @PluginEventHandler
 public class Iain extends Conversation {
 
-    //Identify NPC by ID
-    //Iain has the same script as Donie..
     private static final int npcId = 7868;
 
     public static NPCClickHandler Iain = new NPCClickHandler(new Object[]{npcId}, e -> {
@@ -27,15 +25,12 @@ public class Iain extends Conversation {
         addOptions(new Options() {
             @Override
             public void create() {
-                //Give player options
                 addOptions(new Options() {
                     @Override
                     public void create() {
-                        //Simple Reply
                         option("Where am I?", new Dialogue()
                                 .addNPC(npcId, HeadE.CALM_TALK, "This is the town of Lumbridge my friend."));
 
-                        //Conversation
                         option("How are you today?", new Dialogue()
                                 .addNPC(npcId, HeadE.CALM_TALK, "Aye, not too bad thank you. Lovely weather in RuneScape this fine day.")
                                 .addPlayer(HeadE.CALM_TALK, "Weather?")
@@ -45,11 +40,8 @@ public class Iain extends Conversation {
                                 .addNPC(npcId, HeadE.LAUGH, "Not just a pretty face eh? Ha ha ha.")
                         );
 
-                        //Nested player options with responses
                         option("Are there any quests I can do here?", new Dialogue()
-                                //NPC to respond first
                                 .addNPC(npcId, HeadE.CALM_TALK, "What kind of quest are you looking for?")
-                                //Show next set of options
                                 .addOptions(new Options() {
                                     @Override
                                     public void create() {
@@ -165,6 +157,5 @@ public class Iain extends Conversation {
             }
         });
 
-        //TODO add mission checks and alternative responses
     }
 }

@@ -25,7 +25,6 @@ import java.util.List;
 @PluginEventHandler
 public class JunglePotion extends QuestOutline {
 
-	// Quest Stages
 	public static final int NOT_STARTED = 0;
 	public static final int FIND_SNAKE_WEED = 1;
 	public static final int FIND_ARDRIGAL = 2;
@@ -34,7 +33,6 @@ public class JunglePotion extends QuestOutline {
 	public static final int FIND_ROGUES_PURSE = 5;
 	public static final int QUEST_COMPLETE = 6;
 
-	// Items IDs
 	public static final int GRIMY_SNAKE_WEED = 1525;
 	public static final int GRIMY_ARDRIGAL = 1527;
 	public static final int GRIMY_SITO_FOIL = 1529;
@@ -44,13 +42,6 @@ public class JunglePotion extends QuestOutline {
 	@Override
 	public List<String> getJournalLines(Player player, int stage) {
 		ArrayList<String> lines = new ArrayList<>();
-		// Keeping this commented for future updates
-//		if (stage == QUEST_COMPLETE) {
-//			lines.add("I collected five jungle herbs for him and he was");
-//			lines.add("able to commune with his gods.");
-//			lines.add("As a reward he showed me some herblore techniques.");
-//			return lines;
-//		}
 		if (stage == player.getQuestStage(Quest.JUNGLE_POTION)) {
 			lines.add("Trufitus Shakaya of the Tai Bwo Wannai village");
 			lines.add("needed some jungle herbs in order to make a potion");
@@ -60,7 +51,7 @@ public class JunglePotion extends QuestOutline {
 		return lines;
 	}
 
-	private static final int HERB = 0; // TODO: I am unsure the herb used in the iface
+	private static final int HERB = 0;
 	@Override
 	public void complete(Player player) {
 		player.getSkills().addXpQuest(Constants.HERBLORE, 775);
@@ -107,7 +98,6 @@ public class JunglePotion extends QuestOutline {
 
 	public static ObjectClickHandler handlePalmTree = new ObjectClickHandler(new Object[] { 2577, 2579, 2581 }, (e) -> {
 		Player player = e.getPlayer();
-		// Is actually supposed to reject stage by stage
 		if (!player.isQuestStarted(Quest.JUNGLE_POTION)) {
 			player.sendMessage("You find nothing of significance...");
 			return;

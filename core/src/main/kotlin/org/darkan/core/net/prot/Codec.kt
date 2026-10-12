@@ -67,7 +67,6 @@ class Codec {
         noinline encoder: (suspend T.(ByteWriteChannel) -> Unit)? = null
     ): Registration<ServerProt, T> = serverProt(opcode, ProtSize.Fixed(size), encoder)
 
-    // Login responses reuse the handshake's response code as their opcode, so they stay out of serverProtsByOpcode.
     internal inline fun <reified T : ServerProt> loginResponse(
         opcode: Int,
         size: ProtSize,
@@ -134,7 +133,6 @@ class Codec {
         return createInstance(protClass, opcode) as T?
     }
 
-    // A constructor whose parameters all have defaults is called with callBy so Kotlin fills them in.
     private fun <T : Any> createInstance(protClass: KClass<T>, opcode: Int): T? {
         return try {
             if (protClass.isValue) {

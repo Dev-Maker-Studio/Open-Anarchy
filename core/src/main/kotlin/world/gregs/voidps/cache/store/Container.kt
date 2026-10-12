@@ -14,45 +14,20 @@ import java.util.zip.CRC32
 import java.util.zip.Deflater
 import java.util.zip.Inflater
 
-/**
- * One JS5 container - the unit an archive is stored and served as.
- *
- * ```
- * [u8 compression][i32 compressedSize]([i32 decompressedSize] if compression != 0)[payload]([u16 version])
- * ```
- *
- * Every archive container in indices 0-35 carries the two byte version trailer; the reference
- * tables in index 255 carry none. The trailer is the low 16 bits of the archive's version in
- * its index's reference table and is never sent over JS5, which is why the CRC and whirlpool
- * the client validates cover the container *without* it - see [crc] and [whirlpool].
- *
- * A [Container] holds the payload exactly as stored: for [Compression.GZIP] that includes the
- * gzip header and trailer, and for an encrypted map archive it is the *deciphered* payload, so
- * [encode] with the same keys reproduces the stored bytes byte for byte.
- */
 class Container(
     val compression: Compression,
-    /** The compressed bytes as stored, deciphered. */
     val payload: ByteArray,
-    /** Size of [data]; equal to `payload.size` when [compression] is [Compression.NONE]. */
     val decompressedSize: Int,
-    /** The two byte trailer, or null when the container has none. */
     val version: Int?,
-    /** The gzip header's OS byte. 0 everywhere in the 727 cache but two archives in index 19. */
     val gzipOs: Int = 0
 ) {
 
-    /** Bytes before the payload: 5 for [Compression.NONE], 9 otherwise. */
     val headerSize: Int
         get() = if (compression == Compression.NONE) HEADER_SIZE_NONE else HEADER_SIZE_SIZED
 
-    /** Length of the encoded container, trailer included. */
     val encodedSize: Int
         get() = headerSize + payload.size + if (version == null) 0 else 2
 
-    /**
-     * Decompress the payload.
-     */
     fun data(): ByteArray = when (compression) {
         Compression.NONE -> payload.copyOf()
         Compression.GZIP -> inflate()
@@ -91,23 +66,12 @@ class Container(
         return output
     }
 
-    /**
-     * A decompressed size out of range means the header was never really decrypted - the field
-     * sits inside the encrypted region, so a wrong or missing xtea key shows up here first.
-     */
     private fun requireSaneSize() {
         require(decompressedSize in 0..MAX_DECOMPRESSED_SIZE) {
             "Container claims $decompressedSize decompressed bytes; the xtea key is wrong or missing."
         }
     }
 
-    /**
-     * The container as stored: header, payload and trailer.
-     *
-     * When [xtea] is given and not all zero the region from offset 5 to the end of the payload
-     * is enciphered - the decompressed size int is inside the encrypted region, which is what
-     * the client's own `decryptXtea(keys, containerLength)` assumes.
-     */
     fun encode(xtea: IntArray? = null): ByteArray {
         val header = headerSize
         val output = ByteArray(encodedSize)
@@ -128,16 +92,11 @@ class Container(
         return output
     }
 
-    /**
-     * CRC32 of the encoded container without the version trailer, which is the value the
-     * reference table stores and the client validates a downloaded archive against.
-     */
     fun crc(xtea: IntArray? = null): Int {
         val encoded = encode(xtea)
         return CRC.calculate(encoded, 0, encoded.size - if (version == null) 0 else 2)
     }
 
-    /** Whirlpool of the same range [crc] covers. */
     fun whirlpool(xtea: IntArray? = null): ByteArray {
         val encoded = encode(xtea)
         val output = ByteArray(ReadOnlyCache.WHIRLPOOL_SIZE)
@@ -152,19 +111,15 @@ class Container(
         const val HEADER_SIZE_NONE = 5
         const val HEADER_SIZE_SIZED = 9
 
-        /** XTEA over a container starts after the type byte and the compressed size. */
         const val XTEA_OFFSET = 5
 
-        /** Nothing in the cache decompresses to more than this; a container's size field is 24 bits of index entry. */
         const val MAX_DECOMPRESSED_SIZE = 0xffffff
 
         private const val GZIP_HEADER_SIZE = 10
         private const val GZIP_TRAILER_SIZE = 8
 
-        /** libbzip2 block size the cache was built with, in hundreds of kilobytes. */
         private const val BZIP2_BLOCK_SIZE = 1
 
-        /** `BZh<n>`, which a cache container omits. */
         private const val BZIP2_MAGIC_SIZE = 4
 
         private val inflaters = ThreadLocal.withInitial { Inflater(true) }
@@ -173,19 +128,11 @@ class Container(
 
         private val deflaters = ThreadLocal.withInitial { Deflater(GZIP_LEVEL, true) }
 
-        /** Deflate level every gzip container in the 727 cache reproduces with. */
         private const val GZIP_LEVEL = 6
 
-        /**
-         * Decode a stored container. [bytes] is never modified: an encrypted container is
-         * deciphered on a copy.
-         */
         fun decode(bytes: ByteArray, xtea: IntArray? = null): Container {
             require(bytes.size >= HEADER_SIZE_NONE) { "Container of ${bytes.size} bytes is too short." }
             val compression = Compression.of(bytes[0].toInt() and 0xff)
-            // Neither size is masked: the container has to re-encode byte for byte, and the
-            // decompressed size lives inside the encrypted region, so a wrong xtea key leaves
-            // garbage there that must still survive a decode/encode round trip untouched.
             val compressedSize = getInt(bytes, 1)
             val header = if (compression == Compression.NONE) HEADER_SIZE_NONE else HEADER_SIZE_SIZED
             val payloadEnd = header + compressedSize
@@ -213,17 +160,6 @@ class Container(
             return Container(compression, data.copyOfRange(header, payloadEnd), decompressedSize, version, gzipOs)
         }
 
-        /**
-         * Compress [data] into a container.
-         *
-         * gzip is written exactly the way the cache stores it: a standard ten byte header with a
-         * zero MTIME and XFL, the [gzipOs] operating system byte, a raw deflate stream at level
-         * 6 with the default strategy, and the eight byte little endian CRC32 and size trailer.
-         *
-         * bzip2 is written at block size 1 with the four byte magic stripped, the way the cache
-         * stores it; [bzip2Variant] picks the encoder, which matters only for the two reference
-         * tables commons-compress produced - see [BZip2Variant].
-         */
         fun compress(
             data: ByteArray,
             compression: Compression,
@@ -244,7 +180,6 @@ class Container(
             BZip2Variant.COMMONS -> commonsBzip2(data)
         }
 
-        /** commons-compress writes the `BZh<n>` magic the cache strips; everything after it is the payload. */
         private fun commonsBzip2(data: ByteArray): ByteArray {
             val output = ByteArrayOutputStream(maxOf(64, data.size / 2))
             BZip2CompressorOutputStream(output, BZIP2_BLOCK_SIZE).use { stream ->
@@ -260,7 +195,6 @@ class Container(
             try {
                 deflater.setInput(data)
                 deflater.finish()
-                // Deflate is never larger than the input plus a little framing for small inputs.
                 var output = ByteArray(data.size + (data.size / 8) + 64)
                 var written = 0
                 while (!deflater.finished()) {
@@ -276,7 +210,7 @@ class Container(
             val payload = ByteArray(GZIP_HEADER_SIZE + deflated.size + GZIP_TRAILER_SIZE)
             payload[0] = 0x1f
             payload[1] = 0x8b.toByte()
-            payload[2] = 8 // deflate
+            payload[2] = 8
             payload[9] = os.toByte()
             System.arraycopy(deflated, 0, payload, GZIP_HEADER_SIZE, deflated.size)
             val crc = CRC32()

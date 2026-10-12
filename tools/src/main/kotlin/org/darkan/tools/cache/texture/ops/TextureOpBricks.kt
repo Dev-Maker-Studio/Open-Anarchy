@@ -4,10 +4,6 @@ import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 import java.util.Random
 
-/**
- * Type 4: Brick pattern generator.
- * Creates a brick wall pattern with configurable brick size, offset, and mortar.
- */
 class TextureOpBricks : TextureOperation(0, true) {
     private var bricksPerRow: Int = 4
     private var rowCount: Int = 8
@@ -29,12 +25,10 @@ class TextureOpBricks : TextureOperation(0, true) {
         if (monochromeImageCache.dirty) {
             var rowIndex = 0
 
-            // Calculate vertical position with offset
             var verticalPos = verticalTable[y] + verticalOffset
             while (verticalPos < 0) verticalPos += 4096
             while (verticalPos > 4096) verticalPos -= 4096
 
-            // Find which row we're in
             while (rowIndex < rowCount && verticalPos >= rowHeights!![rowIndex]) {
                 rowIndex++
             }
@@ -44,18 +38,15 @@ class TextureOpBricks : TextureOperation(0, true) {
             val rowTop = rowHeights!![rowIndex]
             val rowBottom = rowHeights!![rowIndex - 1]
 
-            // Check if we're in the mortar between rows
             if (verticalPos > rowBottom + halfMortarSize && verticalPos < rowTop - halfMortarSize) {
                 for (x in 0 until currentWidth) {
                     var brickIndex = 0
                     val rowHorizontalOffset = if (isEvenRow) horizontalOffset else -horizontalOffset
 
-                    // Calculate horizontal position with offset
                     var horizontalPos = horizontalTable[x] + (rowHorizontalOffset * brickWidth shr 12)
                     while (horizontalPos < 0) horizontalPos += 4096
                     while (horizontalPos > 4096) horizontalPos -= 4096
 
-                    // Find which brick we're in
                     while (brickIndex < bricksPerRow && horizontalPos >= brickWidths!![currentRow][brickIndex]) {
                         brickIndex++
                     }
@@ -64,7 +55,6 @@ class TextureOpBricks : TextureOperation(0, true) {
                     val brickLeft = brickWidths!![currentRow][thisBrick]
                     val brickRight = brickWidths!![currentRow][brickIndex]
 
-                    // Check if we're in the mortar between bricks
                     if (horizontalPos > brickLeft + halfMortarSize && horizontalPos < brickRight - halfMortarSize) {
                         output[x] = brickColors!![currentRow][thisBrick]
                     } else {
@@ -72,7 +62,6 @@ class TextureOpBricks : TextureOperation(0, true) {
                     }
                 }
             } else {
-                // In the horizontal mortar - fill with 0
                 for (x in 0 until currentWidth) {
                     output[x] = 0
                 }

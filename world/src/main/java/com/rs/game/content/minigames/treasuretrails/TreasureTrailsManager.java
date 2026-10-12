@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.minigames.treasuretrails;
 
 import org.darkan.core.cache.NPCDefinitions;
@@ -43,7 +27,6 @@ import java.util.List;
 @PluginEventHandler
 public class TreasureTrailsManager {
 
-	//VARC 1323 = bitpacked location for arrow pointy clue interface 996
 
 	private static final int EASY = 0, MEDIUM = 1, HARD = 2, ELITE = 3;
 	public static final int SOURCE_DIG = 0, SOURCE_EMOTE = 1, SOURCE_NPC = 2, SOURCE_PUZZLENPC = 3, SOURCE_OBJECT = 4;
@@ -97,15 +80,7 @@ public class TreasureTrailsManager {
 			ClueDetails detail = ClueDetails.values()[Utils.random(ClueDetails.values().length)];
 			if (detail.level > dificulty)
 				continue;
-			/*
-			 * int difference = dificulty - detail.level; if (difference == 0)
-			 * return detail; else if (difference == 1 && Utils.random(2) == 0)
-			 * return detail; else if (difference == 2 && Utils.random(4) == 0)
-			 * return detail; else if (difference == 3 && Utils.random(8) == 0)
-			 * return detail;
-			 */
-			return detail; // else we get same clues all time o.o
-			// continue;
+			return detail;
 		}
 	}
 
@@ -191,7 +166,6 @@ public class TreasureTrailsManager {
 			} else
 				throw new RuntimeException("UNKNOWN_SOURCE:" + source);
 		} else if (cluePhase == 0 && (currentClue.details.type == COORDINATE || currentClue.details.type == EMOTE) && currentClue.dificulty >= HARD) {
-			// spawn combat npc
 			if (!meerkat) {
 				boolean inWilderness = player.getControllerManager().getController() instanceof WildernessController;
 				boolean isCoordinateClue = currentClue.details.type == COORDINATE;
@@ -212,7 +186,7 @@ public class TreasureTrailsManager {
 			WorldTasks.schedule(() -> npc.faceEntityTile(player));
 			cluePhase = ((Emote[]) currentClue.details.parameters[0]).length == 1 ? 4 : 3;
 		} else if (cluePhase == 3)
-			cluePhase = 4; // for emotes
+			cluePhase = 4;
 	}
 
 	public static boolean isScroll(int id) {
@@ -334,13 +308,12 @@ public class TreasureTrailsManager {
 			setNextClue(SOURCE_DIG, meerkat);
 			return true;
 		}
-		if (currentClue.details.type == COORDINATE /*&& hasSextantItems()*/) {
+		if (currentClue.details.type == COORDINATE ) {
 			if (!hasCurrentClue())
 				return false;
 			Tile t = getTile((Integer) currentClue.details.parameters[0], (Integer) currentClue.details.parameters[1], (Integer) currentClue.details.parameters[2], (Integer) currentClue.details.parameters[3],
 					(Integer) currentClue.details.parameters[4], (Integer) currentClue.details.parameters[5]);
-			if (!player.withinDistance(t, meerkat ? 12 : 6)) // setted distance cuz the getTile
-				// method may miss 3-5 tiles on rs
+			if (!player.withinDistance(t, meerkat ? 12 : 6))
 				return false;
 			setNextClue(SOURCE_DIG, meerkat);
 			return true;
@@ -548,7 +521,6 @@ public class TreasureTrailsManager {
 		for (int i = 0; i < mix.length; i++)
 			mix[i] = i - 1;
 		shuffle(mix);
-		// http://www.cs.bham.ac.uk/~mdr/teaching/modules04/java2/TilesSolvability.html
 		int inversions = 0;
 		for (int i = 0; i < mix.length - 1; i++) {
 			if (mix[i] == -1)
@@ -557,11 +529,8 @@ public class TreasureTrailsManager {
 				if (mix[j] > mix[i])
 					inversions++;
 		}
-		// If the grid width is odd, then the number of inversions in a solvable
-		// situation is even.
 		if ((inversions & 1) != 0)
-			return createMix(); // could just simply swap last 2 pieces but need
-		// to make sure they arn't blank
+			return createMix();
 		return mix;
 	}
 
@@ -732,18 +701,6 @@ public class TreasureTrailsManager {
 		ANAGRAM_A_4(HARD, ANAGRAM, NPC, 4594, "An Paint", "Tonic"),
 		ANAGRAM_A_5(MEDIUM, ANAGRAM, NPC, 696, "Arc O", "Line"),
 		ANAGRAM_A_6(HARD, ANAGRAM, NPC, 746, "Are Col")
-		// ,
-		// ANAGRAM_A_7(MEDIUM,
-		// ANAGRAM,
-		// NPC,
-		// 3827,
-		// "Arr!
-		// So
-		// I",
-		// "am
-		// a",
-		// "crust",
-		// "and?")
 		,
 		ANAGRAM_B_1(MEDIUM, ANAGRAM, NPC, 171, "Bail Trims"),
 		ANAGRAM_B_2(HARD, ANAGRAM, NPC, 471, "By Look"),
@@ -1078,46 +1035,6 @@ public class TreasureTrailsManager {
 				"a ring of life,",
 				"and a rune hatchet."),
 		EMOTE_P_4(EASY, EMOTE, TILE, 43846754, new Emote[] { Emote.PANIC }, new Item[] {}, "Panic on the pier where you", "catch the Fishing Trawler.", "Have nothing equipped at all", "when you do.")
-		// ,
-		// EMOTE_P_5(EASY,
-		// EMOTE,
-		// TILE,57413112,
-		// new
-		// int[]
-		// {20,
-		// 7},
-		// new
-		// Item[]
-		// {new
-		// Item(1085,
-		// 1),
-		// new
-		// Item(851,
-		// 1)},
-		// "Panic
-		// by
-		// the
-		// mausoleum",
-		// "in
-		// Morytania.
-		// ",
-		// "
-		// Wave
-		// before
-		// you
-		// speak
-		// to
-		// me.",
-		// "Equip
-		// a
-		// mithril
-		// plateskirt,",
-		// "a
-		// maple
-		// longbow
-		// and
-		// no
-		// boots.")
 		,
 		EMOTE_S_1(
 				HARD,
@@ -1146,45 +1063,6 @@ public class TreasureTrailsManager {
 				"an iron platebody,",
 				"and blue d'hide vambraces."),
 		EMOTE_T_1(EASY, EMOTE, TILE, 51776739, new Emote[] { Emote.THINK }, new Item[] { new Item(1656, 1), new Item(843, 1) }, "Think in the middle of the", "wheat field by the Lumbridge mill.", "Equip a sapphire necklace", "and an oak shortbow. ")
-		// ,
-		// EMOTE_T_2(MEDIUM,EMOTE,
-		// TILE,
-		// -1,
-		// new
-		// int[]
-		// {6,16},
-		// new
-		// Item[]
-		// {new
-		// Item(1109,1),
-		// new
-		// Item(1099,1),
-		// new
-		// Item(1698,1)},
-		// "Think
-		// under
-		// the
-		// lens
-		// in
-		// the
-		// Observatory.",
-		// "Twirl
-		// before
-		// you
-		// talk
-		// to
-		// me.",
-		// "Equip
-		// a
-		// mithril
-		// chainbody,",
-		// "green
-		// dragonhide
-		// chaps",
-		// "and
-		// ruby
-		// amulet.
-		// ")
 		,
 		EMOTE_T_3(
 				EASY,

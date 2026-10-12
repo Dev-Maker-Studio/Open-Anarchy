@@ -268,8 +268,6 @@ class QBD(npcId: Int, tile: Tile) : NPC(npcId, tile, Direction.SOUTH, true) {
                 }
                 val destination = Tile.of(middleTile.transform(0, -7, 0), 5)
                 wait(World.sendProjectileHalfSqAbsoluteSpeed(this@QBD.middleTile.transform(0, 3, 0), destination, 3141, endXyHalves = 1 to 1, heights = 255 to 0, delay = 0, speed = 90, angle = 5).taskDelay)
-//                World.sendSpotAnim(destination, 3142)
-//                wait(2)
                 val worm = NPC(15464, destination, true)
                 worm.anim(16800)
                 worm.lock(2)
@@ -700,10 +698,6 @@ private fun QBD.sendFirewall(variant: Int) {
                                 else -> random(450, 550)
                             }))
                         }
-//                        if (Settings.getConfig().isDebug) {
-//                            World.sendSpotAnim(baseTile.transform(x, 0), 502)
-//                            World.sendSpotAnim(baseTile.transform(x, -1), 502)
-//                        }
                     }
                 }
             }

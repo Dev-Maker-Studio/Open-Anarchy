@@ -21,13 +21,7 @@ class ChatHandler : PacketHandler<Player, Chat> {
             return
         }
 
-        // Which channel the message belongs to is server-side state, set by ChatTypeHandler. The
-        // client never puts it in the Chat packet (`Chat.type` decodes as -1 always), so reading it
-        // off the packet sent every friends-chat and clan-chat line out as public chat instead.
         val chatType = player.chatType
-        // 2 is the player's own clan channel, 3 the guest channel they are listening to. Clan chat
-        // is not forwarded as a client packet: it goes to the lobby as a typed action, which also
-        // means the talk-rank and mute rules are checked here first (docs/clans.md).
         if (chatType == 2 || chatType == 3) {
             if (message.isBlank()) return
             val effects = (packet.color shl 8) or (packet.effect and 0xff)

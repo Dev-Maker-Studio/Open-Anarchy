@@ -12,23 +12,10 @@ import world.gregs.voidps.cache.definition.data.CutsceneEntityMovementRecord
 import world.gregs.voidps.cache.definition.data.CutsceneEntityRecord
 import world.gregs.voidps.cache.definition.data.CutsceneObjectRecord
 
-/**
- * Index 35, one cutscene per archive and one file (0) in each.
- *
- * Nothing in the file is opcode keyed past a two entry header, so - like
- * [WorldMapDetailsDecoder] - the whole file is read in one pass and [readLoop] just hands over to it.
- *
- * Reads exactly what the client's `CutsceneTypeList.isFullyCached`, `readValueLoop` and
- * `listCutsceneAction` read, in the same order and with the same widths, but keeps the raw values rather
- * than the client's derived ones so [world.gregs.voidps.cache.definition.encoder.CutsceneEncoder] can put
- * the file back byte for byte. Anything the client would tolerate but a re-encode could not reproduce is
- * an error rather than a silent loss.
- */
 class CutsceneDecoder : DefinitionDecoder<CutsceneDefinition>(CUTSCENES) {
 
     override fun create(size: Int) = Array(size) { CutsceneDefinition(it) }
 
-    /** One archive per cutscene, so the count is the archive count and not the usual archive * 256 + file. */
     override fun size(cache: Cache): Int = cache.lastArchiveId(index)
 
     override fun getArchive(id: Int) = id
@@ -68,14 +55,6 @@ class CutsceneDecoder : DefinitionDecoder<CutsceneDefinition>(CUTSCENES) {
         actions = List(buffer.readSmart()) { readAction(this, buffer) }
     }
 
-    /**
-     * The header: opcode 0 carries the viewport size and 255 ends it.
-     *
-     * Every other opcode reads nothing and loops forever in the client, so a file carrying one is
-     * unplayable and rejected here rather than hanging. A second opcode 0 is rejected for a different
-     * reason: the client would keep the last one and the encoder writes exactly one, so it is a value that
-     * could not survive a round trip.
-     */
     private fun CutsceneDefinition.readHeader(buffer: Reader) {
         var viewport = false
         while (true) {
@@ -133,13 +112,6 @@ class CutsceneDecoder : DefinitionDecoder<CutsceneDefinition>(CUTSCENES) {
         return record
     }
 
-    /**
-     * One action: its disk id, the cycle length every action starts with, and then a body decided by the id.
-     *
-     * The ids are `CutsceneActionType`'s second field, which is not the client's internal action number -
-     * the dispatch in `listCutsceneAction` goes through the lookup, so 30 on disk is internal 18,
-     * `CutscenePlaySong`.
-     */
     private fun readAction(definition: CutsceneDefinition, buffer: Reader): CutsceneActionRecord {
         val type = buffer.readUnsignedByte()
         val record = CutsceneActionRecord(type = type, lengthInCycles = buffer.readUnsignedShort())
@@ -163,8 +135,6 @@ class CutsceneDecoder : DefinitionDecoder<CutsceneDefinition>(CUTSCENES) {
                 record.entityIndex = buffer.readUnsignedShort()
                 record.packedPos = buffer.readInt()
                 record.plane = buffer.readUnsignedByte()
-                // The client's `readSmart`, which is the *signed* smart, not its `readUSmart`; the values
-                // in the 727 files are 0..16383, an angle, and only the signed reading gives that range.
                 record.direction = buffer.readSignedSmart()
             }
             11 -> record.entityIndex = buffer.readUnsignedShort()
@@ -271,18 +241,12 @@ class CutsceneDecoder : DefinitionDecoder<CutsceneDefinition>(CUTSCENES) {
         return record
     }
 
-    /** The client's `AbstractCutsceneSpotAnimation`, shared by actions 17 and 42 and read before their own fields. */
     private fun readSpotAnimation(record: CutsceneActionRecord, buffer: Reader) {
         record.gfxId = buffer.readUnsignedShort()
         record.rotation = buffer.readUnsignedShort()
         record.displayHeight = buffer.readUnsignedByte()
     }
 
-    /**
-     * The client's `CutsceneProjectile`, whose source and target are each either a packed coordinate or an
-     * entity index. `listCutsceneAction` pairs the four disk ids with the two flags as 52 -> (0, 0),
-     * 53 -> (1, 0), 51 -> (0, 1) and 50 -> (1, 1), source flag first, where 0 means a coordinate.
-     */
     private fun readProjectile(record: CutsceneActionRecord, type: Int, buffer: Reader) {
         val sourceIsEntity = type == 50 || type == 53
         val targetIsEntity = type == 50 || type == 51

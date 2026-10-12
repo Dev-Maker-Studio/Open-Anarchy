@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.minigames.fightkiln;
 
 import org.darkan.core.cache.NPCDefinitions;
@@ -45,10 +29,6 @@ import com.rs.utils.Ticks;
 import com.rs.utils.music.Genre;
 import com.rs.utils.music.Music;
 
-/**
- * T70+
- * Copy this: https://www.youtube.com/watch?v=gY0CwX27Css&t=1340s&ab_channel=Smokey9112Films
- */
 public class FightKilnController extends Controller {
 
 	public static final Tile OUTSIDE = Tile.of(4744, 5172, 0);
@@ -76,12 +56,6 @@ public class FightKilnController extends Controller {
 		return true;
 	}
 
-	/*
-	 * 0 - south east 1 - south west 2 - north west 3 - north east TokHaar-Hur -
-	 * 15201 TokHaar-Xil - 15202 TokHaar-Mej - 15203 TokHaar-Ket - 15204
-	 * TokHaar-Tok-Xil - 15205 TokHaar-Yt-Mejkot - 15206 TokHaar-Ket-Zek - 15207
-	 * TokHaar-Jad - 15208 TokHaar-Ket-Dill - 15213
-	 */
 	private final int Hur = 15201;
     private final int Xil = 15202;
     private final int Mej = 15203;
@@ -93,42 +67,42 @@ public class FightKilnController extends Controller {
     private final int Ket_Dill = 15213;
 
 
-	private final int[][] WAVES = { { Hur, Hur, Xil, Xil, Tok_Xil }, // 1
-			{ Hur, Xil, Xil, Tok_Xil, Tok_Xil }, // 2
-			{ Tok_Xil, Xil, Tok_Xil, Tok_Xil, Hur }, // 3
-			{ Tok_Xil, Tok_Xil, Tok_Xil, Mej, Mej }, // 4
-			{ Xil, Tok_Xil, Tok_Xil, Ket_Dill, Tok_Xil }, // 5
-			{ Xil, Tok_Xil, Tok_Xil, Mej, Mej }, // 6
-			{ Mej, Tok_Xil, Tok_Xil, Tok_Xil, Xil, Tok_Xil }, // 7
-			{ Ket_Zek, Tok_Xil, Tok_Xil }, // 8
-			{ Tok_Xil, Tok_Xil, Tok_Xil, Tok_Xil, Tok_Xil, Tok_Xil }, // 9
-			{ Tok_Xil, Jad }, // 10
-			{ Mej, Mej, Mej, Mej }, // 11
-			{ Mej, Tok_Xil, Tok_Xil, Mej }, // 12
-			{ Ket_Zek, Hur, Mej }, // 13
-			{ Ket_Zek, Ket_Zek, Mej, Mej }, // 14
-			{ Ket_Zek, Ket_Zek, Tok_Xil }, // 15
-			{ Ket_Zek, Ket_Zek, Tok_Xil, Mej, Mej }, // 16
-			{ Ket_Zek, Ket_Zek, Tok_Xil, Yt_Mejkot, Mej }, // 17
-			{ Ket_Zek, Ket_Zek, Tok_Xil, Yt_Mejkot, Tok_Xil, Mej }, // 18
-			{ Mej, Mej, Mej, Mej, Mej, Mej, Mej, Ket_Dill, Mej}, // 19
-			{ Ket_Zek, Jad }, // 20
-			{ Hur, Hur, Hur, Hur, Hur, Hur, Hur, Hur, Hur, Hur, Hur, Hur }, // 21
-			{ Hur, Hur, Ket, Ket, Yt_Mejkot }, // 22
-			{ Hur, Hur, Ket, Yt_Mejkot, Yt_Mejkot }, // 23
-			{ Yt_Mejkot, Yt_Mejkot, Tok_Xil, Yt_Mejkot, Yt_Mejkot }, // 24
-			{ Yt_Mejkot, Yt_Mejkot, Tok_Xil, Tok_Xil, Ket_Zek }, // 25
-			{ Yt_Mejkot, Yt_Mejkot, Tok_Xil, Ket_Zek, Ket_Zek }, // 26
-			{ Ket, Ket, Tok_Xil, Ket_Zek, Yt_Mejkot, Yt_Mejkot }, // 27
-			{ Ket_Dill, Ket_Dill, Ket_Zek, Ket_Dill, Ket_Dill, Ket_Dill, Ket_Dill }, // 28
-			{ Yt_Mejkot, Yt_Mejkot, Yt_Mejkot, Yt_Mejkot, Yt_Mejkot, Yt_Mejkot }, // 29
-			{ Yt_Mejkot, Jad, Yt_Mejkot, Yt_Mejkot }, // 30
-			{ Tok_Xil, Tok_Xil, Tok_Xil, Tok_Xil }, // 31
-			{ Yt_Mejkot, Yt_Mejkot, Yt_Mejkot, Yt_Mejkot }, // 32
-			{ Ket_Zek, Ket_Zek, Ket_Zek, Ket_Zek }, // 33
-			{ Jad, Tok_Xil, Yt_Mejkot }, // 34
-			{ Ket_Zek, Tok_Xil, Yt_Mejkot, Jad }, // 35
-			{ Jad, Jad } // 36
+	private final int[][] WAVES = { { Hur, Hur, Xil, Xil, Tok_Xil },
+			{ Hur, Xil, Xil, Tok_Xil, Tok_Xil },
+			{ Tok_Xil, Xil, Tok_Xil, Tok_Xil, Hur },
+			{ Tok_Xil, Tok_Xil, Tok_Xil, Mej, Mej },
+			{ Xil, Tok_Xil, Tok_Xil, Ket_Dill, Tok_Xil },
+			{ Xil, Tok_Xil, Tok_Xil, Mej, Mej },
+			{ Mej, Tok_Xil, Tok_Xil, Tok_Xil, Xil, Tok_Xil },
+			{ Ket_Zek, Tok_Xil, Tok_Xil },
+			{ Tok_Xil, Tok_Xil, Tok_Xil, Tok_Xil, Tok_Xil, Tok_Xil },
+			{ Tok_Xil, Jad },
+			{ Mej, Mej, Mej, Mej },
+			{ Mej, Tok_Xil, Tok_Xil, Mej },
+			{ Ket_Zek, Hur, Mej },
+			{ Ket_Zek, Ket_Zek, Mej, Mej },
+			{ Ket_Zek, Ket_Zek, Tok_Xil },
+			{ Ket_Zek, Ket_Zek, Tok_Xil, Mej, Mej },
+			{ Ket_Zek, Ket_Zek, Tok_Xil, Yt_Mejkot, Mej },
+			{ Ket_Zek, Ket_Zek, Tok_Xil, Yt_Mejkot, Tok_Xil, Mej },
+			{ Mej, Mej, Mej, Mej, Mej, Mej, Mej, Ket_Dill, Mej},
+			{ Ket_Zek, Jad },
+			{ Hur, Hur, Hur, Hur, Hur, Hur, Hur, Hur, Hur, Hur, Hur, Hur },
+			{ Hur, Hur, Ket, Ket, Yt_Mejkot },
+			{ Hur, Hur, Ket, Yt_Mejkot, Yt_Mejkot },
+			{ Yt_Mejkot, Yt_Mejkot, Tok_Xil, Yt_Mejkot, Yt_Mejkot },
+			{ Yt_Mejkot, Yt_Mejkot, Tok_Xil, Tok_Xil, Ket_Zek },
+			{ Yt_Mejkot, Yt_Mejkot, Tok_Xil, Ket_Zek, Ket_Zek },
+			{ Ket, Ket, Tok_Xil, Ket_Zek, Yt_Mejkot, Yt_Mejkot },
+			{ Ket_Dill, Ket_Dill, Ket_Zek, Ket_Dill, Ket_Dill, Ket_Dill, Ket_Dill },
+			{ Yt_Mejkot, Yt_Mejkot, Yt_Mejkot, Yt_Mejkot, Yt_Mejkot, Yt_Mejkot },
+			{ Yt_Mejkot, Jad, Yt_Mejkot, Yt_Mejkot },
+			{ Tok_Xil, Tok_Xil, Tok_Xil, Tok_Xil },
+			{ Yt_Mejkot, Yt_Mejkot, Yt_Mejkot, Yt_Mejkot },
+			{ Ket_Zek, Ket_Zek, Ket_Zek, Ket_Zek },
+			{ Jad, Tok_Xil, Yt_Mejkot },
+			{ Ket_Zek, Tok_Xil, Yt_Mejkot, Jad },
+			{ Jad, Jad }
 	};
 
 	private transient Instance region;
@@ -200,9 +174,6 @@ public class FightKilnController extends Controller {
 		return true;
 	}
 
-	/**
-	 * return process normaly
-	 */
 	@Override
 	public boolean processObjectClick1(GameObject object) {
 		if (object.getId() == 68111) {
@@ -214,9 +185,6 @@ public class FightKilnController extends Controller {
 		return true;
 	}
 
-	/*
-	 * return false so wont remove script
-	 */
 	@Override
 	public boolean login() {
 		logoutAtEnd = false;
@@ -250,31 +218,28 @@ public class FightKilnController extends Controller {
 									removeTokHaarTok();
 									nextWave();
 								});
-							ops2.add("What do I get if I beat you?"); //TODO
-							ops2.add("What are the rules?"); //TODO
+							ops2.add("What do I get if I beat you?");
+							ops2.add("What are the rules?");
 						});
-					ops.add("I'd like to speak more about you and your kind."); //TODO
+					ops.add("I'd like to speak more about you and your kind.");
 				});
 	}
 
 	public void loadCave(final boolean login) {
 		stage = Stages.LOADING;
-		player.lock(); // locks player
+		player.lock();
 		player.setLargeSceneView(true);
 		int currentWave = getCurrentWave();
 		Runnable event = () -> {
-			// selects a music
 			selectedMusic = MUSICS[Utils.random(MUSICS.length)];
 			playMusic();
 			player.setForceMultiArea(true);
 			player.stopAll();
-			if (currentWave == 0) { // SCENE 0
+			if (currentWave == 0) {
 				player.getInventory().removeItems(new Item(23653, Integer.MAX_VALUE), new Item(23654, Integer.MAX_VALUE), new Item(23655, Integer.MAX_VALUE), new Item(23656, Integer.MAX_VALUE), new Item(23657, Integer.MAX_VALUE), new Item(23658, Integer.MAX_VALUE));
 				player.tele(getTile(31, 51));
 				tokHaarHok = new NPC(TOKHAAR_HOK, getTile(30, 36), true);
 				tokHaarHok.setFaceAngle(Utils.getAngleTo(0, 1));
-				// 1delay because player cant walk while teleing :p,
-				// + possible issues avoid
 				WorldTasks.scheduleLooping(new Task() {
 					int count = 0;
 					boolean run;
@@ -296,14 +261,14 @@ public class FightKilnController extends Controller {
 							player.startConversation(getStartDialogue());
 							player.setRun(run);
 							stage = Stages.RUNNING;
-							player.unlock(); // unlocks player
+							player.unlock();
 							stop();
 						}
 						count++;
 					}
 
 				}, 1, 6);
-			} else if (currentWave == 38) { // SCENE 7, WIN
+			} else if (currentWave == 38) {
 				player.tele(getTile(38, 25));
 				player.setNextFaceTile(getTile(38, 26));
 				tokHaarHok = new NPC(TOKHAAR_HOK_SCENE, getTile(37, 30), true);
@@ -351,7 +316,7 @@ public class FightKilnController extends Controller {
                         }));
 					}
 				}, 1);
-			} else if (currentWave == 37) { // SCENE 6
+			} else if (currentWave == 37) {
 				player.tele(getTile(38, 25));
 				player.setNextFaceTile(getTile(38, 26));
 				tokHaarHok = new NPC(TOKHAAR_HOK_SCENE, getTile(37, 30), true);
@@ -374,7 +339,7 @@ public class FightKilnController extends Controller {
 							.addNPC(TOKHAAR_HOK_SCENE, HeadE.T_SURPRISED, "Ah - yes, there is one final challenge..."));
 
 				});
-			} else if (currentWave == 34) { // SCENE 5
+			} else if (currentWave == 34) {
 				teleportPlayerToMiddle();
 				player.getPackets().setBlockMinimapState(2);
 				player.getVars().setVar(1241, 1);
@@ -416,7 +381,7 @@ public class FightKilnController extends Controller {
 					}
 
 				}, 1, 0);
-			} else if (currentWave == 31) { // SCENE 4
+			} else if (currentWave == 31) {
 				player.tele(getTile(21, 21));
 				player.setNextFaceTile(getTile(20, 20));
 				player.getPackets().setBlockMinimapState(2);
@@ -430,7 +395,7 @@ public class FightKilnController extends Controller {
 					player.startConversation(new Dialogue()
 							.addNPC(TOKHAAR_HOK_SCENE, HeadE.T_CALM_TALK, "Hurry, " + player.getDisplayName() + "... Kill my brothers before the lava consumes you."));
 				});
-			} else if (currentWave == 21) { // SCENE 3
+			} else if (currentWave == 21) {
 				tokHaarHok = new NPC(TOKHAAR_HOK_SCENE, getTile(30, 43), true);
 				tokHaarHok.setFaceAngle(Utils.getAngleTo(0, -1));
 				teleportPlayerToMiddle();
@@ -446,7 +411,7 @@ public class FightKilnController extends Controller {
 							.addNPC(TOKHAAR_HOK_SCENE, HeadE.T_CALM_TALK, "You must be carved from a rock impervious to magic... You are quite the worthy foe.")
 							.addNPC(TOKHAAR_HOK_SCENE, HeadE.T_CALM_TALK, "Ah, the platform is crumbling. Be quick little one - our Ket are coming."));
 				});
-			} else if (currentWave == 11) { // SCENE 2
+			} else if (currentWave == 11) {
 				tokHaarHok = new NPC(TOKHAAR_HOK_SCENE, getTile(45, 45), true);
 				tokHaarHok.setFaceAngle(Utils.getAngleTo(-1, -1));
 				teleportPlayerToMiddle();
@@ -468,7 +433,7 @@ public class FightKilnController extends Controller {
 											.addNPC(TOKHAAR_HOK_SCENE, HeadE.T_CALM_TALK, "Our Mej wish to test you...")));
 								}));
 					});
-			} else if (currentWave == 1) { // SCENE 1
+			} else if (currentWave == 1) {
 				player.getInventory().removeItems(new Item(23653, Integer.MAX_VALUE), new Item(23654, Integer.MAX_VALUE), new Item(23655, Integer.MAX_VALUE), new Item(23656, Integer.MAX_VALUE), new Item(23657, Integer.MAX_VALUE), new Item(23658, Integer.MAX_VALUE));
 				tokHaarHok = new NPC(TOKHAAR_HOK_SCENE, getTile(30, 36), true);
 				tokHaarHok.setFaceAngle(Utils.getAngleTo(0, 1));
@@ -487,7 +452,7 @@ public class FightKilnController extends Controller {
 					stage = Stages.RUNNING;
 					player.unlock();
 				});
-			} else if (login) { // LOGIN during
+			} else if (login) {
 				FightKilnController.this.login = login;
 				WorldTasks.schedule(new Task() {
 					@Override
@@ -499,7 +464,6 @@ public class FightKilnController extends Controller {
 				}, 1);
 			}
 		};
-		// finds empty map bounds
 		if (region == null) {
 			region = Instance.of(OUTSIDE, 8, 8);
 			region.copyMapAllPlanes(getMap()[0], getMap()[1]).thenAccept(e -> {
@@ -541,24 +505,18 @@ public class FightKilnController extends Controller {
 		return getTile(22, 22);
 	}
 
-	/*
-	 * 20, 20 min X, min Y 42 42 maxX, maxY
-	 */
-	/*
-	 * 0 - north 1 - south 2 - east 3 - west
-	 */
 	public Tile getTentacleTile() {
 		int corner = Utils.random(4);
 		int position = Utils.random(5);
 		while (corner != 0 && position == 2)
 			position = Utils.random(5);
         return switch (corner) {
-            case 0 -> // north
+            case 0 ->
                     getTile(21 + (position * 5), 42);
-            case 1 -> // south
+            case 1 ->
                     getTile(21 + (position * 5), 20);
-            case 2 -> // east
-                    getTile(42, 21 + (position * 5)); // west
+            case 2 ->
+                    getTile(42, 21 + (position * 5));
             default -> getTile(20, 21 + (position * 5));
         };
 	}
@@ -566,17 +524,17 @@ public class FightKilnController extends Controller {
 	static final String[] COMPASS = new String[] { "SE", "SW", "NW", "NE" };
 	private Tile getTileOfSide(String side, int size) {
 		switch(side.toUpperCase()) {
-			case "SE": // South East
+			case "SE":
 				Tile maxTile = getMaxTile();
 				Tile minTile = getMinTile();
 				return Tile.of(maxTile.getX() - 1 - size, minTile.getY() + 2, 1);
-			case "SW": // South West
+			case "SW":
 				return getMinTile().transform(2, 2, 0);
-			case "NW": // North West
+			case "NW":
 				maxTile = getMaxTile();
 				minTile = getMinTile();
 				return Tile.of(minTile.getX() + 2, maxTile.getY() - 1 - size, 1);
-			case "NE": // North East
+			case "NE":
 			default:
 				return getMaxTile().transform(-1 - size, -1 - size, 0);
 		}
@@ -598,12 +556,12 @@ public class FightKilnController extends Controller {
 		if (stage != Stages.RUNNING)
 			return;
 		int currentWave = getCurrentWave();
-		player.getInterfaceManager().removeOverlay();//Spawns every wave now
+		player.getInterfaceManager().removeOverlay();
 		player.getInterfaceManager().sendOverlay(316);
 		player.getVars().setVar(639, currentWave);
 		if(currentWave == 37)
 			WorldTasks.delay(1, ()->{
-				player.getPackets().setIFText(316, 5, "Har-Aken");//Says Har-Aken now
+				player.getPackets().setIFText(316, 5, "Har-Aken");
 			});
 		if (currentWave > WAVES.length) {
 			if (currentWave == 37)
@@ -683,7 +641,7 @@ public class FightKilnController extends Controller {
 
 	public void unlockPlayer() {
 		stage = Stages.RUNNING;
-		player.unlock(); // unlocks player
+		player.unlock();
 	}
 
 	public void removeScene() {
@@ -787,15 +745,12 @@ public class FightKilnController extends Controller {
 		exitCave(2);
 	}
 
-	/*
-	 * logout or not. if didnt logout means lost, 0 logout, 1, normal, 2 tele
-	 */
 	public void exitCave(int type) {
 		stage = Stages.DESTROYING;
-		Tile outside = Tile.of(OUTSIDE, 2); // radomizes alil
+		Tile outside = Tile.of(OUTSIDE, 2);
 		if (type == 0) {
 			player.setTile(outside);
-			if (getCurrentWave() == 0) // leaves if didnt start
+			if (getCurrentWave() == 0)
 				removeController();
 		} else if (type == 2) {
 			player.setTile(outside);
@@ -830,21 +785,12 @@ public class FightKilnController extends Controller {
 		player.getTempAttribs().removeB("FightKilnCrystal");
 	}
 
-	/*
-	 * gets worldtile inside the map
-	 */
 	public Tile getTile(int mapX, int mapY) {
 		return region.getLocalTile(mapX, mapY).transform(0, 0, 1);
 	}
 
-	/*
-	 * return false so wont remove script
-	 */
 	@Override
 	public boolean logout() {
-		/*
-		 * only can happen if dungeon is loading and system update happens
-		 */
 		if (stage != Stages.RUNNING)
 			return false;
 		exitCave(0);
@@ -862,9 +808,6 @@ public class FightKilnController extends Controller {
 
 	@Override
 	public void forceClose() {
-		/*
-		 * shouldnt happen
-		 */
 		if (stage != Stages.RUNNING)
 			return;
 		exitCave(2);
@@ -893,7 +836,6 @@ public class FightKilnController extends Controller {
 				break;
 			}
 			harAken.spawn();
-			// TODO set worldtile
 		}
 		harAken.setCantInteract(false);
 		harAken.setNextAnimation(new Animation(16232));
@@ -904,7 +846,7 @@ public class FightKilnController extends Controller {
 			return;
 		player.getInventory().deleteItem(new Item(id, 1));
 		switch (id) {
-		case 23653: // invulnerability
+		case 23653:
 			player.sendMessage("<col=7E2217>>The power of this crystal makes you invulnerable.");
 			player.getTempAttribs().setB("FightKilnCrystal", true);
 			player.setInvulnerable(true);
@@ -918,21 +860,21 @@ public class FightKilnController extends Controller {
 				}
 			});
 			break;
-		case 23654: // RESTORATION
+		case 23654:
 			player.heal(player.getMaxHitpoints());
 			player.getPrayer().restorePrayer(player.getSkills().getLevelForXp(Constants.PRAYER) * 10);
 			player.sendMessage("<col=7E2217>The power of this crystal heals you fully.");
 			break;
-		case 23655: // MAGIC
+		case 23655:
 			boostCrystal(player, Constants.MAGIC);
 			break;
-		case 23656: // RANGED
+		case 23656:
 			boostCrystal(player, Constants.RANGE);
 			break;
-		case 23657: // STRENGTH
+		case 23657:
 			boostCrystal(player, Constants.STRENGTH);
 			break;
-		case 23658: // CONSTITUTION
+		case 23658:
 			player.getTempAttribs().setB("FightKilnCrystal", true);
 			player.setHpBoostMultiplier(0.5);
 			player.getEquipment().refreshConfigs(false);

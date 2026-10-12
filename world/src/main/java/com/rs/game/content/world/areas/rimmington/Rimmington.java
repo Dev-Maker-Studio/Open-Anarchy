@@ -13,9 +13,6 @@ import com.rs.utils.shop.ShopsHandler;
 
 @PluginEventHandler
 public class Rimmington {
-    /**
-     * Shopkeepers and simple NPCs
-     */
     public static NPCClickHandler GENERAL_STORES = new NPCClickHandler(new Object[] { 530, 531 }, e -> {
         switch (e.getOption()) {
             case "Trade" -> ShopsHandler.openShop(e.getPlayer(), "rimmington_general_store");

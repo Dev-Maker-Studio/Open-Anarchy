@@ -9,9 +9,6 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.*
 
-/**
- * Serializer for clan setting values which can be Int, Long, or String.
- */
 object ClanSettingValueSerializer : KSerializer<Any> {
     override val descriptor: SerialDescriptor = buildClassSerialDescriptor("ClanSettingValue") {
         element<JsonElement>("value")
@@ -53,11 +50,6 @@ data class ClanMemberData(
     var firstWeek: Boolean? = false,
 )
 
-/**
- * Every persisted property is a `var`: the Mongo POJO codec constructs through the no-arg
- * constructor and then assigns via setters, so a `val` here would decode as its default and the
- * stored value would be silently discarded.
- */
 @Serializable
 class Clan(
     var name: String = "",

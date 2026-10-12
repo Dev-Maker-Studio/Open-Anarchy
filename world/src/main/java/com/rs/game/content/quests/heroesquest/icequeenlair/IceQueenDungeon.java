@@ -28,7 +28,7 @@ public class IceQueenDungeon {
 		if (e.isAtObject()) {
 			if (e.getOption().equalsIgnoreCase("Investigate"))
 				e.getPlayer().sendMessage("It appears to need 50 mining to clear...");
-			else //Clear rocks
+			else
 				WorldTasks.scheduleTimer(i -> {
 					if (i == 0)
 						e.getPlayer().lock();

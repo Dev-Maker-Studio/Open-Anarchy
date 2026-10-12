@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content;
 
 import com.rs.game.model.entity.player.Player;
@@ -103,21 +87,7 @@ public class Dicing {
 		}, 1);
 	}
 
-	//TODO
 	public static void friendsRoll(final Player player, final int itemId, int graphic, final int lowest, final int highest) {
-//				if (player.getAccount().getSocial().getCurrentFriendsChat() == null) {
-//					player.sendMessage("You need to be in a friend chat to use this option.");
-//					return;
-//				}
-//				player.lock(2);
-//				player.sendMessage("Rolling...");
-//				player.getInventory().deleteItem(itemId, 1);
-//				player.setNextAnimation(new Animation(11900));
-//				player.setNextSpotAnim(new SpotAnim(graphic));
-//				WorldTasks.schedule(1, () -> {
-//					player.getInventory().addItem(itemId, 1);
-//					player.sendDiceMessage(player, "Friends Chat channel-mate <col=db3535>" + player.getDisplayName() + "</col> rolled <col=db3535>" + getRandom(lowest, highest) + "</col> on " + diceText(itemId) + " die.");
-//				});
 	}
 
 	public static int getRandom(int lowest, int highest) {

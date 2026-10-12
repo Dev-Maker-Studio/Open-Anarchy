@@ -2,7 +2,6 @@ onNpcClick("Man", options = arrayOf("Talk-to")) { e ->
     e.player.startConversation {
         npc(e.npc.id, HAPPY_TALKING, "Hello there, adventurer! What brings you to our town?")
         options {
-            //Conditional options example
             if (e.player.inventory.containsItem(1050, 1))
                 op("Ask about the town") {
                     npc(e.npc.id, HAPPY_TALKING, "This town is known for its ancient history and beautiful landscapes.")

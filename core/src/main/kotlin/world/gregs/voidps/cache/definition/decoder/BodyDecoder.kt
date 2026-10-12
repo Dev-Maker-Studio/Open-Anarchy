@@ -27,6 +27,5 @@ class BodyDecoder : DefinitionDecoder<BodyDefinition>(DEFAULTS) {
         }
     }
 
-    /** The order [BodyEncoder] writes on its own; see [OpcodeOrdered.opcodeOrder]. */
     override fun canonicalOpcodes(definition: BodyDefinition): IntArray = BodyEncoder.opcodesOf(definition)
 }

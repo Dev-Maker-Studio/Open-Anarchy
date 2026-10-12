@@ -5,12 +5,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.ItemDefinition
 
-/**
- * Writes an index 19 obj file.
- *
- * The ground options (30 to 34) and the inventory options (35 to 39) each keep one entry of their array at a
- * non null default - "Take" and "Drop" - so a record is written for an option only when it differs from that.
- */
 class ItemEncoder : OpcodeEncoder<ItemDefinition>() {
 
     override fun opcodes(definition: ItemDefinition): IntArray {

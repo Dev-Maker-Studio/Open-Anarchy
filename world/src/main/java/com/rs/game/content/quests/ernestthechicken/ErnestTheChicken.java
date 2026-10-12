@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.quests.ernestthechicken;
 
 import com.rs.engine.dialogue.Conversation;
@@ -59,7 +43,6 @@ public class ErnestTheChicken extends QuestOutline {
 	public final static int ERNEST_NOT_CHICKEN=4;
 	public final static int QUEST_COMPLETE = 5;
 
-	//items
 	private final static int PRESSURE_GAUGE = 271;
 	private final static int FISH_FOOD = 272;
 	private final static int POISON = 273;
@@ -255,13 +238,13 @@ public class ErnestTheChicken extends QuestOutline {
 
 	public static ObjectClickHandler handleDraynorManorLadders = new ObjectClickHandler(new Object[] { 47574, 47575, 133, 32015 }, e -> {
 		GameObject obj = e.getObj();
-		if(obj.getTile().matches(Tile.of(3105, 3363, 2)))//To 2nd floor from professor
+		if(obj.getTile().matches(Tile.of(3105, 3363, 2)))
 			e.getPlayer().useLadder(Tile.of(3105, 3364, 1));
-		if(obj.getTile().matches(Tile.of(3105, 3363, 1)))//to 3rd floor to professor
+		if(obj.getTile().matches(Tile.of(3105, 3363, 1)))
 			e.getPlayer().useLadder(Tile.of(3105, 3362, 2));
-		if(obj.getTile().matches(Tile.of(3092, 3362, 0)))//To basement from 1st floor
+		if(obj.getTile().matches(Tile.of(3092, 3362, 0)))
 			e.getPlayer().useLadder(Tile.of(3117, 9753, 0));
-		if(obj.getTile().matches(Tile.of(3117, 9754, 0)))//To 1st floor from basement
+		if(obj.getTile().matches(Tile.of(3117, 9754, 0)))
 			e.getPlayer().useLadder(Tile.of(3092, 3361, 0));
 	});
 

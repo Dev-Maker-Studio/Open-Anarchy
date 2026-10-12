@@ -12,15 +12,6 @@ import org.darkan.core.mongo.collections.Clans
 import world.gregs.voidps.cache.Cache
 import java.io.File
 
-/**
- * Reads every migrated document back through the code the servers themselves use - the Mongo POJO
- * codecs behind [Accounts] and [Clans], and the world's Gson configuration for player saves - and
- * reports each one that fails to decode. A clean run is the evidence that nobody loses their
- * progress at login.
- *
- * The modern collections connect through `MONGO_URI`, so the process must be started with that
- * variable pointing at the target; this is checked rather than assumed.
- */
 fun verify(target: MongoTarget): Boolean {
     val configured = MongoTarget(EnvVars.mongoUri)
     require(configured.describe() == target.describe()) {
@@ -55,7 +46,6 @@ private fun verifyAccounts(target: MongoTarget): Boolean {
             }
         }
     } catch (e: Exception) {
-        // Typically the unique email index failing to build on first access.
         report.problem("collection init failed: ${describe(e)}", "-")
     }
     report.print()

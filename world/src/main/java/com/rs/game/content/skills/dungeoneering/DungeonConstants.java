@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering;
 
 import org.darkan.core.model.ObjectShape;
@@ -39,27 +23,15 @@ public class DungeonConstants {
 	public static final int FLOORS_COUNT = 60;
 	public static final int GROUP_GATESTONE = 18829, GATESTONE = 17489;
 
-	/*
-	 * objects handling
-	 */
 	public static final int[] DUNGEON_DOORS = { 50342, 50343, 50344, 53948, 55762 };
 	public static final int[] DUNGEON_BOSS_DOORS = { 50350, 50351, 50352, 53950, 55764 };
 
 	public static final int[] DUNGEON_GUARDIAN_DOORS = { 50346, 50347, 50348, 53949, 55763 };
 
-	/*
-	 * novite ores
-	 */
 	public static final int[] MINING_RESOURCES = { 49806, 49786, 49766, 53771, 55514 };
 
-	/*
-	 * Tangle gum tree
-	 */
 	public static final int[] WOODCUTTING_RESOURCES = { 49745, 49725, 49705, 53751, 55494 };
 
-	/*
-	 * Salve nettles
-	 */
 	public static final int[] FARMING_RESOURCES = { 49866, 49846, 49826, 53791, 55534 };
 
 	public static final int[] THIEF_CHEST_LOCKED = { 49345, 49346, 49347, 54407, 32462 };
@@ -103,9 +75,6 @@ public class DungeonConstants {
 		private final int[] closedThemeObjects, openThemeObjects;
 		private final String failMessage;
 
-		/*
-		 * set openThemeObjects if u want it to disappear after open
-		 */
 		SkillDoors(int skillId, int[] closedThemeObjects, int[] openThemeObjects, int openAnim, int openGfx, int openObjectAnim, int failObjectAnim, int failAnim, int failGfx, String failMessage) {
 			this.skillId = skillId;
 			this.closedThemeObjects = closedThemeObjects;
@@ -160,9 +129,6 @@ public class DungeonConstants {
 		}
 	}
 
-	/*
-	 * keydoors only require the unlock objectid and itemid
-	 */
 	public enum KeyDoors {
 		ORANGE_TRIANGLE(0),
 		ORANGE_DIAMOND(1),
@@ -285,19 +251,12 @@ public class DungeonConstants {
 		{ -0.228, -0.076, 0.0633, 0.1457 },
 		{ -0.304, -0.1267, 0.0380, 0.114, 0.19 }
 	};
-	/*
-	 * floor types
-	 */
 	public enum FloorType {Frozen, Abandoned, Furnished, Occult, Warped}
 
-	/*
-	 * dungeon sizes
-	 */
 	public enum Size {Small, Medium, Large}
 
 	public static final double[] NPC_COMBAT_LEVEL_COMPLEXITY_MUL = { 0.70, 0.75, 0.80, 0.85, 0.95, 1.0 };
 
-	// 4x4, 4x8 and 4x8, 2x1(just boss room for test)
 	public static final int[][] DUNGEON_RATIO = {
 		{ 4, 4 },
 		{ 4, 8 },
@@ -305,40 +264,34 @@ public class DungeonConstants {
 		{ 2, 1 }
 	};
 
-	/*
-	 * door directions
-	 */
 	public static final int EAST_DOOR = 2, WEST_DOOR = 0, NORTH_DOOR = 1, SOUTH_DOOR = 3;
 
 	public static final int[] START_ROOM_MUSICS = { 822, 797, 765, 884, 935 };
 
 	public static final int[][] DANGEROUS_MUSICS = {
-		{ 832, 834, 827, 811, 824, 808, 831, 810, 833, 837 }, //frozen
-		{ 779, 781, 799, 802, 794, 780, 771, 790, 775, 801 }, //abandoned
-		{ 748, 769, 741, 739, 742, 753, 761, 757, 747, 756 }, //furnished
-		{ 873, 882, 880, 860, 886, 872, 885, 889, 870, 864 }, //occult floor
-		{ 930, 914, 917, 911, 927, 939, 938, 920, 925, 936 }, //warped floor
+		{ 832, 834, 827, 811, 824, 808, 831, 810, 833, 837 },
+		{ 779, 781, 799, 802, 794, 780, 771, 790, 775, 801 },
+		{ 748, 769, 741, 739, 742, 753, 761, 757, 747, 756 },
+		{ 873, 882, 880, 860, 886, 872, 885, 889, 870, 864 },
+		{ 930, 914, 917, 911, 927, 939, 938, 920, 925, 936 },
 	};
 
 	public static final int[][] SAFE_MUSICS = {
-		// FloorType.FROZEN
-		{ 804, 805, 806, 807, 809, 812, 813, 814, 812, 813, 814, 821, 822 }, //frozen
-		{ 772, 773, 775, 776, 777, 778, 788, 789, 791, 792, 793, 795, 796 }, //abandoned
-		{ 740, 744, 745, 749, 750, 751, 752, 754, 755, 758, 760, 762, 764 }, //furnished
-		{ 861, 862, 866, 867, 868, 869, 871, 874, 875, 878, 879, 881, 883 }, //occult
-		{ 912, 915, 918, 919, 921, 923, 926, 928, 929, 931, 932, 933, 934 } //warped floor
+		{ 804, 805, 806, 807, 809, 812, 813, 814, 812, 813, 814, 821, 822 },
+		{ 772, 773, 775, 776, 777, 778, 788, 789, 791, 792, 793, 795, 796 },
+		{ 740, 744, 745, 749, 750, 751, 752, 754, 755, 758, 760, 762, 764 },
+		{ 861, 862, 866, 867, 868, 869, 871, 874, 875, 878, 879, 881, 883 },
+		{ 912, 915, 918, 919, 921, 923, 926, 928, 929, 931, 932, 933, 934 }
 	};
 
 	public static final int[] OTHER_DUNGEONEERING_MUSIC =  new int[] { 0, 738, 743, 746, 759, 767, 768, 782, 784, 785, 786, 787, 803, 815, 816, 817, 818, 819, 820, 863, 865, 876, 877, 890, 891, 892, 913, 916, 922, 924, 937, 940, 1089, 1090 };
 
 	public enum GuardianMonster {
-		//ALL FLOORS
 		FORGOTTEN_WARRIOR(new FloorType[] { FloorType.Frozen, FloorType.Abandoned, FloorType.Furnished, FloorType.Occult, FloorType.Warped}, Utils.range(10397, 10459), Utils.range(10246, 10308), Utils.range(10843, 10905), Utils.range(10507, 10548)),
 		FORGOTTEN_RANGER(new FloorType[] { FloorType.Frozen, FloorType.Abandoned, FloorType.Furnished, FloorType.Occult, FloorType.Warped}, Utils.range(10320, 10363)),
 		FORGOTTEN_MAGE(new FloorType[] { FloorType.Frozen, FloorType.Abandoned, FloorType.Furnished, FloorType.Occult, FloorType.Warped}, Utils.range(10560, 10603)),
 		MYSTERIOUS_SHADE(new FloorType[] { FloorType.Frozen, FloorType.Abandoned, FloorType.Furnished, FloorType.Occult, FloorType.Warped}, Utils.range(10831, 10842), new int[] { 7398 }),
 
-		//MIXED FLOORS
 		GIANT_RAT(new FloorType[] { FloorType.Frozen, FloorType.Abandoned, FloorType.Furnished, FloorType.Occult}, Utils.range(10480, 10486)),
 		DUNGEON_SPIDER(new FloorType[] { FloorType.Abandoned, FloorType.Furnished, FloorType.Occult}, Utils.range(10496, 10505), new int[] { 9382 }),
 		SKELETON_MELEE(new FloorType[] { FloorType.Abandoned, FloorType.Occult, FloorType.Warped}, Utils.range(10629, 10669)),
@@ -354,7 +307,6 @@ public class DungeonConstants {
 		GREATER_DEMON(new FloorType[] { FloorType.Occult, FloorType.Warped}, Utils.range(10718, 10721)),
 		BLACK_DEMON(new FloorType[] { FloorType.Occult, FloorType.Warped}, Utils.range(10722, 10725)),
 
-		//FROZEN
 		ICE_WARRIOR(new FloorType[] { FloorType.Frozen}, Utils.range(10225, 10235)),
 		ICE_SPIDER(new FloorType[] { FloorType.Frozen}, Utils.range(10157, 10167)),
 		ICE_TROLL(new FloorType[] { FloorType.Frozen}, Utils.range(10782, 10790)),
@@ -364,26 +316,22 @@ public class DungeonConstants {
 		HYDRA(new FloorType[] { FloorType.Frozen}, Utils.range(10610, 10618)),
 		FROST_DRAGON(new FloorType[] { FloorType.Frozen}, Utils.range(10770, 10775)),
 
-		//ABANDONED
 		EARTH_WARRIOR(new FloorType[] { FloorType.Abandoned}, Utils.range(10178, 10187)),
 		GREEN_DRAGON(new FloorType[] { FloorType.Abandoned}, Utils.range(10604, 10609)),
 		HILL_GIANT(new FloorType[] { FloorType.Abandoned}, Utils.range(10706, 10717)),
 		GIANT_SKELETON(new FloorType[] { FloorType.Abandoned}, Utils.range(10469, 10479)),
 		HOBGOBLIN(new FloorType[] { FloorType.Abandoned}, Utils.range(10236, 10245)),
 
-		//FURNISHED
 		GUARD_DOG(new FloorType[] { FloorType.Furnished}, Utils.range(10726, 10735)),
 		BRUTE(new FloorType[] { FloorType.Furnished}, Utils.range(10797, 10814)),
 		IRON_DRAGON(new FloorType[] { FloorType.Furnished}, Utils.range(10776, 10781)),
 
-		//OCCULT
 		RED_DRAGON(new FloorType[] { FloorType.Occult}, Utils.range(10815, 10820)),
 		FIRE_GIANT(new FloorType[] { FloorType.Occult}, Utils.range(10754, 10761)),
 		HELLHOUND(new FloorType[] { FloorType.Occult}, Utils.range(10188, 10195)),
 		NECROMANCER(new FloorType[] { FloorType.Occult}, Utils.range(10196, 10206)),
 		GHOST(new FloorType[] { FloorType.Occult}, Utils.range(10821, 10830)),
 
-		//WARPED
 		GIANT_RAT_WARP(new FloorType[] { FloorType.Warped}, Utils.range(12914, 12920)),
 		GUARD_DOG_WARP(new FloorType[] { FloorType.Warped}, Utils.range(12922, 12931)),
 		BRUTE_WARP(new FloorType[] { FloorType.Furnished}, Utils.range(12932, 12940)),
@@ -443,7 +391,6 @@ public class DungeonConstants {
 	public static final int[] HUNTER_CREATURES = new int[] { 11086, 11087, 11088, 11089, 11090, 11091, 11092, 11093, 11094, 11095 };
 
 	public static final StartRoom[] START_ROOMS = {
-		// FloorType.FROZEN
 		new StartRoom(14, 632, EAST_DOOR, WEST_DOOR, NORTH_DOOR, SOUTH_DOOR),
 		new StartRoom(14, 624, SOUTH_DOOR),
 		new StartRoom(14, 626, WEST_DOOR, SOUTH_DOOR),
@@ -669,7 +616,6 @@ public class DungeonConstants {
 
 	public static final HandledRoom[] PUZZLE_ROOMS;
 
-	// TODO: Some dungeoneering puzzle rooms are disabled
 	public enum Puzzle {
 		CRYSTAL_PUZZLE(12, CrystalPuzzleRoom.class, all(spot(13, 5)), false),
 		TOXIN_MAZE(20, ToxinMaze.class, all(spot(7, 8)), false),
@@ -678,12 +624,9 @@ public class DungeonConstants {
 		FISHING_FERRET(32, FishingFerretRoom.class, all(spot(2, 1)), false),
 		LEVERS(38, LeverRoom.class, list(spot(1, 5), spot(10, 14), spot(1, 5), spot(10, 14), spot(1, 5), spot(10, 14), spot(1, 5)), false),
 		SLIDING_STATUES(42, SlidingStatuesRoom.class, all(spot(1, 3)), false),
-		//FLOWER_ROOTS(50, FlowerRootsRoom.class, list(spot(9, 10), spot(6, 7), spot(13, 12), spot(12, 12), spot(3, 6), spot(2, 11), spot(3, 11)), false),
 		POLTERGEIST(52, PoltergeistRoom.class, list(spot(1, 10), spot(2, 10), spot(3, 5), spot(2, 4), spot(13, 4), spot(2, 12), spot(3, 4)), false),
 		UNHAPPY_GHOST(60, UnhappyGhostRoom.class, list(spot(2, 3), spot(3, 5), spot(3, 5), spot(2, 2), spot(3, 3), spot(2, 2), spot(4, 3)), false),
 		RETURN_THE_FLOW(66, ReturnTheFlowRoom.class, list(spot(3, 3), spot(2, 12), spot(2, 2), spot(4, 2), spot(3, 3), spot(2, 2), spot(2, 2))),
-		//COLOURED_RECESS(68, ColouredRecessRoom.class, list(spot(2, 3), spot(2, 3), spot(2, 3), spot(2, 3), spot(2, 3), spot(2, 5), spot(2, 3)), false),
-		//SLIDING_TILES(76, SlidingTilesRoom.class, list(spot(1, 2), spot(13, 7), spot(1, 2), spot(13, 7), spot(1, 2), spot(13, 7), spot(1, 2)))
 		;
 
 		private final int chunkX;
@@ -721,15 +664,8 @@ public class DungeonConstants {
 		}
 
 		public boolean isAvailableOnFloorType(FloorType floorType) {
-			//I think constructor args are uglier because some are exclude and some are include
 			if (this == POLTERGEIST && floorType == FloorType.Frozen)
 				return false;
-			/*if (this == FLOWER_ROOTS && floorType == 0) {
-				return false;
-			}*/
-			//if(this == ICY_PRESSURE_PAD && floorType != 0) {
-			//return false;
-			//}
 			return true;
 		}
 
@@ -766,79 +702,21 @@ public class DungeonConstants {
 		int ptr = 0;
 		PUZZLE_ROOMS = new HandledRoom[Puzzle.values().length * PUZZLE_DOOR_ORDER.length];
 		for (Puzzle puzzle : Puzzle.values())
-			//			if (Settings.getConfig().isDebug())
-			//				puzzle = Puzzle.TOXIN_MAZE; //FORCE PUZZLE ROOM
 			for (int i = 0; i < PUZZLE_DOOR_ORDER.length; i++)
 				PUZZLE_ROOMS[ptr++] = new HandledPuzzleRoom(i, puzzle);
 
-		//8 Monolith spot
-		//(4,4),(4,4),(4,4),(4,4),(4,4),(4,4),(4,5)
-		//10 Collapsing room (7, 1)
-		//14 Ghosts (3, 10) in small one,	(3, 3)
-		//(1,2),(3,10),(1,3),(1,3),(1,3),(1,3),(3,3)
-		//16 Three statue weapon (Combat triangle statues) (8, 7) + chisel too
-		//18 Follow the leader (Emotes) (7, 6)
-		//22 	Frozen: Icy Pressure Pad,
-		//		(8, 1), (8, 1), (8, 1), (1, 8), (14, 8), (14, 8), (8, 14)
-		//	Aba: Seeker Sentinel, //where no door else entrance? (8, 2) south (13, 7) east (7, 13)
-		//		(), (), (), (), (), (), ()
-		//	Furnished: Sleeping guards,
-		//		(8, 10),all
-		//	Occcult: Coloured bookcases,
-		//		(8, 11), (14, 3), (4, 3), (10, 11), (5, 1), (7, 2), (3, 3)
-		//	Warped: Portal maze
-		//		(13, 6), all
-		//28 Ten statue weapon (was 2-3 pairs on 1:1 on rs) (7, 8) on chisel
-		//30 Lodestone power //east of crystal? (10, 1) (14, 4)
-		//34 Suspicious grooves (11, 11) usually or opposite side
-		//(5, 12 or 10,12
-		//36 Agility Maze (4, 2) start always
-		//40 Barrel puzzle (6, 11) barrel part at (7, 11) or (9, 2)
-		//42 Sliding statues (1, 3)
-		//1,3 or 3,1
-		//44 Hunter ferret (8, 8) key ferret on (7, 8)
-		//ferrets: (8, 7), (8, 7), (7, 7), (8, 7), (7, 8), (8, 7), (8, 7)
-		//keys:    (7, 7), (8, 7), (7, 7), (7, 7), (7, 8), (7, 7), (8, 6)
-		//46 Magical Construct (8, 6)
-		//(), (), (), (), (), (), ()
-		//48 Enigmatic Hoardstalker (Riddles) (NOT ON FROZEN) (7, 8)
-		//(), (), (), (), (), (), ()
-		//54 Keystone bridge (NOT ON FROZEN)
-		//(9, 7), ??, (10,2) crit or (5, 13) bonus, (6, 2), (6, 2), (6, 2), (9, 2)
-		//56 Grapple tightrope
-		//(6, 2), (2, 2), (5, 1), (7, 2), (6, 1), (13, 1), (6, 1)
-		//58 Pondskaters
-		//(2, 2) or (13, 10), (<), (14, 8), (1, 6), (13, 7), (2,2 or 13,7), (13, 2)
-		//60 Unhappy ghost
-		//(2, 3), (3, 5), (3, 5), (2, 2), (3, 3), (2, 2), (4, 3)
-		//62 Broken plank bridge
-		//(6, 1), (6, 1), (6, 1), (6, 1), (7, 2), (6, 1), (6, 1)
-		//64 Statue bridge
-		//(13, 2), (9, 2), (4, 1), (6, 1), (9, 2), (8, 2), (9, 1)
-		//68 Coloured recess
-		//(2, 3), (2, 3), (2, 3), (2, 3), (2, 3), (2, 5), (2, 3)
-		//70 Winch bridge (6, 1), (1, 3), (9, 1), (9, 2), (8, 2), (6, 1), (8, 2)
-		//72 Mercenary leader (combat) (12, 13), (3, 11), (2, 13), (4, 4), (4 , 2), (3, 4), (2, 3)
-		//74 Ramokee familiars (combat) (4, 2), (3, 12), (2, 3), (2, 3), (2, 12), (3, 12), (5, 2)
-		//78 Coloured ferrets (1, 3), (14, 4), (2, 13), (2, 2), (3, 5), (2, 2), (1, 6)
 	}
 
 	public static final BossRoom[][] BOSS_ROOMS = {
-		// FloorType.FROZEN
 		{
-			// To'Kash The Blood Chiller
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 10024, 5, 10, false, DungeonConstants.BOSS_NPC), 820, 9, 26, 626),
 
-			// Plane-freezer Lakhrahnaz
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 9929, 7, 11, false, DungeonConstants.BOSS_NPC), 819, 6, 26, 624),
 
-			// Luminscent Icefiend
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 9912, 7, 11, false, DungeonConstants.BOSS_NPC), 818, 3, 26, 626),
 
-			// Icy Bones
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 10040, 7, 11, false, DungeonConstants.BOSS_NPC), 815, 1, 24, 626),
 
-			// Gluttonous behemoth
 			new BossRoom((dungeon, reference) -> {
 				dungeon.spawnNPC(reference, 9948, 5, 10, false, DungeonConstants.BOSS_NPC);
 				dungeon.spawnObject(reference, 49283, ObjectShape.SCENERY_INTERACT, 3, 0, 11);
@@ -846,66 +724,45 @@ public class DungeonConstants {
 					dungeon.spawnObject(reference, 49283, ObjectShape.SCENERY_INTERACT, 0, 11, 11);
 			}, 817, 1, 28, 624),
 
-			// Astea Frostweb
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 9965, 8, 12, false, DungeonConstants.BOSS_NPC), 816, 1, 30, 624),
 		},
-		// ABANDONED BOSSES
 		{
-			//Bal'Lak The Pummeler
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 10128, 6, 8, false, DungeonConstants.BOSS_NPC), 786, 33, 26, 642),
 
-			//Shadow-forger Ihlakhizan
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 10143, 6, 6, false, DungeonConstants.BOSS_NPC), 783, 30, 28, 640),
 
-			//Unholy cursebearer
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 10111, 6, 8, false, DungeonConstants.BOSS_NPC), 784, 15, 26, 640),
 
-			//Bulwark beast
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 10073, 5, 10, false, DungeonConstants.BOSS_NPC), 785, 12, 24, 642),
 
-			//Hobgoblin Geomancer
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 10059, 6, 8, false, DungeonConstants.BOSS_NPC), 787, 12, 24, 640),
 
-			//Divine Skinweaver
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 10058, 5, 2, false, DungeonConstants.BOSS_NPC), 782, 12, 30, 640)
 		},
-		// FURNISHED BOSSES
 		{
-			//Night-gazer Khighorahk
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 9725, 6, 6, false, DungeonConstants.BOSS_NPC), 759, 26, 24, 656),
 
-			//Sagittare
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 9753, 6, 6, false, DungeonConstants.BOSS_NPC), 768, 23, 24, 658),
 
-			//Lexicus Runewright
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 9842, 8, 7, false, DungeonConstants.BOSS_NPC), 738, 20, 26, 658),
 
-			//Lakk The Rift Splitter
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 9898, 6, 6, false, DungeonConstants.BOSS_NPC), 767, 18, 28, 656),
 
-			//Stomp
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 9782, 6, 9, false, DungeonConstants.BOSS_NPC), 743, 18, 30, 656),
 
-			//Rammernaut
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 9767, 7, 7, false, DungeonConstants.BOSS_NPC), 746, 18, 26, 656)
 		},
-		//
 		{
-			//Yk'lagoor the thunderous
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 11872, 5, 5, false, DungeonConstants.BOSS_NPC), 890, 45, 26, 672),
 
-			//Flesh-spoiler Haasghenahk
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 11925, 8, 7, false, DungeonConstants.BOSS_NPC), 892, 42, 24, 674),
 
-			//Necro Lord
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 11737, 7, 10, false, DungeonConstants.BOSS_NPC), 876, 39, 30, 672),
 
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 11708, 5, 5, false, DungeonConstants.BOSS_NPC), 891, 36, 28, 672),
 
-			//Runebound Behemoth
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 11812, 6, 8, false, DungeonConstants.BOSS_NPC), 877, 36, 26, 674),
 
-			//Skeletal Trio
 			new BossRoom((dungeon, reference) -> {
 				dungeon.spawnNPC(reference, 11940, 5, 6, false, DungeonConstants.BOSS_NPC);
 				dungeon.spawnNPC(reference, 12044, 7, 9, false, DungeonConstants.BOSS_NPC);
@@ -913,24 +770,17 @@ public class DungeonConstants {
 			}, 865, 36, 24, 672),
 
 		},
-		//
 		{
-			// Warmonger
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 12752, 6, 9, false, DungeonConstants.BOSS_NPC), 924, 57, 24, 690),
 
-			// World Gorger
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 12478, 5, 6, false, DungeonConstants.BOSS_NPC), 937, 54, 26, 690),
 
-			// Hope Devourer
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 12886, 8, 6, false, DungeonConstants.BOSS_NPC), 916, 51, 30, 688),
 
-			// Blink
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 12865, 5, 6, false, DungeonConstants.BOSS_NPC), 940, 48, 24, 688),
 
-			// Dreadnaut
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 12848, 7, 5, false, DungeonConstants.BOSS_NPC), 913, 48, 28, 688),
 
-			// Warped Gulega
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 12737, 8, 8, false, DungeonConstants.BOSS_NPC), 922, 48, 26, 688),
 		}
 	};

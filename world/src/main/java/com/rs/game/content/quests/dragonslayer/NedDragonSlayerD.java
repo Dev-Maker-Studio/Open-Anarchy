@@ -12,9 +12,6 @@ import static com.rs.game.content.quests.dragonslayer.DragonSlayer.*;
 
 @PluginEventHandler
 public class NedDragonSlayerD extends Conversation {
-	/**
-	 * Only called in PREPARE_FOR_CRANDOR stage.
-	 */
 	public NedDragonSlayerD(Player p) {
 		super(p);
 		AttribMap attr = p.getQuestManager().getAttribs(Quest.DRAGON_SLAYER);

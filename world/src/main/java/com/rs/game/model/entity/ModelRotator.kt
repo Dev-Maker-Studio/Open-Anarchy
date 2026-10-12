@@ -14,12 +14,6 @@ class ModelRotator {
         return this
     }
 
-    /**
-     * Converts this ModelRotator into a core [ModelOverrides] snapshot.
-     *
-     * Each entry's targetData is packed as the "key" and slotHashes as the "value".
-     * The core revision encoder unpacks and writes them; this class holds no wire format.
-     */
     fun toModelOverrides(): ModelOverrides {
         val keys = IntArray(curr)
         val values = IntArray(curr)

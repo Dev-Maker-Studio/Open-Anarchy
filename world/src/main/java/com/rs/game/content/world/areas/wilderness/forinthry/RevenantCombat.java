@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.world.areas.wilderness.forinthry;
 
 import com.rs.game.World;
@@ -55,7 +39,6 @@ public class RevenantCombat extends CombatScript {
             case 13479 -> 7515;
             case 13480 -> 7508;
             default ->
-                // melee emote, better than 0
                     npc.getCombatDefinitions().getAttackEmote();
         };
 	}
@@ -75,7 +58,6 @@ public class RevenantCombat extends CombatScript {
             case 13479 -> 7514;
             case 13480 -> 7522;
             default ->
-                // melee emote, better than 0
                     npc.getCombatDefinitions().getAttackEmote();
         };
 	}
@@ -87,7 +69,7 @@ public class RevenantCombat extends CombatScript {
 			npc.heal(100);
 
 		int attackStyle = Utils.random(3);
-		if (attackStyle == 2) { // checks if can melee
+		if (attackStyle == 2) {
 			int distanceX = target.getX() - npc.getX();
 			int distanceY = target.getY() - npc.getY();
 			int size = npc.getSize();
@@ -99,7 +81,7 @@ public class RevenantCombat extends CombatScript {
 			npc.soundEffect(target, 202, true);
 
 		switch (attackStyle) {
-		case 0: // magic
+		case 0:
 			int damage = getMaxHit(npc, defs.getMaxHit(), CombatStyle.MAGIC, target);
 			if (target instanceof Player player && player.hasEffect(Effect.REV_IMMUNE))
 				damage = 0;
@@ -120,7 +102,7 @@ public class RevenantCombat extends CombatScript {
 				}, 2);
 			npc.setNextAnimation(new Animation(getMagicAnimation(npc)));
 			break;
-		case 1: // range
+		case 1:
 			int damage2 = getMaxHit(npc, defs.getMaxHit(), CombatStyle.RANGE, target);
 			if (target instanceof Player player && player.hasEffect(Effect.REV_IMMUNE))
 				damage = 0;
@@ -128,7 +110,7 @@ public class RevenantCombat extends CombatScript {
 			World.sendProjectile(npc, target, 1278, new Pair<>(34, 16), 30, 7, 16);
 			npc.setNextAnimation(new Animation(getRangeAnimation(npc)));
 			break;
-		case 2: // melee
+		case 2:
 			int damage3 = getMaxHit(npc, defs.getMaxHit(), CombatStyle.MELEE, target);
 			if (target instanceof Player player && player.hasEffect(Effect.REV_IMMUNE))
 				damage = 0;

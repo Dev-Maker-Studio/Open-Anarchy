@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.utils.music;
 
 import com.google.gson.JsonIOException;
@@ -34,24 +18,11 @@ import java.util.*;
 
 @PluginEventHandler
 public class Music {
-	/** Summary of Music System
-	 * -When initially entering a region the songs associated with that region play first
-	 * from songs.json.
-	 * -Afterward genre ambient songs play. Region specific songs are added to that genre.
-	 * -When entering other regions the only time it switches songs is when the region
-	 * has a different genre in the genre map or the region has no genre. This means
-	 * less song changes as the player moves around.
-	 * -allowAmbient allows players to play the music as ambient music, though it is still
-	 * locked. This works to increase variety but never adds to unlocked music. This is
-	 * mostly used just to increase ambient song variety and does not affect region or
-	 * playlist music.
-	 * Chunks are secondary and do not change the current music but whatever plays next.
-	 */
-	private static final Map<Integer, Song> MUSICS = new HashMap<>();//Full music listing
-	private static final Map<Integer, int[]> MUSICS_REGION = new HashMap<>();//hints & unlocks
+	private static final Map<Integer, Song> MUSICS = new HashMap<>();
+	private static final Map<Integer, int[]> MUSICS_REGION = new HashMap<>();
 
-	private static final Map<Integer, Genre> GENRE_CHUNKS = new HashMap<>();//Genre per chunk
-	private static final Map<Integer, Genre> GENRE_REGION = new HashMap<>();//Genre per region
+	private static final Map<Integer, Genre> GENRE_CHUNKS = new HashMap<>();
+	private static final Map<Integer, Genre> GENRE_REGION = new HashMap<>();
 	private static final List<Genre> genres = new ArrayList<>();
 	private static Genre[] parentGenres;
 	private static final ArrayList<Integer> allowAmbientMusic = new ArrayList<>();
@@ -81,11 +52,6 @@ public class Music {
 			addGenresToChunkMap();
 			addGenresToRegionMap();
 
-
-
-
-
-			//Auto-unlock songs list.
 			for(Song s : songs)
 				if(s.isAllowAmbient())
 					allowAmbientMusic.add(s.getId());
@@ -101,7 +67,7 @@ public class Music {
 				for (int regionId : g.getRegionIds()) {
 					if (GENRE_REGION.containsKey(regionId))
 						throw new java.lang.Error("Error, duplicate key at: " + regionId);
-					GENRE_REGION.put(regionId, g);//none of the values can be empty
+					GENRE_REGION.put(regionId, g);
 				}
 	}
 	private static void addGenresToChunkMap() {
@@ -110,15 +76,10 @@ public class Music {
 				for (int chunkId : g.getChunkIds()) {
 					if (GENRE_CHUNKS.containsKey(chunkId))
 						throw new java.lang.Error("Error, duplicate key at: " + chunkId);
-					GENRE_CHUNKS.put(chunkId, g);//none of the values can be empty
+					GENRE_CHUNKS.put(chunkId, g);
 				}
 	}
 
-	/**
-	 * This is for the music system to check if a song is unlocked.
-	 * @param regionId
-	 * @return
-	 */
 	public static int[] getRegionMusics(int regionId) {
 		return MUSICS_REGION.get(regionId);
 	}
@@ -135,12 +96,6 @@ public class Music {
 		return MUSICS.keySet();
 	}
 
-	/**
-	 * Start with the region genre but if there are genre chunks then default to that.
-	 * Lastly make sure the genre is active.
-	 * @param player
-	 * @return
-	 */
 	public static Genre getGenre(Player player) {
 		Genre biomeGenre = GeneratedMusicKt.biomeGenre(player);
 		if(biomeGenre != null)

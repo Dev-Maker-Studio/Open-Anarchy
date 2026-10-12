@@ -35,17 +35,14 @@ public class WolfWhistleWellCutscene extends Cutscene {
 
 	private final static int SCALECTRIX = 15055;
 
-    // spot anims
 	private final static int SUMMONING_SPAWN = 1315;
 	private final static int ONE = 2860;
 	private final static int WOLPERTINGER_FEAR_FLASH = 2820;
 
-    // animations
 	private final static int WOLPERTINGER_FEAR_CAST = 15929;
 	private final static int WOLPERTINGER_DESPAWN = 15930;
 	private final static int WOLPERTINGER_SPAWN = 15932;
 	private final static int TROLL_COWER = 15921;
-    // 1522
 
 	private final String[] TROLL_KEYS = new String[]{"t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10", "t11", "t12"};
 	private final ArrayList<NPC> whiners = new ArrayList<>();
@@ -65,12 +62,12 @@ public class WolfWhistleWellCutscene extends Cutscene {
         npcCreate("wolfmeat", WOLF_MEAT, 15, 21, 0);
         npcCreate("wolfbones", WOLF_BONES, 13, 21, 0);
         npcCreate("trollflinter", TROLL_FLINTER, 11, 23, 0);
-        npcCreate("t0", TROLL_BONE, 16, 18, 0); // 3 with just bone frontline runner
+        npcCreate("t0", TROLL_BONE, 16, 18, 0);
         npcCreate("t1", TROLL_BONE, 10, 27, 0);
         npcCreate("t2", TROLL_BONE, 15, 25, 0);
-        npcCreate("t3", TROLL_BONE_SHIELD, 11, 17, 0); // 2 with bone + shield frontline runner
-        npcCreate("t4", TROLL_BONE_SHIELD, 11, 21, 0); // runner
-        npcCreate("t5", TROLL_CLUB, 16, 17, 0); // 8 with club frontline runner
+        npcCreate("t3", TROLL_BONE_SHIELD, 11, 17, 0);
+        npcCreate("t4", TROLL_BONE_SHIELD, 11, 21, 0);
+        npcCreate("t5", TROLL_CLUB, 16, 17, 0);
         npcCreate("t6", TROLL_CLUB, 10, 23, 0);
         npcCreate("t7", TROLL_CLUB, 11, 25, 0);
         npcCreate("t8", TROLL_CLUB, 13, 25, 0);
@@ -158,7 +155,7 @@ public class WolfWhistleWellCutscene extends Cutscene {
             });
         });
         delay(2);
-        npcMove("t4", 8, 20, MoveType.WALK); // maybe run
+        npcMove("t4", 8, 20, MoveType.WALK);
         {
             Animation cower = new Animation(TROLL_COWER);
             for (String key : TROLL_KEYS) {

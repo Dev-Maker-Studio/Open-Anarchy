@@ -200,7 +200,7 @@ class CastleWarsPlayingController(private val team: Int) : Controller() {
             passBarrier(obj)
             return false
         }
-        if (id == 4377 || id == 4378) { // no flag anymore
+        if (id == 4377 || id == 4378) {
             if (id == 4377 && team == CastleWars.SARADOMIN) {
                 if (player.equipment.weaponId == 4039) {
                     CastleWars.addScore(player, team, CastleWars.ZAMORAK)
@@ -212,7 +212,7 @@ class CastleWarsPlayingController(private val team: Int) : Controller() {
             }
             player.sendMessage("You need to bring a flag back here!")
             return false
-        } else if (id == 4902 || id == 4903) { // take flag
+        } else if (id == 4902 || id == 4903) {
             if (id == 4902 && team == CastleWars.SARADOMIN) {
                 if (player.equipment.weaponId == 4039) {
                     CastleWars.addScore(player, team, CastleWars.ZAMORAK)
@@ -225,10 +225,10 @@ class CastleWarsPlayingController(private val team: Int) : Controller() {
                     return false
                 }
                 player.sendMessage("Zamorak won't let you take his flag!")
-            } else  // take flag
+            } else
                 CastleWars.takeFlag(player, team, if (id == 4902) CastleWars.SARADOMIN else CastleWars.ZAMORAK, obj, false)
             return false
-        } else if (id == 4900 || id == 4901) { // take dropped flag
+        } else if (id == 4900 || id == 4901) {
             CastleWars.takeFlag(player, team, if (id == 4900) CastleWars.SARADOMIN else CastleWars.ZAMORAK, obj, true)
             return false
         } else if (id == 36579 || id == 36586) {
@@ -240,8 +240,7 @@ class CastleWarsPlayingController(private val team: Int) : Controller() {
         } else if (id == 36577 || id == 36584) {
             player.inventory.addItem(Item(4045))
             return false
-            // under earth from basess
-        } else if (id == 4411) { // stepping stone
+        } else if (id == 4411) {
             if (obj.x == player.x && obj.y == player.y) return false
             player.lock(2)
             player.anim(741)
@@ -302,12 +301,7 @@ class CastleWarsPlayingController(private val team: Int) : Controller() {
             else if (obj.y == 3108) player.useStairs(827, Tile.of(2400, 9507, 0), 1, 2)
             player.freeze(0)
             return false
-        } /*
-		 * else if (id == 4438) player.getActionManager().setSkill(new
-		 * Mining(object, RockDefinitions.SMALLER_ROCKS)); else if (id == 4437)
-		 * player.getActionManager().setSkill(new Mining(object,
-		 * RockDefinitions.ROCKS ));
-		 */
+        }
         else if (id == 4448) {
             for (players in CastleWars.getPlaying())
                 for (player in players)

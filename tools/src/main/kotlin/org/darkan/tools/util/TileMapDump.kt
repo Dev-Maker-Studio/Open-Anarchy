@@ -5,12 +5,6 @@ import org.darkan.tools.cache.terrain.TerrainLoader
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
 
-/**
- * Headless diagnostic that prints an ASCII map of a region's tile data so overlay
- * layout (water pools, mud borders, paths) can be inspected without launching the viewer.
- *
- * Usage: tools tilemap <regionX> <regionY> [plane] [x0] [y0] [x1] [y1]
- */
 fun runTileMapDump(cache: Cache, args: List<String>) {
     val regionX = args.getOrNull(0)?.toIntOrNull() ?: 54
     val regionY = args.getOrNull(1)?.toIntOrNull() ?: 54
@@ -65,7 +59,6 @@ fun runTileMapDump(cache: Cache, args: List<String>) {
     }
     println()
 
-    // Map each overlay id to a single printable char for the grid.
     val chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
     val symbolFor = HashMap<Int, Char>()
     overlayIds.forEachIndexed { i, id -> symbolFor[id] = chars[i % chars.length] }
@@ -139,8 +132,6 @@ fun runTileMapDump(cache: Cache, args: List<String>) {
         for ((id, acc) in depthByOverlay.entries.sortedBy { it.key }) {
             println("  overlay $id: ${acc[0]} tiles with depth, ${acc[1]} without")
         }
-        // Corner-level view: the shoreline band can only exist on tiles whose four corners
-        // span the waterline, so count those specifically.
         var allZero = 0
         var mixed = 0
         var allDeep = 0
@@ -176,9 +167,6 @@ fun runTileMapDump(cache: Cache, args: List<String>) {
             val depth = (tiles[x][y].height - bedTiles[x][y].height) / 32
             if (depth <= 0) '.' else chars[depth.coerceAtMost(35)]
         }
-        // The underwater archive carries its own overlays, and in the client those are what
-        // lift bed vertices back up to the water surface. Whether this region uses that at
-        // all decides how wide the mud band can legitimately be.
         var bedOverlays = 0
         for (x in x0..x1) for (y in y0..y1) if (bedTiles[x][y].overlayId > 0) bedOverlays++
         println("--- BED OVERLAY TILES: $bedOverlays over range ---")
@@ -193,7 +181,6 @@ fun runTileMapDump(cache: Cache, args: List<String>) {
         }
     }
 
-    // Height field, relative to the minimum in range, in units of 32 (quarter tile step).
     var minH = Int.MAX_VALUE
     for (x in x0..x1) for (y in y0..y1) minH = minOf(minH, tiles[x][y].height)
     grid("HEIGHT (steps of 32 above min=$minH, '+' = >35 steps)") { x, y ->
@@ -201,10 +188,6 @@ fun runTileMapDump(cache: Cache, args: List<String>) {
         if (step > 35) '+' else chars[step.coerceAtLeast(0)]
     }
 
-    // The bucketed grid above saturates wherever a region spans more than 35 quarter-tile
-    // steps, which is most of any region with a cliff in it. For a small window print the
-    // raw numbers too -- distinguishing genuinely stepped map data from a rendering fault
-    // needs the actual values, not a bucket.
     if (x1 - x0 <= 24 && y1 - y0 <= 40) {
         println()
         println("--- RAW HEIGHT (RS units, north up, x increases right) ---")

@@ -28,7 +28,6 @@ import org.darkan.core.gameval.gen.Varbit;
 @PluginEventHandler
 public class WolfWhistle extends QuestOutline {
 
-    // stages
     public static final int NOT_STARTED = 0;
     public static final int FIND_SCALECTRIX = 1;
     public static final int PIKKUPSTIX_HELP = 2;
@@ -38,23 +37,20 @@ public class WolfWhistle extends QuestOutline {
     public static final int SAVE_BOWLOFTRIX = 6;
     public static final int QUEST_COMPLETE = 7;
 
-    // animations
     public static final int POUCH_INFUSION = 725;
-    // item ids
     public static final int WHITE_HARE_MEAT = 23067;
     public static final int EMBROIDERED_POUCH = 23068;
     public static final int RARE_SUMMONING_ITEMS = 23069;
     public static final int ANCIENT_WOLF_BONE_AMULET = 23066;
     public static final int GIANT_WOLPERTINGER_POUCH = 23070;
     public static final int GOLD_CHARM = 12158;
-    // object ids
     static final int CLUTTERED_DRAWERS = 28641;
     static final int CLUTTERED_SHELVES = 67496;
     static final int UNTIDY_SHELVES = 67495;
     static final int CROWDED_SHELVES = 67497;
     static final int HEAPED_BOOKS = 67494;
     static final int DISCARDED_BOOKS = 65849;
-    static final int STIKKLEBRIX_BODY = 67488; // varbit 10734
+    static final int STIKKLEBRIX_BODY = 67488;
     public static LoginHandler handleLoginVarbit = new LoginHandler(e -> {
         Player p = e.getPlayer();
 
@@ -167,7 +163,7 @@ public class WolfWhistle extends QuestOutline {
             }
             case SAVE_BOWLOFTRIX -> {
                 lines.add("Pikkupstix has told me that the pouch is working correctly. He");
-                lines.add("has told me to take it to Scalectrix by the the old well."); // typo intentional
+                lines.add("has told me to take it to Scalectrix by the the old well.");
                 lines.add("");
             }
             case QUEST_COMPLETE -> {

@@ -252,7 +252,6 @@ enum class Attack(val range: Int, val attackFunc: PKBotNPC.(Entity) -> Int) {
         val ammoId = equipment.get(Equipment.AMMO)?.id ?: -1
         val combatDelay = getRangeCombatDelay(weaponId, attackStyle)
         val p = weapon.sendProjectile(this, target, combatDelay, ammoId)
-        //val hit = calculateHit(this, target, weaponId, attackStyle, true)
         val hit = Hit.range(this, getMaxHit(this, CombatStyle.RANGE, target))
         delayHit(target, p.taskDelay, weaponId, attackStyle, hit)
         anim(weaponConfig.getAttackAnim(attackStyle.index))

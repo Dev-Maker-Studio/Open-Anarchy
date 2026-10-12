@@ -5,11 +5,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-/**
- * How a source file says which script it is. The binding is what the cache source
- * tree packer resolves an id through, so a file that could be read two ways - or
- * silently filed under the wrong archive - is the failure that matters here.
- */
 class Cs2LayoutTest {
 
     @Test
@@ -20,9 +15,6 @@ class Cs2LayoutTest {
 
     @Test
     fun `a header that names nothing does not fall through to the path`() {
-        // Falling back to the path here would compile the file into whichever
-        // archive it happened to be filed under - the silent mis-binding the
-        // layout has to rule out.
         val source = "// [proc,not_a_real_script_name_at_all]\nfunction f(): void {}\n"
         assertNull(Cs2Layout.scriptIdOf(source, "proc/quicksort.ts"))
     }

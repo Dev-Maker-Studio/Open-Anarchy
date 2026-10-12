@@ -5,10 +5,6 @@ import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 import java.util.Random
 
-/**
- * Type 38: Line noise generator.
- * Creates random line patterns across the texture.
- */
 class TextureOpLineNoise : TextureOperation(0, true) {
     private var randomSeed: Int = 0
     private var lineCount: Int = 2000
@@ -54,7 +50,6 @@ class TextureOpLineNoise : TextureOperation(0, true) {
                     var y1 = endY
 
                     if (steep) {
-                        // Swap x and y
                         x0 = startY
                         y0 = startX
                         x1 = endY
@@ -62,7 +57,6 @@ class TextureOpLineNoise : TextureOperation(0, true) {
                     }
 
                     if (x0 > x1) {
-                        // Swap start and end
                         val tempX = x0
                         val tempY = y0
                         x0 = x1

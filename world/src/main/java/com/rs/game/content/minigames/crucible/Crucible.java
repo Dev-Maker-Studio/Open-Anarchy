@@ -18,14 +18,7 @@ import java.util.stream.Collectors;
 
 @PluginEventHandler
 public class Crucible {
-    //1291 = teleport interface
-    //1292 = warning interface
-    //1294-1295 = crucible help interface
-    //1296 = overlay
-    //1297 = rewards
-    //1298 = bounty fee payment
 
-    //591 classic BH interface
 
     public static ObjectClickHandler entrance = new ObjectClickHandler(new Object[]{67052}, e -> e.getPlayer().sendOptionDialogue("Which Bounty Hunter mode would you like to enter as?", ops -> {
         ops.add("Safe (No items lost on death)", () -> {
@@ -97,25 +90,10 @@ public class Crucible {
         player.getPackets().setIFText(1296, 0, participants.toString());
     }
 
-    /**
-     * -1 = none
-     * 0 = lowest rank (6)
-     * 1 = rank 5
-     * 2 = rank 4
-     * 3 = rank 3
-     * 4 = rank 2
-     * 5 = rank 1
-     * 6 = supreme champion
-     * 7 = temporarily invulnerable
-     */
     private static void updateRank(Player player, int tier) {
         player.getPackets().sendRunScript(6284, tier);
     }
 
-    /**
-     * Positive values add points
-     * 0 or lower values remove all points
-     */
     public static void updateRankPoints(Player player, int currPoints, int amountToAddOrRemove) {
         if (amountToAddOrRemove != 0)
             player.getPackets().sendRunScript(6288, amountToAddOrRemove);

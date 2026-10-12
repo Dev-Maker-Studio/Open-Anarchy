@@ -7,11 +7,6 @@ import org.darkan.core.update.PlayerAppearanceData
 import world.gregs.voidps.buffer.write.BufferWriter
 import kotlin.math.abs
 
-/**
- * Rev727 entity update protocol (PlayerUpdate/NpcUpdate).
- *
- * All revision-oriented update encoding lives here.
- */
 object Rev727UpdateProtocol : UpdateProtocol {
 
     override val playerBitConfig = PlayerBitConfig(
@@ -38,9 +33,6 @@ object Rev727UpdateProtocol : UpdateProtocol {
         planeBits = 2,
     )
 
-    // ----------------------------
-    // Appearance
-    // ----------------------------
 
     override fun encodePlayerAppearance(data: PlayerAppearanceData): PlayerAppearance =
         PlayerAppearance.of(Rev727AppearanceEncoder.encode(data))
@@ -58,9 +50,6 @@ object Rev727UpdateProtocol : UpdateProtocol {
         largeSceneView: Boolean,
     ): NpcUpdateFrame = Rev727NpcUpdateDecoder.decode(data, state, npcBitConfig, localTileHash30, largeSceneView)
 
-    // ----------------------------
-    // Player update
-    // ----------------------------
 
     override fun encodePlayerUpdate(snapshot: PlayerUpdateSnapshot, state: PlayerUpdateTrackingState): ByteArray {
         val local = snapshot.playersByIndex[snapshot.localIndex] ?: return ByteArray(0)
@@ -349,9 +338,6 @@ object Rev727UpdateProtocol : UpdateProtocol {
         out.writeBytes(block.toArray())
     }
 
-    // ----------------------------
-    // NPC update
-    // ----------------------------
 
     override fun encodeNpcUpdate(snapshot: NpcUpdateSnapshot, state: NpcUpdateTrackingState): ByteArray {
         val cfg = npcBitConfig
@@ -411,9 +397,6 @@ object Rev727UpdateProtocol : UpdateProtocol {
                         stream.writeBits(cfg.walkDirectionBits, npc.nextWalkDirection)
                         stream.writeBits(cfg.walkDirectionBits, npc.nextRunDirection ?: 0)
                     }
-                    // TELEPORT is filtered upstream via hasTeleported; NPCs that teleport
-                    // are removed from the local list and re-added with the 1-bit teleport flag,
-                    // so this branch should never execute in practice.
                     MoveType.TELEPORT -> {}
                 }
                 stream.writeBits(1, if (needUpdate) 1 else 0)

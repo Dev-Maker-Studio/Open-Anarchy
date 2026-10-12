@@ -1,10 +1,5 @@
 package org.darkan.core.update
 
-/**
- * Lightweight builders for revision-agnostic update blocks.
- *
- * These are intended for world logic to construct update blocks without hand-building arrays.
- */
 
 class CommonUpdateBlocksBuilder {
     var tint: Tint? = null

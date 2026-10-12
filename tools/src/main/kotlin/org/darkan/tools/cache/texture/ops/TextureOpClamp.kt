@@ -4,9 +4,6 @@ import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 import kotlin.math.min
 
-/**
- * Type 6: Clamps pixel values to a min/max range.
- */
 class TextureOpClamp : TextureOperation(1, false) {
     private var minValue: Int = 0
     private var maxValue: Int = 4096

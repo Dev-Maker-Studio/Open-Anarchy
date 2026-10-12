@@ -3,24 +3,15 @@ package org.darkan.tools.cache.texture.ops
 import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 
-/**
- * Type 25: Adjusts brightness of pixels matching a target color.
- * Pixels within tolerance of the target color have their RGB multiplied.
- */
 class TextureOpBrightness : TextureOperation(1, false) {
-    /** Blue multiplier (12-bit fixed-point) */
     private var blueMul: Int = 4096
 
-    /** Green multiplier (12-bit fixed-point) */
     private var greenMul: Int = 4096
 
-    /** Red multiplier (12-bit fixed-point) */
     private var redMul: Int = 4096
 
-    /** Color match tolerance (12-bit fixed-point) */
     private var tolerance: Int = 409
 
-    /** Target color for matching (12-bit R, G, B) */
     private val targetColor: IntArray = IntArray(3)
 
     override fun getColorOutput(y: Int): Array<IntArray> {
@@ -41,7 +32,6 @@ class TextureOpBrightness : TextureOperation(1, false) {
                 if (redDelta < 0) redDelta = -redDelta
 
                 if (redDelta > tolerance) {
-                    // Red out of tolerance - pass through
                     outputRed[x] = red
                     outputGreen[x] = childGreen[x]
                     outputBlue[x] = childBlue[x]
@@ -51,7 +41,6 @@ class TextureOpBrightness : TextureOperation(1, false) {
                     if (greenDelta < 0) greenDelta = -greenDelta
 
                     if (greenDelta > tolerance) {
-                        // Green out of tolerance - pass through
                         outputRed[x] = red
                         outputGreen[x] = green
                         outputBlue[x] = childBlue[x]
@@ -61,12 +50,10 @@ class TextureOpBrightness : TextureOperation(1, false) {
                         if (blueDelta < 0) blueDelta = -blueDelta
 
                         if (blueDelta > tolerance) {
-                            // Blue out of tolerance - pass through
                             outputRed[x] = red
                             outputGreen[x] = green
                             outputBlue[x] = blue
                         } else {
-                            // All within tolerance - apply brightness multipliers
                             outputRed[x] = red * redMul shr 12
                             outputGreen[x] = green * greenMul shr 12
                             outputBlue[x] = blue * blueMul shr 12

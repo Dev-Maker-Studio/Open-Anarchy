@@ -8,8 +8,8 @@ description: How to author and change 727 clientscripts, interface components an
 The client's interface behaviour is TypeScript in `cache-source/clientscripts/<category>/<name>.ts`,
 compiled back into index 12 whenever the cache is built. This skill is the working knowledge for
 changing it; `reference.md` beside it holds two worked examples (the bank placeholder button, the
-world list bot icon). The toolchain itself is documented in `docs/cs2-editor.md`, the tree in
-`docs/cache-source.md`. Code standards (`darkan-code-standards`) apply unchanged: gamevals for every
+world list bot icon). The toolchain itself is documented in `src/engine/cs2-editor.md`, the tree in
+`src/engine/cache-source.md`. Code standards (`darkan-code-standards`) apply unchanged: gamevals for every
 id, real names for what we author, no comments, no attribution.
 
 ## 1. The loop
@@ -54,7 +54,7 @@ the looking.
    **State** panel, saving a `.ts` reloads it, and F7 re-reads everything. Graphics, fonts and
    models still come from the packed cache, so a *new* graphic needs step 2. `tools cs2 interface
    <id>` runs the load scripts on the VM in seconds but takes no `--var` and reports no ccs, so it
-   is no use for a var-driven interface. See `docs/cs2-editor.md`, "Live source mode".
+   is no use for a var-driven interface. See `src/engine/cs2-editor.md`, "Live source mode".
    Loop over several states with a bash script (`while read -r name skill tab; do ...; done`), not
    a zsh one-liner: the Bash tool's shell is zsh and `set -- $spec` does not split there.
 2. **Pack**: `tools cache build cache-source data/cache` compiles every clientscript, so a type or
@@ -398,7 +398,7 @@ corrected opcode is added to the `Cs2Op` enum by hand.
   tables, and is unreferenced now along with `cs2_1567`. The 52 hard-coded per-skill table scripts they
   used to dispatch to (`cs2_2`, `cs2_3`, `cs2_977`-`cs2_1022`, `cs2_2787`, `cs2_2788`, `cs2_3354`,
   `cs2_3355`) are unreferenced and left in place. Adding a guide row = one struct + one enum entry at
-  the right level position; never a script edit. The RS3 urn port (`docs/rs3-port.md`) is the worked
+  the right level position; never a script edit. The RS3 urn port (`src/engine/rs3-port.md`) is the worked
   example of adding objs, seqs, structs, models and guide rows together.
 - **Var-driven interface state**: `onLoadScript` + `onVarpTransmit` (`varps: [parent varp]`) on the
   component, running a `[clientscript,x]` that calls `[proc,x]`; the proc reads `varbit_x` and sets

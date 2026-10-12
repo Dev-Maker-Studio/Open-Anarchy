@@ -11,13 +11,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * The four audio indices that are not index 4, each through its own codec over the whole cache.
- *
- * Indices 6 and 11 are standard MIDI files and have to pack back to the shipped compact encoding;
- * indices 14 and 15 are bytes and are exact by construction, so what is measured for them is that
- * the layout addresses every archive and that index 14's derived listing describes them.
- */
 class AudioCodecTest {
 
     @Test
@@ -69,7 +62,6 @@ class AudioCodecTest {
             assertEquals(Owner.Index, VorbisCodec.owner(directory, VorbisCodec.MANIFEST), "the listing is derived")
             assertEquals(Owner.Archive(7), VorbisCodec.owner(directory, "7.jagvorbis"))
 
-            // The header the listing reports is the one the payload carries.
             val first = Files.readAllBytes(directory.resolve("1.jagvorbis"))
             val sample = JagexVorbis.sample(first)
             assertEquals(22050, sample.sampleRate)

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.rooms.puzzles;
 
 import com.rs.engine.dialogue.HeadE;
@@ -55,7 +39,6 @@ public class UnhappyGhostRoom extends PuzzleRoom {
 
 	@Override
 	public boolean processObjectClick1(Player player, GameObject object) {
-		//TODO: You can fail skill related tasks
 		if (object.getId() == DAMAGED_PILLAR[type.ordinal()]) {
 			if (!hasRequirement(player, Constants.CONSTRUCTION)) {
 				player.sendMessage("You need a construction level of " + getRequirement(Constants.CONSTRUCTION) + " to repair this pillar.");
@@ -107,7 +90,6 @@ public class UnhappyGhostRoom extends PuzzleRoom {
 				player.sendMessage("You need a prayer level of " + getRequirement(Constants.PRAYER) + " to bless these remains.");
 				return false;
 			}
-			//TODO: failing drains prayer
 			giveXP(player, Constants.PRAYER);
 			player.lock(3);
 			player.setNextAnimation(new Animation(833));

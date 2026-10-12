@@ -55,41 +55,14 @@ import org.darkan.cs2.ir.VarRef
 import org.darkan.cs2.ir.VarSpace
 import org.darkan.cs2.ir.While
 
-/**
- * Parses the TypeScript subset the decompiler emits back into the IR.
- *
- * Local slots are assigned by declaration order within each type - parameters
- * first, then `let` declarations - so locals can be renamed freely without
- * changing which slot they compile to.
- */
 class Cs2Parser(
     source: String,
-    /** Resolves whether a param id yields a string; see [Cs2Context]. */
     private val paramTypes: (Int) -> Boolean = { false },
-    /**
-     * Resolves identifiers that have been renamed away from their default
-     * names. Without one, only the generated names are understood - which is
-     * enough to compile a file nobody has touched.
-     */
     private val symbols: Cs2SymbolTable = Cs2SymbolTable.EMPTY,
-    /**
-     * Where the file sits under the project folder, e.g. `proc/quicksort.ts`.
-     *
-     * The layout is a binding in its own right - the catalog turns a script's name
-     * into its archive id, and the path spells that name out - so it stands in for
-     * a header a hand-made file never had.
-     */
     private val relativePath: String? = null,
-    /**
-     * What a called script leaves on the stacks, in push order. A destructuring
-     * declaration has nowhere to write the types of the names it introduces, so
-     * they come from the call on its right.
-     */
     private val returnTypes: (Int) -> List<Cs2Type> = { emptyList() },
 ) {
 
-    // What the file says it is: its gameval name, or the numbered header an older
-    // dump wrote. See [Cs2Layout.scriptIdOf].
     private val headerId: Int? = Cs2Layout.scriptIdOf(source, relativePath)
 
     private val gamevalHeader: String? = Cs2Layout.gamevalHeader(source)
@@ -113,7 +86,6 @@ class Cs2Parser(
     private var scriptName: String? = null
     private var returns = emptyList<Cs2Type>()
 
-    /** The declared parameter types in declaration order; see [parseHeader]. */
     private val argumentTypes = ArrayList<Cs2Type>()
 
     fun parse(): Cs2Function {
@@ -133,14 +105,9 @@ class Cs2Parser(
         )
     }
 
-    // ------------------------------------------------------------- signature
 
     private fun parseSignature() {
         val name = parseHeader()
-        // The header is authoritative, so the function can be renamed freely. A
-        // header naming a script the catalogs no longer have is an error rather
-        // than something to fall back from: falling back would compile this file
-        // into whatever archive the function name happens to resolve to.
         if (headerId == null && gamevalHeader != null) {
             error(
                 "'$gamevalHeader' is not a clientscript in gamevals/clientscript.json; " +
@@ -151,17 +118,6 @@ class Cs2Parser(
             ?: error("Cannot tell which clientscript '$name' is")
     }
 
-    /**
-     * The declaration itself - `function name(a: number, b: string): [number, string] {` - up to
-     * and including the brace that opens the body, leaving [returns] and the argument slots set.
-     *
-     * Split out of [parseSignature] because which script a file *is* and what its signature *says*
-     * are separate questions, and [Companion.signature] asks only the second one: a folder about to
-     * be compiled needs every other file's signature, and resolving 6,567 headers against the
-     * catalogs to get them would refuse the whole folder over one orphan.
-     *
-     * @return the function's name, which is what a caller writes.
-     */
     private fun parseHeader(): String {
         scriptName = nameComment
         while (peek().kind == TokenKind.IDENT && peek().text != "function") skip()
@@ -173,8 +129,6 @@ class Cs2Parser(
             expectPunct(":")
             val type = parseType()
             declare(parameter, type, argument = true)
-            // Declaration order, which can interleave the stacks and is therefore not the slot
-            // order; it is the order callers push in and the order a signature has to be read in.
             argumentTypes.add(type)
             if (atPunct(",")) skip()
         }
@@ -224,7 +178,6 @@ class Cs2Parser(
         return local
     }
 
-    // ------------------------------------------------------------ statements
 
     private fun parseBlock(): List<Stmt> {
         val out = ArrayList<Stmt>()
@@ -237,8 +190,6 @@ class Cs2Parser(
     }
 
     private fun parseStatement(): Stmt? {
-        // An empty statement carries no instructions; it only exists so a label
-        // at the end of a block is valid TypeScript.
         if (atPunct(";")) {
             skip()
             return null
@@ -262,7 +213,6 @@ class Cs2Parser(
                 "break" -> { skip(); expectPunct(";"); return Break() }
                 "continue" -> { skip(); expectPunct(";"); return Continue() }
             }
-            // `L12:` is a jump label, not an expression.
             if (tokens.getOrNull(at + 1)?.text == ":" && token.text.startsWith("L")) {
                 skip()
                 skip()
@@ -276,19 +226,13 @@ class Cs2Parser(
     private fun parseDeclaration(): Stmt? {
         val keyword = expect(TokenKind.IDENT).text
         if (atPunct("[")) {
-            // `const [...]` names a call's results; `let [...]` puts them
-            // straight into locals it declares as it goes.
             return if (keyword == "const") parseTemporaries() else parseDeclaredDestructuring()
         }
 
         val name = expect(TokenKind.IDENT).text
         expectPunct(":")
         val type = parseType()
-        // Slots are handed out in declaration order, which is what lets a local
-        // be renamed to anything: the name never says which slot it is.
         val local = declare(name, type, argument = false)
-        // A declaration with no initialiser only reserves the slot; one with an
-        // initialiser is an ordinary store that happens to introduce the name.
         if (!atPunct("=")) {
             expectPunct(";")
             return null
@@ -299,7 +243,6 @@ class Cs2Parser(
         return LocalAssign(local.slot, local.type, value, declare = true)
     }
 
-    /** `[a, b] = f();` - a call's results, stored into locals that already exist. */
     private fun parseDestructuring(): Stmt {
         expectPunct("[")
         val targets = ArrayList<Expr>()
@@ -316,13 +259,6 @@ class Cs2Parser(
         return DestructureAssign(targets, call, declare = false)
     }
 
-    /**
-     * `let [a, b] = f();` - a call's results, into locals it declares here.
-     *
-     * The names are read before the call so the call can say what they are: a
-     * destructured name has no type annotation, and which stack it lives on is
-     * exactly what decides the opcode that stores it.
-     */
     private fun parseDeclaredDestructuring(): Stmt {
         expectPunct("[")
         val names = ArrayList<String>()
@@ -345,7 +281,6 @@ class Cs2Parser(
         return DestructureAssign(targets, call, declare = true)
     }
 
-    /** The stacks a multi-value call leaves its results on, in push order. */
     private fun resultTypes(call: Expr): List<Cs2Type> = when (call) {
         is ScriptCall -> returnTypes(call.scriptId)
         is OpCall -> List(call.op.pushInt) { Cs2Type.INT } +
@@ -354,7 +289,6 @@ class Cs2Parser(
         else -> error("$call does not leave several values")
     }
 
-    /** `const [tmpInt0, tmpStr0] = f();` - a call's results, bound to names. */
     private fun parseTemporaries(): Stmt {
         expectPunct("[")
         val names = ArrayList<String>()
@@ -373,11 +307,6 @@ class Cs2Parser(
 
     private val tempTypes = HashMap<String, TempRef>()
 
-    /**
-     * Which stack an opcode's single result lands on. This decides whether `+`
-     * means arithmetic or string joining, so guessing `number` would silently
-     * turn a `JOIN_STRING` into an `ADD`.
-     */
     private fun opResultType(op: Cs2Op, args: List<Expr>): Cs2Type {
         if (op.kind == OpKind.PARAM) {
             val yieldsString = if (op == Cs2Op.ENUM) {
@@ -395,14 +324,6 @@ class Cs2Parser(
         }
     }
 
-    /**
-     * Turns a spelled-out constant back into the integer it packs. This is the
-     * inverse of the decompiler's typed-constant rendering.
-     *
-     * A gameval constant has already become an [IntConst] by the time it gets
-     * here, so a name and a number reach the bytecode identically; `scriptId`
-     * additionally accepts the referenced script's own function.
-     */
     private fun packedConstant(name: String, args: List<Expr>): Expr? {
         val values = args.map {
             when (it) {
@@ -422,7 +343,6 @@ class Cs2Parser(
         return TypedConst(packed, kind)
     }
 
-    /** Destructured results carry their stack in the name. */
     private fun tempType(name: String) = when {
         name.startsWith("tmpStr") -> Cs2Type.STRING
         name.startsWith("tmpLong") -> Cs2Type.LONG
@@ -452,7 +372,6 @@ class Cs2Parser(
     private fun parseWhile(): Stmt {
         expectIdent("while")
         expectPunct("(")
-        // `while (true)` is a loop with its test written out in the body.
         val condition = if (peek().text == "true") skip().let { null } else parseCondition()
         expectPunct(")")
         expectPunct("{")
@@ -484,20 +403,15 @@ class Cs2Parser(
             cases.add(SwitchCase(keys, parseCaseBody()))
         }
         skip()
-        // Where `default:` sits says nothing about the layout any more: the code
-        // generator writes the jump-to-default shape, which is the one the
-        // structurer reads back, unless the arms are a bare jump table.
         return Switch(subject, cases, default, table = -1)
     }
 
-    /** The number a constant expression holds, whatever spelling it was given. */
     private fun constantValue(value: Expr): Int = when (value) {
         is IntConst -> value.value
         is TypedConst -> value.value
         else -> error("Expected a constant, but found $value")
     }
 
-    /** A case key is any constant expression, so `case colour(0xFF0000):` works. */
     private fun parseCaseKey(): Int = when (val key = parseExpression()) {
         is IntConst -> key.value
         is TypedConst -> key.value
@@ -538,7 +452,6 @@ class Cs2Parser(
         return Return(values)
     }
 
-    /** `[a, b] = [x, y];` - a parallel assignment, or a destructured call. */
     private fun parseParallelAssign(): Stmt {
         val mark = at
         expectPunct("[")
@@ -551,8 +464,6 @@ class Cs2Parser(
         }
         skip()
         expectPunct("=")
-        // A list on the right is a parallel assignment; anything else is a call
-        // whose results go straight into the targets.
         if (!atPunct("[")) {
             at = mark
             return parseDestructuring()
@@ -590,7 +501,6 @@ class Cs2Parser(
         return ExprStmt(target)
     }
 
-    // ----------------------------------------------------------- expressions
 
     private fun parseCondition(): Condition = parseOr()
 
@@ -614,11 +524,6 @@ class Cs2Parser(
         return if (terms.size == 1) terms.first() else AndAll(terms)
     }
 
-    /**
-     * A leading `(` is ambiguous: it opens either a grouped condition or a
-     * parenthesised operand. Try the group first and rewind if it does not
-     * close cleanly.
-     */
     private fun parseComparison(): Condition {
         if (atPunct("!")) {
             skip()
@@ -640,7 +545,6 @@ class Cs2Parser(
                     return inner
                 }
             } catch (e: Exception) {
-                // fall through to the operand reading below
             }
             at = mark
         }
@@ -664,10 +568,6 @@ class Cs2Parser(
         return Compare(op, left, right, negated = false)
     }
 
-    /**
-     * Binary operators by binding strength, loosest first - TypeScript's own
-     * order, which is what the decompiler prints against.
-     */
     private val precedenceLevels = listOf(
         setOf("|"), setOf("&"), setOf("+", "-"), setOf("*", "/", "%"),
     )
@@ -678,9 +578,6 @@ class Cs2Parser(
         if (level >= precedenceLevels.size) return parseUnary()
         val operators = precedenceLevels[level]
         var left = parseBinary(level + 1)
-        // String `+` is JOIN_STRING, which takes all its parts at once. A
-        // bracketed join is a JOIN_STRING of its own, so only the parts this
-        // loop reads are joined here.
         var parts: MutableList<Expr>? = null
         while (peek().kind == TokenKind.PUNCT && peek().text in operators) {
             val symbol = skip().text
@@ -742,9 +639,7 @@ class Cs2Parser(
 
         if (name == "true") return TypedConst(1, ArgType.BOOLEAN)
         if (name == "false") return TypedConst(0, ArgType.BOOLEAN)
-        // `type_obj` and friends are the characters a compiler wrote for a type.
         Cs2TypeChars.charNamed(name)?.let { return TypedConst(it.code, ArgType.TYPECHAR) }
-        // `event_com` and friends are the values the client substitutes on dispatch.
         Cs2Events.valueOf(name)?.let { return IntConst(it) }
 
         if (atPunct(".") && name in Cs2Names.NAMESPACES.values) return gamevalConstant(name)
@@ -761,12 +656,10 @@ class Cs2Parser(
             return ArrayRef(name.drop(5).toInt(), index)
         }
 
-        // A bare script reference: the id of the script, not a call to it.
         val referenced = Cs2Symbols.scriptOf(name) ?: symbols.script(name)
         if (referenced != null && !atPunct("(")) {
             return TypedConst(referenced, ArgType.SCRIPT)
         }
-        // `name<1>(...)` carries the instruction's own operand.
         var operand = 0
         if (atPunct("<")) {
             skip()
@@ -777,16 +670,6 @@ class Cs2Parser(
         error("Unknown identifier '$name'")
     }
 
-    /**
-     * `Obj.abyssal_whip`, `Component.<interface>.<component>` - a gameval name
-     * standing for the number the bytecode holds.
-     *
-     * The name is looked up in exactly two places, in this order: the ids the
-     * project's `gamevals.d.ts` binds its names to, which is where an editor
-     * rename lands, and the catalogs those defaults came from. Nothing else may
-     * name an id, and where the two disagree the folder is refused before a
-     * compile starts (see [Cs2SymbolTable.conflicts]).
-     */
     private fun gamevalConstant(namespace: String): Expr {
         val path = StringBuilder(namespace)
         expectPunct(".")
@@ -850,9 +733,6 @@ class Cs2Parser(
                 ?: error("hook() needs its type spec")
             return Callback(callee, format, lists.getOrNull(0).orEmpty(), lists.getOrNull(1).orEmpty())
         }
-        // Where a helper shares a name with an opcode, the number of arguments
-        // says which is meant: `coord()` is the opcode that reads the player's
-        // position, `coord(x, y, level)` is a coordinate written out.
         val named = Cs2Op.byTsName(name)
         val arity = named?.let { it.popInt + it.popStr + it.popLong }
         if (arity != args.size) packedConstant(name, args)?.let { return it }
@@ -875,7 +755,6 @@ class Cs2Parser(
         return OpCall(op, args, opResultType(op, args), operand)
     }
 
-    // ---------------------------------------------------------------- tokens
 
     private fun peek() = tokens[at]
 
@@ -898,34 +777,14 @@ class Cs2Parser(
         return tokens[at++]
     }
 
-    /** What a script's declaration says about it, without parsing a line of its body. */
     class Signature(
-        /** The function's name, which is what a caller writes. */
         val name: String,
-        /** The arguments in the order callers push them, which can interleave the stacks. */
         val arguments: List<Cs2Type>,
-        /** The values the script returns, in push order; empty for `void`. */
         val returns: List<Cs2Type>,
     )
 
     companion object {
 
-        /**
-         * Reads the `function name(a: number): [number, string]` line and stops there.
-         *
-         * Compiling one file needs every *other* file's signature - a call's results have to be
-         * discarded on the right stacks, and `let [a, b] = f();` types its names from the callee -
-         * so a folder that is about to be compiled has to be able to answer that for all 6,567
-         * scripts without parsing 6,567 bodies. Parsing a body is also circular: it is the thing
-         * that needs the answer.
-         *
-         * Only the header is lexed. The body opens at the first `{`, because nothing in a
-         * signature can contain one, and the whole file is lexed as a fallback for a hand-written
-         * header that somehow does; either way it is this parser's own grammar walking it, not a
-         * second reading of the same shape.
-         *
-         * @return null when the file declares no function, or its header does not parse.
-         */
         fun signature(source: String): Signature? {
             val declaration = DECLARATION.find(source) ?: return null
             val body = source.indexOf('{', declaration.range.first)
@@ -933,37 +792,23 @@ class Cs2Parser(
             return read(header) ?: if (body < 0) null else read(source)
         }
 
-        /**
-         * The Cs2 type a TypeScript type name stands for.
-         *
-         * One spelling for the parser and for anything reading a signature back: an alias
-         * ([Cs2Names.ALIASES]) says what an int *means* and never which stack it is on, so every
-         * one of them is an [Cs2Type.INT].
-         */
         fun typeNamed(text: String): Cs2Type = when {
             text == "number" -> Cs2Type.INT
             text == "string" -> Cs2Type.STRING
             text == "bigint" -> Cs2Type.LONG
-            // An alias says what an int means, never which stack it is on.
             Cs2Names.isAlias(text) -> Cs2Type.INT
             else -> error("Unsupported type '$text'")
         }
 
-        /** Lexes [header] and walks the declaration in it, or null when it will not walk. */
         private fun read(header: String): Signature? = try {
             Cs2Parser(header).headerOnly()
         } catch (e: Exception) {
             null
         }
 
-        /** `function <name>(` at the start of a line - the shape the emitter always writes. */
         private val DECLARATION = Regex("""^function \w+\s*\(""", RegexOption.MULTILINE)
     }
 
-    /**
-     * [parseHeader] alone, for [Companion.signature]. Never called on a parser that is going
-     * to parse a body, so the locals it declares along the way are thrown away with it.
-     */
     private fun headerOnly(): Signature =
         Signature(name = parseHeader(), arguments = argumentTypes.toList(), returns = returns)
 }

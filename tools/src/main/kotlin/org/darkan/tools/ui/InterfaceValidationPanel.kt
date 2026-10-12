@@ -12,29 +12,6 @@ import org.darkan.tools.rsinterface.InterfaceIssue
 import org.darkan.tools.rsinterface.InterfaceStore
 import org.darkan.tools.rsinterface.IssueSeverity
 
-/**
- * Everything that is wrong with the open interface, in the order it will hurt.
- *
- * Two different questions get answered here and they are deliberately kept
- * apart:
- *
- * - **Validation** is structural and cheap. Out of range parents, cycles, a
- *   component parented to something that is not a layer, a layer with no size -
- *   the things that make an interface draw as nothing. It re-runs whenever the
- *   document changes, because it costs a pass over the component array.
- * - **Round-trip verification** encodes every component and decodes it straight
- *   back, and reports each field that came back different. That is the only
- *   honest answer to "will saving lose anything", and it is expensive enough to
- *   be a button rather than something that happens per frame.
- *
- * The round-trip stays a first-class button even though the if3 codec currently
- * round-trips the whole cache byte for byte, because that is a property of
- * today's encoder rather than of the format: a few constructs are still
- * type-gated (a colour on a component the encoder writes no colour block for,
- * `viewportZ` outside a `centreType` block) and an edit can walk into one of
- * them. Checking is cheap enough to do before a save and worth far more than
- * trusting that it is still true.
- */
 class InterfaceValidationPanel(
     private val context: InterfaceEditContext,
     private val store: InterfaceStore,
@@ -52,13 +29,11 @@ class InterfaceValidationPanel(
     private val filter = ImString(48)
     private var showInfo = false
 
-    /** Counts for the window title and the status bar, refreshed with [issues]. */
     var errorCount: Int = 0
         private set
     var warningCount: Int = 0
         private set
 
-    /** Recomputes the structural issues when the document has moved on. */
     fun refresh() {
         val document = context.document
         if (document == null) {
@@ -145,7 +120,6 @@ class InterfaceValidationPanel(
     private fun issueList() {
         val needle = filter.get().trim().lowercase()
         var shown = 0
-        // Errors first: a broken parent index makes every warning under it noise.
         for (severity in SEVERITY_ORDER) {
             for (issue in issues) {
                 if (issue.severity != severity) {

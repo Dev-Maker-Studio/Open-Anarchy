@@ -180,7 +180,6 @@ object JsonFileManager {
 
     fun deleteFile(filePath: String) = File(filePath).delete()
 
-    // --- Gson backward-compatibility for legacy Java callers ---
 
     private var gsonInstance: Gson? = null
 

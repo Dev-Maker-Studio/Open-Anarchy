@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content;
 
 import com.rs.Settings;
@@ -404,7 +388,6 @@ public class ItemConstants {
 	public static boolean isDungItem(int itemId) {
 		if (itemId < 15750)
 			return false;
-		//General dung items, dung pouches, dung only kinship rings
         return (itemId >= 15750 && itemId <= 18329) || (itemId >= 18511 && itemId <= 18570) || (itemId >= 18817 && itemId <= 18829);
     }
 
@@ -422,7 +405,6 @@ public class ItemConstants {
 		if (item.getMetaData() != null)
 			return false;
 		switch(item.getId()) {
-			//tradeable non-exchangeable item exceptions
 			case 995:
 			case 1706:
 			case 1707:

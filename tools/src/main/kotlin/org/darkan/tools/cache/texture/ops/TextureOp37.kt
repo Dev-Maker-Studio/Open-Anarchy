@@ -4,10 +4,6 @@ import org.darkan.tools.cache.texture.TextureOperation
 import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 
-/**
- * Type 37: Pattern generator with dual cosine wave checks.
- * Creates a pattern based on diagonal wave interference.
- */
 class TextureOp37 : TextureOperation(0, true) {
     private var offsetX1: Int = 2048
     private var offsetY1: Int = 0
@@ -29,7 +25,6 @@ class TextureOp37 : TextureOperation(0, true) {
             for (x in 0 until currentWidth) {
                 val horizontalPos = horizontalTable[x] - 2048
 
-                // First position with offset
                 var pos1X = horizontalPos + offsetX1
                 pos1X = if (pos1X < -2048) pos1X + 4096 else pos1X
                 pos1X = if (pos1X > 2048) pos1X - 4096 else pos1X
@@ -37,7 +32,6 @@ class TextureOp37 : TextureOperation(0, true) {
                 pos1Y = if (pos1Y < -2048) pos1Y + 4096 else pos1Y
                 pos1Y = if (pos1Y > 2048) pos1Y - 4096 else pos1Y
 
-                // Second position with offset
                 var pos2X = horizontalPos + offsetX2
                 pos2X = if (pos2X < -2048) pos2X + 4096 else pos2X
                 pos2X = if (pos2X > 2048) pos2X - 4096 else pos2X

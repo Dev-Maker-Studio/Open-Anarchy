@@ -8,7 +8,6 @@ import org.darkan.core.model.Animation;
 import org.darkan.core.model.MoveType;
 import world.gregs.voidps.type.Tile;
 
-//TODO: Check Fight Arena, Dragon Slayer, Vampire Slayer, wally vs delrith cutscene, and the rest of the cutscenes
 public class WallyVSDelrithCutscene extends Cutscene {
 	@Override
 	public void construct(Player player) {

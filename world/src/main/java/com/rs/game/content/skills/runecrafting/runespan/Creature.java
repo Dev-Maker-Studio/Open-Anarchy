@@ -29,7 +29,6 @@ public enum Creature {
 
 	Creature(int npcId, double xp, int playerEmoteId, Runecrafting.RCRune rune, int npcEmoteId, int npcLife, int levelRequired, int deathEmote, double pointValue) {
 		this.npcId = npcId;
-		//this.xp = xp;
 		this.playerEmoteId = playerEmoteId;
 		this.rune = rune;
 		this.npcEmoteId = npcEmoteId;

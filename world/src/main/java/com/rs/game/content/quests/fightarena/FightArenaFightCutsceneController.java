@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.quests.fightarena;
 
 import com.rs.engine.dialogue.Dialogue;
@@ -89,7 +73,7 @@ public class FightArenaFightCutsceneController extends Controller {
 					}
 					if (tick == 0)
 						player.getInterfaceManager().setFadingInterface(115);
-					if (tick == 2) {// setup player
+					if (tick == 2) {
 						player.getPackets().setBlockMinimapState(2);
 						player.tele(spawn);
 					}
@@ -279,7 +263,7 @@ public class FightArenaFightCutsceneController extends Controller {
 					if(tick == 0) {
 						player.getInterfaceManager().setFadingInterface(115);
 					}
-					if (tick == 2) {// setup player
+					if (tick == 2) {
 						player.getPackets().setBlockMinimapState(2);
 						player.tele(locationOnVictory);
 						player.getQuestManager().setStage(Quest.FIGHT_ARENA, FightArena.RETURN_TO_LADY_SERVIL);
@@ -364,8 +348,8 @@ public class FightArenaFightCutsceneController extends Controller {
 		List<Integer> xDiff = new ArrayList<>();
 		List<Integer> yDiff = new ArrayList<>();
 		for(NPC npc : originalNPCs) {
-			xDiff.add(2617 - npc.getX());//Same spawn X as dynamic but from original Fight Arena
-			yDiff.add(3167 - npc.getY());//Same spawn Y
+			xDiff.add(2617 - npc.getX());
+			yDiff.add(3167 - npc.getY());
 		}
 		if(spawn != null)
 			for(int i = 0; i < originalNPCs.size(); i++) {

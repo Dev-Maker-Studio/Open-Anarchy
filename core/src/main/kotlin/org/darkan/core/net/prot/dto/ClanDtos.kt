@@ -1,6 +1,3 @@
-/**
- * Payload types carried by the clan channel and clan settings packets.
- */
 package org.darkan.core.net.prot.dto
 
 import kotlinx.serialization.Serializable

@@ -24,7 +24,6 @@ data class WornModelLayout(
 }
 
 class AppearanceLayout(
-    // Equipment defaults opcode 1: 1 = slot not transmitted, 0 = transmitted and mesh-customisable.
     val customizableObjSlots: IntArray,
     val wornModels: (itemId: Int) -> WornModelLayout,
 )

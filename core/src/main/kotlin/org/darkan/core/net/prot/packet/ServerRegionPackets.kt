@@ -1,6 +1,3 @@
-/**
- * Region building, minimap, hint arrows and camera packets.
- */
 package org.darkan.core.net.prot.packet
 
 import org.darkan.core.model.RegionSize
@@ -143,13 +140,6 @@ data class BuildInstancedRegion(
 
 data class MinimapFlag(val x: Int, val y: Int) : ServerProt
 
-/**
- * Represents a single hint arrow slot update.
- *
- * - If [targetType] == 0, the hint arrow is cleared and other fields are ignored.
- * - If [targetType] is 1 or 10, [targetIndex] and [denominator] are used.
- * - Otherwise, [plane], [x], [y], [height], [distance] are used (tile based).
- */
 data class HintArrow(
     val iconIndex: Int,
     val targetType: Int,
@@ -184,7 +174,6 @@ data class HintTrail(val index: Int, val modelId: Int, val data: ByteArray) : Se
 
 @JvmInline value class BlockMinimapState(val state: Int) : ServerProt
 
-// Camera related protocols
 data class CamLookAt(val viewLocalX: Int, val viewLocalY: Int, val viewZ: Int, val speed1: Int, val speed2: Int) : ServerProt
 
 data class CamMoveTo(val moveLocalX: Int, val moveLocalY: Int, val moveZ: Int, val speed1: Int, val speed2: Int) : ServerProt

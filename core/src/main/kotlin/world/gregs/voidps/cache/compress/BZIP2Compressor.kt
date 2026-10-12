@@ -1,10 +1,5 @@
 package world.gregs.voidps.cache.compress
 
-/**
- * A class representing the BZIP2 (de)compressor.
- * @author Jagex
- * @author Displee
- */
 @Deprecated("Decompression is slow, use gzip for better performance. Kept for backwards compatability.")
 internal class BZIP2Compressor {
     private var anInt3070 = 0
@@ -39,14 +34,6 @@ internal class BZIP2Compressor {
     private var compressed: ByteArray = ByteArray(0)
     private var anIntArray5786: IntArray = IntArray(100000)
 
-    /**
-     * Decompress a compressed BZIP2 file.
-     * @param decompressed       An empty byte array where we put the decompressed data in.
-     * @param decompressedLength The length to decompress.
-     * @param archiveData        The compressed BZIP2 file.
-     * @param startOffset        The start offset.
-     * @return The decompressed length.
-     */
     @Deprecated("Use GZIP")
     fun decompress(decompressed: ByteArray, decompressedLength: Int, archiveData: ByteArray, startOffset: Int): Int {
         compressed = archiveData
@@ -64,9 +51,6 @@ internal class BZIP2Compressor {
         return decompressedLength - this.decompressedLength
     }
 
-    /**
-     * Decompress a BZIP2 block entry.
-     */
     private fun decompress() {
         var i: Int
         var intArray1: IntArray
@@ -250,7 +234,7 @@ internal class BZIP2Compressor {
                     i65++
                     i30 = aByteArray3107[aByteArray3101[anIntArray3092[0]].toInt() and 0xff].toInt()
                     anIntArray3075[i30 and 0xff] += i65
-                    while ( /**/i65 > 0) {
+                    while ( i65 > 0) {
                         anIntArray5786[i59] = i30 and 0xff
                         i59++
                         i65--
@@ -260,7 +244,7 @@ internal class BZIP2Compressor {
                     if (i68 < 16) {
                         val i69 = anIntArray3092[0]
                         i29 = aByteArray3101[i69 + i68].toInt()
-                        while ( /**/i68 > 3) {
+                        while ( i68 > 3) {
                             val i70 = i69 + i68
                             aByteArray3101[i70] = aByteArray3101[i70 - 1]
                             aByteArray3101[i70 - 1] = aByteArray3101[i70 - 2]
@@ -268,7 +252,7 @@ internal class BZIP2Compressor {
                             aByteArray3101[i70 - 3] = aByteArray3101[i70 - 4]
                             i68 -= 4
                         }
-                        while ( /**/i68 > 0) {
+                        while ( i68 > 0) {
                             aByteArray3101[i69 + i68] = aByteArray3101[i69 + i68 - 1]
                             i68--
                         }

@@ -41,14 +41,12 @@ public class WitchsHouse extends QuestOutline {
 	public final static int FIND_BALL = 1;
 	public final static int QUEST_COMPLETE = 2;
 
-	//items
 	protected final static int DOOR_KEY = 2409;
 	protected final static int BACKROOM_KEY = 2411;
 	protected final static int MAGNET = 2410;
 	protected final static int WITCH_DIARY = 2408;
 	protected final static int BALL = 2407;
 
-	//NPCs
 	protected final static int BOY = 895;
 	protected final static int WITCH = 896;
 	protected final static int MOUSE = 901;

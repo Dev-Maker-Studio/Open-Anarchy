@@ -3,32 +3,6 @@ package org.darkan.tools.cache.map.environment
 import org.darkan.tools.util.ColorUtil
 import world.gregs.voidps.buffer.read.BufferReader
 
-/**
- * Decodes the environment/effects block that follows the tile section of a
- * `m{regionX}_{regionY}` map archive.
- *
- * Layout of a map archive:
- * ```
- * [4 planes * 64 * 64 tile opcode streams]   <- consumed by TerrainLoader
- * [effects block, opcodes until end of file] <- decoded here
- * ```
- *
- * Effects opcodes:
- * - `0`   environment (flag byte, then the fields the flags select)
- * - `1`   point lights (ubyte count, then that many light records)
- * - `2`   HDR triple (bloom, brightpass, whitePoint as ubytes)
- * - `128` skybox (ushort id, 3 shorts position, ushort rotation)
- * - `129` per-plane light intensity grid (4 planes, each a mode byte)
- *
- * Anything else is malformed - the client throws, and so do we, because a bad opcode means
- * the read head desynced rather than that the file has an unknown feature.
- *
- * Decoding runs in two stages. [readLayout] produces an [EnvironmentLayout], a byte-faithful
- * echo of the block that [MapEnvironmentEncoder] can turn straight back into the original
- * bytes; [buildRegion] then applies defaults, colour conversion and clamping to reach the
- * renderable [RegionEnvironment]. Keeping the lossy step separate is what makes write-back
- * possible - see [EnvironmentLayout] for what would otherwise be lost.
- */
 object MapEnvironmentDecoder {
 
     private const val TILES_PER_PLANE = 64 * 64
@@ -38,16 +12,8 @@ object MapEnvironmentDecoder {
 
     private const val LIGHT_BLOCK = RawLightGridPlane.BLOCK
 
-    /** Packed light type meaning "parameters come from the light config list". */
     private const val LIGHT_TYPE_CONFIG = 31
 
-    /**
-     * Decode the effects block of a full map archive.
-     *
-     * @param data raw (decompressed) `m{x}_{y}` archive bytes
-     * @param lightFlicker resolves a light config id to its flicker parameters; when null,
-     *   type-31 lights fall back to [LightFlicker.NONE]
-     */
     fun decode(
         data: ByteArray,
         regionX: Int,
@@ -55,11 +21,6 @@ object MapEnvironmentDecoder {
         lightFlicker: ((Int) -> LightFlicker)? = null,
     ): RegionEnvironment = buildRegion(readLayout(data, regionX, regionY), regionX, regionY, lightFlicker)
 
-    /**
-     * Byte-faithful structure of the effects block, for round-tripping and write-back.
-     * Also records where the tile section ends so callers can splice the original tile
-     * bytes back in unchanged.
-     */
     fun readLayout(data: ByteArray, regionX: Int, regionY: Int): EnvironmentLayout {
         val buffer = BufferReader(data)
         skipTiles(buffer)
@@ -72,10 +33,6 @@ object MapEnvironmentDecoder {
         )
     }
 
-    /**
-     * Advance past the `4 * 64 * 64` tile opcode streams at the head of a map archive.
-     * Mirrors the tile opcode grammar in `TerrainLoader.decodeRawTile`.
-     */
     fun skipTiles(buffer: BufferReader) {
         repeat(PLANES * TILES_PER_PLANE) {
             while (true) {
@@ -148,7 +105,6 @@ object MapEnvironmentDecoder {
         )
     }
 
-    /** Mirror of `FlickeringEffect`'s constructor read order, without the derived values. */
     private fun readLight(buffer: BufferReader): RawPointLight {
         val packedLevel = buffer.readUnsignedByte()
         val x = buffer.readUnsignedShort()
@@ -172,12 +128,6 @@ object MapEnvironmentDecoder {
         )
     }
 
-    /**
-     * Opcode 129: four per-plane mode bytes.
-     * - `0` plane is unlit
-     * - `1` 16x16 signed intensity samples, each covering a 4x4 tile block
-     * - `2` copy the plane below (planes above 0 only)
-     */
     private fun readLightGrid(buffer: BufferReader): LightGridRecord {
         val planes = Array(PLANES) {
             when (val mode = buffer.readByte()) {
@@ -192,10 +142,6 @@ object MapEnvironmentDecoder {
         return LightGridRecord(planes)
     }
 
-    /**
-     * Turn a decoded layout into the renderable region view: defaults for absent fields,
-     * HSL to RGB, clamped light ranges and the 16x16 samples expanded to 64x64.
-     */
     fun buildRegion(
         layout: EnvironmentLayout,
         regionX: Int,
@@ -210,9 +156,6 @@ object MapEnvironmentDecoder {
         for (block in layout.blocks) {
             when (block) {
                 is EnvironmentRecord -> {
-                    // The client leaves HDR at zero when opcode 0 arrives first, and only
-                    // applies reset() defaults when an HDR/skybox opcode created the
-                    // environment. Reproduce that exactly - it is visible in the tone mapping.
                     val target = builder ?: EnvironmentBuilder(hdrDefaults = false).also { builder = it }
                     applyEnvironment(block, target)
                     environmentBlocks++
@@ -292,10 +235,6 @@ object MapEnvironmentDecoder {
         }
     }
 
-    /**
-     * Raw positions are 1/128 of a tile; the client shifts them left by 2 to reach the
-     * scene's 512-units-per-tile space, and expands the packed radius the same way.
-     */
     private fun buildLight(raw: RawPointLight, lightFlicker: ((Int) -> LightFlicker)?): MapPointLight {
         val sliceCount = raw.packedRadius * 2 + 1
         val ranges = ShortArray(sliceCount)
@@ -333,7 +272,6 @@ object MapEnvironmentDecoder {
         )
     }
 
-    /** Expands the 16x16 samples of each lit plane across its 4x4 tile blocks. */
     private fun buildLightGrid(record: LightGridRecord, existing: Array<ByteArray?>?): Array<ByteArray?> {
         val grid = existing ?: arrayOfNulls(PLANES)
         for (plane in 0 until PLANES) {
@@ -366,7 +304,6 @@ object MapEnvironmentDecoder {
         return grid
     }
 
-    /** Packs a 16-bit RS HSL colour into 0xRRGGBB. */
     private fun hslToRgb(hsl: Int): Int {
         val rgb = ColorUtil.hslToRgb(hsl)
         val r = (rgb.x * 255.0f + 0.5f).toInt().coerceIn(0, 255)
@@ -375,7 +312,6 @@ object MapEnvironmentDecoder {
         return (r shl 16) or (g shl 8) or b
     }
 
-    /** Mutable accumulator; the file may carry the environment across several opcodes. */
     private class EnvironmentBuilder(hdrDefaults: Boolean) {
         var sunColour = MapEnvironment.DEFAULT_SUN_COLOUR
         var sunPositionX = MapEnvironment.DEFAULT_SUN_POSITION_X

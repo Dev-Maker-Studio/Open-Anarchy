@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.mining;
 
 import org.darkan.core.gameval.gen.Seq;
@@ -42,7 +26,6 @@ import java.util.function.Supplier;
 @PluginEventHandler
 public class Mining extends Action {
 
-	/** The right click option on tin and copper rocks that gathers the ore bare handed in one action, like punching a tree. */
 	private static final String GATHER_OPTION = "Gather";
 
 	public static ObjectClickHandler handleClay = new ObjectClickHandler(new Object[] { "Clay rocks", "Clay vein", "Clay rock" },
@@ -67,7 +50,7 @@ public class Mining extends Action {
 			e -> e.getPlayer().getActionManager().setAction(new Mining(RockType.SILVER, e.getObj())));
 
 	public static ObjectClickHandler handleGold = new ObjectClickHandler(new Object[] { "Gold ore rocks", "Gold ore vein" }, e -> {
-		if(e.getObj().getTile().getRegionId() == 10903)//witchhaven mine
+		if(e.getObj().getTile().getRegionId() == 10903)
 			e.getPlayer().getActionManager().setAction(new Mining(RockType.PERFECT_GOLD, e.getObj()));
 		else
 			e.getPlayer().getActionManager().setAction(new Mining(RockType.GOLD, e.getObj()));
@@ -291,21 +274,19 @@ public class Mining extends Action {
 
 	public static void rollForGem(Player player) {
 		int random = Utils.random(256);
-		// >= 10354 && <= 10360 //charged trimmed glory
-		// >= 1706 && <= 1712 //charged glory
 		int neck = player.getEquipment().getAmuletId();
 		if ((neck >= 10354 && neck <= 10360) || (neck >= 1706 && neck <= 1712))
 			random = Utils.random(86);
 		if (random == 0) {
 			random = Utils.random(10);
 			if (random >= 9)
-				player.getInventory().addItemDrop(1617, 1); // Uncut Diamond
+				player.getInventory().addItemDrop(1617, 1);
 			else if (random >= 7)
-				player.getInventory().addItemDrop(1619, 1); // Uncut Ruby
+				player.getInventory().addItemDrop(1619, 1);
 			else if (random >= 4)
-				player.getInventory().addItemDrop(1621, 1); // Uncut Emerald
+				player.getInventory().addItemDrop(1621, 1);
 			else
-				player.getInventory().addItemDrop(1623, 1); // Uncut Sapphire
+				player.getInventory().addItemDrop(1623, 1);
 		}
 	}
 }

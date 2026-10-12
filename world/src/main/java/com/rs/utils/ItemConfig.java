@@ -53,7 +53,6 @@ public class ItemConfig {
 	public static void main(String[] args) throws IOException {
 		JsonFileManager.setGSON(new GsonBuilder()
 				.registerTypeAdapter(Controller.class, new ControllerAdapter())
-				// TODO: re-add legacy adapters when migrated
 				.disableHtmlEscaping()
 				.setPrettyPrinting()
 				.create());
@@ -71,7 +70,6 @@ public class ItemConfig {
 			}
 		}
 
-//		JsonFileManager.saveJsonFile(CONFIG_CACHE, new File(PATH));
 	}
 
 	public ItemConfig() {
@@ -90,12 +88,6 @@ public class ItemConfig {
 		return equipSound <= 0 ? 2240 : equipSound;
 	}
 
-	/**
-	 * TODO
-	 * Dump all sounds into the config
-	 * Dump all existing anims into the config
-	 * Automatically dump any equippable item that is wieldable but does not have an animation
-	 */
 
 	public int getAttackSound(int attackStyleIndex) {
 		return attackSounds == null ? -1 : attackSounds.getOrDefault(attackStyleIndex, attackSounds.get(0));
@@ -105,7 +97,7 @@ public class ItemConfig {
 		return defendSound <= 0 ? 2240 : defendSound;
 	}
 
-	public int getAttackAnim(int attackStyleIndex) { //422
+	public int getAttackAnim(int attackStyleIndex) {
 		return attackAnims == null ? -1 : attackAnims.getOrDefault(attackStyleIndex, attackAnims.get(0));
 	}
 

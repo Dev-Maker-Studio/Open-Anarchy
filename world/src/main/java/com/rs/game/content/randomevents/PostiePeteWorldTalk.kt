@@ -114,7 +114,6 @@ class PostiePeteWorldTalk {
             }
             else {
                 spawnedPete.finish()
-                //Logger.info(Launcher::class.java, "PostiePeteWorldTalk", "Pete tried to talk to ${location.npcId} at ${location.peteTile} but the npc was not spawned. Killing Pete.")
             }
         }
 
@@ -130,7 +129,7 @@ class PostiePeteWorldTalk {
                 if (finishedTalking && loop >= 100) {
                     when (loop) {
                         100 -> pete.forceTalk("I'd better head off.")
-                        101 -> isFinishing = true //Stops it triggering with line == conversation.size??
+                        101 -> isFinishing = true
                         in 102..103 -> return@scheduleTimer true
                         104 -> pete.forceTalk("Now, how's this thing work again...?")
                         in 105 ..107 -> return@scheduleTimer true
@@ -174,7 +173,6 @@ object PostiePeteStartup {
             if (tick % 120 == 0) {
                 val location = PostiePeteLocation.entries[Utils.random(PostiePeteLocation.entries.size)]
                 if (location != lastLocation) {
-                    //Logger.info(Launcher::class.java, "PostiePeteWorldTalk", "Trying to spawn pete at ${location.name}.")
                     PostiePeteWorldTalk.spawnPostiePete(location)
                     lastLocation = location
                 }

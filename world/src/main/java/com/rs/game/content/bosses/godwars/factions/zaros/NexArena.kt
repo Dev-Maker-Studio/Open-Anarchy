@@ -9,10 +9,6 @@ import java.util.Collections
 import org.darkan.core.gameval.gen.Npc
 import world.gregs.voidps.type.Tile
 
-/**
- * The war roster for the public Nex arena. Nex herself owns her minions, so this only tracks who is
- * fighting and starts or ends the encounter.
- */
 class NexArena {
     private val players: MutableList<Player> = Collections.synchronizedList(ArrayList())
     var nex: Nex? = null

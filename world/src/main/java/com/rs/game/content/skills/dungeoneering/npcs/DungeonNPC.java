@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.npcs;
 
 import com.rs.game.World;
@@ -47,7 +31,7 @@ public class DungeonNPC extends NPC {
 			resetBonuses();
 			setForceMultiArea(true);
 		}
-		setForceAggroDistance(20); //includes whole room
+		setForceAggroDistance(20);
 	}
 
 	protected int getTier() {
@@ -76,9 +60,6 @@ public class DungeonNPC extends NPC {
 		setLevels(manager.getLevels(this instanceof DungeonBoss, getCombatLevel(), getMaxHitpoints()));
 	}
 
-	/*
-	 * they don't respawn anyway, and this way stomp will be fine
-	 */
 	@Override
 	public int getRespawnDirection() {
 		return getFaceAngle();
@@ -139,7 +120,7 @@ public class DungeonNPC extends NPC {
 	public void drop() {
 		int size = getSize();
 		ArrayList<Item> drops = new ArrayList<>();
-		if (getId() != 10831 && getId() != 10821) //nature & ghost
+		if (getId() != 10831 && getId() != 10821)
 			drops.add(new Item(getBones()));
 		for (int i = 0; i < 1 + Utils.random(10); i++)
 			drops.add(new Item(DungeonUtils.getFood(Math.min(1+Utils.random(getTier()), 8))));
@@ -150,43 +131,43 @@ public class DungeonNPC extends NPC {
 		if (Utils.random(5) == 0)
 			drops.add(new Item(DungeonConstants.RUNES[Utils.random(DungeonConstants.RUNES.length)], 90 + Utils.random(30)));
 
-		if (getManager().getParty().getComplexity() >= 5 && Utils.random(5) == 0) // torn bag, 1
+		if (getManager().getParty().getComplexity() >= 5 && Utils.random(5) == 0)
 			drops.add(new Item(DungeonUtils.getTornBag(Math.min(1+Utils.random(getTier()), 10))));
 
-		if (getManager().getParty().getComplexity() >= 3 && Utils.random(5) == 0) //ore, up to 10
+		if (getManager().getParty().getComplexity() >= 3 && Utils.random(5) == 0)
 			drops.add(new Item(DungeonUtils.getOre(Math.min(1+Utils.random(getTier()), 5)), 1 + Utils.random(10)));
 
-		if (getManager().getParty().getComplexity() >= 2 && Utils.random(5) == 0) // branch, up to 10
+		if (getManager().getParty().getComplexity() >= 2 && Utils.random(5) == 0)
 			drops.add(new Item(DungeonUtils.getBranche(Math.min(1+Utils.random(getTier()), 5)), 1 + Utils.random(10)));
 
-		if (getManager().getParty().getComplexity() >= 4 && Utils.random(5) == 0) //textile, up to 10
+		if (getManager().getParty().getComplexity() >= 4 && Utils.random(5) == 0)
 			drops.add(new Item(DungeonUtils.getTextile(Math.min(1+Utils.random(getTier()), 5)), 1 + Utils.random(10)));
 
-		if (getManager().getParty().getComplexity() >= 5 && Utils.random(5) == 0) //herb, up to 10
+		if (getManager().getParty().getComplexity() >= 5 && Utils.random(5) == 0)
 			drops.add(new Item(DungeonUtils.getHerb(Math.min(1+Utils.random(getTier()), 3)), 1 + Utils.random(10)));
 
-		if (getManager().getParty().getComplexity() >= 5 && Utils.random(5) == 0) //seed, up to 10
+		if (getManager().getParty().getComplexity() >= 5 && Utils.random(5) == 0)
 			drops.add(new Item(DungeonUtils.getSeed(Math.min(1+Utils.random(getTier()), 3)), 1 + Utils.random(10)));
 
-		if (getManager().getParty().getComplexity() >= 5 && Utils.random(3) == 0) //charms, depending in mob size
+		if (getManager().getParty().getComplexity() >= 5 && Utils.random(3) == 0)
 			drops.add(new Item(DungeonConstants.CHARMS[Utils.random(DungeonConstants.CHARMS.length)], size));
 
-		if (getManager().getParty().getComplexity() >= 2) //coins, 1000 up to 11000
+		if (getManager().getParty().getComplexity() >= 2)
 			drops.add(new Item(DungeonConstants.RUSTY_COINS, 1000 + Utils.random(10001)));
 
-		if (getManager().getParty().getComplexity() >= 3 && Utils.random(5) == 0) //essence, 10 up to 300
+		if (getManager().getParty().getComplexity() >= 3 && Utils.random(5) == 0)
 			drops.add(new Item(DungeonConstants.RUNE_ESSENCE, 10 + Utils.random(300)));
-		if (getManager().getParty().getComplexity() >= 2 && Utils.random(5) == 0) //feather, 10 up to 300
+		if (getManager().getParty().getComplexity() >= 2 && Utils.random(5) == 0)
 			drops.add(new Item(DungeonConstants.FEATHER, 10 + Utils.random(300)));
-		if ((getManager().getParty().getComplexity() >= 5 && Utils.random(10) == 0)) //vial, 1
+		if ((getManager().getParty().getComplexity() >= 5 && Utils.random(10) == 0))
 			drops.add(new Item(17490));
-		if ((Utils.random(10) == 0)) //anti dragon shield
+		if ((Utils.random(10) == 0))
 			drops.add(new Item(16933));
-		if ((getManager().getParty().getComplexity() >= 4 && Utils.random(10) == 0)) //bowstring, 1
+		if ((getManager().getParty().getComplexity() >= 4 && Utils.random(10) == 0))
 			drops.add(new Item(17752));
-		if ((getManager().getParty().getComplexity() >= 2 && Utils.random(10) == 0)) // fly-fishing rod, 1
+		if ((getManager().getParty().getComplexity() >= 2 && Utils.random(10) == 0))
 			drops.add(new Item(17794));
-		if ((getManager().getParty().getComplexity() >= 4 && Utils.random(5) == 0)) //thread, 10 up to 300
+		if ((getManager().getParty().getComplexity() >= 4 && Utils.random(5) == 0))
 			drops.add(new Item(17447, 10 + Utils.random(300)));
 
 		for (Item item : drops)

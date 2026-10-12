@@ -93,79 +93,18 @@ import world.gregs.voidps.cache.definition.decoder.InterfaceDecoder
 import world.gregs.voidps.cache.definition.decoder.ItemDecoder
 import java.io.File
 
-/** What the pointer and the keyboard mean while they are over the stage. */
 enum class EditorMode {
-    /** Clicking selects, the gizmo moves and resizes, no hook is dispatched. */
     DESIGN,
 
-    /** The interface behaves like the client: hooks fire from real input. */
     PLAY,
 }
 
-/**
- * The interface editor.
- *
- * This class is the shell: it owns the window, the GL objects, the CS2 runtime
- * and the panels, and it decides the order things happen in each frame. All the
- * actual work lives elsewhere - the panels draw, [InterfaceDocument] edits,
- * [InterfaceInteraction] runs the interface. What is genuinely hard here, and
- * what the rest of this comment is about, is the three orderings that have to be
- * right.
- *
- * ### The frame order
- *
- * The interface is drawn into an off-screen [RenderTarget] that [StagePanel]
- * shows as a texture. ImGui only samples that texture when its draw data is
- * submitted, so the target can be - and must be - filled *after* every panel is
- * built and *before* `imGui.endFrame()`. That buys a stage with zero frames of
- * lag whose contents already reflect this frame's input, and it is why
- * [renderStage] sits between [ImGuiLayer.endDockspace] and
- * [ImGuiLayer.endFrame] rather than anywhere more obvious.
- *
- * The stage panel is also submitted *first* among the panels, because it is what
- * computes the stage-space pointer, and the interaction runtime has to be fed
- * before the panels that display its state - otherwise the hover chain and the
- * event trace are always one frame stale.
- *
- * ### Who gets the pointer
- *
- * Three things want it and they overlap:
- *
- * - **ImGui** claims the mouse whenever it is over any window, and the stage
- *   *is* an ImGui window, so `wantCaptureMouse` is useless here - it is true
- *   exactly when the interface should be getting the pointer.
- *   [StagePanel.hovered] is the right question: it is the stage's own invisible
- *   button being hovered, which is false when a popup, the option menu or
- *   another window is on top.
- * - **The gizmo** takes priority inside the selection's handles in Design mode,
- *   which is why the pick and the gizmo cannot both act on one press.
- * - **The interaction runtime** gets everything else, but only in Play mode, and
- *   it keeps getting it while a press that started on the stage is held, so a
- *   drag that leaves the panel still completes.
- *
- * The keyboard is simpler but has the same trap: `wantCaptureKeyboard` goes true
- * as soon as ImGui's keyboard navigation activates, which would kill every
- * shortcut. `wantTextInput` is the question actually being asked - "is a text
- * field swallowing this" - so that is what gates both the shortcuts and the key
- * hooks.
- *
- * ### Why the load scripts keep re-running
- *
- * [InterfaceDocument] re-seeds every [ComponentState] from its definition after
- * any edit, which throws away everything the CS2 load scripts did - the graphics
- * they set, the text they wrote. Re-running them is the only way to put it back,
- * so any edit sets [scriptsDirty] and the next frame re-runs them before
- * anything is drawn. The cost is one dispatch per component that has a load
- * script and it is reported in the stage's status line, because a surprise in
- * there is the first place a slow frame would show up.
- */
 class InterfaceViewer(
     private val cache: Cache,
     startInterfaceId: Int = 0,
     private val startup: InterfaceStartup = InterfaceStartup(),
 ) : Engine(WindowConfig(title = "Darkan Interface Editor", width = 1600, height = 900)) {
 
-    // --- Rendering ---------------------------------------------------------
 
     private lateinit var imGui: ImGuiLayer
     private lateinit var canvas: Canvas2D
@@ -177,7 +116,6 @@ class InterfaceViewer(
     private val stageTarget = RenderTarget()
     private lateinit var stagePanel: StagePanel
 
-    // --- Model -------------------------------------------------------------
 
     private lateinit var store: InterfaceStore
     private lateinit var assets: InterfaceAssets
@@ -185,19 +123,13 @@ class InterfaceViewer(
     private var frameInstance: InterfaceInstance? = null
     private var currentId = startInterfaceId.coerceAtLeast(0)
 
-    /** Set by any edit; cleared once the load scripts have been re-run. */
     private var scriptsDirty = false
     private var loadScriptMillis = 0L
 
-    // --- Live source -------------------------------------------------------
 
-    // Components and clientscripts only. Graphics, fonts and models always come from the packed
-    // cache, which is the form a pack turns the tree's copies back into.
     private var source: InterfaceSourceTree? = null
     private val sourceWatch = SourceWatch()
 
-    // A save arrives as a burst of events around a half-written file, so the re-read waits for
-    // the writes to stop rather than parsing the first one. 0 is nothing pending.
     private var sourceChangedAt = 0L
     private var sourceReloads = 0
 
@@ -205,7 +137,6 @@ class InterfaceViewer(
     private var scriptReloads = 0
     private var lastLiveReload = 0L
 
-    // --- CS2 ---------------------------------------------------------------
 
     private lateinit var scripts: Cs2Analyzer
     private lateinit var reload: Cs2HotReload
@@ -214,7 +145,6 @@ class InterfaceViewer(
     private lateinit var dispatcher: Cs2HookDispatcher
     private lateinit var interaction: InterfaceInteraction
 
-    // --- Panels ------------------------------------------------------------
 
     private lateinit var library: InterfaceLibraryPanel
     private lateinit var tree: InterfaceEditorPanel
@@ -229,7 +159,6 @@ class InterfaceViewer(
     private val palette = CommandPalette()
     private val gizmo = SelectionGizmo()
 
-    // --- Editor state ------------------------------------------------------
 
     private var mode = EditorMode.DESIGN
     private var status = ""
@@ -240,15 +169,6 @@ class InterfaceViewer(
     private var layoutBuilt = false
     private var layoutExists = false
 
-    /**
-     * Frames left to force every panel into its node.
-     *
-     * The dock builder writes the layout into ImGui's settings, but a panel that
-     * calls `setNextWindowPos` on its own first frame - [Cs2ReloadPanel] does -
-     * lands as a floating window before those settings are ever applied. Pinning
-     * the dock id explicitly for the first few frames after a build is what makes
-     * the default layout hold for every panel rather than most of them.
-     */
     private var dockFrames = 0
     private val dockNodes = HashMap<String, Int>()
     private var showDialog = false
@@ -258,16 +178,13 @@ class InterfaceViewer(
     private val dialogPath = ImString(320)
     private var dialogSource = 0
 
-    // --- Interface index for the library ------------------------------------
 
     private lateinit var decoder: InterfaceDecoder
     private lateinit var definitions: Array<InterfaceDefinition>
     private lateinit var decodedIds: BooleanArray
 
-    // ------------------------------------------------------------------- init
 
     override fun onInit() {
-        // Checked before ImGui reads it, so a first run can lay the panels out.
         layoutExists = File(LAYOUT_FILE).isFile
 
         imGui = ImGuiLayer(window)
@@ -290,10 +207,6 @@ class InterfaceViewer(
         assets = InterfaceAssets.of(cache)
         seedTemplateDefaults()
 
-        // The analyzer resolves every script's return signature and parameter
-        // types once, which is what lets the virtual machine keep its stacks
-        // straight. The hot reload wraps it and is what the dispatcher talks to,
-        // so a recompiled script is live without anything being invalidated.
         scripts = Cs2Analyzer(cache)
         scripts.analyse()
         reload = Cs2HotReload(cache, scripts)
@@ -309,8 +222,6 @@ class InterfaceViewer(
         interaction.liveMode = false
         state = InterfaceState(cs2Host)
         reload.onReload = { event ->
-            // Hooks a previous run bound with IF_SETON* survive a reload, so the
-            // interface has to be rebuilt for the edit to be visible at all.
             if (event.ok) {
                 scriptsDirty = true
                 if (event.scriptId >= 0) {
@@ -328,11 +239,6 @@ class InterfaceViewer(
             scriptsDirty = true
         }
 
-        // Start watching straight away when the source folder is there. Hot reload
-        // is only "edit in the editor and see it" if nothing has to be armed first;
-        // having to press Start every launch is the whole friction the feature
-        // exists to remove. A missing folder just leaves the watcher stopped, which
-        // the panel reports.
         useSource(startupTree(), announce = false)
         if (reload.project.folder.isDirectory && !reload.start()) {
             status = reload.watcherError ?: "could not watch ${reload.project.folder.path}"
@@ -344,7 +250,6 @@ class InterfaceViewer(
         openInterface(currentId)
     }
 
-    // ----------------------------------------------------------- live source
 
     private fun startupTree(): File? = when {
         startup.packedOnly -> null
@@ -417,12 +322,6 @@ class InterfaceViewer(
         }
     }
 
-    /**
-     * Without this a fresh session would run the *cache's* bytecode for every script nobody has
-     * saved yet, so an edit made before launch would be invisible until it was touched again. The
-     * closure is re-read after each install, because compiling a script can add a call its cached
-     * bytecode never had.
-     */
     private fun compileInterfaceScripts(): Int {
         source ?: return 0
         val pending = ArrayDeque<Int>()
@@ -472,11 +371,6 @@ class InterfaceViewer(
         return "live: ${tree.name}, $reloads reloads, last ${"%.1f".format(seconds)} s ago"
     }
 
-    /**
-     * Points the "add component" templates at ids that exist in this cache.
-     * Guessing one that does not makes every new graphic or text component draw
-     * nothing, which reads as the editor being broken rather than as a default.
-     */
     private fun seedTemplateDefaults() {
         for (id in 0 until minOf(graphics.count, TEMPLATE_SCAN)) {
             if (graphics.definition(id) != null) {
@@ -505,10 +399,6 @@ class InterfaceViewer(
         eventPanel = InterfaceEventPanel(context, interaction, cs2Host)
         hookPanel = Cs2HookPanel(context, cs2Host, ::runHook, ::openScript) { scriptsDirty = true }
         reloadPanel = Cs2ReloadPanel(reload, { hookPanel.scripts() }, ::liveStatus)
-        // The panel no longer forces its own position, so it docks like any other
-        // and belongs in the default layout: editing a script in VS Code and seeing
-        // the interface pick it up is a headline feature, not something to go
-        // looking for in a menu.
         reloadPanel.visible = true
         statePanel = InterfaceStatePanel(state, { scriptsDirty = true }, ::runStateScript)
         validation = InterfaceValidationPanel(context, store, assets)
@@ -533,7 +423,6 @@ class InterfaceViewer(
         return if (definitions[id].components == null) null else definitions[id]
     }
 
-    // ----------------------------------------------------------- open / save
 
     private fun openInterface(id: Int) {
         val tree = source
@@ -562,9 +451,6 @@ class InterfaceViewer(
         currentId = document.id
         context.attach(document)
         document.onRebuild = { instance ->
-            // Fired from inside instance(); point the frame at the new one before
-            // anything - a load script asking the host for this interface has to
-            // reach the instance that is about to be drawn.
             frameInstance = instance
             scriptsDirty = true
         }
@@ -583,18 +469,9 @@ class InterfaceViewer(
             if (compiled > 0) "; $compiled scripts compiled from source" else ""
     }
 
-    /**
-     * Runs every component's load script, which is how an interface builds
-     * itself - the cache holds the skeleton and the scripts fill it in. Dispatch
-     * goes through the interaction runtime so the run shows up in the trace, with
-     * live mode forced on because this is an explicit request.
-     */
     private fun runLoadScripts(instance: InterfaceInstance) {
         val started = System.nanoTime()
         cs2Host.log.clear()
-        // Resolve the box model first: the client only runs a load hook on an
-        // interface it has already drawn, and a script that asks how tall a
-        // component is has to get the answer the client would have given it.
         if (stageTarget.width > 0 && stageTarget.height > 0) {
             instance.layout(stageTarget.width, stageTarget.height)
         } else {
@@ -668,11 +545,8 @@ class InterfaceViewer(
         window.setTitle("Darkan Interface Editor - ${document?.id ?: "-"}$dirty")
     }
 
-    // ------------------------------------------------------------------ frame
 
     override fun onInput() {
-        // The base engine grabs the cursor on right click for its fly cameras; a
-        // 2D editor always wants a visible pointer.
         if (input.mouseCaptured) {
             input.releaseMouse()
         }
@@ -701,7 +575,6 @@ class InterfaceViewer(
         }
         drawMenuBar()
 
-        // The stage first: it computes the pointer everything else reads.
         dock("Stage")
         val drawStage = stagePanel.render(fps)
         routePointer(drawStage)
@@ -740,24 +613,14 @@ class InterfaceViewer(
         imGui.endFrame()
     }
 
-    /**
-     * Fills the render target. Called after every panel is built and before the
-     * ImGui draw data is submitted, so what lands here is what the stage shows
-     * this frame.
-     */
     private fun renderStage() {
         val width = stageTarget.width
         val height = stageTarget.height
-        // Model components switch the viewport themselves and flip their scissor
-        // box against the surface height; without this they aim at the window and
-        // every model viewport lands off screen.
         modelRenderer.targetWidth = width
         modelRenderer.targetHeight = height
 
         stageTarget.begin()
         renderSystem.enableDepthWrite()
-        // A transparent clear is what lets the panel's checkerboard show through
-        // the parts of the stage the interface does not cover.
         glClearColor(0f, 0f, 0f, 0f)
         glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
 
@@ -770,12 +633,9 @@ class InterfaceViewer(
         modelRenderer.targetHeight = 0
     }
 
-    // ---------------------------------------------------------------- routing
 
     private fun routePointer(drawStage: Boolean) {
         val io = ImGui.getIO()
-        // Not wantCaptureMouse: the stage is an ImGui window, so that flag is true
-        // exactly when the interface should be receiving the pointer.
         val overStage = drawStage && stagePanel.hovered && !menuOverlay.hovered
         if (overStage && input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
             stageHeld = true
@@ -783,8 +643,6 @@ class InterfaceViewer(
         if (!input.mouse.isButtonDown(GLFW_MOUSE_BUTTON_LEFT)) {
             stageHeld = false
         }
-        // A press that began on the stage keeps feeding it, so a drag that leaves
-        // the panel still completes rather than sticking down forever.
         val active = overStage || stageHeld
         val live = mode == EditorMode.PLAY
 
@@ -810,25 +668,6 @@ class InterfaceViewer(
         }
     }
 
-    /**
-     * Design-mode picking. Hits arrive back to front, so the last is the topmost;
-     * a bare layer is only picked when nothing it contains was hit, which is what
-     * makes clicking a button select the button rather than the panel behind it.
-     *
-     * Runtime components are skipped, and that is the whole reason this is not a
-     * one-liner. A `CC_CREATE` child exists only in the live [InterfaceInstance]:
-     * it has no entry in the document, so [InterfaceEditContext.definition] answers
-     * null for it, the inspector has nothing to show, the tree has no row to
-     * highlight and saving would not write it out. Interfaces whose load scripts
-     * build anything - a dropdown, a scrollbar, the five shadow copies of a label -
-     * put such a child on top of every component worth editing, so picking the
-     * topmost hit outright selects an index the rest of the editor cannot resolve
-     * and the click silently does nothing at all.
-     *
-     * What the developer means by clicking a runtime child is the authored component
-     * that owns it, so the search drops to the topmost *editable* hit and, failing
-     * that, walks up from the runtime hit to its nearest authored ancestor.
-     */
     private fun pickComponent(additive: Boolean) {
         val instance = frameInstance ?: return
         val hits = instance.hitTest(
@@ -850,9 +689,6 @@ class InterfaceViewer(
     }
 
     private fun routeKeyboard() {
-        // wantTextInput, not wantCaptureKeyboard: the latter also goes true as
-        // soon as ImGui's keyboard navigation activates, which would silently
-        // disable every shortcut in the editor.
         val typing = ImGui.getIO().wantTextInput
         val presses = input.keyboard.presses
         val shortcuts = presses.map { it.key to it.mods }
@@ -863,8 +699,6 @@ class InterfaceViewer(
             releaseKeys(all = true)
             return
         }
-        // The whole frame's input, repeats included: a held key drives a scrollbar
-        // arrow through its auto-repeats, not through the initial press.
         val chars = ArrayDeque(input.keyboard.chars)
         for (event in presses) {
             if (isShortcut(event.key, event.mods)) {
@@ -891,13 +725,11 @@ class InterfaceViewer(
         }
     }
 
-    /** True when a key press is already spoken for by an editor shortcut. */
     private fun isShortcut(key: Int, mods: Int): Boolean {
         val relevant = mods and (GLFW_MOD_CONTROL or GLFW_MOD_SHIFT or GLFW_MOD_ALT)
         return palette.all.any { it.key == key && it.mods == relevant }
     }
 
-    // ---------------------------------------------------------- stage overlay
 
     private fun drawStageToolbar() {
         if (mode == EditorMode.PLAY) {
@@ -914,16 +746,10 @@ class InterfaceViewer(
         }
     }
 
-    /**
-     * Selection chrome, drawn over the stage image in screen space so it stays a
-     * crisp one pixel however far the stage is zoomed.
-     */
     private fun drawStageOverlay() {
         val instance = frameInstance ?: return
         val drawList = ImGui.getWindowDrawList()
         if (mode == EditorMode.PLAY) {
-            // Selection gets out of the way: a faint outline only, no handles, so
-            // the interface looks like the client rather than like an editor.
             context.primaryState()?.let { outline(drawList, it, PLAY_OUTLINE) }
             return
         }
@@ -990,16 +816,6 @@ class InterfaceViewer(
         gizmo.draw(drawList, drawn, stagePanel::screenX, stagePanel::screenY, true)
     }
 
-    /**
-     * Turns a dragged box back into authored values.
-     *
-     * The gizmo works in resolved stage pixels; the definition holds a base value
-     * plus a mode that says how the layout pass got from one to the other. Each
-     * mode is inverted exactly rather than the position simply being nudged by
-     * the drag delta, because for the far-edge and proportional modes a nudge is
-     * the wrong sign or the wrong scale, and the component would run away from
-     * the pointer.
-     */
     private fun applyGizmo(state: ComponentState, box: GizmoBox) {
         val instance = frameInstance ?: return
         val parent = instance.state(state.parent)
@@ -1013,8 +829,6 @@ class InterfaceViewer(
             parent.scrollHeight != 0 -> parent.scrollHeight
             else -> parent.height
         }
-        // The parent's content origin, recovered from the two coordinates the
-        // layout already produced for this component.
         val localX = box.x - (state.screenX - state.x)
         val localY = box.y - (state.screenY - state.y)
 
@@ -1036,7 +850,6 @@ class InterfaceViewer(
         0 -> resolved
         1 -> parent - resolved
         2 -> if (parent > 0) (resolved shl 14) / parent else current
-        // Unchanged and aspect are not driven by the base value at all.
         else -> current
     }
 
@@ -1050,7 +863,6 @@ class InterfaceViewer(
         else -> if (parent > 0) ((parent - size - resolved) shl 14) / parent else current
     }
 
-    // ------------------------------------------------------------------- menu
 
     private fun drawMenuBar() {
         if (!ImGui.beginMainMenuBar()) {
@@ -1132,8 +944,6 @@ class InterfaceViewer(
             ImGui.endMenu()
         }
 
-        // The right hand side of the bar is a status line: the mode, the dirty
-        // marker and whatever the last action reported.
         ImGui.sameLine(ImGui.getWindowSizeX() - STATUS_WIDTH)
         if (mode == EditorMode.PLAY) {
             ImGuiText.coloured(0.4f, 0.9f, 0.55f, "PLAY")
@@ -1183,14 +993,7 @@ class InterfaceViewer(
         }
     }
 
-    // ----------------------------------------------------------------- dialog
 
-    /**
-     * New / duplicate / import, in one modal. All three end in a document being
-     * attached, and the only thing that differs is where the components come
-     * from, so splitting them into three dialogs would be three copies of the
-     * same id field.
-     */
     private fun drawDialog() {
         drawSourceDialog()
         if (showDialog) {
@@ -1291,7 +1094,6 @@ class InterfaceViewer(
         attach(document)
     }
 
-    // --------------------------------------------------------------- commands
 
     @Suppress("LongMethod")
     private fun registerCommands() {
@@ -1448,13 +1250,7 @@ class InterfaceViewer(
         status = if (mode == EditorMode.PLAY) "play mode: hooks fire" else "design mode: click to select"
     }
 
-    // ----------------------------------------------------------------- layout
 
-    /**
-     * The starting arrangement, built with the dock builder rather than shipped
-     * as an ini file so it survives a panel being renamed. Only run when there is
-     * no saved layout, or on request.
-     */
     private fun buildDefaultLayout() {
         val root = imGui.dockspace()
         if (root == 0) {
@@ -1501,7 +1297,6 @@ class InterfaceViewer(
         dockFrames = DOCK_FRAMES
     }
 
-    /** Pins the next window into its default node while [dockFrames] is counting down. */
     private fun dock(title: String) {
         if (dockFrames <= 0) {
             return
@@ -1509,7 +1304,6 @@ class InterfaceViewer(
         dockNodes[title]?.let { ImGui.setNextWindowDockID(it) }
     }
 
-    // ---------------------------------------------------------------- cleanup
 
     override fun onCleanup() {
         sourceWatch.close()
@@ -1527,12 +1321,6 @@ class InterfaceViewer(
         private const val LAYOUT_FILE = "darkan-tools-layout.ini"
         private const val BACKGROUND = 0.09f
         private const val TEMPLATE_SCAN = 4096
-        /**
-         * Handed to a key hook when the press produced no typed character.
-         * Zero rather than a space on purpose: a component's typed-character
-         * bindings are only matched when the bound code is above zero, so this
-         * can never collide with one, whereas a space could.
-         */
         private const val NO_CHAR = '\u0000'
 
         private const val STATUS_WIDTH = 560f
@@ -1540,10 +1328,8 @@ class InterfaceViewer(
         private const val DIALOG = "New interface"
         private const val SOURCE_DIALOG = "Live source"
 
-        /** How long a component file has to stay unwritten before it is re-read. */
         private const val SOURCE_DEBOUNCE = 150L
 
-        /** Ceiling on the call closure compiled when an interface opens in live source mode. */
         private const val SCRIPT_CLOSURE_LIMIT = 512
         private const val DIALOG_BUTTON = 110f
         private const val DOCK_FRAMES = 4
@@ -1552,7 +1338,6 @@ class InterfaceViewer(
         private const val SOURCE_COPY = 1
         private const val SOURCE_IMPORT = 2
 
-        /** ImGui packs colours as ABGR. */
         private const val HOVER_OUTLINE = 0x9028c8ffL.toInt()
         private const val SECONDARY_OUTLINE = 0xa0ffb040L.toInt()
         private const val PLAY_OUTLINE = 0x4028c8ffL.toInt()

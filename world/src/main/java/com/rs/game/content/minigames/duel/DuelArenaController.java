@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.minigames.duel;
 
 import org.darkan.core.cache.ItemDefinitions;
@@ -349,7 +333,7 @@ public class DuelArenaController extends Controller {
 			target.tele(random == 0 ? teleports[1] : teleports[0]);
 		}
 		player.stopAll();
-		player.lock(2); // fixes mass click steps
+		player.lock(2);
 		player.reset();
 		isDueling = true;
 		player.getTempAttribs().setB("startedDuel", true);
@@ -521,7 +505,6 @@ public class DuelArenaController extends Controller {
 		int[] maxOffsetX = { 14, 14, 16 };
 		int[] maxOffsetY = { 10, 10, 10 };
 
-		//Obstacles enabled
 		if (player.getLastDuelRules().getRule(6)) {
 			arenaBoundariesX = new int[]{ 3336, 3367, 3367 };
 			arenaBoundariesY = new int[]{ 3227, 3246, 3208 };
@@ -573,81 +556,81 @@ public class DuelArenaController extends Controller {
 					return true;
 				case 631:
 					switch (componentId) {
-					case 56: // no range
+					case 56:
 						rules.setRules(0);
 						return false;
-					case 57: // no melee
+					case 57:
 						rules.setRules(1);
 						return false;
-					case 58: // no magic
+					case 58:
 						rules.setRules(2);
 						return false;
-					case 59: // fun wep
+					case 59:
 						rules.setRules(8);
 						return false;
-					case 60: // no forfiet
+					case 60:
 						rules.setRules(7);
 						return false;
-					case 61: // no drinks
+					case 61:
 						rules.setRules(3);
 						return false;
-					case 62: // no food
+					case 62:
 						rules.setRules(4);
 						return false;
-					case 63: // no prayer
+					case 63:
 						rules.setRules(5);
 						return false;
-					case 64: // no movement
+					case 64:
 						rules.setRules(25);
 						if (rules.getRule(6)) {
 							rules.setRule(6, false);
 							player.sendMessage("You can't have obstacles without movement.");
 						}
 						return false;
-					case 65: // obstacles
+					case 65:
 						rules.setRules(6);
 						if (rules.getRule(25)) {
 							rules.setRule(25, false);
 							player.sendMessage("You can't have obstacles without movement.");
 						}
 						return false;
-					case 66: // enable summoning
+					case 66:
 						rules.setRules(24);
 						return false;
-					case 67:// no spec
+					case 67:
 						rules.setRules(9);
 						return false;
-					case 21:// no helm
+					case 21:
 						rules.setRules(10);
 						return false;
-					case 22:// no cape
+					case 22:
 						rules.setRules(11);
 						return false;
-					case 23:// no ammy
+					case 23:
 						rules.setRules(12);
 						return false;
-					case 31:// arrows
+					case 31:
 						rules.setRules(23);
 						return false;
-					case 24:// weapon
+					case 24:
 						rules.setRules(13);
 						return false;
-					case 25:// body
+					case 25:
 						rules.setRules(14);
 						return false;
-					case 26:// shield
+					case 26:
 						rules.setRules(15);
 						return false;
-					case 27:// legs
+					case 27:
 						rules.setRules(17);
 						return false;
-					case 28:// ring
+					case 28:
 						rules.setRules(19);
 						return false;
-					case 29: // bots
+					case 29:
 						rules.setRules(20);
 						return false;
-					case 30: // gloves
+					case 30:
 						rules.setRules(22);
 						return false;
 					case 107:
@@ -687,20 +670,15 @@ public class DuelArenaController extends Controller {
 				case 628:
 					switch (packet) {
 					case 1:
-						// addItem(slotId, 1);
 						return false;
 					case 2:
-						// addItem(slotId, 5);
 						return false;
 					case 3:
-						// addItem(slotId, 10);
 						return false;
 					case 4:
 						Item item = player.getInventory().getItems().get(slotId);
 						if (item == null)
 							return false;
-						// addItem(slotId,
-						// player.getInventory().getItems().getNumberOf(item));
 						return false;
 					case 5:
 						player.getInventory().sendExamine(slotId);
@@ -717,83 +695,83 @@ public class DuelArenaController extends Controller {
 						accept(false);
 						return false;
 					}
-				case 637: // friendly
+				case 637:
 					switch (componentId) {
-					case 25: // no range
+					case 25:
 						rules.setRules(0);
 						return false;
-					case 26: // no melee
+					case 26:
 						rules.setRules(1);
 						return false;
-					case 27: // no magic
+					case 27:
 						rules.setRules(2);
 						return false;
-					case 28: // fun wep
+					case 28:
 						rules.setRules(8);
 						return false;
-					case 29: // no forfiet
+					case 29:
 						rules.setRules(7);
 						return false;
-					case 30: // no drinks
+					case 30:
 						rules.setRules(3);
 						return false;
-					case 31: // no food
+					case 31:
 						rules.setRules(4);
 						return false;
-					case 32: // no prayer
+					case 32:
 						rules.setRules(5);
 						return false;
-					case 33: // no movement
+					case 33:
 						rules.setRules(25);
 						if (rules.getRule(6)) {
 							rules.setRule(6, false);
 							player.sendMessage("You can't have movement without obstacles.");
 						}
 						return false;
-					case 34: // obstacles
+					case 34:
 						rules.setRules(6);
 						if (rules.getRule(25)) {
 							rules.setRule(25, false);
 							player.sendMessage("You can't have obstacles without movement.");
 						}
 						return false;
-					case 35: // enable summoning
+					case 35:
 						rules.setRules(24);
 						return false;
-					case 36:// no spec
+					case 36:
 						rules.setRules(9);
 						return false;
-					case 43:// no helm
+					case 43:
 						rules.setRules(10);
 						return false;
-					case 44:// no cape
+					case 44:
 						rules.setRules(11);
 						return false;
-					case 45:// no ammy
+					case 45:
 						rules.setRules(12);
 						return false;
-					case 53:// arrows
+					case 53:
 						rules.setRules(23);
 						return false;
-					case 46:// weapon
+					case 46:
 						rules.setRules(13);
 						return false;
-					case 47:// body
+					case 47:
 						rules.setRules(14);
 						return false;
-					case 48:// shield
+					case 48:
 						rules.setRules(15);
 						return false;
-					case 49:// legs
+					case 49:
 						rules.setRules(17);
 						return false;
-					case 50:// ring
+					case 50:
 						rules.setRules(19);
 						return false;
-					case 51: // bots
+					case 51:
 						rules.setRules(20);
 						return false;
-					case 52: // gloves
+					case 52:
 						rules.setRules(22);
 						return false;
 					case 86:

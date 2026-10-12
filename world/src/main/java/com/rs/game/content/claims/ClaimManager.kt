@@ -93,7 +93,6 @@ object ClaimManager {
         return false
     }
 
-    /** Construction pieces are only made, placed and picked up on land claimed by the player, or by someone who allows building. */
     @JvmStatic
     fun canConstruct(player: Player, tile: Tile, notify: Boolean = true): Boolean {
         if (GeneratedWorld.onRoad(tile.x, tile.y)) {

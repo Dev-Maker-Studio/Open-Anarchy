@@ -1,8 +1,5 @@
 package org.darkan.core.map.pathfinder
 
-/**
- * @author Kris | 16/03/2022
- */
 @Suppress("MemberVisibilityCanBePrivate")
 @JvmInline
 public value class AbsoluteCoords(public val packedCoord: Int) {
@@ -16,9 +13,6 @@ public value class AbsoluteCoords(public val packedCoord: Int) {
     public val y: Int get() = packedCoord and 0x3FFF
     public val z: Int get() = (packedCoord shr 28) and 0x3
 
-    /**
-     * Converts these absolute coords to the zone coords in which these absolute coords are.
-     */
     public fun toZoneCoords(): ZoneCoords = ZoneCoords(x shr 3, y shr 3, z)
     override fun toString(): String = "AbsoluteCoords($x, $y, $z)"
 }

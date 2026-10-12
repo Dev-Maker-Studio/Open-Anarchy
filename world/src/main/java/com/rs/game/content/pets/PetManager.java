@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.pets;
 
 import org.darkan.core.cache.ItemDefinitions;
@@ -29,57 +13,21 @@ import world.gregs.voidps.type.Tile;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * The pet manager.
- *
- * @author Emperor
- *
- */
 public final class PetManager {
 
-	/**
-	 * The pet details mapping, sorted by item id.
-	 */
 	private final Map<Integer, PetDetails> petDetails = new HashMap<>();
 
-	/**
-	 * The player.
-	 */
 	private transient Player player;
 
-	/**
-	 * The current NPC id.
-	 */
 	private int npcId;
 
-	/**
-	 * The current item id.
-	 */
 	private int itemId;
 
-	/**
-	 * The troll baby's name (if any).
-	 */
 	private String trollBabyName;
 
-	/**
-	 * Constructs a new {@code PetManager} {@code Object}.
-	 */
 	public PetManager() {
-		/*
-		 * empty.
-		 */
 	}
 
-	/**
-	 * Spawns a pet.
-	 *
-	 * @param itemId
-	 *            The item id.
-	 * @param deleteItem
-	 *            If the item should be removed.
-	 * @return {@code True} if we were dealing with a pet item id.
-	 */
 	public boolean spawnPet(int itemId, boolean deleteItem) {
 		Pets pets = Pets.forId(itemId);
 		if (pets == null)
@@ -120,33 +68,15 @@ public final class PetManager {
 		return true;
 	}
 
-	/**
-	 * Checks if the player has the requirements for the pet.
-	 *
-	 * @param pet
-	 *            The pet.
-	 * @return {@code True} if so.
-	 */
 	private boolean hasRequirements(Player player, Pets pet) {
 		return player.getSkills().getLevel(Constants.SUMMONING) >= pet.getSummoningLevel();
 	}
 
-	/**
-	 * Initializes the pet manager.
-	 */
 	public void init() {
 		if (npcId > 0 && itemId > 0)
 			spawnPet(itemId, false);
 	}
 
-	/**
-	 * Makes the pet eat.
-	 *
-	 * @param foodId
-	 *            The food item id.
-	 * @param npc
-	 *            The pet NPC.
-	 */
 	public void eat(int foodId, Pet npc) {
 		if (npc != player.getPet()) {
 			player.sendMessage("This isn't your pet!");
@@ -185,12 +115,6 @@ public final class PetManager {
 		player.sendMessage("Nothing interesting happens.");
 	}
 
-	/**
-	 * Removes the details for this pet.
-	 *
-	 * @param npcId
-	 *            The item id of the pet.
-	 */
 	public void removeDetails(int itemId) {
 		Pets pets = Pets.forId(itemId);
 		if (pets == null)
@@ -198,78 +122,34 @@ public final class PetManager {
 		petDetails.remove(pets.getBabyItemId());
 	}
 
-	/**
-	 * Gets the player.
-	 *
-	 * @return The player.
-	 */
 	public Player getPlayer() {
 		return player;
 	}
 
-	/**
-	 * Sets the player.
-	 *
-	 * @param player
-	 *            The player to set.
-	 */
 	public void setPlayer(Player player) {
 		this.player = player;
 	}
 
-	/**
-	 * Gets the npcId.
-	 *
-	 * @return The npcId.
-	 */
 	public int getNpcId() {
 		return npcId;
 	}
 
-	/**
-	 * Sets the npcId.
-	 *
-	 * @param npcId
-	 *            The npcId to set.
-	 */
 	public void setNpcId(int npcId) {
 		this.npcId = npcId;
 	}
 
-	/**
-	 * Gets the itemId.
-	 *
-	 * @return The itemId.
-	 */
 	public int getItemId() {
 		return itemId;
 	}
 
-	/**
-	 * Sets the itemId.
-	 *
-	 * @param itemId
-	 *            The itemId to set.
-	 */
 	public void setItemId(int itemId) {
 		this.itemId = itemId;
 	}
 
-	/**
-	 * Gets the trollBabyName.
-	 *
-	 * @return The trollBabyName.
-	 */
 	public String getTrollBabyName() {
 		return trollBabyName;
 	}
 
-	/**
-	 * Sets the trollBabyName.
-	 *
-	 * @param trollBabyName
-	 *            The trollBabyName to set.
-	 */
 	public void setTrollBabyName(String trollBabyName) {
 		this.trollBabyName = trollBabyName;
 	}

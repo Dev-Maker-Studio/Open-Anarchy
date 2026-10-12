@@ -7,16 +7,6 @@ import world.gregs.voidps.cache.definition.data.TextureOp
 import world.gregs.voidps.cache.definition.data.TextureOpcode
 import world.gregs.voidps.cache.definition.data.TextureShape
 
-/**
- * The exact inverse of [world.gregs.voidps.cache.definition.decoder.TextureDecoder].
- *
- * Nothing here decides anything: an operation writes the opcodes it carries in the order it
- * carries them, and each payload's shape comes from [TextureOpFormat] exactly as the decoder read
- * it. What it does do is refuse to write a graph that would not read back - a child count that
- * disagrees with the type, an output index past the end of the list, a perlin step list that no
- * longer matches the step count - because a texture that desyncs is a texture the client draws as
- * noise.
- */
 class TextureEncoder {
 
     fun Writer.encode(definition: TextureDefinition) {
@@ -186,7 +176,6 @@ class TextureEncoder {
 
         private const val NEGATIVE = 0x8000
 
-        /** Every count in the format is a single byte. */
         private const val LIMIT = 255
     }
 }

@@ -7,14 +7,6 @@ import world.gregs.voidps.cache.Index
 import world.gregs.voidps.cache.definition.data.ParticleProducerDefinition
 import world.gregs.voidps.cache.definition.encoder.ParticleProducerEncoder
 
-/**
- * Index 27 archive 0: particle producers, the client's `ParticleProducerType`.
- *
- * The read path only, as every codec in the tree needs: the client's `decode` shifts the angles
- * and the sizes and narrows three of them into a `short`, and its `build` derives twenty more
- * values from those. None of that is invertible, so none of it happens here - see
- * [ParticleProducerDefinition].
- */
 class ParticleProducerDecoder : DefinitionDecoder<ParticleProducerDefinition>(Index.PARTICLES) {
 
     private val encoder = ParticleProducerEncoder()
@@ -96,14 +88,12 @@ class ParticleProducerDecoder : DefinitionDecoder<ParticleProducerDefinition>(In
         }
     }
 
-    /** A byte counted list of shorts, which opcodes 9, 10 and 25 all are. */
     private fun ids(buffer: Reader): IntArray {
         val count = buffer.readUnsignedByte()
         return IntArray(count) { buffer.readUnsignedShort() }
     }
 
     companion object {
-        /** Index 27's producer archive. */
         const val ARCHIVE = 0
     }
 }

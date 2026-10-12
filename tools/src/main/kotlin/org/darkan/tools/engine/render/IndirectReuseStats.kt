@@ -1,35 +1,11 @@
 package org.darkan.tools.engine.render
 
-/**
- * Accounting for what an [IndirectRenderer] rebuild actually re-does that the previous build
- * had already done.
- *
- * The renderer is thrown away and rebuilt from scratch on every navigation jump: every model
- * of the new centre region is re-registered into fresh shared buffers and every material it
- * references is regenerated into fresh array textures. Some of that is genuinely new work —
- * a region the camera has never seen brings models and materials the GPU has never held. The
- * rest is the same geometry and the same layers uploaded again under new GL names.
- *
- * This object measures the split, so the question "is reusing the renderer across jumps worth
- * the refactor?" is answered by a reusable fraction and a phase cost rather than by intuition.
- * It is the same trade [org.darkan.tools.cache.texture.TexturePixelStats] makes: **ids and
- * counts only, never geometry and never pixels**, so measuring the path cannot change the cost
- * of the path being measured.
- *
- * Two baselines are reported, and they answer different questions:
- * - *vs previous build* is what a renderer that only remembered the last jump could skip.
- * - *vs all builds so far* is the ceiling for one that remembers everything it has ever
- *   uploaded, which is the design the refactor would actually produce.
- */
 object IndirectReuseStats {
 
-    /** `-Ddarkan.irReuseStats=true` turns the accounting on. Off by default. */
     val ENABLED: Boolean = System.getProperty("darkan.irReuseStats", "false").toBoolean()
 
-    /** Vertex and index counts a single model contributed to the shared buffers. */
     private class ModelSize(val vertices: Int, val indices: Int)
 
-    /** What one build registered, by id. No geometry and no pixels are retained. */
     private class Build {
         val models = HashMap<Int, ModelSize>()
         val materialSizes = HashMap<Int, Int>()
@@ -37,21 +13,16 @@ object IndirectReuseStats {
         var indices = 0L
     }
 
-    /** The build currently being registered, or null outside a build. */
     private var current: Build? = null
 
-    /** The last completed build, for the "vs previous" baseline. */
     private var previous: Build? = null
 
-    /** Every model id ever registered, with the size it contributed. */
     private val everModels = HashMap<Int, ModelSize>()
 
-    /** Every material id ever turned into an array layer, with its edge length. */
     private val everMaterials = HashMap<Int, Int>()
 
     private var buildIndex = 0
 
-    /** Bytes per vertex in the shared buffers, set by the renderer so the two agree. */
     var vertexBytes: Int = 36
 
     fun beginBuild() {
@@ -59,10 +30,8 @@ object IndirectReuseStats {
         current = Build()
     }
 
-    /** Record that [modelId] contributed [vertices] vertices and [indices] indices. */
     fun recordModel(modelId: Int, vertices: Int, indices: Int) {
         val build = current ?: return
-        // A model registers once per build; its mesh batches accumulate into one entry.
         val existing = build.models[modelId]
         build.models[modelId] = if (existing == null) ModelSize(vertices, indices)
         else ModelSize(existing.vertices + vertices, existing.indices + indices)
@@ -70,27 +39,11 @@ object IndirectReuseStats {
         build.indices += indices
     }
 
-    /** Record that [materialId] became an array layer of [size] x [size] texels. */
     fun recordMaterial(materialId: Int, size: Int) {
         val build = current ?: return
         build.materialSizes[materialId] = size
     }
 
-    /**
-     * Close the current build and print the reuse split against both baselines.
-     *
-     * @param geometryUploadMs wall of the shared VBO/IBO upload
-     * @param registerMs wall of the accumulate loop that fed it
-     * @param texCpuMs wall of the CPU row-flip that packs array layers
-     * @param texUploadMs wall of the `glTexImage3D`/`glTexSubImage3D` calls
-     * @param texMipmapMs wall of `glGenerateMipmap` across all array textures
-     * @param texGenMs wall of material pixel generation (memoised; reported for context)
-     * @param drainMs wall of the `glFinish` that follows the build, i.e. whatever the driver
-     *        deferred past the upload calls the phase walls above measured
-     * @param registerCpuMs CPU time of the accumulate loop
-     * @param geometryUploadCpuMs CPU time of the shared geometry upload
-     * @param texArrayCpuMs CPU time of the whole array-texture build
-     */
     fun finishBuild(
         drainMs: Double,
         geometryUploadMs: Double,
@@ -142,13 +95,6 @@ object IndirectReuseStats {
         val everNewVertices = build.vertices - everSharedVertices
         val everNewLayerBytes = newLayerBytesEver.values.sum()
 
-        // The ceiling on what reuse can give back: the phase's wall scaled by the share of
-        // its input that a renderer remembering every previous build would not have to touch
-        // again. It is a ceiling and not an estimate -- an append-based rebuild still has to
-        // grow and re-bind buffers, which this credits as free.
-        // Deliberately CPU time and not wall: the build runs while the loader pool holds most
-        // of the machine, so a phase's wall includes waiting that not doing the work cannot
-        // give back. Only the CPU figure is a saving reuse could actually bank.
         val geometryPhaseMs = geometryUploadCpuMs + registerCpuMs
         val geomCeilingMs =
             if (build.vertices > 0) geometryPhaseMs * everSharedVertices / build.vertices else 0.0

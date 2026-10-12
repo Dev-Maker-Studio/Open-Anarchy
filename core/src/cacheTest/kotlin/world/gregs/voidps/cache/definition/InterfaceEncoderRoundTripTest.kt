@@ -14,18 +14,6 @@ import java.lang.reflect.Modifier
 import kotlin.test.Test
 import kotlin.test.fail
 
-/**
- * Encodes every component of every interface in the cache with [InterfaceEncoder], decodes the result
- * straight back with [InterfaceDecoder] and compares every field of the definition.
- *
- * The interface editor authors components in memory and saves them through the encoder, so anything the
- * encoder cannot reproduce is data silently lost on save. The decoder is the authority here: it is what
- * reads the shipped cache, so the encoder is expected to produce a stream the decoder reads back identically.
- *
- * Byte identity against the shipped cache is proven separately by [InterfaceEncoderParityTest], which is
- * what the cache source tree needs; this test is the field level view of the same thing and reports which
- * field went wrong when one does.
- */
 class InterfaceEncoderRoundTripTest {
 
     @Test
@@ -61,9 +49,6 @@ class InterfaceEncoderRoundTripTest {
                 components++
                 val writer = BufferWriter(BUFFER_CAPACITY)
                 with(encoder) { writer.encode(component) }
-                // Round tripping through our own decoder only proves self consistency; comparing the
-                // bytes against the shipped cache proves the client reads the saved component the same
-                // way it read the original.
                 val cached = cache.data(INTERFACES, definition.id, component.id and 0xffff)
                 if (cached != null && !cached.contentEquals(writer.toArray())) {
                     byteDifferences++
@@ -135,7 +120,6 @@ class InterfaceEncoderRoundTripTest {
     }
 
     companion object {
-        /** Largest shipped component encodes to a few kb; give the writer plenty of headroom. */
         private const val BUFFER_CAPACITY = 64 * 1024
         private const val EXAMPLE_LIMIT = 5
 

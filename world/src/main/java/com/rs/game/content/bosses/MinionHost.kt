@@ -9,22 +9,12 @@ data class MinionSpawn(val npcId: Int, val offsetX: Int, val offsetY: Int, val o
     fun tileFrom(host: Tile): Tile = host.transform(offsetX, offsetY, offsetZ)
 }
 
-/**
- * What happens to the minions when the boss dies. Godwars bodyguards outlive their general and are
- * killed and respawned on their own; Nex's four take their power back with her.
- */
 enum class MinionPolicy { PERSIST, BOUND }
 
-/** A minion that needs to talk back to the boss that placed it. */
 interface HostedMinion {
     var host: MinionHost?
 }
 
-/**
- * A boss that brings its own minions rather than relying on world spawns: they are placed relative
- * to wherever the boss itself spawned, so the same boss arrives complete in its real arena, in an
- * instance copy of it, or dropped anywhere in the open world.
- */
 open class MinionHost(
     id: Int,
     tile: Tile,
@@ -60,11 +50,6 @@ open class MinionHost(
         }
     }
 
-    /**
-     * A bound minion is marked as spawned so that dying never schedules a respawn of its own: the
-     * host is the only thing that may bring it back, and one that respawned itself outlived the
-     * roster it was in and haunted the arena.
-     */
     private fun spawnMinions() {
         val ownLifecycle = policy == MinionPolicy.BOUND
         minionSpawns.mapTo(minions) { spawn ->

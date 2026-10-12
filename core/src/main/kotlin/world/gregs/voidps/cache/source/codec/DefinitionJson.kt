@@ -33,31 +33,8 @@ import java.lang.Long as JavaLong
 import java.lang.reflect.Array as ReflectArray
 import java.lang.reflect.Type as ReflectType
 
-/**
- * One definition data class as an editable JSON file.
- *
- * The mapping is derived from the class itself rather than written out by hand, so a field added to a
- * decoder appears in the tree the moment it exists and no type can quietly lose one. The rules, which are
- * what `docs/cache-source.md` promises a file looks like:
- *
- * - **Keys are the fields, in declaration order.** The class file lists its fields in the order they were
- *   written, constructor properties first and the body's afterwards, so `id` leads and the layout fidelity
- *   fields ([world.gregs.voidps.cache.definition.OpcodeOrdered]) trail.
- * - **Defaults are kept, nulls are omitted.** Every non-null field is written whatever its value, so a
- *   reader never needs the decoder's defaults to understand a file; a null field is left out entirely and
- *   read back as the fresh definition's default, which for every nullable field here is null.
- * - **Ids are numbers, arrays are inline while they fit.** A line is broken only when it would run past
- *   [WIDTH], so `[1, 2, 3]` stays on one line and a 200 entry parameter map does not.
- * - **Maps keep their insertion order.** The encoders write parameters and enum entries in iteration
- *   order, so sorting the keys here would change the file.
- *
- * Writing is deterministic to the byte - the same definition always produces the same text - which is what
- * lets re-unpacking an unchanged cache leave the tree alone. Reading is tolerant: key order, whitespace and
- * unknown keys are all ignored, and a missing key leaves the field at its default.
- */
 internal class DefinitionJson private constructor(private val properties: List<Property>) {
 
-    /** [definition] as the exact text of its file, trailing newline included. */
     fun write(definition: Any): ByteArray {
         val entries = ArrayList<Pair<String, Node>>(properties.size)
         for (property in properties) {
@@ -73,10 +50,6 @@ internal class DefinitionJson private constructor(private val properties: List<P
         return out.toString().toByteArray(Charsets.UTF_8)
     }
 
-    /**
-     * Read [bytes] into [definition], which must be a fresh instance of the right id: a key the file does
-     * not carry leaves the field exactly as the constructor left it.
-     */
     fun read(bytes: ByteArray, definition: Any) {
         val root = json.parseToJsonElement(String(bytes, Charsets.UTF_8)).jsonObject
         for (property in properties) {
@@ -88,12 +61,10 @@ internal class DefinitionJson private constructor(private val properties: List<P
         }
     }
 
-    /** One field of the definition and how its value crosses to JSON and back. */
     private class Property(val name: String, val field: Field, val codec: ValueCodec)
 
     companion object {
 
-        /** How wide a line may be before an array, object or map is broken across lines. */
         private const val WIDTH = 100
 
         private const val INDENT = "  "
@@ -102,37 +73,16 @@ internal class DefinitionJson private constructor(private val properties: List<P
 
         private val cache = ConcurrentHashMap<Class<*>, DefinitionJson>()
 
-        /**
-         * A field that is derived from another field the file does carry, so it is not written.
-         *
-         * Writing one would put a value in the file that the encoder ignores and an editor could
-         * contradict. Keyed by the fully qualified field so a same-named field elsewhere is unaffected.
-         */
         private val DERIVED = setOf(
-            // ClanVarDefinition.typeChar is the descriptor byte the file holds; CS2Type.forJagexDesc of it
-            // is many to one, has no JSON form, and is what the encoder is careful never to use.
             "world.gregs.voidps.cache.definition.data.ClanVarDefinition.type",
-            // A font's 65,536 entry kerning table is computed from the glyph offset profiles the file
-            // does carry, and only for the variable width form; writing it would be a megabyte of
-            // derived numbers per font that the encoder ignores.
             "world.gregs.voidps.cache.definition.data.FontDefinition.kerningAdjustments",
-            // A world map area's bounds are the extremes of its sections, which the file does carry.
             "world.gregs.voidps.cache.definition.data.WorldMapDefinition.minX",
             "world.gregs.voidps.cache.definition.data.WorldMapDefinition.minY",
             "world.gregs.voidps.cache.definition.data.WorldMapDefinition.maxX",
             "world.gregs.voidps.cache.definition.data.WorldMapDefinition.maxY",
-            // The zoom byte is rawZoom; anInt9547 is it with the client's 255 to 0 fold applied.
             "world.gregs.voidps.cache.definition.data.WorldMapDefinition.anInt9547"
         )
 
-        /**
-         * The record classes that predate [DefinitionRecord] and are named here instead.
-         *
-         * They write their null fields as `null`, which is what the trees that already exist hold, so
-         * they stay listed rather than being given the marker. Anything new implements the marker, and
-         * either way [nested] gives it the same spelling - a nested object - so a record is free to
-         * arrive by whichever route its class chose.
-         */
         private val NESTED = setOf(
             InterfaceComponentSetting::class.java,
             InterfaceComponentHook::class.java,
@@ -150,14 +100,6 @@ internal class DefinitionJson private constructor(private val properties: List<P
             ShaderProgramDefine::class.java
         )
 
-        /**
-         * [type]'s mapping, built once.
-         *
-         * Built outside the map rather than in a `computeIfAbsent`: a definition holding a record class
-         * asks for that class's mapping while its own is still being built, and a recursive update of a
-         * [ConcurrentHashMap] either throws or deadlocks. Two threads racing on the same type build two
-         * equivalent mappings and the first one to land wins.
-         */
         fun of(type: Class<*>): DefinitionJson {
             cache[type]?.let { return it }
             val built = build(type)
@@ -180,12 +122,6 @@ internal class DefinitionJson private constructor(private val properties: List<P
             return DefinitionJson(properties)
         }
 
-        /**
-         * The codec for one field, from its declared type.
-         *
-         * Anything not listed is an error rather than a silently dropped field: a new decoder field of a
-         * type nothing here can write must be given a spelling, not lost.
-         */
         private fun codec(type: Class<*>, field: Field): ValueCodec {
             simple(field.type)?.let { return it }
             if (Map::class.java.isAssignableFrom(field.type) || List::class.java.isAssignableFrom(field.type)) {
@@ -197,12 +133,6 @@ internal class DefinitionJson private constructor(private val properties: List<P
             )
         }
 
-        /**
-         * The codec of a field's type, of a map's key or value, or of a list's element.
-         *
-         * Recursive rather than flat because a list's element may itself be a list of records: a
-         * texture is operations, each of which is opcodes, one of which is shapes.
-         */
         private fun element(owner: Class<*>, field: Field, argument: ReflectType): ValueCodec {
             val type = erase(argument) ?: throw IllegalArgumentException(
                 "${owner.name}.${field.name} is parameterised with $argument, which is not a class."
@@ -221,15 +151,12 @@ internal class DefinitionJson private constructor(private val properties: List<P
             )
         }
 
-        /** The codec of a type that needs nothing but itself - everything but a map or a list. */
         private fun simple(type: Class<*>): ValueCodec? = when (type) {
             Int::class.javaPrimitiveType, Integer::class.java -> IntCodec
             Long::class.javaPrimitiveType, JavaLong::class.java -> LongCodec
             Short::class.javaPrimitiveType, Short::class.javaObjectType -> ShortCodec
             Byte::class.javaPrimitiveType, Byte::class.javaObjectType -> ByteCodec
             Char::class.javaPrimitiveType, Char::class.javaObjectType -> CharCodec
-            // The boxed form is what a nullable field declares, and a nullable field is how a record
-            // says "the file did not carry this" - see DefinitionRecord.
             Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> BooleanCodec
             String::class.java -> StringCodec
             Any::class.java -> AnyCodec
@@ -240,38 +167,19 @@ internal class DefinitionJson private constructor(private val properties: List<P
             CharArray::class.java -> ArrayCodec.CHARS
             Array<String>::class.java -> ObjectArrayCodec(String::class.java, StringCodec)
             Array<IntArray>::class.java -> ObjectArrayCodec(IntArray::class.java, ArrayCodec.INTS)
-            // The only byte[][] is a shadowed payload list: opaque record bytes, so hex, not numbers.
             Array<ByteArray>::class.java -> ObjectArrayCodec(ByteArray::class.java, HexCodec)
             Array<Any>::class.java -> ObjectArrayCodec(Any::class.java, AnyCodec)
-            // A record, by either route; and an array of records - a synth sound's ten instrument
-            // slots, a filter's pole pairs - as an array of nested objects. Every other array class is
-            // named above, so the component check only ever catches one whose elements are records,
-            // and nulls in it survive the trip.
             else -> nested(type) ?: type.componentType?.let { component ->
                 nested(component)?.let { ObjectArrayCodec(component, it) }
             }
         }
 
-        /**
-         * [type] as a nested object, if it is a record at all.
-         *
-         * The two ways of being one meet here, because nothing downstream cares which was used: a class
-         * listed in [NESTED] writes its null fields as `null`, and one carrying the [DefinitionRecord]
-         * marker leaves them out.
-         */
         private fun nested(type: Class<*>): NestedCodec? = when {
             NESTED.contains(type) -> NestedCodec(type, nulls = true)
             DefinitionRecord::class.java.isAssignableFrom(type) -> NestedCodec(type)
             else -> null
         }
 
-        /**
-         * The class a type argument stands for.
-         *
-         * Kotlin's collection types are declaration site covariant, so a `Map<Int, Any>` field's signature
-         * reads `Map<Integer, ? extends Object>` and the value argument arrives as a wildcard rather than
-         * as a class; its bound is the type that was written.
-         */
         private fun erase(type: ReflectType): Class<*>? = when (type) {
             is Class<*> -> type
             is WildcardType -> type.upperBounds.firstOrNull()?.let { erase(it) }
@@ -279,7 +187,6 @@ internal class DefinitionJson private constructor(private val properties: List<P
             else -> null
         }
 
-        /** [type]'s [count] type arguments, unwrapping the wildcards Kotlin's covariance emits. */
         private fun arguments(
             owner: Class<*>,
             field: Field,
@@ -295,16 +202,13 @@ internal class DefinitionJson private constructor(private val properties: List<P
             return arguments
         }
 
-        /** [type] as a parameterised type, through however many wildcards stand in front of it. */
         private fun parameterized(type: ReflectType): ParameterizedType? = when (type) {
             is ParameterizedType -> type
             is WildcardType -> type.upperBounds.firstOrNull()?.let { parameterized(it) }
             else -> null
         }
 
-        // --- The JSON value tree -------------------------------------------------------------------
 
-        /** A value on its way to or from a file. */
         private interface ValueCodec {
             fun node(value: Any): Node
             fun value(element: JsonElement): Any
@@ -340,10 +244,6 @@ internal class DefinitionJson private constructor(private val properties: List<P
             override fun value(element: JsonElement) = element.jsonPrimitive.content
         }
 
-        /**
-         * A cp1252 type descriptor, written as the character itself so a file says `"i"` rather than
-         * `105`. Code 0 - a definition that carries no descriptor - is the empty string.
-         */
         private object CharCodec : ValueCodec {
             override fun node(value: Any): Node {
                 val character = value as Char
@@ -356,7 +256,6 @@ internal class DefinitionJson private constructor(private val properties: List<P
             }
         }
 
-        /** A parameter value, an enum entry or a script argument: an int or a string, and nothing else. */
         private object AnyCodec : ValueCodec {
             override fun node(value: Any): Node = when (value) {
                 is String -> StringNode(value)
@@ -371,7 +270,6 @@ internal class DefinitionJson private constructor(private val properties: List<P
             }
         }
 
-        /** Opaque bytes - a shadowed record payload - as lower case hex. */
         private object HexCodec : ValueCodec {
             private val digits = "0123456789abcdef".toCharArray()
 
@@ -393,7 +291,6 @@ internal class DefinitionJson private constructor(private val properties: List<P
             }
         }
 
-        /** A primitive array as an array of numbers, or of booleans. */
         private class ArrayCodec(
             private val length: (Any) -> Int,
             private val element: (Any, Int) -> Node,
@@ -426,7 +323,6 @@ internal class DefinitionJson private constructor(private val properties: List<P
                     { items -> BooleanArray(items.size) { items[it].jsonPrimitive.boolean } }
                 )
 
-                /** Single cp1252 characters, each as a string, and the empty string for code 0. */
                 val CHARS = ArrayCodec(
                     { (it as CharArray).size },
                     { array, index -> CharCodec.node((array as CharArray)[index]) },
@@ -435,7 +331,6 @@ internal class DefinitionJson private constructor(private val properties: List<P
             }
         }
 
-        /** An array of objects, any of which may be null. */
         private class ObjectArrayCodec(
             private val component: Class<*>,
             private val element: ValueCodec
@@ -457,12 +352,6 @@ internal class DefinitionJson private constructor(private val properties: List<P
             }
         }
 
-        /**
-         * A map as a JSON object keyed by the numeric id, in the order the file listed it.
-         *
-         * Insertion ordered on the way back in, because the encoders write a parameter list and an enum's
-         * entries in iteration order and a rehash would rewrite the file.
-         */
         private class MapCodec(private val key: ValueCodec, private val value: ValueCodec) : ValueCodec {
 
             override fun node(value: Any): Node {
@@ -484,21 +373,13 @@ internal class DefinitionJson private constructor(private val properties: List<P
             }
         }
 
-        /** A list of records, as an array of objects. */
         private class ListCodec(private val element: ValueCodec) : ValueCodec {
             override fun node(value: Any) = ArrayNode((value as List<*>).map { element.node(it!!) })
             override fun value(source: JsonElement): Any = source.jsonArray.map { element.value(it) }
         }
 
-        /**
-         * A record class - a parameter record, a component setting, a script hook - as a nested object.
-         *
-         * Its fields are mapped exactly like a definition's, and it is rebuilt through the constructor
-         * that takes them all, in declaration order, since a record's fields may be read only.
-         */
         private class NestedCodec(
             private val type: Class<*>,
-            /** Whether a null field is written as `null` rather than left out; see [DefinitionRecord]. */
             private val nulls: Boolean = false
         ) : ValueCodec {
 
@@ -509,10 +390,6 @@ internal class DefinitionJson private constructor(private val properties: List<P
                 ?.also { it.isAccessible = true }
                 ?: throw IllegalArgumentException("${type.name} has no constructor taking all of its fields.")
 
-            /**
-             * The record's fields, nulls left out exactly as a definition's are: [value] reads a
-             * missing key back as null, so a written null says nothing a missing key does not.
-             */
             override fun node(value: Any): Node {
                 val entries = ArrayList<Pair<String, Node>>(json.properties.size)
                 for (property in json.properties) {
@@ -540,21 +417,15 @@ internal class DefinitionJson private constructor(private val properties: List<P
             }
         }
 
-        // --- The printer ---------------------------------------------------------------------------
 
-        /** A JSON value on its way out, which knows both how to fit on a line and how not to. */
         private sealed class Node {
-            /** The whole value on one line. */
             abstract fun compact(out: StringBuilder)
 
-            /** Whether breaking the value across lines would make it any narrower. */
             open val breakable: Boolean
                 get() = false
 
-            /** The value across lines, its first character at the caller's cursor and [indent] its column. */
             open fun expand(out: StringBuilder, indent: Int) = compact(out)
 
-            /** [expand] when the compact form would run past [WIDTH] from [column], [compact] otherwise. */
             fun write(out: StringBuilder, indent: Int, column: Int) {
                 val line = StringBuilder()
                 compact(line)

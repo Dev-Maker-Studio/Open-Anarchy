@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.farming
 import com.rs.utils.isAt
 
@@ -38,7 +22,6 @@ import kotlin.collections.HashMap
 
 @ServerStartupEvent
 fun mapToolLeprechauns() {
-    //inventory inter 74 = jadinko related storage
     fun openToolStorage(player: Player) {
         for (i in StorableItem.entries) i.updateVars(player)
         player.interfaceManager.sendInterface(125)
@@ -126,7 +109,6 @@ fun mapToolLeprechauns() {
 
     onItemOnNpc("Tool leprechaun", "Tool Leprechaun", "Teclyn") { e ->
         val itemId = e.item.id
-        // Duplicate npcid hack for miscellania cabbage noting
         if (e.npc.respawnTile.isAt(3056, 3310) && e.item.id in listOf(1965, 1967)) {
             e.player.startConversation {
                 npc(e.npc.id, HeadE.SAD_MILD_LOOK_DOWN,"A cabbage? Don't ye go showing me yer cabbage; this whole farm stinks of the things! Take it away and get it exchanged somewhere else.")

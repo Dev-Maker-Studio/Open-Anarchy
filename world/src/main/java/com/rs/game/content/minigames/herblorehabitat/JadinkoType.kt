@@ -11,7 +11,6 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import world.gregs.voidps.type.Tile
 
-//null meaning any, requireEmptyXPatch = true meaning must be empty.
 enum class JadinkoType(
 	val npcId: Int,
 	val level: Int,

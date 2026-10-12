@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.quests.demonslayer;
 
 import com.rs.engine.dialogue.Conversation;
@@ -41,7 +25,6 @@ import org.darkan.core.gameval.gen.Varbit;
 )
 @PluginEventHandler
 public class DemonSlayer extends QuestOutline {
-	//stages
 	final static int NOT_STARTED_STAGE = 0;
 	final static int AFTER_GYPSY_ARIS_INTRO_STAGE = 1;
 	final static int AFTER_SIR_PRYSIN_INTRO_STAGE = 2;
@@ -84,7 +67,6 @@ public class DemonSlayer extends QuestOutline {
 			lines.add("box. It can only be opened with special keys...");
 			lines.add("");
 
-			//---Sir Prysin---
 			if(player.getQuestManager().getAttribs(Quest.DEMON_SLAYER).getB("KEY1_DRAIN_LOC_KNOWN")) {
 				lines.add("Sir Prysin's key is stuck in a drain northeast of the castle");
 				lines.add("of Varrock castle. I can use a bucket of water");
@@ -100,7 +82,6 @@ public class DemonSlayer extends QuestOutline {
 				lines.add("I have gotten Sir Prysin's key");
 				lines.add("");
 			}
-			//------
 
 			if(player.getQuestManager().getAttribs(Quest.DEMON_SLAYER).getB("KEY2_WIZARD_LOC_KNOWN")) {
 				lines.add("I can speak to Wizard Traiborn in the wizards");

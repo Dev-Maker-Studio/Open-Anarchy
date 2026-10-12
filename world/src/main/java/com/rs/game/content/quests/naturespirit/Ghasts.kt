@@ -33,7 +33,6 @@ class Ghast(id: Int, tile: Tile) : NPC(id, tile) {
     }
 
     override fun getPossibleTargets(): MutableList<Entity> {
-        //Can't attack in filliman's grotto zone
         return super.getPossibleTargets().filter { !intArrayOf(879008, 881056, 881057, 879009).contains(it.getChunkId()) }.toMutableList()
     }
 

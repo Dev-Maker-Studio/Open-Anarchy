@@ -7,16 +7,13 @@ import world.gregs.voidps.cache.definition.data.MapObject
 import world.gregs.voidps.cache.definition.decoder.MapObjectDecoder
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * Complete region data including terrain tiles and objects.
- */
 data class RegionData(
     val regionId: Int,
     val regionX: Int,
     val regionY: Int,
-    val tiles: LongArray,           // MapTile packed values indexed by MapDefinition.index()
-    val settings: ByteArray,         // Tile settings (collision flags, bridges)
-    val objects: List<MapObject>     // All objects in this region
+    val tiles: LongArray,
+    val settings: ByteArray,
+    val objects: List<MapObject>
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -27,9 +24,6 @@ data class RegionData(
     override fun hashCode(): Int = regionId
 }
 
-/**
- * Tile data extracted from terrain archive.
- */
 data class TileInfo(
     val height: Int,
     val overlayId: Int,
@@ -39,23 +33,11 @@ data class TileInfo(
     val settings: Int
 )
 
-/**
- * Loads complete region data from the cache including terrain and XTEA-encrypted objects.
- *
- * Usage:
- * ```kotlin
- * MapXteas.load()  // Load XTEA keys first
- * val region = RegionLoader.loadRegion(cache, 50, 50)
- * ```
- */
 object RegionLoader {
     private class Loaded(val data: RegionData?)
 
     private val regionCache = ConcurrentHashMap<Int, Loaded>()
 
-    /**
-     * Pre-computed tile indices for iteration order (matches client expectation).
-     */
     private val tileIndices = IntArray(16384).apply {
         var i = 0
         for (level in 0 until 4) {
@@ -67,15 +49,6 @@ object RegionLoader {
         }
     }
 
-    /**
-     * Load a region by coordinates.
-     *
-     * @param cache The game cache
-     * @param regionX Region X coordinate
-     * @param regionY Region Y coordinate
-     * @param useCache Whether to cache the result (default true)
-     * @return RegionData or null if region doesn't exist
-     */
     fun loadRegion(cache: Cache, regionX: Int, regionY: Int, useCache: Boolean = true): RegionData? {
         val regionId = (regionX shl 8) or regionY
 
@@ -83,9 +56,6 @@ object RegionLoader {
         return regionCache.computeIfAbsent(regionId) { Loaded(loadRegionInternal(cache, regionX, regionY)) }.data
     }
 
-    /**
-     * Load a region by region ID.
-     */
     fun loadRegion(cache: Cache, regionId: Int, useCache: Boolean = true): RegionData? {
         val regionX = regionId shr 8
         val regionY = regionId and 0xff
@@ -95,18 +65,15 @@ object RegionLoader {
     private fun loadRegionInternal(cache: Cache, regionX: Int, regionY: Int): RegionData? {
         val regionId = (regionX shl 8) or regionY
 
-        // Load terrain data (m{x}_{y}) - unencrypted
         val terrainArchive = cache.archiveId(Index.MAPS, "m${regionX}_$regionY")
         if (terrainArchive == -1) return null
 
         val terrainData = cache.data(Index.MAPS, terrainArchive) ?: return null
 
-        // Decode terrain tiles and extract settings
         val tiles = LongArray(64 * 64 * 4)
         val settings = ByteArray(64 * 64 * 4)
         decodeTerrain(terrainData, tiles, settings)
 
-        // Load object data (l{x}_{y}) - may be XTEA encrypted
         val objectArchive = cache.archiveId(Index.MAPS, "l${regionX}_$regionY")
         val objects = if (objectArchive != -1) {
             val xtea = MapXteas.getKeys(regionId)
@@ -123,9 +90,6 @@ object RegionLoader {
         return RegionData(regionId, regionX, regionY, tiles, settings, objects)
     }
 
-    /**
-     * Decode terrain data into tiles and settings arrays.
-     */
     private fun decodeTerrain(data: ByteArray, tiles: LongArray, settings: ByteArray) {
         var position = 0
         val size = data.size
@@ -161,16 +125,11 @@ object RegionLoader {
                 }
             }
 
-            // Pack tile data
             tiles[index] = packTile(height, overlayId, overlayShape, overlayRotation, underlayId, setting)
             settings[index] = setting.toByte()
         }
     }
 
-    /**
-     * Pack tile data into a long value.
-     * Format matches MapTile value class structure.
-     */
     private fun packTile(
         height: Int,
         overlayId: Int,
@@ -187,9 +146,6 @@ object RegionLoader {
                (underlayId.toLong() shl 48)
     }
 
-    /**
-     * Decode objects from the object archive data.
-     */
     private fun decodeObjects(
         data: ByteArray,
         settings: ByteArray,
@@ -210,7 +166,6 @@ object RegionLoader {
                 regionTileX: Int,
                 regionTileY: Int
             ) {
-                // Calculate world coordinates
                 val worldX = regionTileX * 64 + localX
                 val worldY = regionTileY * 64 + localY
 
@@ -221,33 +176,18 @@ object RegionLoader {
         try {
             decoder.decode(data, settings, regionTileX, regionTileY)
         } catch (e: Exception) {
-            // A region that silently contains no objects is indistinguishable from one
-            // that is genuinely empty, so this failure must never be silent. That is not
-            // hypothetical: MapObjectDecoder chained object-id deltas only once where the
-            // client's readSum loops, and 22 of 2399 archives threw here and loaded with
-            // zero objects -- no doors, stairs or banks -- undetected because this catch
-            // said nothing.
-            //
-            // Wrong/absent XTEA keys are an expected, benign failure (the data decrypts to
-            // noise), so they are reported differently from a decode fault on data we could
-            // read. Anything in the second class is a real bug worth chasing.
             System.err.println(
                 "[RegionLoader] region ($regionTileX, $regionTileY): object decode failed after " +
                     "${objects.size} object(s) - " +
                     if (encrypted) "encrypted, XTEA keys may be wrong: ${e}"
                     else "UNENCRYPTED data, so this is a decoder fault, not a key problem: ${e}"
             )
-            // Partial output is worse than none: it looks like a valid region while silently
-            // missing everything past the fault. Drop it, having said so above.
             return emptyList()
         }
 
         return objects
     }
 
-    /**
-     * Extract tile info at a specific location.
-     */
     fun getTileInfo(tiles: LongArray, localX: Int, localY: Int, level: Int): TileInfo {
         val packed = tiles[MapDefinition.index(localX, localY, level)]
         return TileInfo(
@@ -260,23 +200,14 @@ object RegionLoader {
         )
     }
 
-    /**
-     * Get tile height at a location (raw value, multiply by 8 for world units).
-     */
     fun getTileHeight(tiles: LongArray, localX: Int, localY: Int, level: Int): Int {
         return (tiles[MapDefinition.index(localX, localY, level)] and 0xff).toInt()
     }
 
-    /**
-     * Check if a region exists in the cache.
-     */
     fun regionExists(cache: Cache, regionX: Int, regionY: Int): Boolean {
         return cache.archiveId(Index.MAPS, "m${regionX}_$regionY") != -1
     }
 
-    /**
-     * Get all available region coordinates.
-     */
     fun getAvailableRegions(cache: Cache): List<Pair<Int, Int>> {
         val regions = mutableListOf<Pair<Int, Int>>()
         for (x in 0 until 256) {
@@ -289,15 +220,9 @@ object RegionLoader {
         return regions
     }
 
-    /**
-     * Clear the region cache.
-     */
     fun clearCache() {
         regionCache.clear()
     }
 
-    /**
-     * Get cache statistics.
-     */
     fun getCacheSize(): Int = regionCache.size
 }

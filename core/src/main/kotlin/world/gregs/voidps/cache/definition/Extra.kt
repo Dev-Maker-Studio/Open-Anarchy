@@ -21,8 +21,6 @@ interface Extra {
         if (length == 0) {
             return
         }
-        // Linked: an encoder has to write the params back in the order the file had them,
-        // and a plain open hash map iterates in hash order.
         val extras = Object2ObjectLinkedOpenHashMap<String, Any>()
         for (i in 0 until length) {
             val string = buffer.readUnsignedBoolean()

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.minigames.shadesofmortton;
 
 import com.rs.game.World;
@@ -162,7 +146,6 @@ public class ShadesOfMortton {
 			return;
 		}
 		switch(e.getItem().getId()) {
-			//olive oils
 			case 3422:
 				e.getItem().setId(3430);
 				removeSanctity(e.getPlayer(), 3.6);
@@ -179,7 +162,6 @@ public class ShadesOfMortton {
 				e.getItem().setId(3436);
 				removeSanctity(e.getPlayer(), 0.9);
 				break;
-			//serums
 			case 3408:
 				e.getItem().setId(3416);
 				removeSanctity(e.getPlayer(), 3.6);
@@ -354,58 +336,58 @@ public class ShadesOfMortton {
 			return;
 		}
 		switch(e.getUsedWith(21488).getId()) {
-			case 1381: //Skeletal staff of air
+			case 1381:
 				e.getUsedWith(21488).changeId(21490);
 				break;
-			case 1383: //Skeletal staff of water
+			case 1383:
 				e.getUsedWith(21488).changeId(21491);
 				break;
-			case 1385: //Skeletal staff of earth
+			case 1385:
 				e.getUsedWith(21488).changeId(21492);
 				break;
-			case 1387: //Skeletal staff of fire
+			case 1387:
 				e.getUsedWith(21488).changeId(21493);
 				break;
-			case 1393: //Skeletal battlestaff of fire
+			case 1393:
 				e.getUsedWith(21488).changeId(21494);
 				break;
-			case 1395: //Skeletal battlestaff of water
+			case 1395:
 				e.getUsedWith(21488).changeId(21495);
 				break;
-			case 1397: //Skeletal battlestaff of air
+			case 1397:
 				e.getUsedWith(21488).changeId(21496);
 				break;
-			case 1399: //Skeletal battlestaff of earth
+			case 1399:
 				e.getUsedWith(21488).setId(21497);
 				break;
-			case 1401: //Necromancer's fire staff
+			case 1401:
 				e.getUsedWith(21488).setId(21498);
 				break;
-			case 1403: //Necromancer's water staff
+			case 1403:
 				e.getUsedWith(21488).setId(21499);
 				break;
-			case 1405: //Necromancer's air staff
+			case 1405:
 				e.getUsedWith(21488).setId(21500);
 				break;
-			case 1407: //Necromancer's earth staff
+			case 1407:
 				e.getUsedWith(21488).setId(21501);
 				break;
-			case 3053: //Skeletal lava battlestaff
+			case 3053:
 				e.getUsedWith(21488).setId(21502);
 				break;
-			case 3054: //Necromancer's lava staff
+			case 3054:
 				e.getUsedWith(21488).setId(21503);
 				break;
-			case 6562: //Skeletal mud battlestaff
+			case 6562:
 				e.getUsedWith(21488).setId(21504);
 				break;
-			case 6563: //Necromancer's mud staff
+			case 6563:
 				e.getUsedWith(21488).setId(21505);
 				break;
-			case 11736: //Skeletal steam battlestaff
+			case 11736:
 				e.getUsedWith(21488).setId(21506);
 				break;
-			case 11738: //Necromancer's steam staff
+			case 11738:
 				e.getUsedWith(21488).setId(21507);
 				break;
 		}
@@ -421,58 +403,58 @@ public class ShadesOfMortton {
 		e.getPlayer().sendOptionDialogue("Would you like to remove the skull?", ops -> {
 			ops.add("Yes", () -> {
 				switch(e.getItem().getId()) {
-					case 21490: //Skeletal staff of air
+					case 21490:
 						e.getItem().setId(1381);
 						break;
-					case 21491: //Skeletal staff of water
+					case 21491:
 						e.getItem().setId(1383);
 						break;
-					case 21492: //Skeletal staff of earth
+					case 21492:
 						e.getItem().setId(1385);
 						break;
-					case 21493: //Skeletal staff of fire
+					case 21493:
 						e.getItem().setId(1387);
 						break;
-					case 21494: //Skeletal battlestaff of fire
+					case 21494:
 						e.getItem().setId(1393);
 						break;
-					case 21495: //Skeletal battlestaff of water
+					case 21495:
 						e.getItem().setId(1395);
 						break;
-					case 21496: //Skeletal battlestaff of air
+					case 21496:
 						e.getItem().setId(1397);
 						break;
-					case 21497: //Skeletal battlestaff of earth
+					case 21497:
 						e.getItem().setId(1399);
 						break;
-					case 21498: //Necromancer's fire staff
+					case 21498:
 						e.getItem().setId(1401);
 						break;
-					case 21499: //Necromancer's water staff
+					case 21499:
 						e.getItem().setId(1403);
 						break;
-					case 21500: //Necromancer's air staff
+					case 21500:
 						e.getItem().setId(1405);
 						break;
-					case 21501: //Necromancer's earth staff
+					case 21501:
 						e.getItem().setId(1407);
 						break;
-					case 21502: //Skeletal lava battlestaff
+					case 21502:
 						e.getItem().setId(3053);
 						break;
-					case 21503: //Necromancer's lava staff
+					case 21503:
 						e.getItem().setId(3054);
 						break;
-					case 21504: //Skeletal mud battlestaff
+					case 21504:
 						e.getItem().setId(6562);
 						break;
-					case 21505: //Necromancer's mud staff
+					case 21505:
 						e.getItem().setId(6563);
 						break;
-					case 21506: //Skeletal steam battlestaff
+					case 21506:
 						e.getItem().setId(11736);
 						break;
-					case 21507: //Necromancer's steam staff
+					case 21507:
 						e.getItem().setId(11738);
 						break;
 				}

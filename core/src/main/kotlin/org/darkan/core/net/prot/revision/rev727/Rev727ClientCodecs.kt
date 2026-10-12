@@ -15,25 +15,8 @@ import world.gregs.voidps.buffer.*
 import org.darkan.core.fixChatMessage
 import world.gregs.voidps.type.Tile
 
-/** The value a 16-bit interface field carries when the client means "none". */
 private const val NONE_16 = 0xFFFF
 
-/**
- * Normalises the client's 16-bit "none" sentinel to -1.
- *
- * A component with no slot writes `slotId = -1` and one holding no obj writes
- * `containerItemId = -1` (darkan-bot `Component.slotId` / `Component.containerItemId` and
- * `Client.selectedSlotId` / `Client.selectedItemId`, all of which default to -1), and an interface
- * hash naming a whole interface rather than one of its components carries 0xFFFF in its low half.
- * Read back out of a 16-bit field every one of those arrives as 65535, so they are all mapped here
- * and a handler only ever has to test for -1.
- *
- * The legacy decoders got to the same place unevenly: some read the field signed (IFDragOntoIF,
- * IFOnIF, IFOnObject, IFOnGroundItem), some mapped 65535 in the decoder (IFOnNPC, IFOnPlayer), and
- * some left it to the handler (IFOpHandler, IFOnIFHandler and IFOnGroundItemHandler each compare a
- * component id against 65535). Only 65535 is remapped, so every other value still decodes exactly
- * as the legacy unsigned reads decoded it.
- */
 private fun Int.orNone(): Int = if (this == NONE_16) -1 else this
 
 private fun interfaceHash(interfaceId: Int, componentId: Int): Int = (interfaceId shl 16) or (componentId and NONE_16)
@@ -65,11 +48,8 @@ private suspend fun ByteWriteChannel.writeMouseTrailStep(step: MouseTrailStep) {
 }
 
 internal fun Codec.registerRev727ClientProts() {
-    //Utility/clientwatch
     clientProt<Ping>(opcode = 0)
 
-    // Client writes: writeShort(pid), writeString(name). The leading byte is the VarByte
-    // length prefix, already consumed by the framing layer.
     clientProt(opcode = 39, size = ProtSize.VarByte) {
         UnusedClanOp(
             pid = readUShort().toInt(),
@@ -80,7 +60,6 @@ internal fun Codec.registerRev727ClientProts() {
         out.writeRSString(username)
     }
 
-    // Client writes: writeInt(checkId), then one result blob per requested operation.
     clientProt(opcode = 36, size = ProtSize.VarByte) {
         ReflectionResponse(readInt(), readByteArray(remaining.toInt()))
     }.encoder { out ->
@@ -112,7 +91,7 @@ internal fun Codec.registerRev727ClientProts() {
         out.writeShortAdd(angleY)
     }
 
-    clientProt(opcode = 44, size = 9) { //TODO test
+    clientProt(opcode = 44, size = 9) {
         SendFps(
             key1 = readUIntInverseMiddle(),
             key2 = readUIntMiddle(),
@@ -138,12 +117,6 @@ internal fun Codec.registerRev727ClientProts() {
         out.writeShort((time and 0x7FFF) or (mouseButton shl 15))
     }
 
-    // Opcode 57 is emitted only by the client's native (jaclib/ICMP) mouse hook, so every event
-    // that arrives here is a hardware one - the software mouse sends MOUSE_CLICK (59) instead.
-    // Bit 0 of the flags byte is not that distinction: the client writes
-    // `writeByte128(meta shl 1 or (constant and 0x1))`, where `constant` is an opaque value from
-    // the native library that is 0 in practice, so reading it as a hardware flag always said
-    // "software".
     clientProt(opcode = 57, size = 7) {
         val positionHash = readUIntLittle()
         val flags = readByteAdd() and 0xFF
@@ -160,11 +133,6 @@ internal fun Codec.registerRev727ClientProts() {
         out.writeShortLittle(time)
     }
 
-    // Opcode 40 is the native (jaclib/ICMP) mouse trail, opcode 78 the java/AWT one: the client
-    // has a recorder per input source and each always sends its own opcode, so the opcode is what
-    // says "hardware", not any field in the payload. The native recorder appends one extra byte
-    // per step (an opaque native value, 0 in practice) that the java one omits, so it still has to
-    // be consumed or every later step decodes from the wrong offset.
     clientProt(opcodes = intArrayOf(40, 78), size = ProtSize.VarByte) { opcode ->
         val hardware = opcode == 40
         val steps = mutableListOf<MouseTrailStep>()
@@ -245,7 +213,6 @@ internal fun Codec.registerRev727ClientProts() {
         out.writeRSString(command)
     }
 
-    // Entity interactions
     val playerOpOpcodes = intArrayOf(66, 6, 31, 89, 103, 1, 51, 94, 53, 70)
     clientProt(opcodes = playerOpOpcodes, size = 3) { opcode ->
         OpPlayer(
@@ -309,21 +276,20 @@ internal fun Codec.registerRev727ClientProts() {
         Walk(x, y, forceRun, false)
     }.encoder { out -> out.writeWalk(this) }
 
-    // A client resolves Walk to this codec by class, so a plain walk goes out as 33 (fixed frames carry no length).
     clientProt(opcode = 42, size = 18) {
         val forceRun = readBoolean()
         val x = readUShort().toInt()
         val y = readUShortLittle()
         readByte()
-        readByte() //always -1
+        readByte()
         val camAngle = readUShort().toInt()
-        readByte() //always 57
-        val minimapRotation = readUByte() //TODO
+        readByte()
+        val minimapRotation = readUByte()
         val minimapZoom = readUByte()
-        readByte() //always 89
+        readByte()
         val absX = readUShort().toInt()
         val absY = readUShort().toInt()
-        readByte() //always 63
+        readByte()
         Walk(x, y, forceRun, true)
     }.encoder(opcode = { if (it.minimap) 42 else 33 }) { out ->
         out.writeWalk(this)
@@ -340,9 +306,6 @@ internal fun Codec.registerRev727ClientProts() {
         out.writeByte(63)
     }
 
-    // Interface interactions
-    // Client writes: writeIntLittle(interfaceHash), writeShort(itemId), writeShortAdd(slotId)
-    // See darkan-bot PacketEncoder.writeInterfaceComponentData
     val ifButtonOpcodes = intArrayOf(96, 27, 68, 9, 72, 19, 23, 21, 22, 81)
     clientProt(opcodes = ifButtonOpcodes, size = 8) { opcode ->
         val interfaceHash = readUIntLittle()
@@ -416,8 +379,6 @@ internal fun Codec.registerRev727ClientProts() {
     clientProt(opcode = 67, size = 15) {
         val itemIdContainer = readUShortAdd().orNone()
         val interfaceHash = readUIntInverseMiddle()
-        // The ground item's own id, taken from the clicked menu entry rather than from the dragged
-        // component, so it is never the "none" sentinel - legacy IFOnGroundItem reads it signed too.
         val itemId = readShort().toInt()
         val forceRun = readBooleanSubtract()
         val slotId = readUShortAddLittle().orNone()
@@ -522,10 +483,6 @@ internal fun Codec.registerRev727ClientProts() {
         out.writeShortAddLittle(slotId)
     }
 
-    // The drop target of a bank drag can be a tab header, which is a component with no slot: the
-    // client writes -1 there (darkan-bot PacketEncoder.sendInterfaceDragOntoInterface writes
-    // `target.slotId`, which Component defaults to -1), and legacy IFDragOntoIF read both slots
-    // signed. Read unsigned it arrived as 65535 and Bank.switchItem never saw the tab drag at all.
     clientProt(opcode = 74, size = 16) {
         val toSlot = readUShortAddLittle().orNone()
         val fromSlot = readUShortLittle().orNone()
@@ -554,7 +511,6 @@ internal fun Codec.registerRev727ClientProts() {
 
     clientProt<CloseInterface>(opcode = 60)
 
-    // Dialog interactions
     clientProt(opcode = 87, size = ProtSize.VarByte) { ResumeTextDialog(readRSString()) }
         .encoder { out -> out.writeRSString(text) }
     clientProt(opcode = 80, size = ProtSize.VarByte) { ResumeNameDialog(readRSString()) }
@@ -565,12 +521,9 @@ internal fun Codec.registerRev727ClientProts() {
         .encoder { out -> out.writeShort(data) }
     clientProt(opcode = 58, size = 4) { ResumeCountDialog(readInt()) }
         .encoder { out -> out.writeInt(count) }
-    // Read signed on purpose: the client writes -1 when the obj dialog is dismissed without a
-    // pick, matching legacy GEItemSelect's `readShort()`.
     clientProt(opcode = 17, size = 2) { ResumeItemSelect(readShort().toInt()) }
         .encoder { out -> out.writeShort(itemId) }
 
-    // Communication
     clientProt(opcode = 86, size = ProtSize.VarByte) {
         Chat(
             color = readUByte().toInt().coerceIn(0, 12),
@@ -623,7 +576,6 @@ internal fun Codec.registerRev727ClientProts() {
             out.writeByte(tradeFilter)
         }
 
-    // Friends/Ignore List
     clientProt(opcode = 26, size = ProtSize.VarByte) { AddFriend(readRSString()) }
         .encoder { out -> out.writeRSString(name) }
     clientProt(opcode = 29, size = ProtSize.VarByte) { RemoveFriend(readRSString()) }
@@ -636,7 +588,6 @@ internal fun Codec.registerRev727ClientProts() {
     clientProt(opcode = 12, size = ProtSize.VarByte) { RemoveIgnore(readRSString()) }
         .encoder { out -> out.writeRSString(name) }
 
-    // Friend Chat
     clientProt(opcode = 71, size = ProtSize.VarByte) { FcJoin(if (remaining > 0) readRSString() else null) }
         .encoder { out -> fcName?.let { out.writeRSString(it) } }
     clientProt(opcode = 91, size = ProtSize.VarByte) { FcKick(readRSString()) }
@@ -647,7 +598,6 @@ internal fun Codec.registerRev727ClientProts() {
             out.writeRSString(username)
         }
 
-    // Clan Chat
     clientProt(opcode = 90, size = ProtSize.VarByte) {
         ClanChannelKickUser(
             guest = !readBoolean(),
@@ -660,7 +610,6 @@ internal fun Codec.registerRev727ClientProts() {
         out.writeRSString(username)
     }
 
-    // Game State
     clientProt<RegionLoadedConfirm>(opcode = 76)
     clientProt(opcode = 2, size = 4) { SoundEffectMusicEnded(readInt()) }
         .encoder { out -> out.writeInt(musicId) }
@@ -677,8 +626,6 @@ internal fun Codec.registerRev727ClientProts() {
         SendPreferences(buildMap {
             var currIdx = 0
             while (remaining > 0) {
-                // Index 0 is the client's entry count and index 21 is a reserved filler byte;
-                // both map to no Preference and are read purely to advance the cursor.
                 val preference = Preference.forIndex(currIdx++)
                 val value = readUByte().toInt()
                 if (preference != null)
@@ -696,7 +643,6 @@ internal fun Codec.registerRev727ClientProts() {
     clientProt(opcode = 47, size = 4) { RequestWorldList(readInt()) }
         .encoder { out -> out.writeInt(worldlistVersion) }
 
-    // Reporting/Bug Tracking
     clientProt(opcode = 100, size = ProtSize.VarByte) {
         ReportAbuse(
             username = readRSString(),
@@ -723,7 +669,6 @@ internal fun Codec.registerRev727ClientProts() {
         out.writeJagString(reproSteps)
     }
 
-    // Account/Login
     clientProt(opcode = 52, size = ProtSize.VarByte) { EmailValidationSubmitCode(readRSString()) }
         .encoder { out -> out.writeRSString(code) }
     clientProt(opcode = 92, size = ProtSize.VarShort) { EmailValidationAddNewAddress(readRSString(), readByte().toInt()) }
@@ -757,7 +702,6 @@ internal fun Codec.registerRev727ClientProts() {
         out.writeByte(flags)
     }
 
-    // Unknown/Misc
     clientProt(opcode = 37, size = 2) { PlayVorbis(readShort().toInt()) }
         .encoder { out -> out.writeShort(fileId) }
     clientProt(opcode = 63, size = 4) { AltWalk(x = readUShortAdd(), y = readUShort().toInt()) }
@@ -765,7 +709,7 @@ internal fun Codec.registerRev727ClientProts() {
             out.writeShortAdd(x)
             out.writeShort(y)
         }
-    clientProt(opcode = 82, size = 4) { AppletLoadingPleaseWait(readInt() /*Always 1057001181*/) }
+    clientProt(opcode = 82, size = 4) { AppletLoadingPleaseWait(readInt() ) }
         .encoder { out -> out.writeInt(data) }
     clientProt(opcode = 97, size = ProtSize.VarByte) { UnkCs2StringResponse(readRSString()) }
         .encoder { out -> out.writeRSString(str) }

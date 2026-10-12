@@ -3,18 +3,6 @@ package world.gregs.voidps.cache.definition.encoder
 import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.definition.data.GraphicDefinition
 
-/**
- * The exact inverse of [world.gregs.voidps.cache.definition.decoder.GraphicDecoder].
- *
- * The file is three blocks: the frames' pixels from offset 0, then the palette, then a fixed
- * `7 + 8 * frames` byte trailer. Nothing here decides anything - every frame writes the storage
- * order and the alpha plane its own [world.gregs.voidps.cache.definition.data.IndexedGraphic.flags]
- * calls for, and the palette is written from
- * [GraphicDefinition.rawPalette] rather than from the normalised copy the frames share.
- *
- * An alpha plane the decoder dropped because every byte of it was 0xff is written back as 0xff:
- * that is what "no transparency" means in the file, and the flag is what says the plane is there.
- */
 class GraphicEncoder {
 
     fun Writer.encode(definition: GraphicDefinition) {
@@ -89,10 +77,8 @@ class GraphicEncoder {
     }
 
     private companion object {
-        /** The alpha byte of a fully opaque pixel, which is what a dropped alpha plane was made of. */
         private const val OPAQUE = 0xff
 
-        /** The palette size is stored as `size - 1` in one byte. */
         private const val PALETTE_LIMIT = 256
     }
 }

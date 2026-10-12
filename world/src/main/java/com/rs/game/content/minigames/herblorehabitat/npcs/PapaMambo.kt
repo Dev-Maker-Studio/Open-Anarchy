@@ -427,7 +427,6 @@ private fun Player.openHabitatBuildDialogue(player: Player, npc: NPC) {
 }
 
 private fun giveSkillReward(p: Player, npc: NPC, skillId: Int, item1: Int, item2: Int?) {
-    // Calculate XP: Y = Z * (Z - 4) + 200 per https://www.runehq.com/minigame/herblore-habitat
     val level = p.skills.getLevel(skillId)
     val xp = level * (level - 4) + 200
     if (item2 != null) {

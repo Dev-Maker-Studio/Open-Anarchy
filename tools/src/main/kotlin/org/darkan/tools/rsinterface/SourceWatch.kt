@@ -9,13 +9,6 @@ import java.nio.file.WatchService
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.TimeUnit
 
-/**
- * Watches a handful of directories and hands what changed to the render thread.
- *
- * Directories rather than files, because an editor saving a file writes a temporary one and
- * renames it: the old name is never modified, so a per-file watch sees nothing. The queue is the
- * only state crossing the thread boundary.
- */
 class SourceWatch : AutoCloseable {
 
     private val queue = ConcurrentLinkedQueue<File>()

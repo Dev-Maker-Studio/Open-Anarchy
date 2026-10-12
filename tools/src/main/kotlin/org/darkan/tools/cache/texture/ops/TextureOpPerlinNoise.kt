@@ -5,35 +5,23 @@ import world.gregs.voidps.buffer.read.BufferReader
 import java.util.Random
 import kotlin.math.pow
 
-/**
- * Type 34: Generates multi-octave Perlin noise.
- */
 class TextureOpPerlinNoise : TextureOperation(0, true) {
-    /** Permutation array for noise generation */
     private var noiseArray: ByteArray = ByteArray(512)
 
-    /** Number of noise octaves */
     private var numNoiseSteps: Int = 4
 
-    /** Noise amplitude */
     private var noiseAmplitude: Int = 1638
 
-    /** Y-axis texture coordinate scale */
     private var texCoordScaleY: Int = 4
 
-    /** X-axis texture coordinate scale */
     private var texCoordScaleX: Int = 4
 
-    /** Random seed */
     private var randomSeed: Int = 0
 
-    /** Per-octave step multipliers */
     private var stepMultipliers: ShortArray? = null
 
-    /** Per-octave amplitude multipliers */
     private var amplitudeMultipliers: ShortArray? = null
 
-    /** Whether to apply fog/bias effect */
     private var useFogEffect: Boolean = true
 
     override fun getMonochromeOutput(y: Int): IntArray {
@@ -76,7 +64,6 @@ class TextureOpPerlinNoise : TextureOperation(0, true) {
                 }
             }
         } else {
-            // First octave
             var stepMul = stepMultipliers!![0]
             if (stepMul > 8 || stepMul < -8) {
                 val ampMul = amplitudeMultipliers!![0].toInt() shl 12
@@ -102,7 +89,6 @@ class TextureOpPerlinNoise : TextureOperation(0, true) {
                 }
             }
 
-            // Remaining octaves
             for (octave in 1 until numNoiseSteps) {
                 stepMul = stepMultipliers!![octave]
                 if (stepMul > 8 || stepMul < -8) {
@@ -197,7 +183,6 @@ class TextureOpPerlinNoise : TextureOperation(0, true) {
         noiseArray = generatePermutationArray(randomSeed)
         computeMultipliers()
 
-        // Trim unused octaves
         var lastOctave = numNoiseSteps - 1
         while (lastOctave >= 1) {
             val stepMul = stepMultipliers!![lastOctave]
@@ -247,12 +232,10 @@ class TextureOpPerlinNoise : TextureOperation(0, true) {
     }
 
     companion object {
-        /** Smoothstep function lookup table */
         val SINE_WAVE: IntArray = IntArray(4096)
 
         init {
             for (i in 0 until 4096) {
-                // Smoothstep: 3t^2 - 2t^3
                 val t3 = i * (i * i shr 12) shr 12
                 val term1 = i * 6 - 61440
                 val term2 = (i * term1 shr 12) + 40960
@@ -260,9 +243,6 @@ class TextureOpPerlinNoise : TextureOperation(0, true) {
             }
         }
 
-        /**
-         * Generate a permutation array for the given seed.
-         */
         fun generatePermutationArray(seed: Int): ByteArray {
             val array = ByteArray(512)
             val random = Random(seed.toLong())

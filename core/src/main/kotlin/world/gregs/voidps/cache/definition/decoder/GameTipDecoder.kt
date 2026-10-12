@@ -9,21 +9,10 @@ import world.gregs.voidps.cache.definition.data.GameTipElementRecord
 import world.gregs.voidps.cache.definition.data.GameTipStageRecord
 import world.gregs.voidps.cache.definition.data.GameTipUpdateRecord
 
-/**
- * Index 33, the loading screens, from the client's `GameTipTypeList` and `GameTipType`.
- *
- * The index is not opcode keyed: every archive holds one file whose whole length is one fixed layout, so
- * [readLoop] does the entire read in one call and there is no terminator to stop on.
- *
- * Two layouts share the index and the archive id picks between them - archive [MASTER] is the stage table,
- * every other archive is one screen - which is why one definition type covers both; see
- * [GameTipDefinition].
- */
 class GameTipDecoder : DefinitionDecoder<GameTipDefinition>(GAME_TIPS) {
 
     override fun create(size: Int) = Array(size) { GameTipDefinition(it) }
 
-    /** One definition per archive, not per file: every archive of this index holds a single file 0. */
     override fun size(cache: Cache) = cache.lastArchiveId(index)
 
     override fun getArchive(id: Int) = id
@@ -42,14 +31,6 @@ class GameTipDecoder : DefinitionDecoder<GameTipDefinition>(GAME_TIPS) {
         }
     }
 
-    /**
-     * The master stage table.
-     *
-     * The client's decode is defensive rather than a layout of its own: it bails out to an empty table if
-     * the version is below 4 or if the render type signature disagrees with its own enum, and it reads on
-     * regardless of which. Both checks are read here as plain fields, so a file that would make the client
-     * give up still decodes and re-encodes unchanged.
-     */
     private fun GameTipDefinition.readStageTable(buffer: Reader) {
         version = buffer.readUnsignedByte()
         val renderTypeCount = buffer.readUnsignedByte()
@@ -78,7 +59,6 @@ class GameTipDecoder : DefinitionDecoder<GameTipDefinition>(GAME_TIPS) {
         }
     }
 
-    /** One loading screen: a count and then that many elements, each tagged with its render type. */
     private fun GameTipDefinition.readScreen(buffer: Reader) {
         val count = buffer.readUnsignedByte()
         elements = List(count) { readElement(buffer) }
@@ -149,7 +129,6 @@ class GameTipDecoder : DefinitionDecoder<GameTipDefinition>(GAME_TIPS) {
         return element
     }
 
-    /** The prefix types 1, 2, 3 and 9 share, the client's `decodeAnchored`. */
     private fun GameTipElementRecord.readAnchored(buffer: Reader, ids: BigSmarts) {
         anchorX = buffer.readUnsignedByte()
         anchorY = buffer.readUnsignedByte()
@@ -162,7 +141,6 @@ class GameTipDecoder : DefinitionDecoder<GameTipDefinition>(GAME_TIPS) {
         textColour = buffer.readInt()
     }
 
-    /** The six graphics of a multi graphic bar, the client's `decodeMultiSpriteLoadingBar`. */
     private fun GameTipElementRecord.readBarGraphics(ids: BigSmarts) {
         fillGraphic = ids.read()
         emptyGraphic = ids.read()
@@ -172,7 +150,6 @@ class GameTipDecoder : DefinitionDecoder<GameTipDefinition>(GAME_TIPS) {
         bottomBorderGraphic = ids.read()
     }
 
-    /** The client's `SpritePositioning.decode`, which types 5 and 6 share. */
     private fun GameTipElementRecord.readGraphic(buffer: Reader, ids: BigSmarts) {
         graphicId = ids.read()
         anchorX = buffer.readUnsignedByte()
@@ -181,16 +158,6 @@ class GameTipDecoder : DefinitionDecoder<GameTipDefinition>(GAME_TIPS) {
         offsetY = buffer.readShort()
     }
 
-    /**
-     * Reads one element's big smart ids, recording which of them the file packed wider than it had to.
-     *
-     * A big smart holds -1 and 0..32766 in two bytes and anything else in four, and
-     * [world.gregs.voidps.buffer.write.Writer.writeBigSmart] always picks the narrower form, so a file that
-     * spent four bytes on a value the two byte form would have held cannot be written back from the value
-     * alone. The width of each id is recorded as a bit of [GameTipElementRecord.wideFileIds] instead, and
-     * that field stays null - and out of the tree - for the overwhelmingly common case of a file that
-     * packed everything as narrowly as it fits.
-     */
     private class BigSmarts(private val buffer: Reader) {
 
         private var mask = 0
@@ -200,8 +167,6 @@ class GameTipDecoder : DefinitionDecoder<GameTipDefinition>(GAME_TIPS) {
         fun read(): Int {
             val start = buffer.position()
             val value = buffer.readBigSmart()
-            // Only a value the narrow form covers can have been packed wider than it had to be; a wide
-            // read never yields -1, since the four byte form masks the sign bit off.
             if (buffer.position() - start == WIDE_BYTES && value in 0..NARROW_MAX) {
                 mask = mask or (1 shl index)
             }
@@ -213,7 +178,6 @@ class GameTipDecoder : DefinitionDecoder<GameTipDefinition>(GAME_TIPS) {
     }
 
     private companion object {
-        /** The archive that holds the master stage table rather than a screen. */
         const val MASTER = 0
 
         const val BACKGROUND = 0

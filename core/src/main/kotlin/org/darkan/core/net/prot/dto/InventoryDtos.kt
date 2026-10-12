@@ -1,6 +1,3 @@
-/**
- * Payload types carried by the inventory and Grand Exchange packets.
- */
 package org.darkan.core.net.prot.dto
 
 sealed interface InvTooltip {

@@ -1,12 +1,8 @@
-/**
- * Movement and entity interaction packets sent by the client.
- */
 package org.darkan.core.net.prot.packet
 
 import org.darkan.core.net.prot.ClientProt
 import world.gregs.voidps.type.Tile
 
-// Entity Interactions
 data class OpPlayer(val opNum: Int, val playerIndex: Int, val forceRun: Boolean) : ClientProt
 
 data class OpNpc(val opNum: Int, val npcIndex: Int, val forceRun: Boolean) : ClientProt

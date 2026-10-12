@@ -2,17 +2,6 @@ package org.darkan.tools.engine.spatial
 
 import org.joml.Vector3f
 
-/**
- * Octree for 3D spatial partitioning of objects within a region.
- *
- * Each node covers a cubic region. Objects are stored at the smallest
- * node that fully contains them.
- *
- * @param T The type of objects stored in the tree
- * @param bounds The axis-aligned bounds of this tree
- * @param maxDepth Maximum subdivision depth
- * @param maxObjects Maximum objects per node before subdivision
- */
 class Octree<T>(
     private val bounds: AABB,
     private val maxDepth: Int = 6,
@@ -36,43 +25,32 @@ class Octree<T>(
     private val root = Node<T>(bounds, 0)
     private var count = 0
 
-    /**
-     * Insert an object with its AABB bounds.
-     */
     fun insert(obj: T, objBounds: AABB) {
         if (!bounds.intersects(objBounds)) {
-            // Object is outside tree bounds - expand or reject
             return
         }
         insert(root, Entry(obj, objBounds))
         count++
     }
 
-    /**
-     * Insert an object at a point location with a radius.
-     */
     fun insert(obj: T, center: Vector3f, radius: Float = 0f) {
         val objBounds = AABB.fromCenterExtents(center, Vector3f(radius, radius, radius))
         insert(obj, objBounds)
     }
 
     private fun insert(node: Node<T>, entry: Entry<T>) {
-        // If not a leaf, try to insert into a child
         node.children?.let { children ->
             val index = getChildIndex(node, entry.bounds)
             if (index != -1) {
                 insert(children[index], entry)
                 return
             }
-            // Object spans multiple children, store here
             node.objects.add(entry)
             return
         }
 
-        // Leaf node - add object
         node.objects.add(entry)
 
-        // Subdivide if needed
         if (node.objects.size > maxObjects && node.depth < maxDepth) {
             subdivide(node)
         }
@@ -81,21 +59,18 @@ class Octree<T>(
     private fun subdivide(node: Node<T>) {
         val center = node.bounds.center
         val childBounds = arrayOf(
-            // Bottom layer (y < center)
-            AABB(node.bounds.min, center),                                                              // 0: ---
-            AABB(Vector3f(center.x, node.bounds.min.y, node.bounds.min.z), Vector3f(node.bounds.max.x, center.y, center.z)), // 1: +--
-            AABB(Vector3f(node.bounds.min.x, node.bounds.min.y, center.z), Vector3f(center.x, center.y, node.bounds.max.z)), // 2: -+-
-            AABB(Vector3f(center.x, node.bounds.min.y, center.z), Vector3f(node.bounds.max.x, center.y, node.bounds.max.z)), // 3: ++-
-            // Top layer (y >= center)
-            AABB(Vector3f(node.bounds.min.x, center.y, node.bounds.min.z), Vector3f(center.x, node.bounds.max.y, center.z)), // 4: --+
-            AABB(Vector3f(center.x, center.y, node.bounds.min.z), Vector3f(node.bounds.max.x, node.bounds.max.y, center.z)), // 5: +-+
-            AABB(Vector3f(node.bounds.min.x, center.y, center.z), Vector3f(center.x, node.bounds.max.y, node.bounds.max.z)), // 6: -++
-            AABB(center, node.bounds.max)                                                               // 7: +++
+            AABB(node.bounds.min, center),
+            AABB(Vector3f(center.x, node.bounds.min.y, node.bounds.min.z), Vector3f(node.bounds.max.x, center.y, center.z)),
+            AABB(Vector3f(node.bounds.min.x, node.bounds.min.y, center.z), Vector3f(center.x, center.y, node.bounds.max.z)),
+            AABB(Vector3f(center.x, node.bounds.min.y, center.z), Vector3f(node.bounds.max.x, center.y, node.bounds.max.z)),
+            AABB(Vector3f(node.bounds.min.x, center.y, node.bounds.min.z), Vector3f(center.x, node.bounds.max.y, center.z)),
+            AABB(Vector3f(center.x, center.y, node.bounds.min.z), Vector3f(node.bounds.max.x, node.bounds.max.y, center.z)),
+            AABB(Vector3f(node.bounds.min.x, center.y, center.z), Vector3f(center.x, node.bounds.max.y, node.bounds.max.z)),
+            AABB(center, node.bounds.max)
         )
 
         node.children = Array(8) { i -> Node<T>(childBounds[i], node.depth + 1) }
 
-        // Redistribute objects to children
         val toRedistribute = node.objects.toList()
         node.objects.clear()
 
@@ -104,15 +79,11 @@ class Octree<T>(
             if (index != -1) {
                 insert(node.children!![index], entry)
             } else {
-                // Spans multiple children, keep in this node
                 node.objects.add(entry)
             }
         }
     }
 
-    /**
-     * Get the child index for bounds, or -1 if it spans multiple children.
-     */
     private fun getChildIndex(node: Node<T>, objBounds: AABB): Int {
         val center = node.bounds.center
 
@@ -123,7 +94,6 @@ class Octree<T>(
         val zNeg = objBounds.max.z < center.z
         val zPos = objBounds.min.z >= center.z
 
-        // Object must be entirely in one octant
         val xSide = when {
             xNeg -> 0
             xPos -> 1
@@ -143,9 +113,6 @@ class Octree<T>(
         return xSide + zSide * 2 + ySide * 4
     }
 
-    /**
-     * Query all objects that intersect with the given frustum.
-     */
     fun query(frustum: Frustum): List<T> {
         val results = mutableListOf<T>()
         query(root, frustum, results)
@@ -153,26 +120,22 @@ class Octree<T>(
     }
 
     private fun query(node: Node<T>, frustum: Frustum, results: MutableList<T>) {
-        // Test node bounds against frustum
         val result = frustum.testAABB(node.bounds)
         if (result == Frustum.OUTSIDE) {
             return
         }
 
-        // If fully inside, add all objects without further testing
         if (result == Frustum.INSIDE) {
             collectAll(node, results)
             return
         }
 
-        // Partially inside - test individual objects
         for (entry in node.objects) {
             if (frustum.isAABBVisible(entry.bounds)) {
                 results.add(entry.obj)
             }
         }
 
-        // Recurse into children
         node.children?.forEach { child ->
             query(child, frustum, results)
         }
@@ -187,9 +150,6 @@ class Octree<T>(
         }
     }
 
-    /**
-     * Query all objects that intersect with the given AABB.
-     */
     fun query(aabb: AABB): List<T> {
         val results = mutableListOf<T>()
         query(root, aabb, results)
@@ -212,11 +172,7 @@ class Octree<T>(
         }
     }
 
-    /**
-     * Query all objects within a sphere.
-     */
     fun query(sphere: BoundingSphere): List<T> {
-        // Use AABB for initial query, then filter by sphere
         val aabb = AABB.fromCenterExtents(
             sphere.center,
             Vector3f(sphere.radius, sphere.radius, sphere.radius)
@@ -225,15 +181,10 @@ class Octree<T>(
         val radiusSq = sphere.radius * sphere.radius
 
         return candidates.filter { obj ->
-            // For precise filtering, we'd need to store bounds with each object
-            // For now, the AABB query is sufficient
             true
         }
     }
 
-    /**
-     * Perform a ray cast and return all objects whose bounds are hit.
-     */
     fun raycast(origin: Vector3f, direction: Vector3f, maxDistance: Float = Float.MAX_VALUE): List<T> {
         val results = mutableListOf<T>()
         val invDir = Vector3f(
@@ -246,7 +197,6 @@ class Octree<T>(
     }
 
     private fun raycast(node: Node<T>, origin: Vector3f, invDir: Vector3f, maxDist: Float, results: MutableList<T>) {
-        // Ray-AABB intersection test
         if (!rayIntersectsAABB(origin, invDir, node.bounds, maxDist)) {
             return
         }
@@ -273,15 +223,9 @@ class Octree<T>(
         val tmin = maxOf(minOf(t1, t2), minOf(t3, t4), minOf(t5, t6))
         val tmax = minOf(maxOf(t1, t2), maxOf(t3, t4), maxOf(t5, t6))
 
-        // Ray intersects if tmax >= 0 and tmin <= tmax and tmin <= maxDist
         return tmax >= 0 && tmin <= tmax && tmin <= maxDist
     }
 
-    /**
-     * Remove an object from the tree.
-     *
-     * @return true if the object was found and removed
-     */
     fun remove(obj: T): Boolean {
         return remove(root, obj)
     }
@@ -304,9 +248,6 @@ class Octree<T>(
         return false
     }
 
-    /**
-     * Update an object's position in the tree.
-     */
     fun update(obj: T, newBounds: AABB): Boolean {
         if (remove(obj)) {
             insert(obj, newBounds)
@@ -315,9 +256,6 @@ class Octree<T>(
         return false
     }
 
-    /**
-     * Clear all objects from the tree.
-     */
     fun clear() {
         clearNode(root)
         count = 0
@@ -329,19 +267,10 @@ class Octree<T>(
         node.children = null
     }
 
-    /**
-     * Get the total number of objects in the tree.
-     */
     fun size(): Int = count
 
-    /**
-     * Check if the tree is empty.
-     */
     fun isEmpty(): Boolean = count == 0
 
-    /**
-     * Get statistics about the tree structure.
-     */
     fun getStats(): OctreeStats {
         var nodeCount = 0
         var leafCount = 0

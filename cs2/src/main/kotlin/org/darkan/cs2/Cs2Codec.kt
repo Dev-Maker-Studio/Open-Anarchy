@@ -3,30 +3,6 @@ package org.darkan.cs2
 import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.buffer.write.BufferWriter
 
-/**
- * Reads and writes the raw clientscript file format (cache index 12).
- *
- * On-disk layout, mirroring `CS2Script` in the client:
- * ```
- * name              null-terminated string, or a bare 0 byte when absent
- * instructions      u16 opcode + operand, repeated until `headerStart`
- *                     PUSH_CONSTANT_STRING -> null-terminated string
- *                     PUSH_LONG_CONSTANT   -> i64
- *                     largeOperand         -> i32
- *                     otherwise            -> u8
- * -- headerStart --
- * i32 instructionCount
- * u16 intLocalsCount, stringLocalsCount, longLocalsCount
- * u16 intArgsCount, stringArgsCount, longArgsCount
- * -- switch block, `switchBlockSize` bytes --
- * u8  switchTableCount
- * per table: u16 caseCount, then caseCount * (i32 key, i32 jumpOffset)
- * -- trailer --
- * u16 switchBlockSize
- * ```
- * The client locates `headerStart` by working backwards from the trailer, so
- * the instruction stream has no explicit end marker.
- */
 object Cs2Codec {
 
     private const val FIXED_HEADER_BYTES = 16
@@ -143,7 +119,6 @@ object Cs2Codec {
         return writer.toArray()
     }
 
-    /** Byte size of the encoded form, without building it. */
     private fun estimateSize(script: Cs2Script): Int {
         var size = (script.name?.length ?: 0) + 1
         for (instruction in script.instructions) {
@@ -160,11 +135,6 @@ object Cs2Codec {
         return size + TRAILER_BYTES
     }
 
-    /**
-     * The client's `readNullString`: a single 0 byte means "no name", otherwise
-     * a plain null-terminated string. An empty name is indistinguishable from an
-     * absent one on the wire, so it always decodes as null.
-     */
     private fun readNullString(reader: BufferReader): String? {
         if (reader.peekByte() == 0) {
             reader.position(reader.position() + 1)

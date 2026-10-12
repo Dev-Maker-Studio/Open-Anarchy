@@ -4,9 +4,6 @@ import world.gregs.voidps.type.area.Cuboid
 import world.gregs.voidps.type.area.Polygon
 import world.gregs.voidps.type.area.Rectangle
 
-/**
- * Represents a tiled area of any size or shape
- */
 interface Area : Iterable<Tile> {
     val area: Double
 

@@ -53,7 +53,7 @@ enum class Structure(
         return h
     }
 
-    fun getChildHeight(): Int = childWidth // Note: matches legacy bug (returns width, not height)
+    fun getChildHeight(): Int = childWidth
 
     fun encode(x: Int, y: Int): Int = encode(x, y, 0)
 

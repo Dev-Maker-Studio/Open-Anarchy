@@ -100,7 +100,6 @@ private fun canEnter(player: Player): Boolean {
 
 @ServerStartupEvent
 fun mapWarriorsGuild() {
-    //Catapault and warrior dummy timer
     WorldTasks.scheduleTimer { tick ->
         if (tick % 14 == 0)
             tickDummies()
@@ -386,9 +385,6 @@ class WarriorsGuildController: Controller() {
     }
 }
 
-/**
- * Armor minigame
- */
 private val ARMOR_POINTS = intArrayOf(5, 10, 15, 20, 50, 60, 80)
 private val ARMOR_SETS = arrayOf(intArrayOf(1155, 1117, 1075), intArrayOf(1153, 1115, 1067), intArrayOf(1157, 1119, 1069), intArrayOf(1165, 1125, 1077), intArrayOf(1159, 1121, 1071), intArrayOf(1161, 1123, 1073), intArrayOf(1163, 1127, 1079))
 private val ARMOR_TYPES = arrayOf("Bronze", "Iron", "Steel", "Black", "Mithril", "Adamant", "Rune")
@@ -423,9 +419,6 @@ class AnimatedArmor(owner: Player, id: Int, tile: Tile) : OwnedNPC(owner, id, ti
     }
 }
 
-/**
- * Keg minigame
- */
 private fun tickKegMinigame(player: Player, controller: WarriorsGuildController) {
     if (controller.kegCount >= 1) {
         if (!player.auraManager.isActivated(AuraManager.Aura.SUREFOOTED, AuraManager.Aura.GREATER_SUREFOOTED))
@@ -481,9 +474,6 @@ private fun resetKegBalance(player: Player, controller: WarriorsGuildController)
     }
 }
 
-/**
- * Dummy minigame
- */
 private fun tickDummies() {
     val index = Utils.random(DUMMY_LOCATIONS.size)
     spawnObjectTemporary(GameObject(Utils.random(15624, 15630), ObjectShape.SCENERY_INTERACT, DUMMY_ROTATIONS[index], DUMMY_LOCATIONS[index]), 10)
@@ -524,9 +514,6 @@ private fun isProperHit(player: Player, obj: GameObject): Boolean {
     }
 }
 
-/**
- * Defense minigame
- */
 private fun tickDefenseMinigame() {
     projectileType = Utils.random(4)
     sendProjectile(CATAPULT_PROJECTILE_BASE, CATAPULT_TARGET, 679 + projectileType, 85 to 15, 15, 10, 15) { projectile ->
@@ -561,9 +548,6 @@ private fun inCatapultArea(player: Player): Boolean {
     return player.withinArea(2837, 3538, 2847, 3552) && player.plane == 1
 }
 
-/**
- * Shotput minigame
- */
 private fun hasEmptyHands(player: Player): Boolean {
     return player.equipment.glovesId == -1 && player.equipment.weaponId == -1 && player.equipment.shieldId == -1
 }
@@ -622,9 +606,6 @@ fun throwShotput(player: Player, type: Int, is18LB: Boolean) {
     }
 }
 
-/**
- * Cyclops defender
- */
 private fun getBestDefender(player: Player): Int {
     for (index in DEFENDERS.indices) if (player.equipment.shieldId == DEFENDERS[index] || player.inventory.containsItem(DEFENDERS[index], 1)) return DEFENDERS[if (index - 1 < 0) 0 else index - 1]
     return DEFENDERS[7]
@@ -645,9 +626,6 @@ private fun confirmAndEnterRoom(player: Player, controller: WarriorsGuildControl
     controller.inCyclopsRoom = true
 }
 
-/**
- * Warriors guild extension functions for manipulating the array on the player file
- */
 val POINT_COMPS = mapOf(
     VARBIT_STRENGTH to 69271567,
     VARBIT_ATTACK to 69271576,

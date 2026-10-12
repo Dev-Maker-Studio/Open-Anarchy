@@ -5,9 +5,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.config.data.ClientVariableParameterDefinition
 
-/**
- * Writes a client variable (`varc`, index 2 archive 19) file.
- */
 class ClientVariableParameterEncoder : OpcodeEncoder<ClientVariableParameterDefinition>() {
 
     override fun opcodes(definition: ClientVariableParameterDefinition): IntArray {

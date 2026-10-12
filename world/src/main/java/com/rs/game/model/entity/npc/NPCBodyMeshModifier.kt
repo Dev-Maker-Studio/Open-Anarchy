@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.model.entity.npc
 
 import org.darkan.core.update.NpcCustomisation
@@ -101,13 +85,6 @@ class NPCBodyMeshModifier(private val defs: NPCDefinition?) {
         return this
     }
 
-    /**
-     * Converts this modifier into the core [NpcCustomisation] schema.
-     *
-     * Which models, colours and textures apply is decided here; how they are framed on the wire is
-     * decided by the revision encoder in core. A modifier that overrides nothing means "reset to
-     * the definition's own appearance", which the schema carries as [NpcCustomisation.clear].
-     */
     fun toCustomisation(): NpcCustomisation = NpcCustomisation(
         clear = modelIds == null && modifiedColors == null && modifiedTextures == null,
         models = modelIds,
@@ -116,7 +93,6 @@ class NPCBodyMeshModifier(private val defs: NPCDefinition?) {
     )
 
     companion object {
-        /** Sentinel meaning "drop every override and render the definition's own appearance". */
         @JvmField
         val RESET: NPCBodyMeshModifier = NPCBodyMeshModifier(null as NPCDefinition?)
     }

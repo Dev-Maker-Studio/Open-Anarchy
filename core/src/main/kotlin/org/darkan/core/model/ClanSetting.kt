@@ -1,15 +1,7 @@
 package org.darkan.core.model
 
-/** Sentinel [ClanSetting.id] for entries the client has no var setting for. */
 const val NO_CLIENT_ID = -1
 
-/**
- * Clan settings. [id] is the client's clan-var-setting id, which is what goes on the wire in
- * ClanSettingsFull; storage keys by enum name instead so the documents stay readable.
- *
- * An id of [NO_CLIENT_ID] means the client defines no setting for this entry, so it is never
- * transmitted. The per-rank permission grid below is currently in that category.
- */
 enum class ClanSetting(val id: Int, val defaultValue: Any) {
     MOTIF_TOP_ICON(14, 1),
     MOTIF_BOTTOM_ICON(15, 2),
@@ -30,8 +22,6 @@ enum class ClanSetting(val id: Int, val defaultValue: Any) {
     HOME_WORLD(6, 1),
 
 
-    // Client-defined settings restored from the legacy table (clan events, keywords hiding,
-    // and the permission ids the client actually has).
     HIDE_MOTTO(9, 0),
     HIDE_MOTIF(10, 0),
     HIDE_FLAG(11, 0),
@@ -119,8 +109,6 @@ enum class ClanSetting(val id: Int, val defaultValue: Any) {
     OVERSEER_PERMISSION_RESOURCE_TRANSFER(261, 1),
     DEPUTY_OWNER_PERMISSION_RESOURCE_TRANSFER(262, 1),
 
-    // Client var-settings present in every existing clan whose meaning has not been identified.
-    // Kept under their id so migrated clans keep sending the client what they always did.
     VAR_3(3, 0),
     VAR_13(13, 0),
     VAR_20(20, 0),

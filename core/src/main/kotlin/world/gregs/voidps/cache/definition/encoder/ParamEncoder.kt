@@ -5,9 +5,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.ParamDefinition
 
-/**
- * Writes a param (`param`, index 2 archive 11) file.
- */
 class ParamEncoder : OpcodeEncoder<ParamDefinition>() {
 
     override fun opcodes(definition: ParamDefinition): IntArray {

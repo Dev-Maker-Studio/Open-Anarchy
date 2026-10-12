@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering;
 
 import org.darkan.core.cache.ItemDefinitions;
@@ -33,16 +17,14 @@ public final class DungeonUtils {
 
 	public static int getMaxFloor(int level) {
 		return (level + 1) / 2;
-		//return (level / 2) + 1;
 	}
 
 	public static int getLevel(int floor) {
 		return (floor * 2) - 1;
-		//return (floor - 1) * 2;
 	}
 
 	public static boolean isBindAmmo(Item item) {
-		if (item.getId() == 19867 || item.getId() == 19868) //runes box
+		if (item.getId() == 19867 || item.getId() == 19868)
 			return true;
 		for (int id : DungeonConstants.ARROWS)
 			if (item.getId() == id)
@@ -144,7 +126,6 @@ public final class DungeonUtils {
 			if (room.hasNorthDoor() == n && room.hasEastDoor() == e && room.hasSouthDoor() == s && room.hasWestDoor() == w)
 				possiblities.add(room);
 		}
-		//return new Room[] { new Room(DungeonConstants.BOSS_ROOMS[2][4], rotation) };
 		return possiblities.toArray(new Room[0]);
 	}
 
@@ -204,17 +185,6 @@ public final class DungeonUtils {
 		for (int id : DungeonConstants.DUNGEON_DOORS)
 			if (id == objectId)
 				return true;
-		/*	for (int id : DungeonConstants.DUNGEON_SKILL_DOORS)
-			    if (id == objectId)
-				return true;
-			for (int id : DungeonConstants.THIEF_CHEST_OPEN)
-			    if (id == objectId)
-				return true;
-			for (int id : DungeonConstants.THIEF_CHEST_LOCKED)
-			    if (id == objectId)
-				return true;
-			if (objectId >= KeyDoors.ORANGE_TRIANGLE.getObjectId() && objectId <= KeyDoors.GOLD_SHIELD.getObjectId())
-				return true;*/
 		return false;
 	}
 
@@ -333,7 +303,7 @@ public final class DungeonUtils {
 			case 26 -> getBoots(tier);
 			case 27 -> getGauntlets(tier);
 			case 28 -> getBattleaxe(tier);
-			default -> getHatchet(tier); // shouldn't
+			default -> getHatchet(tier);
 		};
 	}
 
@@ -346,7 +316,7 @@ public final class DungeonUtils {
 			case 4 -> getVambrances(tier);
 			case 5 -> getLeatherBody(tier);
 			case 6 -> getCoif(tier);
-			default -> getHatchet(tier); // shouldn't
+			default -> getHatchet(tier);
 		};
 	}
 
@@ -359,7 +329,7 @@ public final class DungeonUtils {
 			case 4 -> getShoes(tier);
 			case 5 -> getRobeBottom(tier);
 			case 6 -> getHood(tier);
-			default -> getHatchet(tier); // shouldn't
+			default -> getHatchet(tier);
 		};
 	}
 
@@ -380,7 +350,7 @@ public final class DungeonUtils {
 			case 12 -> getBoots(tier);
 			case 13 -> getGauntlets(tier);
 			case 14 -> getBattleaxe(tier);
-			default -> getHatchet(tier); // shouldn't
+			default -> getHatchet(tier);
 		};
 	}
 
@@ -398,7 +368,7 @@ public final class DungeonUtils {
 			case 9 -> getMaul(tier);
 			case 10 -> getLongsword(tier);
 			case 11 -> getBattleaxe(tier);
-			default -> getHatchet(tier); // shouldn't
+			default -> getHatchet(tier);
 		};
 	}
 
@@ -452,34 +422,34 @@ public final class DungeonUtils {
 
 	public static int getElementalStaff(int tier) {
 		if (tier == 2)
-			return 17001; // earth
+			return 17001;
 		if (tier == 3)
-			return 17005; // fire
+			return 17005;
 		if (tier == 4)
-			return 17009; // air
+			return 17009;
 		if (tier == 5)
-			return 17013; // catalytic
+			return 17013;
 		if (tier == 6)
-			return 16999; // empowered water
+			return 16999;
 		if (tier == 7)
-			return 17003; // empowered earth
+			return 17003;
 		if (tier == 8)
-			return 17007; // empowered fire
+			return 17007;
 		if (tier == 9)
-			return 17011; // empowered air
+			return 17011;
 		if (tier == 10)
-			return 17015; // empowered catalytic
+			return 17015;
 		if (tier == 11)
-			return 17017; // celestial catalytic
-		return 16997; //water
+			return 17017;
+		return 16997;
 	}
 
 	public static int getStartRunes(int level) {
 		if (level >= 41)
-			return DungeonConstants.RUNES[6]; //death
+			return DungeonConstants.RUNES[6];
 		if (level >= 17)
-			return DungeonConstants.RUNES[5]; //chaos
-		return DungeonConstants.RUNES[4]; //mind
+			return DungeonConstants.RUNES[5];
+		return DungeonConstants.RUNES[4];
 	}
 
 	public static int getRobeTop(int tier) {

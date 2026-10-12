@@ -36,10 +36,6 @@ const val REJOIN_INSTANCE = "Rejoin-last instance"
 
 private val INSTANCE_OPTIONS = setOf(START_INSTANCE, JOIN_INSTANCE, REJOIN_INSTANCE)
 
-/**
- * Object handlers are keyed by id with no option filter and every match runs, so each real
- * entrance handler has to stand aside when the player picked an instance option instead.
- */
 fun isInstanceOption(option: String?): Boolean = option in INSTANCE_OPTIONS
 
 @ServerStartupEvent

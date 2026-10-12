@@ -13,7 +13,6 @@ import com.rs.plugin.handlers.NPCClickHandler;
 @PluginEventHandler
 public class Hans extends Conversation {
 
-    //Identify NPC by ID
     private static final int npcId = 0;
     public static NPCClickHandler Hans = new NPCClickHandler(new Object[]{npcId}, e -> {
     	switch (e.getOption()) {
@@ -25,11 +24,9 @@ public class Hans extends Conversation {
 
     public Hans(Player player, NPC npc) {
         super(player);
-        //Identify NPC by ID
         addOptions(new Options() {
             @Override
             public void create() {
-                //Player initiates
                 addNPC(npcId, HeadE.CALM_TALK, "Hello. What are you doing here?");
                 addOptions(new Options() {
                                @Override
@@ -42,7 +39,6 @@ public class Hans extends Conversation {
                                                    .addPlayer(HeadE.EVIL_LAUGH, "I have come to kill everyone in this castle!")
                                                    .addNPC(npcId, HeadE.TERRIFIED, "Help!")
                                                    .addNext(() -> npc.setNextForceTalk(new ForceTalk("Help! Help! Help!")))
-                                           //TODO Make run-away
                                    );
                                    option("Can you tell me how long I've been here?", new Dialogue()
                                            .addPlayer(HeadE.CALM_TALK, "Can you tell me how long I've been here?")

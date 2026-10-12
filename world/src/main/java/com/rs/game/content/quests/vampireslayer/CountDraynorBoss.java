@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.quests.vampireslayer;
 
 import org.darkan.core.model.ObjectShape;
@@ -40,31 +24,26 @@ import com.rs.utils.Ticks;
 public class CountDraynorBoss extends OwnedNPC {
 	private static final int COUNT_DRAYNOR_ID = 9356;
 
-	//Vampyre animations
 	static final int STUNNED = 1568;
 	static final int ASLEEP_IN_COFFIN = 3111;
 	static final int AWAKEN = 3322;
 	static final int SPAWN = 3328;
 	static final int DEATH = 12604;
 
-	//Player animations
 	static final int OPEN_COFFIN = 2991;
 	static final int MISSING_STAKE_IN_COFFIN = 2992;
 	static final int PUSHED_BACK = 3064;
 	static final int ON_FLOOR = 16713;
 	static final int KILL_W_STAKE = 12606;
 
-	//Coffin ID/animations
 	static final int COFFIN_ID = 162;
 	static final int COFFIN_OPEN = 3112;
 
-	//Item
 	static final int STAKE = 1549;
 	static final int STAKE_HAMMER = 15417;
 	static final int REGULAR_HAMMER = 2347;
 	static final int GARLIC = 1550;
 
-	//Count draynor boss music
 	static final int COUNTING_ON_YOU = 717;
 
 	public boolean actuallyDead = false;
@@ -104,10 +83,6 @@ public class CountDraynorBoss extends OwnedNPC {
 	}
 
 
-	/**
-	 * player in die is seperate from player in the boss.
-	 * @param player
-	 */
 	public void die(Player player) {
         if(getOwner() == null)
             return;

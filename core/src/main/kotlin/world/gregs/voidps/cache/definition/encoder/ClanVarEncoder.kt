@@ -5,12 +5,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.ClanVarDefinition
 
-/**
- * Writes a clan variable (`varclan`, index 2 archive 47) file.
- *
- * Opcode 1 is written from [ClanVarDefinition.typeChar], the descriptor byte itself, because
- * [world.gregs.voidps.cache.definition.cs2.CS2Type.forJagexDesc] is many to one.
- */
 class ClanVarEncoder : OpcodeEncoder<ClanVarDefinition>() {
 
     override fun opcodes(definition: ClanVarDefinition): IntArray {

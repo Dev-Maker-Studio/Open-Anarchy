@@ -4,10 +4,6 @@ import org.darkan.tools.cache.texture.TextureOperation
 import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 
-/**
- * Type 19: Applies polar coordinate distortion.
- * Uses angle and radius from child operations to sample from input texture.
- */
 class TextureOpPolarDistortion : TextureOperation(3, false) {
     private var distortionStrength: Int = 32768
 

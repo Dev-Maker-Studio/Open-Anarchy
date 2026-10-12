@@ -22,24 +22,6 @@ import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
 
-/**
- * Standalone harness for [SkyRenderer].
- *
- * Not wired into the tools launcher: run it directly against the installed
- * distribution's lib directory as `org.darkan.tools.viewer.SkyPreviewKt`.
- *
- * Everything is driven by system properties so a screenshot run is
- * reproducible without touching the keyboard:
- *
- * | Property | Meaning |
- * | --- | --- |
- * | `-Dsky.material=<id>` | skybox material id, -1 for the solid fallback |
- * | `-Dsky.mode=repeat\|gradient` | background mode |
- * | `-Dsky.color=0xRRGGBB` | fog / background colour |
- * | `-Dsky.rotation=<0..16383>` | skybox's own yaw offset |
- * | `-Dsky.yaw=<deg>` `-Dsky.pitch=<deg>` | starting camera orientation |
- * | `-Dsky.list=true` | print every skybox config in the cache and exit |
- */
 class SkyPreview(private val cache: Cache) : Engine(
     WindowConfig(title = WINDOW_TITLE, width = 1280, height = 720)
 ) {
@@ -60,8 +42,6 @@ class SkyPreview(private val cache: Cache) : Engine(
         camera.pitch = property("sky.pitch", 0f)
         camera.farPlane = 500f
 
-        // A ground plane and a few boxes so the depth rejection is visible: the
-        // sky must not paint over any of them.
         ground = Mesh(
             positions = floatArrayOf(
                 -60f, 0f, -60f, 60f, 0f, -60f, 60f, 0f, 60f, -60f, 0f, 60f
@@ -128,8 +108,6 @@ class SkyPreview(private val cache: Cache) : Engine(
         }
         simpleShader.unbind()
 
-        // Sky goes last: every pixel the scene already covers fails the depth
-        // test and is never shaded.
         sky.render(camera, window.width, window.height)
     }
 
@@ -165,13 +143,6 @@ class SkyPreview(private val cache: Cache) : Engine(
         private fun property(name: String, fallback: Float): Float =
             System.getProperty(name)?.toFloatOrNull() ?: fallback
 
-        /**
-         * Prints every `SkyboxType` in the cache (index 2, archive 29).
-         *
-         * Decoding is inlined here rather than added to the cache library
-         * because this harness is throwaway; the real decoder belongs to the
-         * environment work happening separately.
-         */
         fun listSkyboxes(cache: Cache) {
             val files = cache.files(Index.CONFIGS, SKYBOX_ARCHIVE)
             println("[SKY] ${files.size} skybox configs in index 2 archive $SKYBOX_ARCHIVE")

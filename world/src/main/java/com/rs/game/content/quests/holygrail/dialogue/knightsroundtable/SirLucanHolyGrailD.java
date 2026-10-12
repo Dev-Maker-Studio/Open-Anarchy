@@ -28,10 +28,4 @@ public class SirLucanHolyGrailD extends Conversation {
 	}
 
 
-//    public static NPCClickHandler handleDialogue = new NPCClickHandler(new Object[]{NPC}) {
-//        @Override
-//        public void handle(NPCClickEvent e) {
-//            e.getPlayer().startConversation(new SirLucanHolyGrailD(e.getPlayer()).getStart());
-//        }
-//    };
 }

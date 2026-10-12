@@ -11,7 +11,6 @@ public class MontyConversation extends Conversation {
 	public MontyConversation(Player player) {
 		super(player);
 		buildDialogue();
-		//TODO - "Go diving" option or something
 	}
 
 	public void buildDialogue() {

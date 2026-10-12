@@ -369,7 +369,6 @@ class ObjIcons(
         return pixels
     }
 
-    // The client's item matrix reads Rz -> Ry -> translate -> Rx, each step in the space the last left.
     private fun transform(model: IconModel, zoom: Int, minY: Int): Matrix4f {
         val angleX = model.rotationX shl ANGLE_SHIFT
         val translateY = fixed(zoom, sin(theta(angleX))) - minY / 2 + (model.offsetY shl OFFSET_SHIFT)
@@ -479,7 +478,6 @@ class ObjIcons(
                     val rgb = ((buffer.get(offset).toInt() and 0xff) shl 16) or
                         ((buffer.get(offset + 1).toInt() and 0xff) shl 8) or
                         (buffer.get(offset + 2).toInt() and 0xff)
-                    // The client treats a pure black pixel as empty; the final sprite keeps that rule.
                     pixels[y * WIDTH + x] = when {
                         alpha == 0 -> 0
                         opaque -> if (rgb == 0) 0 else OPAQUE or rgb
@@ -529,12 +527,10 @@ class ObjIcons(
         private const val OPAQUE = 0xff shl 24
 
         private const val FOCAL = 512f
-        // The client's projection centre is pixel (16, 16) of the 36x32 canvas, not its middle.
         private const val CENTRE_X = 16f
         private const val CENTRE_Y = 16f
         private const val NEAR = 50f
 
-        // Stands in for the client's 2^31 far plane, which no depth buffer can hold usefully.
         private const val FAR = 100000f
 
         private const val RS_UNITS = 128f

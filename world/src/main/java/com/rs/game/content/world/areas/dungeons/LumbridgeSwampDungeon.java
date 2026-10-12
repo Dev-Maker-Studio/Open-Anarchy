@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.world.areas.dungeons;
 
 import com.rs.engine.quest.Quest;
@@ -33,7 +17,6 @@ public class LumbridgeSwampDungeon {
 			return;
 		if (!e.getPlayer().isQuestComplete(Quest.WHILE_GUTHIX_SLEEPS, "to lure the light creature."))
 			return;
-		//spotanims 1932 1933
 		if (e.getItem().getId() == 4702)
 			e.getPlayer().sendOptionDialogue(e.getNPC().getId() == 2021 ? "Would you like to go down into the chasm?" : "Would you like to go back up the chasm?", ops -> {
 				ops.add("Yes", () -> e.getPlayer().tele(e.getNPC().getId() == 2021 ? Tile.of(2520, 5884, 0) : Tile.of(3219, 9527, 2)));

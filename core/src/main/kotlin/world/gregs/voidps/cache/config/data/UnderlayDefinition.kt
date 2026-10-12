@@ -16,13 +16,7 @@ data class UnderlayDefinition(
     var chroma: Int = 0
 ) : Definition, OpcodeOrdered {
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var opcodeOrder: IntArray? = null
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var shadowedPayloads: Array<ByteArray?>? = null
 }

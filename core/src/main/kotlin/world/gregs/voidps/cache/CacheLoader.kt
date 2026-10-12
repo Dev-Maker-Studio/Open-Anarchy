@@ -14,10 +14,6 @@ interface CacheLoader {
         return load(EnvVars.cachePath, BigInteger(EnvVars.js5RsaExponent), BigInteger(EnvVars.js5RsaModulus), threadUsage = EnvVars.cacheThreadUsage)
     }
 
-    /**
-     * @param writable open the underlying store read-write, so [Cache.write] works. Only
-     *   [FileCache] supports it; an in-memory cache has nothing to write to.
-     */
     fun load(
         path: String,
         exponent: BigInteger? = null,
@@ -41,11 +37,6 @@ interface CacheLoader {
         return load(path, mainFile, main, index255File, index255, indexCount, versionTable, xteas, threadUsage, writable, exponent, modulus)
     }
 
-    /**
-     * [main] and [index255] are opened read-only by the caller purely so the index count can be
-     * read; an implementation that keeps its own handles (as [FileCache] does through
-     * [FileStore]) is expected to close them.
-     */
     fun load(
         path: String,
         mainFile: File,

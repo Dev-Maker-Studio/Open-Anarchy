@@ -9,19 +9,9 @@ import org.darkan.cs2.ReturnSignature
 import kotlin.math.pow
 import kotlin.random.Random
 
-/**
- * Executes CS2 bytecode.
- *
- * This mirrors the client's interpreter: three typed operand stacks, per-call
- * locals, five global int arrays, and a call stack of saved frames. Only the
- * core instruction set is implemented here; everything else goes to [Cs2Host],
- * which is what lets the interface editor answer component opcodes while the
- * machine still tracks the stacks exactly.
- */
 class Cs2Vm(
     private val context: Cs2Context,
     private val host: Cs2Host,
-    /** Guards against runaway scripts, as the client's own limit does. */
     private val instructionLimit: Int = 200_000,
 ) {
     private val intStack = ArrayList<Int>(256)
@@ -32,7 +22,6 @@ class Cs2Vm(
     private val globalArrayLengths = IntArray(5)
 
     private class Frame(
-        /** Script id, or -1 when the caller did not name one. */
         val id: Int,
         val script: Cs2Script,
         var pointer: Int,
@@ -40,7 +29,6 @@ class Cs2Vm(
         val strings: Array<String>,
         val longs: LongArray,
     ) {
-        /** `id (name)`, whichever parts are known, for diagnostics. */
         fun label(): String = when {
             id >= 0 && script.name != null -> "$id (${script.name})"
             id >= 0 -> id.toString()
@@ -51,30 +39,18 @@ class Cs2Vm(
 
     private val frames = ArrayList<Frame>(16)
 
-    /**
-     * Source for `RANDOM`/`RANDOMINC`. Seeded so a script that draws on it renders
-     * the same way twice - an editor that changed under the user on every frame
-     * would be unusable, and no interface depends on the values differing.
-     */
     private val random = Random(SEED)
 
-    /** Opcodes that have already reported a zero divisor during this [execute]. */
     private val zeroDivisorsReported = HashSet<Cs2Op>()
 
-    /** Instructions executed by the last [execute] call. */
     var instructionsRun: Int = 0
         private set
 
-    /**
-     * Runs [script] with the given arguments and returns whatever it leaves on
-     * the stacks.
-     */
     fun execute(
         script: Cs2Script,
         intArgs: List<Int> = emptyList(),
         stringArgs: List<String> = emptyList(),
         longArgs: List<Long> = emptyList(),
-        /** Id of [script], used only to name it in error messages. */
         scriptId: Int = -1,
     ): Cs2Values {
         intStack.clear()
@@ -102,11 +78,6 @@ class Cs2Vm(
         return Cs2Values(intStack.toList(), stringStack.toList(), longStack.toList())
     }
 
-    /**
-     * Names the script the limit tripped in, where in it the machine was, and the
-     * opcode it was on, plus the chain of callers. Without the id a runaway script
-     * cannot be found again to be decompiled, which is the only way to fix one.
-     */
     private fun runawayMessage(): String {
         val frame = frames.lastOrNull()
             ?: return "Script ? exceeded $instructionLimit instructions"
@@ -133,7 +104,6 @@ class Cs2Vm(
         longs = LongArray(script.longLocalsCount) { longArgs.getOrElse(it) { 0L } },
     )
 
-    // ------------------------------------------------------------ stack access
 
     private fun popInt(): Int =
         if (intStack.isEmpty()) 0 else intStack.removeAt(intStack.size - 1)
@@ -165,9 +135,7 @@ class Cs2Vm(
         return out
     }
 
-    // ------------------------------------------------------------- execution
 
-    /** Runs one instruction. Returns false to stop the whole script. */
     private fun step(frame: Frame, op: Cs2Op, operand: Int, text: String?, long: Long): Boolean {
         when (op) {
             Cs2Op.PUSH_CONSTANT_INT -> intStack.add(operand)
@@ -219,28 +187,9 @@ class Cs2Vm(
         return true
     }
 
-    /**
-     * Arithmetic, bitwise and string primitives; false when [op] is not one.
-     *
-     * These belong to the language, not to a host: they read and write only the
-     * operand stacks, and every script relies on them. Routing them through
-     * [Cs2Host] like the rest of the opcode space meant an unimplemented host
-     * silently evaluated `i + 1` to `0`, which turns every counting loop into an
-     * infinite one - the machine has to own them.
-     *
-     * Transcribed from the client's `MathStringOps` and `CS2SharedOps`, with one
-     * deliberate difference: where the client throws and abandons the script - a
-     * zero divisor, a substring outside its string - this reports the problem and
-     * yields a harmless value instead. The reason is that such an argument almost
-     * never comes from the script; it comes from an opcode this host has not
-     * implemented returning zero, and abandoning the script would throw away the
-     * rest of a widget over a fault of our own making. Degrading matches what
-     * [Cs2Host] already does for every opcode it does not know.
-     */
     @Suppress("CyclomaticComplexMethod", "LongMethod")
     private fun primitive(op: Cs2Op): Boolean {
         when (op) {
-            // Two ints in, one out. The first operand pushed is the left-hand side.
             Cs2Op.ADD -> binaryInt { left, right -> left + right }
             Cs2Op.SUB -> binaryInt { left, right -> left - right }
             Cs2Op.MULTIPLY -> binaryInt { left, right -> left * right }
@@ -263,14 +212,11 @@ class Cs2Vm(
                     else -> base.toDouble().pow(1.0 / exponent).toInt()
                 }
             }
-            // Widened to long before dividing, as the client does, so a large
-            // numerator does not wrap on the way through.
             Cs2Op.ADDPERCENT -> binaryInt { value, percent ->
                 (value + value.toLong() * percent.toLong() / 100L).toInt()
             }
             Cs2Op.NOT -> intStack.add(popInt().inv())
 
-            // `scale(numerator, denominator, value)` is `value * numerator / denominator`.
             Cs2Op.SCALE -> {
                 val (numerator, denominator, value) = popInts(3)
                 intStack.add(
@@ -320,7 +266,6 @@ class Cs2Vm(
             Cs2Op.APPEND_CHAR -> {
                 val text = popString()
                 val char = popInt()
-                // -1 is the client's "no character", which it treats as fatal.
                 stringStack.add(if (char == -1) text else text + char.toChar())
             }
             Cs2Op.SUBSTRING -> {
@@ -336,9 +281,6 @@ class Cs2Vm(
             Cs2Op.REMOVETAGS -> stringStack.add(removeTags(popString()))
             Cs2Op.ESCAPE -> stringStack.add(popString().replace("<", "<lt>").replace(">", "<gt>"))
             Cs2Op.GET_COL_TAG -> stringStack.add("<col=" + Integer.toHexString(popInt()) + ">")
-            // The client compares locale-aware, treating embedded digit runs as
-            // numbers; a plain lexicographic compare is close enough for a tool and
-            // agrees on the sign for the ASCII text interfaces actually hold.
             Cs2Op.COMPARE -> {
                 val (left, right) = popStrings(2)
                 intStack.add(left.compareTo(right))
@@ -370,7 +312,6 @@ class Cs2Vm(
         intStack.add(combine(left, right))
     }
 
-    /** `DIVIDE` and `MODULO`, yielding 0 rather than throwing on a zero divisor. */
     private inline fun divideBy(op: Cs2Op, combine: (Int, Int) -> Int) {
         val right = popInt()
         val left = popInt()
@@ -382,18 +323,12 @@ class Cs2Vm(
         }
     }
 
-    /**
-     * Notes a zero divisor once per script run. A divide inside a loop would
-     * otherwise fill the log with the same line hundreds of times and bury whatever
-     * else the script reported.
-     */
     private fun reportZeroDivisor(op: Cs2Op) {
         if (zeroDivisorsReported.add(op)) {
             host.onError("$op divided by zero; the divisor is 0 because some opcode this host does not implement returned it")
         }
     }
 
-    /** Everything outside a `<...>` tag, as the client's `removetags` does. */
     private fun removeTags(text: String): String {
         val out = StringBuilder(text.length)
         var inTag = false
@@ -407,10 +342,6 @@ class Cs2Vm(
         return out.toString()
     }
 
-    /**
-     * `APPEND_SIGNNUM`'s explicit sign: the client spells a positive number with a
-     * leading `+` and leaves a negative one to its own minus sign.
-     */
     private fun signed(value: Int): String = if (value >= 0) "+$value" else value.toString()
 
     private fun IntArray.setIfPresent(index: Int, value: Int) {
@@ -421,8 +352,6 @@ class Cs2Vm(
         val array = ((operand shr 16) and 0x7).coerceAtMost(globalArrays.lastIndex)
         val size = popInt().coerceIn(0, 5000)
         globalArrayLengths[array] = size
-        // The client fills with 0 only for an int array; every other element
-        // type - including strings, which are held as ids here - starts at -1.
         val fill = if ((operand and 0xFFFF) == 'i'.code) 0 else -1
         globalArrays[array].fill(fill, 0, size)
     }
@@ -498,10 +427,6 @@ class Cs2Vm(
         return frames.isNotEmpty()
     }
 
-    /**
-     * Hook setters pop a format string describing the callback's arguments,
-     * optionally a trigger list, then the arguments and the script id.
-     */
     private fun setHook(op: Cs2Op) {
         val component = if (op.popInt == 1) popInt() else -1
         val format = popString()
@@ -534,15 +459,12 @@ class Cs2Vm(
         val intArgs = popInts(op.popInt)
         val results = host.invoke(op, operand, Cs2Values(intArgs, stringArgs, longArgs))
 
-        // The host may not know the opcode; pad so the stacks stay consistent
-        // with the signature the rest of the script was compiled against.
         val expected = expectedResults(op, intArgs)
         repeat(expected.ints) { intStack.add(results.ints.getOrElse(it) { 0 }) }
         repeat(expected.strings) { stringStack.add(results.strings.getOrElse(it) { "" }) }
         repeat(expected.longs) { longStack.add(results.longs.getOrElse(it) { 0L }) }
     }
 
-    /** What an opcode pushes, resolving the int-or-string param opcodes. */
     private fun expectedResults(op: Cs2Op, intArgs: List<Int>): ReturnSignature {
         if (op.kind != OpKind.PARAM) {
             return ReturnSignature(op.pushInt, op.pushStr, op.pushLong)
@@ -556,7 +478,6 @@ class Cs2Vm(
     }
 
     private companion object {
-        /** Fixed seed for [random]; the value itself carries no meaning. */
         const val SEED = 0x5CB1EL
     }
 }

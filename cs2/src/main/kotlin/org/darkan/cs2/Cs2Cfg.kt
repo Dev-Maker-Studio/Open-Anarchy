@@ -1,19 +1,10 @@
 package org.darkan.cs2
 
-/**
- * Control-flow graph over a script's instruction list.
- *
- * Jump operands are relative to the *next* instruction: the interpreter
- * increments its instruction pointer before executing, then adds the operand,
- * so an instruction at `index` with operand `d` continues at `index + d + 1`.
- */
 class Cs2Cfg private constructor(
     val script: Cs2Script,
     val blocks: List<Block>,
-    /** Block index that starts at a given instruction index. */
     private val blockAt: Map<Int, Int>,
 ) {
-    /** A maximal run of instructions with a single entry and a single exit. */
     class Block(
         val id: Int,
         val start: Int,
@@ -21,7 +12,6 @@ class Cs2Cfg private constructor(
         val successors: MutableList<Int> = ArrayList(2),
         val predecessors: MutableList<Int> = ArrayList(2),
     ) {
-        /** Instruction indices in this block. */
         val indices: IntRange get() = start until end
 
         override fun toString() = "B$id[$start,$end) -> $successors"
@@ -57,7 +47,6 @@ class Cs2Cfg private constructor(
 
         fun isReturn(op: Cs2Op) = op == Cs2Op.RETURN
 
-        /** Where control goes after `index`, ignoring fallthrough. */
         fun jumpTargets(script: Cs2Script, index: Int): List<Int> {
             val instruction = script[index]
             val op = instruction.op
@@ -72,7 +61,6 @@ class Cs2Cfg private constructor(
             }
         }
 
-        /** True when control can continue at `index + 1`. */
         fun fallsThrough(op: Cs2Op) = !isUnconditionalBranch(op) && !isReturn(op)
 
         fun build(script: Cs2Script): Cs2Cfg {
@@ -85,9 +73,6 @@ class Cs2Cfg private constructor(
                     }
                     leaders.add(target)
                 }
-                // A switch ends a block even when its table is empty, otherwise
-                // the instructions after it would be folded into the same block
-                // and lost when the block is lifted.
                 if (!fallsThrough(op) || isSwitch(op) || jumpTargets(script, index).isNotEmpty()) {
                     if (index + 1 <= script.size) leaders.add(index + 1)
                 }

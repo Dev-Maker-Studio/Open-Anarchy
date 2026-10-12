@@ -13,7 +13,6 @@ import com.rs.plugin.kts.onPlayerStep
 @ServerStartupEvent
 fun handleAlKharidArea() {
 
-	// shantayPass
 	onPlayerStep(arrayOf(
 			Tile.of(3303, 3116, 0),
 			Tile.of(3303, 3117, 0),
@@ -34,12 +33,10 @@ fun handleAlKharidArea() {
 		}
 	}
 
-	// clickShantayPass
 	onObjectClick(12774) { (player) ->
 			player.sendMessage("Walk on through with a pass!")
 	}
 
-	// handleGates
 	onObjectClick(35549, 35551) { (player, obj) ->
 		if (player.inventory.hasCoins(10)) {
 			player.inventory.removeCoins(10)
@@ -49,13 +46,11 @@ fun handleAlKharidArea() {
 		}
 	}
 
-	// handleStrykewyrmStile
 	onObjectClick(48208) { (player, obj) ->
 		val dx = if (player.x < obj.x) 3 else -3
 		AgilityShortcuts.climbOver(player, player.transform(dx, 0, 0))
 	}
 
-	// handleMiningSiteShortcut
 	onObjectClick(9331, 9332) { (player, obj) ->
 		if (!Agility.hasLevel(player, 38)) {
 			player.sendMessage("You need 38 agility")
@@ -71,7 +66,6 @@ fun handleAlKharidArea() {
 		}
 	}
 
-	// handleBrimhavenStairs
 	onObjectClick(45, 46) { (player, obj) ->
 		val (dx, dy, dz) = when (obj.id) {
 			45 -> Triple(

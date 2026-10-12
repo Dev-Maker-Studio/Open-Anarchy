@@ -21,9 +21,6 @@ enum class Direction(deltaX: Int, deltaY: Int) {
 
     fun isVertical() = delta.isVertical()
 
-    /**
-     * Rotate direction clockwise in increments of 1/8
-     */
     fun rotate(count: Int): Direction {
         return all[(ordinal + count + all.size).rem(all.size)]
     }

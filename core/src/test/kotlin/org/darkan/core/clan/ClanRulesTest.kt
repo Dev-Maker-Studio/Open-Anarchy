@@ -43,7 +43,6 @@ class ClanRulesTest {
 
     private fun assertAllowed(decision: ClanDecision) = assertEquals(ClanDecision.Allowed, decision)
 
-    // ─── Names ───────────────────────────────────────────────────────
 
     @Test
     fun `valid names pass and invalid names carry the legacy message`() {
@@ -72,7 +71,6 @@ class ClanRulesTest {
         assertIs<ClanDecision.Denied>(ClanRules.checkName(null, "toolongforaclan"))
     }
 
-    // ─── Membership ──────────────────────────────────────────────────
 
     @Test
     fun `leave is for members only`() {
@@ -186,7 +184,6 @@ class ClanRulesTest {
         )
     }
 
-    // ─── Bans ────────────────────────────────────────────────────────
 
     @Test
     fun `ban and unban follow the channel kick rank`() {
@@ -210,7 +207,6 @@ class ClanRulesTest {
         assertDenied(ClanRules.ban(lenient, "rec", "owner"), "The clan owner cannot be banned.")
     }
 
-    // ─── Settings ────────────────────────────────────────────────────
 
     @Test
     fun `settings delta types every entry and rejects the whole map on one bad entry`() {
@@ -260,7 +256,6 @@ class ClanRulesTest {
         assertDenied(ClanRules.setVar(clan, "stranger"), "You do not have permission to change clan settings.")
     }
 
-    // ─── Channels ────────────────────────────────────────────────────
 
     @Test
     fun `join and leave channel need a member`() {

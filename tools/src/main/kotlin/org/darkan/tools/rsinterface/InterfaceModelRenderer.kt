@@ -21,26 +21,6 @@ import world.gregs.voidps.cache.definition.decoder.ItemDecoder
 import kotlin.math.PI
 import kotlin.math.atan
 
-/**
- * Draws model components (type 6) and item icons into their component rectangle.
- *
- * The client renders these through its own scene toolkit with a viewport-local
- * perspective matrix; there is no way to reproduce that exactly without the
- * client's map-region view range and sun matrix, so this reconstructs the same
- * projection from first principles:
- *
- * - RS projects with a focal length of 512 units, so the vertical field of view
- *   is `2 * atan(256 / 512)` and the model sits `graphicScale * 4` RS units in
- *   front of the camera - the same distance the client's model matrix pushes it.
- * - Pitch, roll and yaw are the cache's 0..2047 turn units.
- * - The model is centred on its bounding box, which is what the client achieves
- *   for items via its `-minY / 2` offset and what makes an arbitrary raw model
- *   land inside its viewport.
- *
- * Everything else about the component (clipping, position, size) is decided by
- * [InterfaceRenderer]; this class only owns the GL viewport switch and the
- * matrices.
- */
 class InterfaceModelRenderer(
     private val cache: Cache,
     private val window: Window,
@@ -55,13 +35,6 @@ class InterfaceModelRenderer(
     private val itemDefinitions: Array<ItemDefinition> = itemDecoder.create(itemDecoder.size(cache) + 1)
     private val itemDecoded = BooleanArray(itemDefinitions.size)
 
-    /**
-     * Size of the framebuffer being drawn into, which the viewport and scissor
-     * arithmetic below has to flip against. It defaults to the window, but the
-     * editor renders the interface into an off-screen target of its own size, and
-     * flipping a target-space coordinate against the window's height puts every
-     * model viewport somewhere else entirely. Set it to (0, 0) to track the window.
-     */
     var targetWidth: Int = 0
     var targetHeight: Int = 0
 
@@ -73,7 +46,6 @@ class InterfaceModelRenderer(
     private val viewMatrix = Matrix4f()
     private val projectionMatrix = Matrix4f()
 
-    /** Decodes (once) and returns an item definition, or null when out of range. */
     fun item(id: Int): ItemDefinition? {
         if (id < 0 || id >= itemDefinitions.size) {
             return null
@@ -89,12 +61,6 @@ class InterfaceModelRenderer(
         return itemDefinitions[id]
     }
 
-    /**
-     * Renders the model a component resolves to. Returns false when there is
-     * nothing to draw, so the caller can fall back to a placeholder.
-     *
-     * @param clip the clip rectangle in effect, as left/top/right/bottom.
-     */
     fun render(state: ComponentState, screenX: Int, screenY: Int, clip: IntArray): Boolean {
         if (state.width <= 0 || state.height <= 0) {
             return false
@@ -110,14 +76,11 @@ class InterfaceModelRenderer(
             return true
         }
 
-        // The 2D pass owns the scissor box; the viewport is ours for this draw.
         val surface = surfaceHeight
         glViewport(screenX, surface - screenY - state.height, state.width, state.height)
         glEnable(GL_SCISSOR_TEST)
         glScissor(clipLeft, surface - clipBottom, clipRight - clipLeft, clipBottom - clipTop)
 
-        // Each component owns its own depth range; without clearing, a model drawn
-        // earlier in the frame would occlude one drawn later at the same depth.
         renderSystem.enableDepthWrite()
         glClear(GL_DEPTH_BUFFER_BIT)
         renderSystem.disableBlending()
@@ -180,11 +143,6 @@ class InterfaceModelRenderer(
         return true
     }
 
-    /**
-     * Works out which model a component draws and with what transform. An item
-     * set on the component wins over the component's own model, matching the
-     * client, which swaps to the item's icon model and its 2D camera angles.
-     */
     private fun resolve(state: ComponentState): ModelRequest? {
         if (state.itemId != -1) {
             val definition = item(state.itemId) ?: return null
@@ -198,8 +156,6 @@ class InterfaceModelRenderer(
                 translateY = definition.graphicTranslateY
             )
         }
-        // Only raw models can be resolved from the cache; player and NPC media
-        // types need live entity state the viewer does not have.
         if (state.mediaType != MediaType.RAW_MODEL || state.mediaId <= 0) {
             return null
         }
@@ -214,11 +170,6 @@ class InterfaceModelRenderer(
         )
     }
 
-    /**
-     * Loads and caches a model. Failures are cached too - an interface can point
-     * at a model that is not in the cache, and retrying every frame would stall
-     * the whole viewer.
-     */
     private fun model(modelId: Int): TexturedModel? {
         if (models.containsKey(modelId)) {
             return models[modelId]
@@ -233,7 +184,6 @@ class InterfaceModelRenderer(
         return loaded
     }
 
-    /** Centre of the model's bounding box in GL space, cached per model. */
     private fun centre(modelId: Int): Vector3f? {
         if (centres.containsKey(modelId)) {
             return centres[modelId]
@@ -262,7 +212,6 @@ class InterfaceModelRenderer(
             minZ = minOf(minZ, definition.vertexZ[index])
             maxZ = maxOf(maxZ, definition.vertexZ[index])
         }
-        // Model vertices reach the GPU as (x, -y, -z) scaled by RS_UNIT.
         return Vector3f(
             (minX + maxX) * 0.5f * RS_UNIT,
             -(minY + maxY) * 0.5f * RS_UNIT,
@@ -276,7 +225,6 @@ class InterfaceModelRenderer(
         centres.clear()
     }
 
-    /** A resolved model draw: which model, and the camera angles to draw it at. */
     private class ModelRequest(
         val modelId: Int,
         val pitch: Int,
@@ -288,10 +236,8 @@ class InterfaceModelRenderer(
     )
 
     companion object {
-        /** RS world units per GL unit, matching the model loader's scale. */
         private const val RS_UNIT = 1f / 128f
 
-        /** RS angles are 2048 units per full turn. */
         private const val TURN_UNITS = 2048f
 
         private const val DEFAULT_SCALE = 100
@@ -299,7 +245,6 @@ class InterfaceModelRenderer(
         private const val NEAR_PLANE = 0.05f
         private const val FAR_PADDING = 64f
 
-        /** RS projects with a focal length of 512 units over a 512-unit viewport. */
         private val FIELD_OF_VIEW = (2.0 * atan(256.0 / 512.0)).toFloat()
 
         private val AMBIENT = Vector3f(0.55f, 0.55f, 0.55f)

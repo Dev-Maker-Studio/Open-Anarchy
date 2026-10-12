@@ -12,7 +12,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @PluginEventHandler
-public class Voices {//set
+public class Voices {
 	public static Set<Integer> voicesMarked = new HashSet<>();
 	
 	@ServerStartupEvent(Priority.FILE_IO)

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.npcs;
 
 import com.rs.game.content.skills.dungeoneering.DungeonManager;
@@ -47,13 +31,11 @@ public class FamishedEye extends DungeonNPC {
 
 	@Override
 	public boolean lineOfSightTo(Object tile, boolean checkClose) {
-		//because npc is under cliped data
 		return getManager().isAtBossRoom(WorldUtil.targetToTile(tile));
 	}
 
 	@Override
 	public void setNextFaceEntity(Entity entity) {
-		//this boss doesnt face
 	}
 
 	@Override
@@ -90,7 +72,7 @@ public class FamishedEye extends DungeonNPC {
 
 	@Override
 	public void sendDeath(Entity source) {
-		sleepCycles++;//start the cycles
+		sleepCycles++;
 		boss.refreshCapDamage();
 		setCantInteract(true);
 		setNextAnimation(new Animation(14917));
@@ -116,7 +98,6 @@ public class FamishedEye extends DungeonNPC {
 	}
 
 	private int findType(int rotation) {
-		// mage, warrior, range
 		return switch (type) {
 			case 0 -> 2;
 			case 1 -> 0;
@@ -126,10 +107,9 @@ public class FamishedEye extends DungeonNPC {
 
 	private int findWeakness(int type) {
 		return switch (type) {
-			// mage, warrior, range
-			case 0 -> 1; //range was mage 2
-			case 1 -> 2; //mage was melee 0
-			default -> 0; //melee was range 1
+			case 0 -> 1;
+			case 1 -> 2;
+			default -> 0;
 		};
 	}
 

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.transportation;
 
 import com.rs.engine.dialogue.Dialogue;
@@ -185,7 +169,7 @@ public class FairyRings {
 			}
 		},
 
-		BIR_DIP_CLR_ALP(-1, "Ork's Rift", Tile.of(1626, 4176, 0)) { //1567, 4133 during quest?
+		BIR_DIP_CLR_ALP(-1, "Ork's Rift", Tile.of(1626, 4176, 0)) {
 			@Override
 			public boolean meetsRequirements(Player player, boolean silent) {
 				return player.isQuestComplete(Quest.FAIRY_TALE_III_BATTLE_AT_ORKS_RIFT, silent ? null : "to use this fairy ring code.");
@@ -230,7 +214,7 @@ public class FairyRings {
 	}
 
 	public static ObjectClickHandler handleRings = new ObjectClickHandler(new Object[] { "Fairy ring", 27331 }, e -> {
-		if (e.getObjectId() == 12094) {//Fairy ring by evil chicken
+		if (e.getObjectId() == 12094) {
 			sendTeleport(e.getPlayer(), Tile.of(3202, 3169, 0));
 			return;
 		}

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.npcs;
 
 import org.darkan.core.model.ObjectShape;
@@ -46,12 +30,12 @@ public class KalGerWarmonger extends DungeonBoss {
 	private static final int SIZE = 5;
 	private static final int[] WEAPONS = { -1, 56057, 56054, 56056, 56055, 56053 };
 	private static final int[][] FLY_COORDINATES = {
-		{ 4, 2 }, // correct
-		{ 0, 0 }, // correct cuz he doesn't even fly
-		{ 10, 10 }, // correct
-		{ 10, 2 }, // correct
-		{ 5, 10 }, // correct
-		{ 5, 3 } // correct
+		{ 4, 2 },
+		{ 0, 0 },
+		{ 10, 10 },
+		{ 10, 2 },
+		{ 5, 10 },
+		{ 5, 3 }
 	};
 
 	private WarpedSphere sphere;
@@ -65,7 +49,6 @@ public class KalGerWarmonger extends DungeonBoss {
 		setCantInteract(true);
 		typeTicks = -1;
 		WorldTasks.scheduleTimer(3, (ticks) -> {
-			//playSoundEffect(3033);
 			setNextForceTalk(new ForceTalk("NOW IT'S YOUR TURN!"));
 			sphere = new WarpedSphere(reference, 12842, manager.getTile(reference, 11, 12), manager);
 			beginFlyCount();
@@ -76,10 +59,10 @@ public class KalGerWarmonger extends DungeonBoss {
 	private void beginFlyCount() {
 		type++;
 		if (type != 1)
-			setHitpoints((int) (getHitpoints() + (getMaxHitpoints() * .15D)));// He heals a bit not 100% sure what the multiplier is
+			setHitpoints((int) (getHitpoints() + (getMaxHitpoints() * .15D)));
 		typeTicks = type == 2 ? 7 : 0;
 		setCantInteract(true);
-		setNextFaceEntity(null);//Resets?
+		setNextFaceEntity(null);
 	}
 
 
@@ -99,7 +82,7 @@ public class KalGerWarmonger extends DungeonBoss {
 	@Override
 	public void handlePreHitOut(Entity target, Hit hit) {
 		if (annoyanceMeter == 10) {
-			annoyanceMeter = 0;// resets it
+			annoyanceMeter = 0;
 			if (target instanceof Player player) {
 				player.setProtectionPrayBlock(2);
 				player.sendMessage("You have been injured and cannot use protective prayers.");
@@ -154,7 +137,7 @@ public class KalGerWarmonger extends DungeonBoss {
 
 	@Override
 	public int getMaxHitpoints() {
-		return super.getMaxHitpoints() * 2;//Maybe * 3
+		return super.getMaxHitpoints() * 2;
 	}
 
 	@Override
@@ -173,7 +156,7 @@ public class KalGerWarmonger extends DungeonBoss {
 	}
 
 	private void processNextType() {
-		if (getManager().isDestroyed()) // Should fix some nullpointers
+		if (getManager().isDestroyed())
 			return;
 
 		if (typeTicks == 1) {
@@ -209,12 +192,11 @@ public class KalGerWarmonger extends DungeonBoss {
 				stealPlayerEffects();
 			sphere.nextStage();
 			setCantInteract(false);
-			typeTicks = -2;// cuz it increments by one
+			typeTicks = -2;
 		}
 	}
 
 	private void submitPullAttack() {
-		//playSoundEffect(3025);
 		setNextForceTalk(new ForceTalk("You dare hide from me? BURN!"));
 		setNextAnimation(new Animation(14996));
 		final NPC boss = this;
@@ -256,7 +238,6 @@ public class KalGerWarmonger extends DungeonBoss {
 	}
 
 	private void stealPlayerEffects() {
-		//playSoundEffect(3029);
 		setNextForceTalk(new ForceTalk("Your gods can't help you now!"));
 		for (Player player : getManager().getParty().getTeam()) {
 			if (!getManager().getCurrentRoomReference(player.getTile()).equals(getReference()))

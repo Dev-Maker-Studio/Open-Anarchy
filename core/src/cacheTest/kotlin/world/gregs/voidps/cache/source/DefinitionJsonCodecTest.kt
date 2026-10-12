@@ -14,19 +14,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * Every definition file of every JSON typed index, through the codec that stores it.
- *
- * The three encoder parity tests prove `encode(decode(bytes)) == bytes`; this proves the whole trip the
- * source tree actually makes - `encode(read(write(decode(bytes)))) == bytes` - so a field the JSON mapper
- * cannot spell, a map it reorders or a number it narrows shows up here rather than as a pristine sidecar
- * in a 2 GB tree. It is also where the per type counts in `docs/cache-source.md` come from.
- *
- * The codec is asked for exactly what an unpack asks it for, so a file it could not reproduce comes back
- * with its `.pristine` sidecar and is counted; the bar is zero.
- *
- * Skipped when there is no cache to test against, like the other whole-cache tests.
- */
 class DefinitionJsonCodecTest {
 
     @Test
@@ -58,7 +45,6 @@ class DefinitionJsonCodecTest {
         assertEquals(0, pristine, "no definition may need a pristine copy")
     }
 
-    /** [type]'s files and how many of them the codec had to keep the shipped bytes for. */
     private fun count(cache: Cache, type: DefinitionCodecs.Type): Pair<Int, Int> {
         var files = 0
         var pristine = 0
@@ -99,7 +85,6 @@ class DefinitionJsonCodecTest {
         assertEquals(1477, component.archiveOf("1477/32${DefinitionLayout.EXTENSION}.pristine"))
         assertEquals(null, component.archiveOf("1477${DefinitionLayout.EXTENSION}"))
 
-        // Index 2's sub-codecs are inside a directory that is the archive, so only ConfigCodec knows which.
         val struct = DefinitionCodecs.types.first { it.name == "struct" }.codec
         assertEquals(null, struct.archiveOf("26${DefinitionLayout.EXTENSION}"))
     }

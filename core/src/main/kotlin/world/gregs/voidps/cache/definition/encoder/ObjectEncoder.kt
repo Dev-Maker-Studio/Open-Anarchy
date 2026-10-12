@@ -5,18 +5,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.ObjectDefinition
 
-/**
- * Writes an index 16 loc file.
- *
- * Several opcodes share a field: 17, 18 and 27 all describe how the loc blocks movement and sight, and 21,
- * 81, 93, 94, 95 and 162 all set the contoured ground mode with a different payload width. The mode a
- * definition came from is recovered from the value, and where the values cannot tell two records apart the
- * decoder has kept the file's own opcode order, which decides for us.
- *
- * Options come from [ObjectDefinition.rawOptions] so that a file holding both a public (30 to 34) and a
- * members (150 to 154) record for the same slot writes both back; [members] supplies the members half for a
- * definition built by hand, which is what the two argument encode form is for.
- */
 class ObjectEncoder : OpcodeEncoder<ObjectDefinition>() {
 
     override fun opcodes(definition: ObjectDefinition): IntArray {

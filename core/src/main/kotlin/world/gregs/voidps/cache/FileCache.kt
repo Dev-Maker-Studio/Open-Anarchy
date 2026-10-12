@@ -16,15 +16,6 @@ import java.io.RandomAccessFile
 import java.math.BigInteger
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * [Cache] which reads data directly from file.
- * Thread-safe for concurrent reads from multiple threads.
- * Average read speeds, fast loading and low but variable memory usage.
- *
- * Opened writable it also serves [write]: the group is repacked, recompressed with the
- * archive's existing compression, its version bumped, and the index's reference table and the
- * signed version table rewritten so the cache stays internally consistent for a JS5 client.
- */
 class FileCache(
     private val store: FileStore,
     indexCount: Int,
@@ -81,8 +72,6 @@ class FileCache(
             return null
         }
 
-        // If XTEA key is provided directly, use it; otherwise fall back to the class field map
-        // For MAPS index, create a temporary map with the archive ID as key
         val effectiveXteas = if (xtea != null && index == Index.MAPS) {
             mapOf(archive to xtea)
         } else {
@@ -100,8 +89,6 @@ class FileCache(
 
         val fileCount = fileCounts[index]?.getOrNull(archive) ?: return null
         val result = if (fileCount == 1) {
-            // One file, whose id is not necessarily 0 - index 23's area archives hold file 4 - and the
-            // array is indexed by position in [fileIds], which for a single file archive is only ever 0.
             arrayOf<ByteArray?>(decompressed)
         } else {
             parseMultiFileArchive(decompressed, fileCount)
@@ -111,11 +98,6 @@ class FileCache(
         return result[matchingIndex]
     }
 
-    /**
-     * Parses a multi-file archive from decompressed data into individual file byte arrays.
-     * The archive format stores chunk counts and per-file sizes at the end of the data,
-     * with the actual file data packed sequentially from the beginning.
-     */
     private fun parseMultiFileArchive(decompressed: ByteArray, fileCount: Int): Array<ByteArray?> {
         val files = ArchiveGroup.split(decompressed, IntArray(fileCount) { it }).files
         return Array(fileCount) { files[it] }
@@ -127,18 +109,6 @@ class FileCache(
         write(index, id, 0, data, xteas)
     }
 
-    /**
-     * Replace [file] of [archive] with [data].
-     *
-     * The rest of the group is read back and repacked around it, so this costs a decompress and
-     * a recompress of the whole archive. The archive's existing compression and gzip OS byte are
-     * kept, its version is bumped by one, and the reference table's CRC, version, whirlpool and
-     * file list are brought in line with what was written before the table itself is rewritten
-     * and the version table rebuilt.
-     *
-     * A three chunk group (index 0) keeps its layout only when nothing about the file lengths
-     * changed; any other edit is written as a single chunk, which every reader accepts.
-     */
     override fun write(index: Int, archive: Int, file: Int, data: ByteArray, xteas: IntArray?) {
         check(store.writable) { "Read only cache." }
         require(archive >= 0 && file >= 0) { "Archive $archive file $file is not a valid address." }
@@ -200,20 +170,12 @@ class FileCache(
             indexTable(index, table)
             sectorCache.remove(index + (archive shl 6))
             sectorCache.remove(255 + (index shl 6))
-            // Data cache keys are salted with the xtea keys used to read them, so the entries
-            // for this archive cannot be picked out one by one.
             dataCache.clear()
             crcs = null
             rebuildVersionTable()
         }
     }
 
-    /**
-     * Compress with [compression], falling back to gzip while an encoder for it is missing.
-     * Everything the client checks - the reference table CRC, the whirlpool and the version
-     * table - is derived from the bytes actually written, so the fallback stays consistent; it
-     * only means the archive stops being byte-identical to the one the cache shipped.
-     */
     private fun compress(group: ByteArray, compression: Compression, version: Int?, gzipOs: Int, index: Int, archive: Int): Container {
         return try {
             Container.compress(group, compression, version, gzipOs)
@@ -226,7 +188,6 @@ class FileCache(
     private fun writeReferenceTable(index: Int, table: ReferenceTable) {
         val current = store.read(FileStore.REFERENCE_INDEX, index)
         val compression = if (current == null) Compression.GZIP else Container.decode(current).compression
-        // A reference table container has no version trailer.
         val container = compress(table.encode(), compression, null, 0, FileStore.REFERENCE_INDEX, index)
         store.write(FileStore.REFERENCE_INDEX, index, container.encode())
     }
@@ -269,10 +230,6 @@ class FileCache(
             return load(path, exponent, modulus, xteas, writable = writable)
         }
 
-        /**
-         * Open the store at [path] and load every index's reference table, leaving archive data
-         * on disk to be read on demand.
-         */
         override fun load(
             path: String,
             mainFile: File,
@@ -287,7 +244,6 @@ class FileCache(
             exponent: BigInteger?,
             modulus: BigInteger?
         ): Cache {
-            // The caller only opened these to count the indices; the store keeps its own handles.
             runCatching { main.close() }
             runCatching { index255.close() }
             val store = FileStore.open(File(path), writable)

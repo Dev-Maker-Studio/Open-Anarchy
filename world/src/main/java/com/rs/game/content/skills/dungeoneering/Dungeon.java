@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering;
 
 import com.rs.Settings;
@@ -149,7 +133,7 @@ public final class Dungeon {
 					g.setColor(Color.green);
 
 					for (int l = 0; l < map[x][y].getRoom().getDoorDirections().length; l++) {
-						int lock0 = 0;// (map[x][y].getDoorTypes()[l] >> 16 & 0xFFFF) - 50208;
+						int lock0 = 0;
 						Door door = map[x][y].getDoor(l);
 						lock0 = door != null && door.getType() == DungeonConstants.DoorType.KEY ? door.getId() : -1;
 						int rotation = (map[x][y].getRoom().getDoorDirections()[l] + map[x][y].getRotation()) & 0x3;
@@ -200,10 +184,8 @@ public final class Dungeon {
 			manager.getParty().customSeed = false;
 		}
 
-		// seed = 1022668148508890112L;
 		Random random = new Random(seed);
 		DungeonStructure structure = new DungeonStructure(size, random, complexity);
-		// map structure to matrix dungeon
 		map = new Room[DungeonConstants.DUNGEON_RATIO[size.ordinal()][0]][DungeonConstants.DUNGEON_RATIO[size.ordinal()][1]];
 		RoomNode base = structure.getBase();
 
@@ -243,7 +225,7 @@ public final class Dungeon {
 					else if (complexity >= 5 && random.nextInt(3) == 0) {
 						int doorIndex = random.nextInt(DungeonConstants.SkillDoors.values().length);
 						SkillDoors sd = DungeonConstants.SkillDoors.values()[doorIndex];
-						if (sd.getClosedObject(type) == -1) // some frozen skill doors dont exist
+						if (sd.getClosedObject(type) == -1)
 							continue;
 						int level = manager == null ? 1 : neighbor.isCritPath ? (manager.getParty().getMaxLevel(sd.getSkillId()) - random.nextInt(10)) : random.nextInt(sd.getSkillId() == Constants.SUMMONING || sd.getSkillId() == Constants.PRAYER ? 100 : 106);
 						map[node.x][node.y].setDoor(doorDir, new Door(DungeonConstants.DoorType.SKILL, doorIndex, level < 1 ? 1 : level));

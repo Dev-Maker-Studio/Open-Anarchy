@@ -7,14 +7,9 @@ import com.rs.game.model.entity.async.ScheduledTask
 import org.darkan.core.model.GroundItem
 import kotlinx.coroutines.CoroutineScope
 
-/**
- * A GroundItem wrapper that supports async task scheduling.
- * Uses composition because GroundItem is final, where legacy's TaskedGroundItem subclassed it.
- */
 class TaskedGroundItem(val groundItem: GroundItem) {
     val asyncTasks = AsyncTaskScheduler()
 
-    // Delegate common GroundItem properties
     val id get() = groundItem.id
     val amount get() = groundItem.amount
     val item get() = groundItem.item
@@ -33,7 +28,6 @@ class TaskedGroundItem(val groundItem: GroundItem) {
     fun getMetaDataI(key: String, default: Int = -1) = groundItem.getMetaDataI(key, default)
     fun addMetaData(key: String, value: Any) = groundItem.addMetaData(key, value)
 
-    /** Allow TaskedGroundItem to be used where GroundItem is expected */
     fun asGroundItem(): GroundItem = groundItem
 }
 

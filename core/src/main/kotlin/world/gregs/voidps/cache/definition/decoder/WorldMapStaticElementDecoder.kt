@@ -5,13 +5,6 @@ import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index.WORLD_MAP
 import world.gregs.voidps.cache.definition.data.WorldMapStaticElementDefinition
 
-/**
- * Index 23's `<area>_staticelements` files: a coordinate, a map element id and the members flag.
- *
- * Not opcode keyed and only seven bytes long, so the whole read is [readLoop]. The archive an element
- * belongs to is the area's, and only the area's archive name says which, so this decoder is only ever
- * driven with bytes somebody else looked up - the source tree does exactly that.
- */
 class WorldMapStaticElementDecoder : DefinitionDecoder<WorldMapStaticElementDefinition>(WORLD_MAP) {
 
     override fun create(size: Int) = Array(size) { WorldMapStaticElementDefinition(it) }

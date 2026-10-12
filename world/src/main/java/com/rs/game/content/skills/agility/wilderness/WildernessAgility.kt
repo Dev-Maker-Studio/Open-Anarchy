@@ -15,17 +15,14 @@ import kotlin.math.roundToInt
 
 @ServerStartupEvent
 fun mapWildernessAgility() {
-    // Ladder down
     onObjectClick(14758) { (player) ->
         player.useStairs(828, Tile(3005, 10362, 0))
     }
 
-    // Ladder up
     onObjectClick(32015, tiles = arrayOf(Tile.of(3005, 10363, 0))) { (player) ->
         player.useStairs(828, Tile(3005, 3962, 0))
     }
 
-    // Gates to & from Wilderness Agility Course
     onObjectClick(65365, 65367) { (player, obj) ->
         if (obj.id == 65365 && !Agility.hasLevel(player, 52)) return@onObjectClick
 
@@ -110,7 +107,6 @@ fun mapWildernessAgility() {
         }
     }
 
-    // Obstacle Pipe
     onObjectClick(65362) { (player, obj) ->
         if (!Agility.hasLevel(player, 49)) return@onObjectClick
 
@@ -141,7 +137,6 @@ fun mapWildernessAgility() {
         })
     }
 
-    // Ropeswing
     onObjectClick(64696) { (player, obj) ->
         if (!Agility.hasLevel(player, 49)) return@onObjectClick
         if (player.y > 3953) {
@@ -192,7 +187,6 @@ fun mapWildernessAgility() {
         })
     }
 
-    // Stepping stone
     onObjectClick(64699) { (player) ->
         if (!Agility.hasLevel(player, 49)) return@onObjectClick
         if (player.tile != Tile(3002, 3960, 0)) return@onObjectClick
@@ -225,7 +219,6 @@ fun mapWildernessAgility() {
         }
     }
 
-    // Log balance
     onObjectClick(64698) { (player) ->
         if (!Agility.hasLevel(player, 49)) return@onObjectClick
         if (player.tile != Tile(3002, 3945, 0)) {
@@ -272,7 +265,6 @@ fun mapWildernessAgility() {
         }
     }
 
-    // Cliffside
     onObjectClick(65734) { (player, obj) ->
         if (!Agility.hasLevel(player, 49)) return@onObjectClick
         if (player.y != 3939) return@onObjectClick

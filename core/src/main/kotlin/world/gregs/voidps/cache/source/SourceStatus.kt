@@ -8,30 +8,21 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.name
 
-/** A pristine sidecar that no longer applies, and why. */
 class StaleFile(
-    /** The tree relative path of the file the sidecar guards. */
     val path: String,
     val reason: String
 ) {
     override fun toString(): String = "$path: $reason"
 }
 
-/** What one index of a tree holds, as `cache status` reports it. */
 class IndexStatus(
     val index: Int,
-    /** The index's directory name, which is Jagex's own - `config_obj`, `clientscripts`. */
     val name: String,
-    /** The codec's [SourceCodec.id]. */
     val codec: String,
     val archives: Int,
-    /** Every regular file under the index directory but its own `index.json`. */
     val files: Int,
-    /** Editable files whose codec could not reproduce the shipped bytes, from `index.json`. */
     val pristine: Int,
-    /** Archives kept as container bytes because nothing could open them. */
     val opaque: Int,
-    /** The sidecars whose guard no longer holds, so the next pack compiles the edit instead. */
     val stale: List<StaleFile>
 ) {
     override fun toString(): String =
@@ -39,23 +30,9 @@ class IndexStatus(
             "${stale.size} stale"
 }
 
-/**
- * A read-only inventory of a source tree: what each index holds and what it is still keeping
- * original bytes for.
- *
- * This is what `cache status` prints, and it lives here rather than in the tool because every
- * number in it is a property of the tree's contract: the pristine count is what `index.json`
- * recorded, a *stale* sidecar is one whose editable file no longer hashes to the guard - which is
- * how a pack knows to compile the edit rather than emit the original - and which archive a path
- * belongs to is the codec's answer ([SourceCodec.owner]) and nobody else's.
- *
- * Nothing is written and nothing is packed; the cost is one walk of the tree plus a SHA-256 of
- * each guarded file, so it is proportional to the number of sidecars and not to the tree.
- */
 class SourceStatus(
     val tree: SourceTree,
     val indices: List<IndexStatus>,
-    /** How many gameval catalogs the tree carries, or -1 when it has no `gamevals` directory. */
     val gamevals: Int
 ) {
 
@@ -71,7 +48,6 @@ class SourceStatus(
     val opaque: Int
         get() = indices.sumOf { it.opaque }
 
-    /** Every stale sidecar in the tree, in index order. */
     val stale: List<StaleFile>
         get() = indices.flatMap { it.stale }
 
@@ -80,7 +56,6 @@ class SourceStatus(
 
     companion object {
 
-        /** Walk [tree] and report what it holds. */
         fun of(tree: SourceTree): SourceStatus {
             val indices = ArrayList<IndexStatus>()
             for (index in tree.indices()) {
@@ -113,13 +88,6 @@ class SourceStatus(
             )
         }
 
-        /**
-         * Why the sidecar guarding [guarded] no longer applies, or null when it still does.
-         *
-         * The hash `index.json` records is filed by file id, and only the codec's layout knows which
-         * file a path is; matching against the *set* of an archive's hashes needs nothing from the
-         * layout but the archive the path belongs to, which every codec answers.
-         */
         private fun staleReason(
             directory: Path,
             guarded: Path,
@@ -149,7 +117,6 @@ class SourceStatus(
             return null
         }
 
-        /** What one walk of an index directory found: the file count and the sidecars, together. */
         private class Walk(val files: Int, val sidecars: List<Path>)
 
         private fun walk(directory: Path): Walk {
@@ -174,7 +141,6 @@ class SourceStatus(
             return Walk(files, sidecars)
         }
 
-        /** How many catalogs the tree's `gamevals` holds, or -1 when it has none at all. */
         private fun gamevals(tree: SourceTree): Int {
             if (!Files.isDirectory(tree.gamevals)) {
                 return -1

@@ -4,13 +4,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.BASDefinition
 
-/**
- * Writes a base animation set (`bas` / render animations, index 2 archive 32) file.
- *
- * Every animation id is a big smart. Opcodes 26 and 54 are stored scaled (`* 4`, `shl 6`) and are
- * written back down; the per slot opcodes 27, 55 and 56 write a slot index and appear once per
- * populated slot, ascending.
- */
 class BASEncoder : OpcodeEncoder<BASDefinition>() {
 
     override fun opcodes(definition: BASDefinition): IntArray {
@@ -241,12 +234,6 @@ class BASEncoder : OpcodeEncoder<BASDefinition>() {
         }
     }
 
-    /**
-     * The slot the [occurrence]th record of a per slot opcode (27, 55, 56) writes: the occurrence'th
-     * populated slot, ascending, which is the order [opcodes] lists them in and the order every shipped
-     * file carries them in. Those opcodes are [BASDefinition.repeats] records, so every occurrence is
-     * written from the fields and none is ever shadowed.
-     */
     private inline fun slot(occurrence: Int, populated: (Int) -> Boolean): Int {
         var remaining = occurrence
         for (slot in 0 until BASDefinition.SLOTS) {
