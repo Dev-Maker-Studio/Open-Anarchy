@@ -61,7 +61,7 @@ private fun exitWhenIdle(occupied: Boolean) {
     if (EnvVars.windowIdleExitMinutes <= 0) return
     idleMinutes = if (occupied) 0 else idleMinutes + 1
     if (idleMinutes >= EnvVars.windowIdleExitMinutes) {
-        Logger.info(Launcher::class.java, "exitWhenIdle", "Window ${GeneratedWorld.windowX},${GeneratedWorld.windowY} has been empty for $idleMinutes minutes")
+        Logger.info(Launcher::class.java, "exitWhenIdle", "Sector ${GeneratedWorld.sectorName} (window ${GeneratedWorld.windowX},${GeneratedWorld.windowY}) has been empty for $idleMinutes minutes")
         Launcher.shutdown()
     }
 }
@@ -73,6 +73,7 @@ private fun demandNeighbours(player: Player) {
     val ys = setOf(WorldWindow.owner(clampTile(globalY - PREPARE_DISTANCE)), WorldWindow.owner(clampTile(globalY + PREPARE_DISTANCE)))
     for (x in xs) for (y in ys) {
         if (x == GeneratedWorld.windowX && y == GeneratedWorld.windowY) continue
+        if (!WorldWindow.isGenerated(x, y)) continue
         WorldServer.socialClient.send(WindowDemand(x, y))
         launchWindow(x, y)
     }
@@ -81,6 +82,7 @@ private fun demandNeighbours(player: Player) {
 private val launched = ConcurrentHashMap.newKeySet<Int>()
 
 private fun launchWindow(x: Int, y: Int) {
+    if (!WorldWindow.isGenerated(x, y)) return
     if (EnvVars.windowLaunchScript.isBlank() || !launched.add(WorldWindow.worldId(x, y))) return
     thread(name = "window-launch-$x-$y", isDaemon = true) {
         runCatching {
@@ -95,7 +97,7 @@ private fun launchWindow(x: Int, y: Int) {
     }
 }
 
-private fun clampTile(tile: Int) = tile.coerceIn(0, WorldWindow.WORLD_TILES - 1)
+private fun clampTile(tile: Int) = tile.coerceIn(0, WorldWindow.GRID_TILES - 1)
 
 fun saveWindowPosition(player: Player) {
     if (!EnvVars.windowed) return
@@ -123,6 +125,7 @@ private fun hand(player: Player) {
     val targetX = WorldWindow.owner(globalX)
     val targetY = WorldWindow.owner(globalY)
     if (targetX == GeneratedWorld.windowX && targetY == GeneratedWorld.windowY) return
+    if (!WorldWindow.isGenerated(targetX, targetY)) return
     if (!player.tempAttribs.getB(ANNOUNCED)) {
         player.tempAttribs.setB(ANNOUNCED, true)
         player.sendMessage("You have reached the edge of this region. Select world ${WorldWindow.worldId(targetX, targetY)} to continue.")

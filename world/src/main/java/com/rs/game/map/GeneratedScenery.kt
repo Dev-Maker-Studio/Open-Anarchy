@@ -1,5 +1,6 @@
 package com.rs.game.map
 
+import com.rs.game.content.skills.fishing.FixedFishingSpots
 import com.rs.game.model.gameobject.GameObject
 import org.darkan.core.EnvVars
 import org.darkan.core.model.ObjectShape
@@ -36,6 +37,7 @@ object GeneratedScenery {
             val shape = ObjectShape.forId(scenery.shape) ?: continue
             chunk.addGeneratedObject(GameObject(scenery.id, shape, scenery.rotation, x, y, scenery.level))
         }
+        FixedFishingSpots.spawn(chunk, generator.fishingSpotsIn(regionX, regionY))
     }
 
     private fun scenery(generator: WorldGenerator, regionX: Int, regionY: Int): List<MapObject> {

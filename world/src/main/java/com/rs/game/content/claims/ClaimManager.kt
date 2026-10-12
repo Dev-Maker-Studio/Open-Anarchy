@@ -16,6 +16,7 @@ import org.darkan.core.gameval.gen.Interface
 import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.gameval.gen.Varp
 import org.darkan.core.map.GeneratedWorld
+import org.darkan.core.map.WorldWindow
 import org.darkan.core.model.ObjectShape
 import org.darkan.core.model.Rights
 import world.gregs.voidps.type.Tile
@@ -345,7 +346,7 @@ object ClaimManager {
     }
 
     private fun load() {
-        val migrating = !file.exists() && LEGACY_FILE.exists() && GeneratedWorld.windowX == 0 && GeneratedWorld.windowY == 0
+        val migrating = !file.exists() && LEGACY_FILE.exists() && GeneratedWorld.windowX == WorldWindow.CENTER_SECTOR_X && GeneratedWorld.windowY == WorldWindow.CENTER_SECTOR_Y
         val source = if (migrating) LEGACY_FILE else file
         val stored = JsonFileManager.loadJsonFile(source, Array<Claim>::class.java) ?: return
         claims.addAll(stored)

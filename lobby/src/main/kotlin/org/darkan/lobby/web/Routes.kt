@@ -47,8 +47,8 @@ fun Application.configureRouting() {
             }
             val x = call.parameters["x"]?.toIntOrNull()
             val y = call.parameters["y"]?.toIntOrNull()
-            if (x == null || y == null || x !in 0 until WorldWindow.WINDOWS_PER_AXIS || y !in 0 until WorldWindow.WINDOWS_PER_AXIS) {
-                return@post call.respond(HttpStatusCode.BadRequest, buildJsonObject { put("error", "No such window") })
+            if (x == null || y == null || !WorldWindow.isGenerated(x, y)) {
+                return@post call.respond(HttpStatusCode.BadRequest, buildJsonObject { put("error", "No such sector") })
             }
             call.respond(buildJsonObject { put("status", WindowOrchestrator.ensure(x, y).name) })
         }

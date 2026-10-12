@@ -45,7 +45,7 @@ private val hostileIds = mapOf(
         Npc.rand_bat_1, Npc.darkbear, Npc.whitewolf, Npc.icegiant, Npc.icewarrior, Npc.rand_ice_troll_melee_1, Npc.ice_spider, Npc.wolf
     ),
     Biome.MOUNTAIN to intArrayOf(
-        Npc.rand_bat_1, Npc.rand_earth_warrior_1, Npc.rand_hill_giant_1, Npc.darkbear, Npc.bat, Npc.mossgiant, Npc.babybluedragon,
+        Npc.rand_bat_1, Npc.rand_earth_warrior_1, *HILL_GIANT_IDS, Npc.darkbear, Npc.bat, Npc.mossgiant, Npc.babybluedragon,
         Npc.ogre2, Npc.wolf, Npc.troll
     ),
     Biome.VOLCANO to intArrayOf(
@@ -110,11 +110,14 @@ private fun spawnHostile(tile: Tile) {
     spawned.add(scaledHostile(id, tile, biome, level))
 }
 
-fun scaledHostile(id: Int, tile: Tile, biome: Biome, level: Int = threatLevel(tile)): HostileNPC {
+fun hostileScale(id: Int, biome: Biome, level: Int): Double {
     val native = NPCDefinitions.getDefs(id).combatLevel.coerceAtLeast(1)
-    val wilderness = biome == Biome.WILDERNESS
-    val scale = maxOf(1.0, level.toDouble() / native) * if (wilderness) WILDERNESS_LEVEL_MULTIPLIER else 1.0
-    return HostileNPC(id, tile, scale, (native * scale).toInt())
+    return maxOf(1.0, level.toDouble() / native) * if (biome == Biome.WILDERNESS) WILDERNESS_LEVEL_MULTIPLIER else 1.0
+}
+
+fun scaledHostile(id: Int, tile: Tile, biome: Biome, level: Int = threatLevel(tile)): HostileNPC {
+    val scale = hostileScale(id, biome, level)
+    return HostileNPC(id, tile, scale, (NPCDefinitions.getDefs(id).combatLevel.coerceAtLeast(1) * scale).toInt())
 }
 
 fun withinLevel(id: Int, level: Int): Boolean = NPCDefinitions.getDefs(id).combatLevel <= level
