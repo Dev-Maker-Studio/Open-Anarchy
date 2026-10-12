@@ -24,9 +24,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.floor
 
-/**
- * Per-region loading state.
- */
 enum class RegionState {
     NOT_LOADED,
     CPU_LOADING,
@@ -35,70 +32,26 @@ enum class RegionState {
     UNLOADING
 }
 
-/**
- * Holds per-region data through the loading pipeline.
- */
 class AsyncRegionData(
     val key: RegionKey,
     @Volatile var state: RegionState = RegionState.NOT_LOADED,
-    // CPU-side computed data (set when CPU_LOADING completes)
     var terrainMeshData: TerrainLoader.TerrainMeshData? = null,
     var objectInstances: List<ObjectInstance> = emptyList(),
     var modelMeshData: Map<Int, List<MeshData>> = emptyMap(),
     var displacedMeshData: Map<Int, List<MeshData>> = emptyMap(),
-    // GPU-side resources (set when GPU tasks complete)
     var terrainMeshes: TerrainLoader.TerrainMeshes? = null,
     var batchMeshes: Map<BatchKey, Mesh>? = null,
-    /**
-     * Render-ready view of [batchMeshes]: already sorted into the order the viewer draws
-     * them and carrying each batch's world-space bounds.
-     *
-     * The viewer used to re-derive this every frame with a `filter` + `sortedBy` per
-     * region, which allocates once per region per frame and gives frustum culling nothing
-     * to test against. Building it when the batch is uploaded costs nothing and makes the
-     * per-frame job a plain array walk with an AABB test. See [RegionBatches] for why the
-     * bounds are kept flat alongside the draw list.
-     */
     var batches: RegionBatches = RegionBatches.EMPTY,
-    /**
-     * Per-object world-space bounds and triangle counts behind [batches].
-     *
-     * The batches themselves are one merged mesh per (region, texture) pair, so the
-     * finest thing the viewer can cull is a whole region's worth of one material. This
-     * keeps the granularity the merge threw away, which is what any measurement of
-     * "how much would a per-object cull save" has to test against.
-     */
     var objectGeometry: RegionObjectGeometry? = null,
-    /**
-     * What this region's batches would look like if the batch key carried a spatial cell
-     * as well as a material. Built only under `-Ddarkan.cullProbe`; see
-     * [BatchGranularitySimulation].
-     */
     var batchSimulations: List<BatchGranularitySimulation> = emptyList(),
-    // Tracking
     var pendingGpuTasks: AtomicInteger = AtomicInteger(0),
     var loadJob: Job? = null
 )
 
-/**
- * One region's static-batch geometry described per source object rather than per batch.
- *
- * Laid out flat, six floats of world-space AABB and one triangle count per object, for
- * the same reason [RegionBatches] flattens its bounds: the consumer is a tight frustum
- * loop over thousands of entries and the arithmetic is cheaper than the pointer chasing.
- *
- * Objects that contributed no drawable geometry are kept in place with a zero triangle
- * count and an inverted (empty) box, so indices still line up with the region's
- * `objectInstances` list.
- */
 class RegionObjectGeometry(
-    /** `minX, minY, minZ, maxX, maxY, maxZ` per object. */
     val bounds: FloatArray,
-    /** Triangles the object contributes across every batch it lands in. */
     val triangles: IntArray,
-    /** Objects with at least one triangle. */
     val drawableCount: Int,
-    /** Sum of [triangles]. */
     val totalTriangles: Long
 ) {
     val count: Int get() = triangles.size
@@ -108,51 +61,20 @@ class RegionObjectGeometry(
     }
 }
 
-/**
- * A dry run of one alternative batch granularity, for pricing it before building it.
- *
- * A batch is currently keyed by `(region, material)`, so it spans 64 tiles and the frustum
- * keeps or drops all of it. The obvious finer key is `(region cell, material)` for some
- * cell smaller than a region — which needs no change to how the geometry is stored or
- * drawn, only to how it is grouped, and so is a far cheaper thing to try than moving the
- * context regions onto per-instance geometry with a GPU cull.
- *
- * Each entry here is one batch that grouping would have produced: its world-space bounds
- * and its triangle count. Running the frame's frustum over them gives exactly the draw
- * count and triangle count the real thing would submit.
- */
 class BatchGranularitySimulation(
-    /** Cell edge in map tiles. 64 reproduces the current whole-region grouping. */
     val gridTiles: Int,
-    /** `minX, minY, minZ, maxX, maxY, maxZ` per simulated batch. */
     val bounds: FloatArray,
-    /** Triangles per simulated batch. */
     val triangles: IntArray
 )
 
-/**
- * One static batch mesh ready to draw, with the world-space bounds used to cull it.
- *
- * Batch geometry is pre-transformed to world space, so [bounds] needs no per-frame
- * transform and a plain frustum test against it is enough.
- */
 class BatchDraw(
     val key: BatchKey,
     val mesh: Mesh,
     val bounds: AABB,
-    /**
-     * Index ranges inside [mesh], one per spatial cell the batch covers, in draw order.
-     *
-     * Submitting all of them is the same draw as submitting the whole mesh — they are
-     * contiguous runs of the buffer in buffer order — so culling at this level changes
-     * nothing except which parts are left out. One range means the batch is drawn whole,
-     * as it was before sub-region ranges existed.
-     */
     val rangeFirst: IntArray = intArrayOf(0),
     val rangeCount: IntArray = intArrayOf(mesh.vertexCount),
     val rangeBounds: FloatArray = FloatArray(6) { Float.NaN }
 ) {
-    /** Per-range equivalent of [cullable]; a range with a bad box is always submitted. */
     val rangeCullable: BooleanArray = BooleanArray(rangeFirst.size) { i ->
         val o = i * 6
         rangeBounds[o].isFinite() && rangeBounds[o + 1].isFinite() && rangeBounds[o + 2].isFinite() &&
@@ -161,57 +83,19 @@ class BatchDraw(
             rangeBounds[o + 2] <= rangeBounds[o + 5]
     }
 
-    /** True when every range is cullable, i.e. the per-range path may be used at all. */
     val rangesCullable: Boolean = rangeFirst.size > 1 && rangeCullable.all { it }
 
-    /**
-     * Whether [bounds] can be trusted for a frustum test.
-     *
-     * Model geometry occasionally produces a degenerate or non-finite vertex, and a NaN
-     * makes every plane comparison false — which a frustum test reads as "outside" and
-     * would silently delete the batch from the scene. A batch whose bounds are not a
-     * finite, well-ordered box is drawn unconditionally instead.
-     */
     val cullable: Boolean = bounds.isValid() &&
             bounds.min.x.isFinite() && bounds.min.y.isFinite() && bounds.min.z.isFinite() &&
             bounds.max.x.isFinite() && bounds.max.y.isFinite() && bounds.max.z.isFinite()
 }
 
-/**
- * One region's static batches in draw order, together with the bounds the viewer culls
- * them by, arranged for the shape of that job rather than for convenience.
- *
- * The viewer's per-frame job is to test every batch in every loaded region — thousands of
- * boxes at render distance 5 — and draw the few hundred that survive. Reading the bounds
- * off the [BatchDraw] objects means four dependent loads per test (draw, its AABB, and the
- * AABB's two Vector3f) into memory the allocator scattered, and the miss on each of those
- * costs far more than the arithmetic of the test itself.
- *
- * [bounds] is the same data flattened into one array, six floats per batch in [draws]
- * order, which the hardware prefetcher can stream. [union] then adds a level above it, so
- * a region wholly outside the frustum costs one test instead of one per batch.
- *
- * Immutable, and always replaced wholesale, so the three views can never disagree about
- * how many batches there are or what order they are in.
- */
 class RegionBatches(val draws: List<BatchDraw>) {
 
-    /** `minX, minY, minZ, maxX, maxY, maxZ` per entry of [draws], in [draws] order. */
     val bounds: FloatArray = FloatArray(draws.size * 6)
 
-    /** Per-entry copy of [BatchDraw.cullable], read on the hot path without a dereference. */
     val cullable: BooleanArray = BooleanArray(draws.size)
 
-    /**
-     * World-space union of every entry's bounds, or null when there is no union that may
-     * be trusted.
-     *
-     * Null means "cannot be rejected as a whole": either the region has no batches, or one
-     * of them has bounds that are not a finite, well-ordered box. Both cases fall through
-     * to the per-batch path, which draws an uncullable batch unconditionally. Rejecting a
-     * whole region on a union that had swallowed a NaN would delete it from the scene
-     * instead of just the one batch.
-     */
     val union: AABB?
 
     init {
@@ -252,19 +136,6 @@ class RegionBatches(val draws: List<BatchDraw>) {
     }
 }
 
-/**
- * One region's slice of the merged atlas terrain buffers.
- *
- * The merged meshes concatenate every covered region's geometry, already offset into
- * world space, so a region is nothing more than a contiguous index range in each of
- * the two buffers. Keeping the range and the region's terrain bounds together lets the
- * viewer frustum-cull per region and still submit the survivors as a single
- * `glMultiDrawElements` call per pass.
- *
- * Either range may be empty: a region with no alpha layers contributes
- * [alphaIndexCount] == 0, and one whose terrain is entirely alpha contributes
- * [opaqueIndexCount] == 0.
- */
 class MergedTerrainRange(
     val key: RegionKey,
     val bounds: AABB,
@@ -274,20 +145,6 @@ class MergedTerrainRange(
     val alphaIndexCount: Int
 )
 
-/**
- * Manages async loading of map regions with background CPU work
- * and time-budgeted GPU uploads.
- *
- * Uses a state machine per region:
- * ```
- * NOT_LOADED -> CPU_LOADING -> GPU_PENDING -> READY
- *                                              |
- *                                          UNLOADING -> removed
- * ```
- *
- * The center region is always loaded synchronously (for initial load / loading screen).
- * Context regions are loaded asynchronously in the background.
- */
 class AsyncRegionManager(
     private val cache: Cache
 ) {
@@ -295,64 +152,30 @@ class AsyncRegionManager(
     private val loadingScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val regions = ConcurrentHashMap<RegionKey, AsyncRegionData>()
 
-    // Configuration
     var renderDistance: Int = 1
     var showRoofs: Boolean = true
     var objectAtlas: TextureAtlas? = null
     var terrainAtlas: TextureAtlas? = null
 
-    // Center region state (loaded synchronously, always available)
     private var centerKey: RegionKey? = null
     private var centerPlane: Int = 0
 
-    // Synchronous RegionManager for the center region (keeps all its existing functionality)
     private lateinit var syncRegionManager: RegionManager
 
-    // Shared registered model tracking
     private val registeredModels = ConcurrentHashMap.newKeySet<Int>()
 
-    /**
-     * `-Ddarkan.cullProbe=true` also switches on the batch-granularity dry run, which
-     * costs load time and memory and produces nothing the renderer reads.
-     */
     private val simulateBatchGranularity: Boolean =
         System.getProperty("darkan.cullProbe", "false").toBoolean()
 
-    /**
-     * `-Ddarkan.displaceAudit=true` logs, per region load, how many contour-type-1
-     * objects were considered, how many the flat pre-test resolved, and how many ran the
-     * per-vertex pass and moved *nothing*.
-     *
-     * That last figure is the direct signal for silently-dropped displacement. It is
-     * legitimately non-zero only when a model's every vertex sits exactly at its average
-     * height; a whole region's edge reporting it means the height field is not reaching
-     * far enough, which is how the Duel Arena ramp railings ended up flat.
-     */
     private val displaceAudit: Boolean =
         System.getProperty("darkan.displaceAudit", "false").toBoolean()
 
-    /**
-     * `-Ddarkan.batchCell=<tiles>`: edge of the spatial cell a static batch is subdivided
-     * into for culling. 64 or more is one cell per region, which is the whole-region
-     * granularity the pass had before sub-ranges existed.
-     *
-     * The batch itself is untouched — same merge, same buffer, same draw order. All this
-     * decides is how finely the frustum may reject parts of it; see
-     * [StaticBatcher.mergeGeometryData] and [BatchDraw.rangeFirst].
-     */
     private val batchCellTiles: Int =
         (System.getProperty("darkan.batchCell")?.toIntOrNull() ?: DEFAULT_BATCH_CELL_TILES)
             .coerceAtLeast(1)
 
     private val batchCellWorldSize: Float = batchCellTiles * TILE_WORLD_SIZE
 
-    /**
-     * Cell of a world-space position, packed into a Long.
-     *
-     * Only ever compared for equality by the merge, so the packing just has to be
-     * collision-free over the coordinate range a load wave covers: render distance 5 spans
-     * about 700 tiles, which is far inside the 21 bits each axis gets here.
-     */
     private fun cellKeyFor(worldX: Float, worldZ: Float): Long {
         if (batchCellTiles >= 64) return 0L
         val cellX = floor(worldX / batchCellWorldSize).toLong()
@@ -360,44 +183,17 @@ class AsyncRegionManager(
         return ((cellX and 0x1FFFFFL) shl 21) or (cellZ and 0x1FFFFFL)
     }
 
-    /**
-     * Caps how many region pipelines run at once. Each region now fans its own
-     * phases out across [ParallelChunks.WORKER_COUNT] workers, so letting all 25
-     * regions of render distance 2 start at once would only add memory pressure
-     * and cache thrash without adding throughput.
-     */
     private val regionLoadSemaphore = Semaphore(
         (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(2)
     )
 
-    /**
-     * Decoded mesh data shared across every region in the current load wave,
-     * keyed by combined model id.
-     *
-     * Neighbouring regions repeat the same models constantly (walls, trees, fences),
-     * and [ModelLoader] only caches the *definition*, not the decoded [MeshData].
-     * Without this each region paid the full decode again. The decoded arrays are
-     * never mutated downstream — [VertexDisplacer] and [GeometryTransformer] both
-     * allocate fresh arrays, and [InstanceManager] atlas UV remapping returns a new
-     * [MeshData] — so sharing the instances between regions is safe.
-     *
-     * An absent model (decode returned null/empty) is stored as an empty list so
-     * repeat lookups do not retry a decode that is known to fail.
-     */
     private val sharedModelMeshData = ConcurrentHashMap<Int, List<MeshData>>()
 
-    /**
-     * Soft cap on [sharedModelMeshData] so a long editing session cannot grow it
-     * without bound. Set to 0 (cache disabled) when the pipeline is forced serial
-     * via `-Ddarkan.loadWorkers=1`, so that flag reproduces the pre-parallel behaviour.
-     */
     private val sharedModelCacheLimit = if (ParallelChunks.WORKER_COUNT <= 1) 0 else 16384
 
-    // Instance manager (shared across all regions, main-thread only)
     var instanceManager: InstanceManager? = null
         private set
 
-    // Expose center region data for the viewer
     var centerObjects: List<ObjectInstance> = emptyList()
         private set
     var centerTerrainData: TerrainLoader.RegionData? = null
@@ -413,84 +209,30 @@ class AsyncRegionManager(
     var mergedAlphaTerrain: Mesh? = null
         private set
 
-    /**
-     * Per-region index ranges inside [mergedOpaqueTerrain] / [mergedAlphaTerrain],
-     * in the order they were concatenated.
-     */
     var mergedTerrainRanges: List<MergedTerrainRange> = emptyList()
         private set
 
-    /**
-     * Regions whose atlas-eligible terrain is already inside the merged meshes.
-     *
-     * The viewer uses this to decide which regions still need their own per-texture
-     * terrain draws: a region in this set only draws the batches the atlas could not
-     * represent, everything else comes from the merged buffers.
-     */
     var mergedTerrainRegions: Set<RegionKey> = emptySet()
         private set
 
-    /**
-     * The eligible-region set the current merged meshes were built from.
-     *
-     * Compared against the live eligible set to decide whether a rebuild is due;
-     * kept separate from [mergedTerrainRegions] because a region can be eligible and
-     * still contribute nothing (empty or unreadable terrain), and comparing against
-     * the contributing set would then ask for a rebuild on every frame forever.
-     */
     private var mergedEligibleSnapshot: Set<RegionKey> = emptySet()
 
-    /**
-     * Set when something invalidated the merged terrain that a rebuild would not fix —
-     * currently terrain edits, which mutate the center region's meshes in place without
-     * writing back the [TerrainLoader.TerrainMeshData] the merge reads. While this is
-     * set the viewer stays on the per-region path, which draws the edited geometry.
-     * Cleared whenever a fresh center region is loaded.
-     */
     private var mergedTerrainSuppressed = false
 
-    /**
-     * Cached terrain mesh data for the center region.
-     *
-     * The center region is owned by [syncRegionManager], which does not hand back the
-     * intermediate [TerrainLoader.TerrainMeshData], so the merge has to recompute it
-     * from cache. Doing that on the GL thread for every incremental rebuild would hitch
-     * the frame, so the result is kept until the center region changes.
-     */
     private var centerMergedMeshData: TerrainLoader.TerrainMeshData? = null
     private var centerMergedMeshKey: Pair<RegionKey, Int>? = null
 
-    /**
-     * `-Ddarkan.earlyContext=true` starts the context region pipelines before the
-     * synchronous center load instead of after it, so their CPU phases overlap the
-     * center's decode rather than waiting it out.
-     *
-     * Kept as a flag so the two orderings can be A/B'd inside one build; the loaded
-     * result is identical either way, only the wall clock differs.
-     */
     private val earlyContextKickoff: Boolean =
         System.getProperty("darkan.earlyContext", "false").toBoolean()
 
-    // ========================================================================
-    // Initialization
-    // ========================================================================
 
     fun initialize() {
         syncRegionManager = RegionManager(cache)
         syncRegionManager.initialize()
     }
 
-    // ========================================================================
-    // Synchronous Center Region Loading
-    // ========================================================================
 
-    /**
-     * Load the center region synchronously (blocks until complete).
-     * This is used for the initial load and when navigating to a completely new area.
-     * Context regions are kicked off as background jobs.
-     */
     fun loadRegionSync(regionX: Int, regionY: Int, plane: Int) {
-        // Cancel any in-progress background loading
         cancelAllLoading()
 
         centerKey = RegionKey(regionX, regionY)
@@ -501,15 +243,13 @@ class AsyncRegionManager(
 
         resetMergedTerrain()
 
-        // Use the synchronous RegionManager for the center region
-        syncRegionManager.renderDistance = 0  // Only load center
+        syncRegionManager.renderDistance = 0
         syncRegionManager.showRoofs = showRoofs
         syncRegionManager.objectAtlas = objectAtlas
         syncRegionManager.terrainAtlas = terrainAtlas
         syncRegionManager.loadRegion(regionX, regionY, plane)
         RegionLoadProfiler.markRegionCpuDone()
 
-        // Copy out center region data
         centerObjects = syncRegionManager.centerObjects
         centerTerrainData = syncRegionManager.centerTerrainData
         centerMapObjects = syncRegionManager.centerMapObjects
@@ -518,29 +258,20 @@ class AsyncRegionManager(
         centerModelMatrix = syncRegionManager.centerModelMatrix
         registeredModels.clear()
 
-        // Mark center as READY
         val centerData = AsyncRegionData(RegionKey(regionX, regionY), RegionState.READY)
         regions[centerData.key] = centerData
 
-        // Kick off async loading for context regions
         if (renderDistance > 0) {
             loadContextRegionsAsync(regionX, regionY, plane)
         }
     }
 
-    /**
-     * Navigate to a new center region. Keeps context regions that are still in view,
-     * only loads new ones. Center region is still loaded synchronously.
-     */
     fun navigateToRegion(regionX: Int, regionY: Int, plane: Int) {
         val newCenter = RegionKey(regionX, regionY)
         val oldCenter = centerKey
 
-        // If same region, same plane - just return
         if (oldCenter == newCenter && plane == centerPlane) return
 
-        // Cancel and remove in-progress regions so they can be re-loaded fresh.
-        // Only keep READY regions; cancelled coroutines leave stale state.
         val inProgressKeys = regions.entries
             .filter { it.value.state == RegionState.CPU_LOADING || it.value.state == RegionState.GPU_PENDING }
             .map { it.key }
@@ -554,7 +285,6 @@ class AsyncRegionManager(
             data?.objectGeometry = null
         }
 
-        // Compute which regions to keep vs unload
         val desiredRegions = mutableSetOf<RegionKey>()
         desiredRegions.add(newCenter)
         for (dx in -renderDistance..renderDistance) {
@@ -567,7 +297,6 @@ class AsyncRegionManager(
             }
         }
 
-        // Unload READY regions no longer in view
         val toRemove = regions.keys.filter { it !in desiredRegions }
         for (key in toRemove) {
             unloadRegion(key)
@@ -579,16 +308,6 @@ class AsyncRegionManager(
         RegionLoadProfiler.beginWave("navigateToRegion $regionX,$regionY plane=$plane rd=$renderDistance",
             (renderDistance * 2 + 1) * (renderDistance * 2 + 1))
 
-        // Context regions can start before the center is loaded. They share no mutable
-        // state with the synchronous center load — they read the cache, the shared decoded
-        // mesh cache and [registeredModels], all of which are concurrent structures already
-        // exercised by the context loaders running against each other, and the center's own
-        // load path touches none of them. Starting here overlaps their CPU phases with the
-        // center's decode instead of idling until it finishes.
-        //
-        // The model-claim set has to be cleared immediately before the kickoff rather than
-        // after the center load, or the first context regions would have their claims wiped
-        // and the same model would be enqueued for registration twice.
         if (earlyContextKickoff) {
             registeredModels.clear()
             if (renderDistance > 0) {
@@ -596,7 +315,6 @@ class AsyncRegionManager(
             }
         }
 
-        // Sync load the new center
         syncRegionManager.renderDistance = 0
         syncRegionManager.showRoofs = showRoofs
         syncRegionManager.objectAtlas = objectAtlas
@@ -604,7 +322,6 @@ class AsyncRegionManager(
         syncRegionManager.loadRegion(regionX, regionY, plane)
         RegionLoadProfiler.markRegionCpuDone()
 
-        // Copy out center region data
         centerObjects = syncRegionManager.centerObjects
         centerTerrainData = syncRegionManager.centerTerrainData
         centerMapObjects = syncRegionManager.centerMapObjects
@@ -612,40 +329,27 @@ class AsyncRegionManager(
         instanceManager = syncRegionManager.instanceManager
         centerModelMatrix = syncRegionManager.centerModelMatrix
 
-        // Clear registered models — the new instanceManager doesn't have them.
-        // Async regions will re-register as needed. Only on the late-kickoff path; the
-        // early path already cleared before starting its regions and clearing again here
-        // would discard their claims.
         if (!earlyContextKickoff) {
             registeredModels.clear()
         }
 
-        // Mark center as READY
         val centerData = AsyncRegionData(newCenter, RegionState.READY)
         regions[newCenter] = centerData
 
-        // Drop the merged terrain of the region we came from. Unlike an edit-driven
-        // invalidation this does not suppress merging: the data behind the new center is
-        // perfectly mergeable, it just has not been built yet.
         resetMergedTerrain()
 
-        // Build merged terrain for just center immediately (so atlas path has something to render)
         buildMergedAtlasTerrain()
 
-        // Kick off async loading for context regions that aren't already READY
         if (!earlyContextKickoff && renderDistance > 0) {
             loadContextRegionsAsync(regionX, regionY, plane)
         }
     }
 
-    /**
-     * Start background loading of context regions around the center.
-     */
     private fun loadContextRegionsAsync(centerRegionX: Int, centerRegionY: Int, plane: Int) {
         val offsets = mutableListOf<RegionKey>()
         for (dx in -renderDistance..renderDistance) {
             for (dy in -renderDistance..renderDistance) {
-                if (dx == 0 && dy == 0) continue  // Skip center
+                if (dx == 0 && dy == 0) continue
                 val rx = centerRegionX + dx
                 val ry = centerRegionY + dy
                 if (rx in 0..255 && ry in 0..255) {
@@ -654,21 +358,17 @@ class AsyncRegionManager(
             }
         }
 
-        // Sort by distance from center (load nearest first)
         offsets.sortBy { (it.regionX - centerRegionX) * (it.regionX - centerRegionX) +
                          (it.regionY - centerRegionY) * (it.regionY - centerRegionY) }
 
         for (key in offsets) {
             if (regions.containsKey(key) && regions[key]!!.state == RegionState.READY) {
-                continue  // Already loaded
+                continue
             }
             loadRegionAsync(key, plane)
         }
     }
 
-    /**
-     * Start background loading of a single region.
-     */
     private fun loadRegionAsync(key: RegionKey, plane: Int) {
         val regionData = AsyncRegionData(key, RegionState.CPU_LOADING)
         regions[key] = regionData
@@ -682,12 +382,10 @@ class AsyncRegionManager(
                 try {
                     runRegionPipeline(key, plane, regionData, showRoofsLocal, priority, regionKeyLong)
                 } catch (e: CancellationException) {
-                    throw e  // Propagate cancellation
+                    throw e
                 } catch (e: Exception) {
                     println("[AsyncRegionManager] Error loading region ${key.regionX},${key.regionY}: ${e.message}")
                     e.printStackTrace()
-                    // Mark as READY (empty) rather than removing — removal would cause
-                    // getLoadProgress() totalRegions to never match regionsReady.
                     RegionLoadProfiler.markRegionCpuDone()
                     regionData.pendingGpuTasks.set(0)
                     regionData.state = RegionState.READY
@@ -696,14 +394,6 @@ class AsyncRegionManager(
         }
     }
 
-    /**
-     * The five CPU phases for one context region.
-     *
-     * Phase 1 loads the raw terrain data. After that the terrain tessellation and
-     * the whole object pipeline (phases 2-5) are independent — both only read
-     * [TerrainLoader.RegionData] — so they run side by side and each phase that
-     * loops over objects is itself chunked across workers.
-     */
     private suspend fun runRegionPipeline(
         key: RegionKey,
         plane: Int,
@@ -712,25 +402,15 @@ class AsyncRegionManager(
         priority: Int,
         regionKeyLong: Long
     ) {
-        // Phase 1: Load terrain data (CPU)
         val terrainPhaseStart = System.nanoTime()
         val terrainData = TerrainLoader.loadRegion(cache, key.regionX, key.regionY)
         if (terrainData == null) {
             RegionLoadProfiler.record(RegionLoadProfiler.PHASE_TERRAIN, System.nanoTime() - terrainPhaseStart)
             RegionLoadProfiler.markRegionCpuDone()
-            regionData.state = RegionState.READY  // Empty region, nothing to load
+            regionData.state = RegionState.READY
             return
         }
 
-        // coroutineScope joins both branches before we fall through to the state
-        // transition, so every pendingGpuTasks increment is visible before the region
-        // can be observed as GPU_PENDING. A failure in either branch cancels the scope
-        // and rethrows to the caller's catch.
-        // Shared by the terrain mesh and the object phase: object heights on the
-        // region's last row/column resolve into the neighbour exactly as the client's
-        // scene-wide height array does. Neighbour regions are cached by TerrainLoader,
-        // so hoisting this out of the terrain branch costs at most one decode that the
-        // object phase would have waited on anyway.
         val neighbors = TerrainLoader.buildNeighborData(cache, key.regionX, key.regionY)
 
         coroutineScope {
@@ -739,7 +419,6 @@ class AsyncRegionManager(
                 regionData.terrainMeshData = terrainMeshData
                 RegionLoadProfiler.record(RegionLoadProfiler.PHASE_TERRAIN, System.nanoTime() - terrainPhaseStart)
 
-                // Enqueue terrain GPU upload
                 regionData.pendingGpuTasks.incrementAndGet()
                 gpuUploadQueue.enqueue(UploadTerrainMesh(
                     regionKey = regionKeyLong,
@@ -749,7 +428,6 @@ class AsyncRegionManager(
                 ))
             }
 
-            // Phase 2: Load objects (CPU)
             val objectPhaseStart = System.nanoTime()
             val ctxRegionData = RegionLoader.loadRegion(cache, key.regionX, key.regionY, useCache = false)
                 ?: return@coroutineScope
@@ -774,34 +452,28 @@ class AsyncRegionManager(
             RegionLoadProfiler.record(RegionLoadProfiler.PHASE_OBJECTS, System.nanoTime() - objectPhaseStart)
             RegionLoadProfiler.noteObjects(instances.size)
 
-            // Phase 3: Load model mesh data (CPU, fanned out over the unique model set)
             val modelPhaseStart = System.nanoTime()
             val modelMeshData = decodeModelMeshData(instances)
             regionData.modelMeshData = modelMeshData
             RegionLoadProfiler.record(RegionLoadProfiler.PHASE_MODELS, System.nanoTime() - modelPhaseStart)
 
-            // Enqueue model registration for models nobody has claimed yet.
-            // Iterating [modelMeshData] keeps first-appearance order, which is
-            // exactly the order the old serial loop enqueued in.
             for ((combinedId, meshDataList) in modelMeshData) {
                 if (registeredModels.add(combinedId)) {
                     regionData.pendingGpuTasks.incrementAndGet()
                     gpuUploadQueue.enqueue(RegisterModel(
                         regionKey = regionKeyLong,
-                        priority = priority + 1,  // Models after terrain
+                        priority = priority + 1,
                         modelId = combinedId,
                         meshDataList = meshDataList
                     ))
                 }
             }
 
-            // Phase 4: Compute vertex displacement (CPU, chunked over instances)
             val displacePhaseStart = System.nanoTime()
             val displacedMeshData = computeDisplacedMeshData(instances, modelMeshData, ctxTiles, neighbors, key.regionX, key.regionY)
             regionData.displacedMeshData = displacedMeshData
             RegionLoadProfiler.record(RegionLoadProfiler.PHASE_DISPLACE, System.nanoTime() - displacePhaseStart)
 
-            // Phase 5: Compute static batch geometry (CPU, chunked over instances)
             val batchPhaseStart = System.nanoTime()
             val batchGeometry = buildBatchGeometry(instances, modelMeshData, displacedMeshData)
             val batcherData = batchGeometry.batches
@@ -809,9 +481,6 @@ class AsyncRegionManager(
             regionData.batchSimulations = batchGeometry.simulations
             RegionLoadProfiler.record(RegionLoadProfiler.PHASE_BATCH, System.nanoTime() - batchPhaseStart)
 
-            // Merge each batch's geometry into flat arrays here, on the worker side,
-            // so the GL thread only performs the buffer upload. Batches are merged
-            // concurrently but enqueued in the deterministic batch key order above.
             val mergeStart = System.nanoTime()
             val batchEntries = batcherData.entries.toList()
             val mergedBatches = arrayOfNulls<MergedGeometry>(batchEntries.size)
@@ -834,30 +503,21 @@ class AsyncRegionManager(
             }
         }
 
-        // Transition state
         RegionLoadProfiler.markRegionCpuDone()
         regionData.state = RegionState.GPU_PENDING
     }
 
-    // ========================================================================
-    // GPU Upload Processing (Main Thread)
-    // ========================================================================
 
-    /**
-     * Process GPU upload tasks within the given time budget.
-     * MUST be called on the main GL thread each frame.
-     */
     fun drainGpuUploads(budgetNanos: Long) {
         val processed = gpuUploadQueue.drain(budgetNanos, processor = { task ->
             when (task) {
                 is UploadTerrainMesh -> processTerrainUpload(task)
                 is RegisterModel -> processModelRegistration(task)
                 is BuildRegionBatchMeshes -> processBatchBuild(task)
-                is UploadAtlasPage -> { /* handled elsewhere */ }
+                is UploadAtlasPage -> { }
                 is BuildMergedTerrain -> processMergedTerrainBuild(task)
             }
         }, onCancelled = { task ->
-            // Decrement the owning region's pending counter so it isn't stuck forever
             val key = regionKeyFromLong(task.regionKey)
             regions[key]?.pendingGpuTasks?.decrementAndGet()
         })
@@ -865,14 +525,12 @@ class AsyncRegionManager(
         RenderMetrics.gpuUploadTasksProcessed = processed
         RenderMetrics.pendingGpuTasks = gpuUploadQueue.pendingCount()
 
-        // Check for regions that have completed all GPU tasks
         for ((_, data) in regions) {
             if (data.state == RegionState.GPU_PENDING && data.pendingGpuTasks.get() <= 0) {
                 data.state = RegionState.READY
             }
         }
 
-        // Update metrics
         RenderMetrics.regionsLoading = regions.values.count {
             it.state == RegionState.CPU_LOADING || it.state == RegionState.GPU_PENDING
         }
@@ -883,7 +541,7 @@ class AsyncRegionManager(
     private fun processTerrainUpload(task: UploadTerrainMesh) {
         val key = regionKeyFromLong(task.regionKey)
         val regionData = regions[key]
-        if (regionData == null) return  // Region removed, task irrelevant
+        if (regionData == null) return
 
         val meshData = task.meshData as? TerrainLoader.TerrainMeshData
         if (meshData != null) {
@@ -898,7 +556,7 @@ class AsyncRegionManager(
     private fun processModelRegistration(task: RegisterModel) {
         val key = regionKeyFromLong(task.regionKey)
         val regionData = regions[key]
-        if (regionData == null) return  // Region removed, task irrelevant
+        if (regionData == null) return
 
         val im = instanceManager
         if (im != null) {
@@ -912,12 +570,11 @@ class AsyncRegionManager(
     private fun processBatchBuild(task: BuildRegionBatchMeshes) {
         val key = regionKeyFromLong(task.regionKey)
         val regionData = regions[key]
-        if (regionData == null) return  // Region removed, task irrelevant
+        if (regionData == null) return
 
         val batchKey = task.batchKey
         val merged = task.merged
 
-        // Geometry was already concatenated on the loader thread; this is a pure upload.
         val start = System.nanoTime()
         val mesh = Mesh(merged.pack())
         RegionLoadProfiler.record(RegionLoadProfiler.PHASE_GL_BATCH, System.nanoTime() - start)
@@ -935,8 +592,6 @@ class AsyncRegionManager(
                 rangeBounds = merged.rangeBounds
             )
         )
-        // Untextured first, then by atlas page, so the viewer's shader and texture
-        // binds stay in the same order they were in when it did the sorting itself.
         draws.sortWith(compareBy({ it.key != BatchKey.UNTEXTURED }, { it.key.atlasPageIndex }))
         regionData.batches = RegionBatches(draws)
 
@@ -962,13 +617,7 @@ class AsyncRegionManager(
         }
     }
 
-    // ========================================================================
-    // Query API
-    // ========================================================================
 
-    /**
-     * Get loading progress snapshot.
-     */
     fun getLoadProgress(): LoadProgress {
         val total = (renderDistance * 2 + 1) * (renderDistance * 2 + 1)
         val ready = regions.values.count { it.state == RegionState.READY }
@@ -993,44 +642,14 @@ class AsyncRegionManager(
 
     fun isFullyLoaded(): Boolean = getLoadProgress().isComplete
 
-    /**
-     * Get all ready context regions for rendering.
-     */
     fun getReadyContextRegions(): List<AsyncRegionData> {
         val center = centerKey ?: return emptyList()
         return regions.values.filter { it.state == RegionState.READY && it.key != center }
     }
 
-    /**
-     * A single region's data if it is loaded and being drawn, else null.
-     *
-     * Unlike [getReadyContextRegions] this includes the centre region and allocates
-     * nothing, which is what tile picking needs: it asks per ray sample whether a given
-     * region may answer a click, and a region that is not on screen must not.
-     */
     fun getReadyRegion(regionX: Int, regionY: Int): AsyncRegionData? =
         regions[RegionKey(regionX, regionY)]?.takeIf { it.state == RegionState.READY }
 
-    /**
-     * World-space bounds of a region's terrain, for culling its terrain draws.
-     *
-     * Deliberately covers the terrain only. Objects near a region border have geometry
-     * that spills past the 64x64 tile footprint, so this box is not a safe gate for the
-     * region's static batches — those carry their own exact world-space bounds and are
-     * tested individually.
-     *
-     * The horizontal extent is exact — a region is always 64x64 tiles at a known origin —
-     * while the vertical extent is a fixed generous span rather than the real height
-     * range, which would mean walking the terrain vertices. Terrain relief inside one
-     * region is a tiny fraction of [TERRAIN_Y_SPAN], and being generous vertically only
-     * costs a few regions that a tighter box would have rejected; being wrong the other
-     * way would punch holes in the ground.
-     */
-    /**
-     * World-space bounds of a region's terrain, for culling its terrain draws.
-     *
-     * Public alias of [terrainBounds] for the viewer's per-region terrain test.
-     */
     fun getRegionBounds(key: RegionKey): AABB = terrainBounds(key)
 
     private fun terrainBounds(key: RegionKey): AABB {
@@ -1043,9 +662,6 @@ class AsyncRegionManager(
         )
     }
 
-    /**
-     * Get the model matrix for a region.
-     */
     fun getRegionModelMatrix(key: RegionKey): Matrix4f {
         val tileSize = RegionManager.TILE_SIZE
         return Matrix4f().identity().translate(
@@ -1053,14 +669,7 @@ class AsyncRegionManager(
         )
     }
 
-    // ========================================================================
-    // Render Distance Changes
-    // ========================================================================
 
-    /**
-     * Change render distance asynchronously.
-     * Computes a transition plan: keeps existing regions, loads new ones, unloads far ones.
-     */
     fun setRenderDistanceAsync(newDistance: Int) {
         val center = centerKey ?: return
         val oldDistance = renderDistance
@@ -1070,12 +679,10 @@ class AsyncRegionManager(
         val currentKeys = regions.keys.toSet()
         val plan = RegionTransitionPlan.compute(currentKeys, center.regionX, center.regionY, renderDistance)
 
-        // Unload regions no longer in view
         for (key in plan.regionsToUnload) {
             unloadRegion(key)
         }
 
-        // Load new regions
         for (key in plan.regionsToLoad) {
             if (key != center) {
                 loadRegionAsync(key, centerPlane)
@@ -1083,16 +690,12 @@ class AsyncRegionManager(
         }
     }
 
-    // ========================================================================
-    // Cleanup
-    // ========================================================================
 
     private fun unloadRegion(key: RegionKey) {
         val data = regions.remove(key) ?: return
         data.loadJob?.cancel()
         gpuUploadQueue.cancelRegion(key.toLong())
 
-        // Clean up GPU resources on main thread
         data.terrainMeshes?.cleanup()
         data.batchMeshes?.values?.forEach { it.cleanup() }
         data.batches = RegionBatches.EMPTY
@@ -1114,8 +717,6 @@ class AsyncRegionManager(
         regions.clear()
         registeredModels.clear()
         sharedModelMeshData.clear()
-        // The cached model extents are derived from the meshes just dropped, so they go
-        // with them rather than outliving the geometry they describe.
         VertexDisplacer.clearCaches()
         RegionLoadProfiler.abortWave()
     }
@@ -1133,53 +734,19 @@ class AsyncRegionManager(
         centerRegionData = null
     }
 
-    /**
-     * Full cleanup including coroutine scope cancellation.
-     * Call when the viewer is being destroyed.
-     */
     fun destroy() {
         cleanup()
         loadingScope.cancel()
     }
 
-    // ========================================================================
-    // Delegate Methods (from RegionManager)
-    // ========================================================================
 
     companion object {
-        /** World units per map tile. */
         private const val TILE_WORLD_SIZE = 512f * CoordinateUtil.DEFAULT_SCALE
 
-        /**
-         * Default cell edge for static batch sub-ranges, in tiles.
-         *
-         * Chosen by measurement rather than by symmetry: over the three test regions at
-         * render distances 3 and 5, 32 tiles gives most of the triangle reduction that
-         * per-object culling would, for a range count the frustum can walk in a fraction
-         * of the time the triangles cost. Halving it again to 16 buys a further few per
-         * cent of triangles for twice the ranges, which the measured per-range submission
-         * cost eats.
-         */
         private const val DEFAULT_BATCH_CELL_TILES = 32
 
-        /**
-         * Cell edges, in tiles, that [simulateGranularity] prices. 64 is the current
-         * whole-region grouping and is kept as a self-check: it must reproduce the live
-         * batch and triangle counts exactly.
-         */
         private val SIMULATED_GRID_TILES = intArrayOf(64, 32, 16, 8)
 
-        /**
-         * Half-height of the box a region's terrain is assumed to fit inside, in world
-         * units.
-         *
-         * RS heights are 1/128 world unit each and the relief inside one region spans a
-         * couple of dozen units at most, with the four planes stacked on top adding a few
-         * more. 300 leaves an order of magnitude of headroom while still being tight
-         * enough to matter: at 2000 the box was so tall that a region *behind* a
-         * downward-pitched camera still intersected the frustum's lower cone, and almost
-         * nothing was ever rejected.
-         */
         private const val TERRAIN_Y_SPAN = 300f
     }
 
@@ -1190,23 +757,12 @@ class AsyncRegionManager(
     fun hasBridgeFlag(localX: Int, localY: Int): Boolean = syncRegionManager.hasBridgeFlag(localX, localY)
     fun getModelIdForInstance(obj: ObjectInstance): Int = syncRegionManager.getModelIdForInstance(obj)
 
-    /**
-     * Mesh data registered for the current center region, keyed by the id
-     * [getModelIdForInstance] reports. Valid until the next center region load.
-     */
     val centerModelMeshData: Map<Int, List<MeshData>> get() = syncRegionManager.centerModelMeshData
 
-    /** Model ids the center region asked for that the cache has no geometry for. */
     val unavailableModels: Set<Int> get() = syncRegionManager.unavailableModels
 
     val objectsByTile get() = syncRegionManager.objectsByTile
 
-    /**
-     * Drop the merged terrain meshes and everything that describes their coverage.
-     *
-     * Callers that expect the merge to come back (a new center region) use this
-     * directly; [invalidateMergedTerrain] additionally stops it coming back.
-     */
     private fun resetMergedTerrain() {
         mergedOpaqueTerrain?.cleanup()
         mergedOpaqueTerrain = null
@@ -1220,23 +776,11 @@ class AsyncRegionManager(
         mergedTerrainSuppressed = false
     }
 
-    /**
-     * Give up on merged terrain until the next center region load.
-     *
-     * Called when terrain edits have changed geometry the merged meshes were built from.
-     * The edited geometry lives in the per-region meshes, so suppressing the merge is
-     * what makes the edit visible; rebuilding instead would redraw the pre-edit terrain
-     * over the top of it.
-     */
     fun invalidateMergedTerrain() {
         resetMergedTerrain()
         mergedTerrainSuppressed = true
     }
 
-    /**
-     * Regions whose terrain data is available to merge right now: the center plus every
-     * context region that has finished loading and kept its computed mesh data.
-     */
     private fun mergedEligibleRegions(): Set<RegionKey> {
         val center = centerKey ?: return emptySet()
         val eligible = HashSet<RegionKey>()
@@ -1250,13 +794,6 @@ class AsyncRegionManager(
         return eligible
     }
 
-    /**
-     * Whether the merged terrain no longer covers the set of regions it could cover.
-     *
-     * True while context regions are still arriving, false once the merge has caught up.
-     * The viewer polls this and rebuilds on a timer so a wave of regions costs a few
-     * rebuilds rather than one per region.
-     */
     fun mergedTerrainNeedsRebuild(): Boolean {
         if (terrainAtlas == null || mergedTerrainSuppressed) return false
         return mergedEligibleSnapshot != mergedEligibleRegions()
@@ -1274,7 +811,6 @@ class AsyncRegionManager(
     private fun buildMergedAtlasTerrainInternal() {
         if (terrainAtlas == null) return
 
-        // Collect terrain mesh data from center + all READY async regions
         data class RegionMeshEntry(
             val data: TerrainLoader.TerrainMeshData,
             val key: RegionKey
@@ -1285,9 +821,6 @@ class AsyncRegionManager(
         val center = centerKey ?: return
         val eligible = mergedEligibleRegions()
 
-        // Center region - re-compute from cache (sync manager owns center data) and keep
-        // the result, so the incremental rebuilds that follow each wave of context regions
-        // do not pay for a cache read plus a full tessellation on the GL thread.
         val centerCacheKey = Pair(center, centerPlane)
         var centerMeshData = if (centerMergedMeshKey == centerCacheKey) centerMergedMeshData else null
         if (centerMeshData == null) {
@@ -1303,7 +836,6 @@ class AsyncRegionManager(
             entries.add(RegionMeshEntry(centerMeshData, center))
         }
 
-        // Async context regions - use already-computed mesh data
         for ((key, data) in regions) {
             if (key == center) continue
             if (key !in eligible) continue
@@ -1312,15 +844,12 @@ class AsyncRegionManager(
         }
 
         if (entries.isEmpty()) {
-            // Nothing to merge (the center failed to load). Record the snapshot anyway so
-            // the viewer's rebuild poll does not spin on an attempt that cannot succeed.
             mergedEligibleSnapshot = eligible
             return
         }
 
         val tileSize = RegionManager.TILE_SIZE
 
-        // Accumulate opaque and alpha geometry
         val allOpaquePositions = mutableListOf<FloatArray>()
         val allOpaqueColors = mutableListOf<FloatArray>()
         val allOpaqueTexCoords = mutableListOf<FloatArray>()
@@ -1338,9 +867,6 @@ class AsyncRegionManager(
         val allAlphaIndices = mutableListOf<IntArray>()
         var alphaVertexOffset = 0
 
-        // Per-region slices of the two index buffers, in concatenation order. Everything a
-        // region contributes lands in one contiguous run of each buffer, which is what lets
-        // the viewer cull whole regions and still issue a single multi-draw per pass.
         val ranges = ArrayList<MergedTerrainRange>(entries.size)
         var opaqueIndexCursor = 0
         var alphaIndexCursor = 0
@@ -1373,7 +899,6 @@ class AsyncRegionManager(
 
             val meshDataEntry = entry.data
 
-            // Color mesh to opaque pool
             meshDataEntry.colorArrays?.let { c ->
                 if (c.positions.isNotEmpty() && c.atlasTransforms != null && c.texCoords != null) {
                     val vertCount = c.positions.size / 3
@@ -1388,7 +913,6 @@ class AsyncRegionManager(
                 }
             }
 
-            // Textured meshes to opaque pool
             for (t in meshDataEntry.texturedArrays) {
                 if (t.positions.isNotEmpty() && t.atlasTransforms != null) {
                     val vertCount = t.positions.size / 3
@@ -1403,7 +927,6 @@ class AsyncRegionManager(
                 }
             }
 
-            // Alpha meshes to alpha pool
             for (a in meshDataEntry.alphaArrays) {
                 if (a.positions.isNotEmpty() && a.atlasTransforms != null) {
                     val vertCount = a.positions.size / 3
@@ -1429,13 +952,11 @@ class AsyncRegionManager(
             ))
         }
 
-        // Clean up old merged meshes
         mergedOpaqueTerrain?.cleanup()
         mergedOpaqueTerrain = null
         mergedAlphaTerrain?.cleanup()
         mergedAlphaTerrain = null
 
-        // Build merged opaque mesh
         if (opaqueVertexOffset > 0) {
             val positions = concatFloatArrays(allOpaquePositions)
             val colors = concatFloatArrays(allOpaqueColors)
@@ -1449,7 +970,6 @@ class AsyncRegionManager(
             )
         }
 
-        // Build merged alpha mesh
         if (alphaVertexOffset > 0) {
             val positions = concatFloatArrays(allAlphaPositions)
             val colors = concatFloatArrays(allAlphaColors)
@@ -1464,30 +984,15 @@ class AsyncRegionManager(
             )
         }
 
-        // Publish coverage last: until these are set the viewer keeps drawing every
-        // region's own terrain, so no frame can fall between the meshes being replaced
-        // and the ranges that describe them.
         mergedTerrainRanges = ranges
         mergedTerrainRegions = ranges.mapTo(HashSet(ranges.size * 2)) { it.key }
         mergedEligibleSnapshot = eligible
     }
 
-    // ========================================================================
-    // Parallel CPU Phases
-    // ========================================================================
 
-    /**
-     * Phase 3: decode the mesh data for every distinct model used by [instances].
-     *
-     * The instance list is deduplicated by combined model id first (thousands of
-     * objects typically resolve to a few hundred unique models), then the unique
-     * set is decoded concurrently. Results are inserted into the returned map in
-     * first-appearance order, matching the old serial loop exactly.
-     */
     private suspend fun decodeModelMeshData(instances: List<ObjectInstance>): Map<Int, List<MeshData>> {
         if (instances.isEmpty()) return emptyMap()
 
-        // Deduplicate, preserving first-appearance order.
         val uniqueIds = ArrayList<Int>()
         val uniqueOwners = ArrayList<ObjectInstance>()
         val seen = HashSet<Int>()
@@ -1502,7 +1007,6 @@ class AsyncRegionManager(
         val decodeCount = AtomicInteger(0)
         val hitCount = AtomicInteger(0)
 
-        // Workers write into disjoint slots of [decoded]; no shared mutable state.
         ParallelChunks.forEachChunk(uniqueIds.size) { from, to ->
             for (i in from until to) {
                 val combinedId = uniqueIds[i]
@@ -1523,8 +1027,6 @@ class AsyncRegionManager(
 
                 val resolved = meshDataList ?: emptyList()
                 if (sharedModelMeshData.size < sharedModelCacheLimit) {
-                    // putIfAbsent rather than computeIfAbsent: a duplicate decode by a
-                    // concurrent region wastes a little work but never blocks a bin.
                     decoded[i] = sharedModelMeshData.putIfAbsent(combinedId, resolved) ?: resolved
                 } else {
                     decoded[i] = resolved
@@ -1543,12 +1045,6 @@ class AsyncRegionManager(
         return result
     }
 
-    /**
-     * Phase 4: per-object vertex displacement for contour-type 1 objects.
-     *
-     * Chunked over the instance list. Each worker fills its own map; the maps are
-     * merged in chunk order so the result is independent of scheduling.
-     */
     private suspend fun computeDisplacedMeshData(
         instances: List<ObjectInstance>,
         modelMeshData: Map<Int, List<MeshData>>,
@@ -1559,10 +1055,6 @@ class AsyncRegionManager(
     ): Map<Int, List<MeshData>> {
         if (instances.isEmpty()) return emptyMap()
 
-        // One flat height array per plane for the whole region, built once and read
-        // concurrently by every worker. Replaces two array derefs plus a TileData field
-        // load with a single indexed read in the inner loop. Padded with neighbour
-        // terrain so objects on the region's last row/column displace at all.
         val field = VertexDisplacer.HeightField.from(tiles, neighbors)
 
         val auditObjects = AtomicLong(0)
@@ -1585,9 +1077,6 @@ class AsyncRegionManager(
                 objCount++
 
                 val definition = obj.definition
-                // Ground that is uniformly at the object's average height displaces every
-                // vertex by zero, so the whole per-vertex pass can be skipped. The test
-                // costs O(footprint tiles) against O(vertices) for the pass it replaces.
                 val bounds = VertexDisplacer.modelBounds(obj.cachedCombinedModelId, baseMeshDataList)
                 if (bounds == null || VertexDisplacer.footprintIsFlat(
                         bounds = bounds,
@@ -1642,11 +1131,6 @@ class AsyncRegionManager(
                 if (anyDisplaced) {
                     local[objIndex] = displaced
                 } else {
-                    // Asked to displace, not resolved as flat, yet not one vertex moved.
-                    // Legitimate only when every vertex sits exactly at the object's
-                    // average height; otherwise the object is being silently skipped,
-                    // which is precisely how the unpadded HeightField dropped every
-                    // object on x == 63 / y == 63 without a trace.
                     zeroMoved++
                 }
             }
@@ -1657,9 +1141,6 @@ class AsyncRegionManager(
             local
         }
 
-        // A displacement that runs and moves nothing is invisible in every other
-        // counter, and is what an under-sized height field looks like from the outside.
-        // Three atomic adds per worker chunk, so the accounting itself can stay on.
         if (displaceAudit) {
             val zero = auditZeroMoved.get()
             println("[displace] region $regionX,$regionY considered=${auditObjects.get()} " +
@@ -1675,14 +1156,6 @@ class AsyncRegionManager(
         return merged
     }
 
-    /**
-     * Phase 5: world-space transform of every object's geometry, grouped by batch key.
-     *
-     * Chunked over the instance list. Every worker gets its own [GeometryTransformer]
-     * and scratch [Matrix4f] — both carry mutable per-call state and must never be
-     * shared. Merging the per-chunk maps in chunk order reproduces the serial
-     * insertion order for both the batch keys and the geometry within each batch.
-     */
     private suspend fun buildBatchGeometry(
         instances: List<ObjectInstance>,
         modelMeshData: Map<Int, List<MeshData>>,
@@ -1694,15 +1167,9 @@ class AsyncRegionManager(
 
         val atlas = objectAtlas
 
-        // Per-object bounds and triangle counts, written by disjoint index ranges from
-        // the chunk workers below. Six floats and one int per object -- 28 bytes -- which
-        // is nothing beside the geometry itself and is the only record of which triangle
-        // came from which object once the merge has flattened them.
         val objectBounds = FloatArray(instances.size * 6)
         val objectTriangles = IntArray(instances.size)
 
-        // Under the probe only: which materials each object contributed to and how many
-        // triangles went to each, which is what [BatchGranularitySimulation] regroups.
         val objectMaterials: Array<HashMap<BatchKey, Int>?>? =
             if (simulateBatchGranularity) arrayOfNulls(instances.size) else null
 
@@ -1725,9 +1192,6 @@ class AsyncRegionManager(
                     ?: modelMeshData[obj.cachedCombinedModelId]
                 if (meshDataList == null || meshDataList.isEmpty()) continue
 
-                // Cell from the object's own position rather than from its geometry, so an
-                // object always lands in one cell and the assignment does not depend on
-                // which of its submeshes is being processed.
                 val cellKey = cellKeyFor(obj.worldPosition.x, obj.worldPosition.z)
 
                 tempMatrix.identity()
@@ -1768,9 +1232,6 @@ class AsyncRegionManager(
                         meshData.normals, meshData.indices, tempMatrix
                     )
 
-                    // One walk of the positions the transform just wrote, still hot in
-                    // cache, serving both the per-piece box the merge turns into a range
-                    // bound and the per-object box the cull probe tests.
                     val positions = transformed.positions
                     var minX = Float.POSITIVE_INFINITY
                     var minY = Float.POSITIVE_INFINITY
@@ -1842,22 +1303,12 @@ class AsyncRegionManager(
         return BatchGeometryResult(merged, objects, simulations)
     }
 
-    /** Return of [buildBatchGeometry]: the merged-by-material view and the per-object view. */
     private class BatchGeometryResult(
         val batches: Map<BatchKey, MutableList<TransformedGeometry>>,
         val objects: RegionObjectGeometry,
         val simulations: List<BatchGranularitySimulation>
     )
 
-    /**
-     * Regroup one region's objects by `(cell, material)` and report the batches that
-     * grouping would produce. See [BatchGranularitySimulation].
-     *
-     * An object belongs wholly to the cell containing its bounding-box centre, so an
-     * object straddling a cell edge inflates its cell's box rather than being split —
-     * which is what a real implementation would have to do too, since splitting geometry
-     * across cells would mean re-welding vertices.
-     */
     private fun simulateGranularity(
         gridTiles: Int,
         objectBounds: FloatArray,
@@ -1878,8 +1329,6 @@ class AsyncRegionManager(
             val cellZ = floor(centerZ / cellWorldSize).toInt()
 
             for ((batchKey, triangles) in materials) {
-                // Cell coordinates are small and signed; the material contributes the low
-                // bits. Packing into a Long keeps the grouping allocation-free per entry.
                 val key = ((cellX.toLong() and 0xFFFFL) shl 48) or
                         ((cellZ.toLong() and 0xFFFFL) shl 32) or
                         ((batchKey.textureId.toLong() and 0xFFFFL) shl 16) or
@@ -1910,15 +1359,12 @@ class AsyncRegionManager(
         return BatchGranularitySimulation(gridTiles, bounds, triangles)
     }
 
-    // ========================================================================
-    // Private Helpers
-    // ========================================================================
 
     private fun computeRegionPriority(key: RegionKey): Int {
         val center = centerKey ?: return Int.MAX_VALUE
         val dx = key.regionX - center.regionX
         val dy = key.regionY - center.regionY
-        return dx * dx + dy * dy  // Distance squared = priority
+        return dx * dx + dy * dy
     }
 
     private fun regionKeyFromLong(regionKeyLong: Long): RegionKey {

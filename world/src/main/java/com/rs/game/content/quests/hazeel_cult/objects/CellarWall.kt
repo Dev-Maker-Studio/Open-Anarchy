@@ -24,7 +24,6 @@ fun mapCarnilleanCellarWall() {
         val player = entity as? Player ?: return@onChunkEnter
         if (CELLAR_WALL_PARTS.none { player.withinDistance(it.tile, 16) }) return@onChunkEnter
         player.schedule {
-            // a teleport loads the region after EnterChunkEvent
             wait(1)
             refreshCellarWall(player)
         }

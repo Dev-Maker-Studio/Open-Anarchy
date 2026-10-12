@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.smithing;
 
 import com.rs.engine.quest.Quest;
@@ -354,10 +338,8 @@ public class Smithing extends PlayerAction {
 		setActionDelay(player, 3);
 	}
 
-	// check both player inventory and coal bag for required items to make bar
 	public static boolean hasRequiredItems(Player player, Item[] requiredItems) {
 		for (Item required : requiredItems) {
-			// if item is not in player's inventory, check the coal bag
 			if (!player.getInventory().containsItem(required.getId(), required.getAmount())) {
 				if (required.getId() == 453 && player.getInventory().containsItem(18339) && player.getI("coalBag") >= required.getAmount())
 					continue;

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.agility.agilitypyramid;
 
 import org.darkan.core.model.ObjectShape;
@@ -42,103 +26,62 @@ import org.darkan.core.gameval.gen.Varbit;
 
 public class AgilityPyramidController extends Controller {
 
-	/**
-	 * ALL AGILITY PYRAMID STAGES (the indices of the obstacles at each plane/level)
-	 *
-	 * Plane 1:
-	 * JUMP ROLLER: 0
-	 * CLIMB OVER: 1
-	 * SHIMMY SIDEWAYS: 2
-	 * WALK LOG: 3
-	 * JUMP ROLLER: 4
-	 * SHIMMY HANDHOLDS: 5
-	 * SHIMMY SIDEWAYS: 6
-	 *
-	 * Plane 2:
-	 * SHIMMY HANDHOLDS: 7
-	 * JUMP GAP: 8
-	 * SHIMMY HANDHOLDS: 9
-	 * JUMP ROLLER: 10
-	 * SHIMMY SIDEWAYS: 11
-	 * CLIMB OVER: 12
-	 * JUMP GAP: 13
-	 *
-	 * Plane 3:
-	 * CLIMB OVER: 14
-	 * SHIMMY SIDEWAYS: 15
-	 * JUMP GAP: 16
-	 * WALK LOG: 17
-	 *
-	 * Plane 4:
-	 * JUMP GAP: 18
-	 * CLIMB OVER: 19
-	 * JUMP ROLLER: 20
-	 * JUMP GAP: 21
-	 * CLIMB OVER: 22
-	 *
-	 * Plane 5:
-	 * JUMP ROLLER: 23
-	 * JUMP GAP: 24
-	 */
 
 	private boolean grabbedTop;
 	private final int N_STAGES = 25;
 	private final String MAX_OBSTACLE_IDX_KEY = "AgilityPyramidMaxObstacleIdx";
 	private final String VIRTUAL_PLANE_KEY = "AgilityPyramidVirtualPlane";
 	private final int[][] jumpRollerStages = {
-			{0,4}, 	// plane 1
-			{10},	// plane 2
-			{-1},	// plane 3 (none)
-			{20},	// plane 4
-			{23}	// plane 5
+			{0,4},
+			{10},
+			{-1},
+			{20},
+			{23}
 	};
 
 	private final int[][] climbOverStages = {
-			{1}, 		// plane 1
-			{12},		// plane 2
-			{14},		// plane 3
-			{19,22},	// plane 4
-			{-1}		// plane 5 (none)
+			{1},
+			{12},
+			{14},
+			{19,22},
+			{-1}
 	};
 
 	private final int[][] jumpGapStages = {
-			{-1},		// plane 1 (none)
-			{8,13},		// plane 2
-			{16},		// plane 3
-			{18,21},	// plane 4
-			{24}		// plane 5
+			{-1},
+			{8,13},
+			{16},
+			{18,21},
+			{24}
 	};
 
 	private final int[][] walkLogStages = {
-			{3},	// plane 1
-			{-1},	// plane 2 (none)
-			{17},	// plane 3
-			{-1},	// plane 4 (none)
-			{-1}	// plane 5 (none)
+			{3},
+			{-1},
+			{17},
+			{-1},
+			{-1}
 	};
 
 	private final int[][] shimmySidewaysStages = {
-			{2,6},		// plane 1
-			{11},		// plane 2
-			{15},		// plane 3
-			{-1},		// plane 4 (none)
-			{-1}		// plane 5 (none)
+			{2,6},
+			{11},
+			{15},
+			{-1},
+			{-1}
 	};
 
 	private final int[][] shimmyHandholdsStages = {
-			{5},	// plane 1
-			{7,9},	// plane 2
-			{-1},	// plane 3 (none)
-			{-1},	// plane 4 (none)
-			{-1}	// plane 5 (none)
+			{5},
+			{7,9},
+			{-1},
+			{-1},
+			{-1}
 	};
 
 	private int[] getObstacleIndicesAtPlane(final Obstacle obstacle) {
 		int virtualPlane = player.getTempAttribs().getI(VIRTUAL_PLANE_KEY);
 
-		// This only applies when a player logs in while already on the pyramid.
-		// However, player.getPlane() is not entirely accurate so this is a "best guess."
-		// Usually, above plane/level 3 the plane resets to 0 so things can get a little weird there...
 		if (virtualPlane < 1) {
 			virtualPlane = player.getPlane() == 0 ? 1 : player.getPlane();
 			player.getTempAttribs().setI(VIRTUAL_PLANE_KEY, virtualPlane);
@@ -154,18 +97,6 @@ public class AgilityPyramidController extends Controller {
 		};
 	}
 
-	/*
-	 * Agility pyramid's state management is a little complex.
-	 * Instead of trying to pinpoint every exact object clicked,
-	 * we instead maintain the "maximum" index reached based off
-	 * the object ID and current plane the player is on. When a
-	 * player encounters a new obstacle type, we check if the index
-	 * (according to ID and plane) is greater than our current max.
-	 * If so, then this is a "new" obstacle. Otherwise, we have already
-	 * encountered it (e.g., getting pushed down a level.) This will
-	 * help in determining whether to apply the aura effect
-	 * since it should not trigger for already completed obstacles.
-	 */
 
 	private void updateMaxObstacleIdx(final Obstacle obstacle) {
 		Agility.initStagesIfNotAlready(player, Agility.AGILITY_PYRAMID, N_STAGES);
@@ -288,7 +219,6 @@ public class AgilityPyramidController extends Controller {
 	public void finishCourse() {
 		if (grabbedTop) {
 			player.tele(Tile.of(3364, 2830, 0));
-			//player.getSkills().addXp(Constants.AGILITY, 300+(player.getSkills().getLevelForXp(Constants.AGILITY)*8)); //osrs rates?
 			player.getSkills().addXp(Constants.AGILITY, 500);
 			grabbedTop = false;
 			updateTop();
@@ -313,10 +243,9 @@ public class AgilityPyramidController extends Controller {
 		});
 	}
 
-	//3056 fail
 	public void shimmyHandholds(GameObject object) {
 		updateMaxObstacleIdx(Obstacle.SHIMMY_HANDHOLDS);
-		int startAnim = 3057; //3053 alt
+		int startAnim = 3057;
 		int renderEmote = 387;
 		int endAnim = 3058;
 		if (object.getId() == 10883 || object.getId() == 10885 || object.getId() == 10862) {
@@ -331,7 +260,6 @@ public class AgilityPyramidController extends Controller {
 			shimmy(object.getTile().transform(player.getX() < object.getX() ? 4 : -4, object.getRotation() == 3 ? 1 : 0, 0), startAnim, renderEmote, endAnim, endAnim == 3055 || endAnim == 3056);
 	}
 
-	//760 761 fail
 	public void shimmySideways(GameObject object) {
 		updateMaxObstacleIdx(Obstacle.SHIMMY_SIDEWAYS);
 		int startAnim = 752;

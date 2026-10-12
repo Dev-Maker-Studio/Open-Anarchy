@@ -275,7 +275,6 @@ fun loadAdminCommands() {
             return@add
         }
 
-        // Copy equipment
         val equip = target.equipment.itemsCopy
         equip.forEachIndexed { i, item ->
             if (item != null) {
@@ -283,7 +282,6 @@ fun loadAdminCommands() {
             }
         }
 
-        // Copy inventory
         val inv = target.inventory.items.itemsCopy
         inv.forEachIndexed { i, item ->
             if (item != null) {
@@ -292,7 +290,6 @@ fun loadAdminCommands() {
             }
         }
 
-        // Copy skills
         for (i in p.skills.levels.indices) {
             p.skills.set(i, target.skills.getLevelForXp(i))
             p.skills.setXp(i, Skills.getXPForLevel(target.skills.getLevelForXp(i)).toDouble())

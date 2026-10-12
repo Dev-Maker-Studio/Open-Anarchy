@@ -8,26 +8,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
-/**
- * Lightweight, thread-safe profiler for the region loading pipeline.
- *
- * A "wave" is one complete map load: the synchronous center region plus every
- * context region for the current render distance. [beginWave] starts the clock,
- * background workers call [record] for each pipeline phase, and [noteRegionsReady]
- * (driven from the GL thread's GPU drain) prints a single summary when the last
- * region reaches READY.
- *
- * Phase clocks are per-region wall time and regions overlap, so they deliberately
- * sum to more than the wave. True core utilisation is reported separately from the
- * process CPU counter.
- *
- * Opt-in, like every other diagnostic here: `-Ddarkan.profileRegionLoad=true` prints one
- * summary block per map load. Off by default so a normal run neither times phases nor
- * writes to stderr while regions stream in.
- */
 object RegionLoadProfiler {
 
-    /** Phase labels, ordered for reporting. */
     const val PHASE_CENTER_TERRAIN = "center:terrain"
     const val PHASE_CENTER_OBJECTS = "center:objectInstances"
     const val PHASE_CENTER_MODELS = "center:modelDecode"
@@ -78,66 +60,29 @@ object RegionLoadProfiler {
     private val uniqueModelsDecoded = AtomicInteger(0)
     private val modelCacheHits = AtomicInteger(0)
 
-    /** Vertex displacement accounting: how much of the work the footprint pre-test avoids. */
     private val displaceObjects = AtomicLong(0)
     private val displaceFlatSkips = AtomicLong(0)
     private val displaceMeshCalls = AtomicLong(0)
     private val displaceVertices = AtomicLong(0)
 
-    /**
-     * Objects that asked for displacement, were not resolved as flat, and still moved
-     * zero vertices.
-     *
-     * This is the one number that separates "was not asked to move" from "was asked and
-     * moved nothing". A non-trivial count means displacement is being silently dropped:
-     * the unpadded [org.darkan.tools.cache.map.VertexDisplacer.HeightField] rejected
-     * every object on a region's last row and column exactly this way, and nothing in
-     * the other four counters could show it.
-     */
     private val displaceZeroMoved = AtomicLong(0)
 
     private var waveLabel: String = ""
 
-    /**
-     * Whole-process CPU time, used to report true core utilisation across the load
-     * (summing per-phase wall clocks double counts, because regions overlap).
-     */
     private val osBean: OperatingSystemMXBean? =
         ManagementFactory.getOperatingSystemMXBean() as? OperatingSystemMXBean
 
     private val waveStartCpuNanos = AtomicLong(0)
     private val cpuDoneCpuNanos = AtomicLong(0)
 
-    /**
-     * [MeshBuffers.packedBytes] at the start of the wave, so the summary can report how much
-     * geometry the load actually pushed at the driver. Upload time tracks this figure closely
-     * — around 850 MB/s — so it is the number to watch when changing the vertex format.
-     */
     private val waveStartPackedBytes = AtomicLong(0)
 
-    /** [MeshBuffers.packNanos] at the start of the wave; see [waveStartPackedBytes]. */
     private val waveStartPackNanos = AtomicLong(0)
 
     private fun processCpuNanos(): Long = osBean?.processCpuTime ?: -1L
 
-    /**
-     * Whole-process CPU time in nanoseconds, or -1 when the JVM does not expose it.
-     *
-     * Exposed so one-shot phases outside a load wave (the terrain atlas build, the
-     * indirect renderer's array textures) can report cores-busy the same way the wave
-     * summary does. A phase whose CPU delta is roughly its wall clock is running on one
-     * core with the rest of the machine idle, which is the only case where parallelising
-     * it can move anything; a phase already burning several cores has no headroom to
-     * take and will just steal workers from whatever else is running.
-     */
     fun processCpuTimeNanos(): Long = processCpuNanos()
 
-    /**
-     * Start a new measurement wave. Any previous unfinished wave is discarded.
-     *
-     * @param label human readable description (region + render distance)
-     * @param regions number of regions that must reach READY before the wave ends
-     */
     fun beginWave(label: String, regions: Int) {
         if (!enabled) return
         phaseNanos.clear()
@@ -163,7 +108,6 @@ object RegionLoadProfiler {
         waveActive.set(true)
     }
 
-    /** Record elapsed nanoseconds against a phase. Safe from any thread. */
     fun record(phase: String, nanos: Long) {
         if (!enabled || !waveActive.get()) return
         phaseNanos.computeIfAbsent(phase) { AtomicLong(0) }.addAndGet(nanos)
@@ -171,7 +115,6 @@ object RegionLoadProfiler {
         threadNames.add(Thread.currentThread().name)
     }
 
-    /** Convenience wrapper: time [block] into [phase] and return its result. */
     fun <T> timed(phase: String, block: () -> T): T {
         if (!enabled) return block()
         val start = System.nanoTime()
@@ -193,18 +136,6 @@ object RegionLoadProfiler {
         modelCacheHits.addAndGet(cacheHits)
     }
 
-    /**
-     * Record one chunk's worth of vertex displacement accounting.
-     *
-     * Called once per worker chunk rather than per object, so the atomics stay cold.
-     *
-     * @param objects contour-type-1 objects considered
-     * @param flatSkips objects the footprint pre-test resolved without touching a vertex
-     * @param meshCalls per-mesh displacement calls actually made
-     * @param vertices vertices walked by those calls
-     * @param zeroMoved objects that ran the per-vertex pass and moved nothing; see
-     *                  [displaceZeroMoved]
-     */
     fun noteDisplace(objects: Long, flatSkips: Long, meshCalls: Long, vertices: Long, zeroMoved: Long = 0) {
         if (!enabled || !waveActive.get()) return
         displaceObjects.addAndGet(objects)
@@ -214,7 +145,6 @@ object RegionLoadProfiler {
         displaceZeroMoved.addAndGet(zeroMoved)
     }
 
-    /** Called when one region has finished all of its CPU phases. */
     fun markRegionCpuDone() {
         if (!enabled || !waveActive.get()) return
         val done = cpuDoneRegions.incrementAndGet()
@@ -225,10 +155,6 @@ object RegionLoadProfiler {
         }
     }
 
-    /**
-     * Called from the GL thread each frame with the current ready-region count.
-     * Prints the summary exactly once, when every region has reached READY.
-     */
     fun noteRegionsReady(ready: Int) {
         if (!enabled || !waveActive.get()) return
         if (ready < expectedRegions.get()) return
@@ -248,13 +174,6 @@ object RegionLoadProfiler {
         sb.append("\n[LOAD-PROF] ==================================================\n")
         sb.append("[LOAD-PROF] wave: $waveLabel  regions=${expectedRegions.get()}\n")
         sb.append("[LOAD-PROF] wall (start -> all regions READY): %.1f ms\n".format(wallMs))
-        // Time-to-ready measured from JVM start rather than from the wave start.
-        //
-        // The wave only opens at navigateToRegion, so everything init does first -- cache
-        // open, shader compile, and the terrain atlas build -- is invisible to the wall
-        // above. A change that shortens one of those phases shows up here and nowhere else,
-        // and quoting the sum of two separately-clocked phases instead would be exactly the
-        // kind of arithmetic that has produced wrong answers before.
         val sinceJvmStartMs = System.currentTimeMillis() - ManagementFactory.getRuntimeMXBean().startTime
         sb.append("[LOAD-PROF] wall (JVM start -> all regions READY): %d ms\n".format(sinceJvmStartMs))
         sb.append("[LOAD-PROF] wall (start -> all CPU phases done): %.1f ms\n".format(cpuWallMs))
@@ -266,7 +185,6 @@ object RegionLoadProfiler {
             totalPhaseMs += ms
             sb.append("[LOAD-PROF]   %-24s %9.1f ms  (%d calls)\n".format(phase, ms, calls))
         }
-        // Any phase not in the declared order still gets reported.
         for ((phase, nanos) in phaseNanos) {
             if (phase in PHASE_ORDER) continue
             val ms = nanos.get() / 1e6
@@ -305,7 +223,6 @@ object RegionLoadProfiler {
         println(sb)
     }
 
-    /** Abandon the current wave without printing (e.g. on cancellation). */
     fun abortWave() {
         waveActive.set(false)
     }

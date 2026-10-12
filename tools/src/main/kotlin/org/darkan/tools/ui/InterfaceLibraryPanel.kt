@@ -11,38 +11,14 @@ import imgui.type.ImString
 import world.gregs.voidps.cache.definition.data.InterfaceDefinition
 import java.io.File
 
-/**
- * Finds an interface to open.
- *
- * Stepping through 1300 interfaces with the arrow keys is how the editor worked
- * before this panel, which is fine for the one you already know the id of and
- * useless for the one you are trying to find. The searches here are the ones that
- * actually locate an interface in practice:
- *
- * - by **id**, for the interface you already know;
- * - by **text**, matching any text component's contents - the fastest way to find
- *   the interface behind something you can see in the game;
- * - by **component name**, matching the `name` field the cache carries;
- * - by **script**, matching interfaces whose components hook a given clientscript,
- *   which is what you need when a script misbehaves and you want its owner.
- *
- * Scanning means decoding, and decoding all 1300 interfaces takes long enough to
- * be felt. The scan is therefore incremental: [render] decodes a bounded number of
- * interfaces per frame and shows its progress, so the panel stays responsive from
- * the first frame and the index fills in behind it.
- */
 class InterfaceLibraryPanel(
-    /** One past the highest interface id. */
     private val count: Int,
-    /** Decodes (once) and returns an interface, or null when it is absent. */
     private val definitionOf: (Int) -> InterfaceDefinition?,
 ) {
     var visible: Boolean = true
 
-    /** Notified when an interface is chosen. */
     var onOpen: ((Int) -> Unit)? = null
 
-    /** Interface the host currently has open, highlighted in the list. */
     var currentId: Int = -1
 
     private val search = ImString(96)
@@ -50,14 +26,12 @@ class InterfaceLibraryPanel(
     private var searchNames = true
     private var searchScripts = false
 
-    /** Summary of one interface, built by the background scan. */
     private class Entry(
         val id: Int,
         val components: Int,
         val rootWidth: Int,
         val rootHeight: Int,
         val label: String,
-        /** Lower-cased haystack of every text and name in the interface. */
         val haystack: String,
         val scripts: Set<Int>,
     )
@@ -140,7 +114,6 @@ class InterfaceLibraryPanel(
         return opened
     }
 
-    /** Records an interface as opened, for the recents list. */
     fun noteOpened(id: Int) {
         currentId = id
         recents.remove(id)
@@ -157,13 +130,7 @@ class InterfaceLibraryPanel(
         saveFavourites()
     }
 
-    // ------------------------------------------------------------------- scan
 
-    /**
-     * Decodes the next slice of interfaces. Bounded per frame so the panel never
-     * stalls the render thread; the whole index lands within a few seconds of the
-     * editor opening and the searches work on whatever has been indexed so far.
-     */
     private fun scanSome() {
         var budget = SCAN_PER_FRAME
         while (scanned < count && budget > 0) {
@@ -206,10 +173,6 @@ class InterfaceLibraryPanel(
         }
     }
 
-    /**
-     * A one-line description. The cache rarely names the root component, so the
-     * first non-empty text in the interface stands in - which is usually its title.
-     */
     private fun label(rootName: String, haystack: StringBuilder): String {
         if (rootName.isNotEmpty()) {
             return rootName
@@ -218,13 +181,10 @@ class InterfaceLibraryPanel(
         return first.replace(TAG, "").trim().take(48)
     }
 
-    // ----------------------------------------------------------------- search
 
     private fun refreshMatches() {
         val query = search.get().trim()
         val filters = (if (searchText) 1 else 0) or (if (searchNames) 2 else 0) or (if (searchScripts) 4 else 0)
-        // The match list only changes when the query, the filters or the indexed
-        // set changed, so it is rebuilt then rather than every frame.
         if (query == lastQuery && scanned == lastScanned && filters == lastFilters) {
             return
         }
@@ -241,7 +201,6 @@ class InterfaceLibraryPanel(
                 result.add(entry)
             }
         }
-        // An exact id match is what the developer meant, so it leads.
         result.sortWith(compareBy({ if (it.id == asId) 0 else 1 }, { it.id }))
         matches = result
     }
@@ -261,7 +220,6 @@ class InterfaceLibraryPanel(
         return false
     }
 
-    // ------------------------------------------------------------------- rows
 
     private fun drawTable(): Boolean {
         val flags = ImGuiTableFlags.RowBg or ImGuiTableFlags.ScrollY or
@@ -277,8 +235,6 @@ class InterfaceLibraryPanel(
         ImGui.tableHeadersRow()
 
         var opened = false
-        // Only the visible rows are emitted; the match list can hold every
-        // interface in the cache and ImGui would lay out all of them otherwise.
         val rows = matches
         ImGuiListClipper.forEach(rows.size, object : ImListClipperCallback() {
             override fun accept(index: Int) {
@@ -342,13 +298,7 @@ class InterfaceLibraryPanel(
         return false
     }
 
-    // -------------------------------------------------------------- favourites
 
-    /**
-     * Pinned ids live next to the ImGui layout file rather than in it, so the two
-     * stay independent - clearing a broken window layout should not lose the
-     * interfaces someone pinned.
-     */
     private fun loadFavourites() {
         if (favouritesLoaded) {
             return
@@ -378,7 +328,6 @@ class InterfaceLibraryPanel(
         private const val RECENT_LIMIT = 12
         private const val FAVOURITES_FILE = "darkan-tools-pinned-interfaces.txt"
 
-        /** Colour and formatting tags in interface text, stripped from the labels. */
         private val TAG = Regex("<[^>]*>")
     }
 }

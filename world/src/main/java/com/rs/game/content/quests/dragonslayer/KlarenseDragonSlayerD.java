@@ -52,7 +52,6 @@ public class KlarenseDragonSlayerD extends Conversation {
 			addNPC(KLARENSE, HeadE.CALM_TALK, "That you may.");
 		}
 		case QUEST_COMPLETE ->  {
-			//Will not talk about Dragon Slayer
 		}
 		}
 

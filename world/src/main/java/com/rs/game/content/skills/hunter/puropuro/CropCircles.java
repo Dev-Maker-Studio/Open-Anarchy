@@ -169,8 +169,8 @@ public class CropCircles {
                 }
 
                 if (ticks == 41) {
-                    impOne.setNextSpotAnim(new SpotAnim(1119)); // 931?
-                    impTwo.setNextSpotAnim(new SpotAnim(1119)); // 931?
+                    impOne.setNextSpotAnim(new SpotAnim(1119));
+                    impTwo.setNextSpotAnim(new SpotAnim(1119));
                 }
 
                 if (ticks >= 45) {

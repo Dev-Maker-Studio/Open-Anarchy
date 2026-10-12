@@ -23,10 +23,6 @@ fun Player.applyAntipoison(tier: AntipoisonTier, ticks: Long = tier.ticks) {
     set(TIER_GRANTED_TICKS_ATTRIBUTE, ticks)
 }
 
-// The record names the tier that granted the immunity now running, and it is dropped the moment
-// that immunity ends. Antipoison from anywhere else - the thermal pool, a familiar's cure - runs
-// longer than any tier grants or can only reach an unprotected player, so it never inherits a
-// record; the bar then shows the plain vial rather than a tier it cannot prove.
 fun activeAntipoisonEntry(player: Player): BuffBarEntry? {
     val ticks = player.getEffectTicks(Effect.ANTIPOISON)
     val tier = AntipoisonTier.forName(player.getO<String>(TIER_ATTRIBUTE))

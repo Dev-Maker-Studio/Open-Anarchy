@@ -19,22 +19,18 @@ import org.darkan.core.gameval.gen.Varp
 @ServerStartupEvent
 fun mapCastleWarsCastle() {
 
-    // scoreboard
     onObjectClick(4484) {
         CastleWars.viewScoreBoard(it.player)
     }
 
-    // join zamorak
     onObjectClick(4388) {
         CastleWars.joinPortal(it.player, CastleWars.ZAMORAK)
     }
 
-    // join guthix
     onObjectClick(4408) {
         CastleWars.joinPortal(it.player, CastleWars.GUTHIX)
     }
 
-    // join saradomin
     onObjectClick(4387) {
         CastleWars.joinPortal(it.player, CastleWars.SARADOMIN)
     }
@@ -56,7 +52,7 @@ class PlayingGame : Task() {
     }
 
     fun reset() {
-        minutesLeft = 5 // temp testing else 5
+        minutesLeft = 5
         score = mutableListOf(0, 0)
         flagStatus = mutableListOf(0, 0)
         barricadesCount = mutableListOf(0, 0)
@@ -106,7 +102,6 @@ class PlayingGame : Task() {
             return
 
         if (flagTeam != team && (player.equipment.weaponId != -1 || player.equipment.shieldId != -1)) {
-            // TODO no space message
             player.sendMessage("You can't take flag while wearing something in your hands.")
             return
         }
@@ -174,7 +169,7 @@ class PlayingGame : Task() {
         } else if (minutesLeft == 0) {
             minutesLeft = 25
             CastleWars.startGame()
-        } else if (minutesLeft > 6) { // adds ppl waiting on lobby
+        } else if (minutesLeft > 6) {
             CastleWars.startGame()
         }
         CastleWars.refreshAllPlayersTime()
@@ -229,7 +224,7 @@ class CastleWars {
         }
 
         fun joinPortal(player: Player, team: Int) {
-            var team = team // apparently kotlin parameters cant be reassigned...
+            var team = team
             if (player.equipment.hatId != -1 || player.equipment.capeId != -1) {
                 player.sendMessage("You cannot wear hats, capes, or helms in the arena.")
                 return
@@ -264,14 +259,12 @@ class CastleWars {
             } else {
                 refreshTimeLeft(player)
             }
-            // TODO You cannot take non-combat items into the arena
         }
 
         fun setHood(player: Player, hood: Item?) {
             player.apply {
                 equipment.setSlot(Equipment.HEAD, hood)
                 equipment.refresh(Equipment.HEAD)
-                // TODO: is generating appearance data already handled??
                 appearance.generateAppearanceData()
             }
         }
@@ -280,7 +273,6 @@ class CastleWars {
             player.apply {
                 equipment.setSlot(Equipment.CAPE, cape)
                 equipment.refresh(Equipment.CAPE)
-                // TODO: is generating appearance data already handled??
                 appearance.generateAppearanceData()
             }
         }
@@ -317,7 +309,6 @@ class CastleWars {
                     player.stopAll()
                 }
             }
-            // TODO: What is going on here???
             WorldTasks.schedule(6) {
                 for (i in 0..playing.size) {
                     for (player in playing[i].toTypedArray()) {
@@ -347,7 +338,6 @@ class CastleWars {
             setCape(player, null)
             setHood(player, null)
             player.tele(Tile.of(LOBBY, 2))
-            // if no players are left, destroy game
             if (playingGame != null && waiting[team].isEmpty() && playing[team].isEmpty())
                 destroyPlayingGame()
         }
@@ -381,12 +371,11 @@ class CastleWars {
                     dropFlag(player.lastTile, if (weaponId == 4037) SARADOMIN else ZAMORAK)
                 }
                 closeInterfaces()
-                inventory.deleteItem(4049, Integer.MAX_VALUE) // bandages
-                inventory.deleteItem(4053, Integer.MAX_VALUE) // barricades
+                inventory.deleteItem(4049, Integer.MAX_VALUE)
+                inventory.deleteItem(4053, Integer.MAX_VALUE)
                 hintIconsManager.removeUnsavedHintIcon()
                 musicsManager.reset()
                 tele(Tile.of(LOBBY, 2))
-                // if no players are left, destroy game
                 if (playingGame != null && waiting[team].isEmpty() && playing[team].isEmpty())
                     destroyPlayingGame()
             }

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.net.decoders.handlers;
 
 import com.rs.game.model.entity.player.BotContainment;
@@ -108,7 +92,6 @@ public class InventoryOptionsHandler {
 					rune = r;
 			if (rune != null) {
 				if (player.hasWickedHoodTalisman(rune)) {
-					//failsafe check for players who manually use all elemental runes so they can still use the talisman to unlock pure ess.
 					if (usedId == WickedHoodRune.ELEMENTAL.getTalismanId() && !player.getUsedElementalTalisman()) {
 						player.getInventory().deleteItem(usedId, 1);
 						player.setUsedElementalTalisman(true);
@@ -263,7 +246,7 @@ public class InventoryOptionsHandler {
 				if (item != null)
 					player.getInventory().addItem(l);
 		}
-		if (item.getId() == 407) { //Oysters
+		if (item.getId() == 407) {
 			player.getInventory().deleteItem(407, 1);
 			final double random = Utils.random(100.0);
 			if (random < 70.0){

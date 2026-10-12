@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.holidayevents.halloween.hw07;
 
 import com.rs.engine.dialogue.Conversation;
@@ -45,7 +29,7 @@ public class Muncher07D extends Conversation {
 			muncher.setNextAnimation(FLINCH);
 		});
 
-		Dialogue op = addOption("He looks mad, what would you like to do?", "Stroke him"/*, "Try to entertain him"*/, "Blow a raspberry at him");
+		Dialogue op = addOption("He looks mad, what would you like to do?", "Stroke him" , "Blow a raspberry at him");
 
 		op.addPlayer(HeadE.NERVOUS, "Okay, touching him seems to be a bad idea.", () -> {
 			player.setNextAnimation(new Animation(7271));
@@ -53,7 +37,6 @@ public class Muncher07D extends Conversation {
 			muncher.setNextAnimation(FLINCH);
 		});
 
-		//op.addPlayer(HeadE.CALM_TALK, "Entertain");
 
 		op.addPlayer(HeadE.LAUGH, "Hehe. This'll make him think twice!")
 		.addNext(() -> {

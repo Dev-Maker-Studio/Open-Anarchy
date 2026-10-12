@@ -3,27 +3,17 @@ package org.darkan.tools.cache.texture.ops
 import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 
-/**
- * Type 1: Fills the texture with a solid RGB color.
- */
 class TextureOpColorFill : TextureOperation(0, false) {
-    /** Red component (12-bit fixed-point) */
     private var redComponent: Int = 0
 
-    /** Green component (12-bit fixed-point) */
     private var greenComponent: Int = 0
 
-    /** Blue component (12-bit fixed-point) */
     private var blueComponent: Int = 0
 
     init {
         setColor(0)
     }
 
-    /**
-     * Sets the fill color from a packed RGB value.
-     * @param packedColor RGB color value (0xRRGGBB)
-     */
     private fun setColor(packedColor: Int) {
         blueComponent = (packedColor and 0xff) shl 4
         greenComponent = (packedColor and 0xff00) shr 4

@@ -9,20 +9,8 @@ import world.gregs.voidps.cache.definition.data.MapLightGridEffect
 import world.gregs.voidps.cache.definition.data.MapLightsEffect
 import world.gregs.voidps.cache.definition.data.MapSkyboxEffect
 
-/**
- * Writes the environment block of a `m<x>_<y>` map archive, the exact inverse of
- * [world.gregs.voidps.cache.definition.decoder.MapEffectDecoder].
- *
- * Records are written in the order the list holds them, which is the order the file had them: the
- * client applies them in order and two records of the same opcode are both legal, so nothing here
- * sorts, merges or de-duplicates.
- *
- * The one derived value is opcode 0's flag byte, and it is derived from which fields are present
- * rather than from which fields differ from the client's defaults - see [MapEnvironmentEffect.flags].
- */
 object MapEffectEncoder {
 
-    /** Write [effects] at [Writer]'s current position. */
     fun Writer.writeEffects(effects: List<MapEffect>) {
         for (effect in effects) {
             writeByte(effect.opcode)
@@ -92,9 +80,6 @@ object MapEffectEncoder {
             }
             writeShort(light.colour)
             writeByte(light.packedType)
-            // The config id is on the wire for exactly one type, so a light that carries one
-            // without being that type - or is that type without one - cannot be written at all
-            // rather than written into a file that reads back as something else.
             if (light.packedType and 0x1f == MapLight.CONFIG_TYPE) {
                 require(light.lightType >= 0) {
                     "A light of type ${MapLight.CONFIG_TYPE} needs a light config id."

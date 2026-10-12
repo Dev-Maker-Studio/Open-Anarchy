@@ -28,9 +28,6 @@ public class ClanVexillum extends OwnedNPC {
 	private final Clan clan;
 	private int hint = -1;
 	
-	/*
-	 * anim skeleton 3606 = clan teleports
-	 */
 
 	private ClanVexillum(Player owner, Tile tile, Clan clan) {
 		super(owner, 13634, tile, false);

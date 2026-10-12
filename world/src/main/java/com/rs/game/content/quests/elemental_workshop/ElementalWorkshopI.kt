@@ -264,7 +264,6 @@ fun mapWorkshop1() {
                 when (option) {
                     "Read" -> readElementalShieldBook()
                     "Cut-open" -> {
-                        // TODO: When we get a list of all slash items we can guard this behind knives or scimitars and stuff
                         inventory.replace(BATTERED_BOOK, SLASHED_BOOK)
                         inventory.addItemDrop(BATTERED_KEY)
                         sendMessage("You make a small cut in the spine of the book.")
@@ -485,7 +484,6 @@ fun mapWorkshop1() {
                 return@onItemOnObject
             }
             sendMessage("Following the instructions in the book, you make an elemental shield.")
-            // Make X dialogue too complicated to add cleaner than this
             schedule {
                 lock()
                 anim(ANIM_MAKE_SHIELD)
@@ -539,7 +537,6 @@ private class EarthElemental(id: Int, tile: Tile) : NPC(id, tile) {
                 lock()
                 wait(3)
                 unlock()
-                // cleanup task
                 var waitTime = 20
                 while (true) {
                     wait(1)
@@ -611,7 +608,6 @@ class ElementalWorkshopI : QuestOutline() {
 
     override fun updateStage(player: Player, stage: Int) {
         if (stage == STAGE_FOUND_WORKSHOP) {
-            // generate random crates, throw in stone bowl because I am evil
             val attribs = player.questManager.getAttribs(Quest.ELEMENTAL_WORKSHOP_I)
             val crates = RANDOM_CRATES.toMutableList()
             attribs.clear()

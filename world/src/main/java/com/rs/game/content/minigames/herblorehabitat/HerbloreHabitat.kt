@@ -73,7 +73,6 @@ fun handleRootTunnel() {
 
 @ServerStartupEvent
 fun handleAgilityVine() {
-    //West Up
     data class AgilityObstacle(
         val objectId: Int,
         val tile: Tile,
@@ -84,13 +83,11 @@ fun handleAgilityVine() {
     )
 
     val agilityObstacles = listOf(
-        // West
         AgilityObstacle(27126, Tile.of(2963, 2904, 0), 3303, destination = Tile.of(2964, 2904, 1)),
         AgilityObstacle(27130, Tile.of(2963, 2904, 1), 3303, destination = Tile.of(2962, 2904, 0)),
         AgilityObstacle(27151, Tile.of(2966, 2903, 1), 3533, destination = Tile.of(2966, 2903, 2)),
         AgilityObstacle(27129, Tile.of(2966, 2903, 2), 3527, destination = Tile.of(2965, 2903, 1)),
 
-        // East
         AgilityObstacle(27126, Tile.of(2977, 2906, 0), 3303, destination = Tile.of(2976, 2906, 1)),
         AgilityObstacle(27130, Tile.of(2977, 2906, 1), 3303, destination = Tile.of(2978, 2906, 0)),
         AgilityObstacle(27151, Tile.of(2973, 2903, 1), 3533, destination = Tile.of(2973, 2903, 2)),
@@ -105,7 +102,7 @@ fun handleAgilityVine() {
 
     onObjectClick(56840) { (player, obj) ->
         if (!Utils.skillSuccess(player.skills.getLevel(Skills.AGILITY), 185, 255)) {
-            player.anim(15545) // TODO: Not authentic
+            player.anim(15545)
         } else {
             player.forceMove(
                 Tile.of(if (player.x > obj.x) 2967 else 2972, 2903, 2),

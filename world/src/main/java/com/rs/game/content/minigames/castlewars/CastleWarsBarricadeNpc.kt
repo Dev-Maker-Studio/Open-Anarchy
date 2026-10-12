@@ -36,7 +36,6 @@ class CastleWarsBarricadeNpc(private var team: Int, tile: Tile) : NPC(1532, tile
     }
 
     fun explode() {
-        // TODO gfx
         sendDeath(this)
     }
 

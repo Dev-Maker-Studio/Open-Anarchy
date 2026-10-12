@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.minigames.domtower;
 
 import com.rs.engine.dialogue.Conversation;
@@ -37,7 +21,6 @@ public class StrangeFace extends Conversation {
 		addSimple("The Tower is I, and I have control of the tower. I see what happens, in any corner of any floor. I am always watching.").voiceEffect(7909);
 		addSimple("So you believe yourself a mighty warrior?", () -> {
 			player.getPackets().resetSounds();
-			//player.voiceEffect(7907);//Need to find a way to reset sounds when starting options...
 		});
 		addOptions("Choose an option:", (ops) -> {
 			ops.add("Only the greatest warrior that ever lived!", new Dialogue()
@@ -53,7 +36,6 @@ public class StrangeFace extends Conversation {
 					.addSimple("You will find I am welcoming enough.").voiceEffect(7911)
 					.addSimple("Now, I can offer you more guidance; or, if you overflow with confidence, you can figure out yourself. I am the tower, I am ever-present, so come to me if you change your mind.", () -> {
 						player.getPackets().resetSounds();
-						//player.voiceEffect(7872);//Need a way to reset sounds on option
 						player.getDominionTower().setTalkedWithFace(true);
 					})
 					.addOptions("Receive further instruction?", (ops1) -> {
@@ -61,7 +43,6 @@ public class StrangeFace extends Conversation {
 								.addNext(() -> player.getDominionTower().talkToFace(true));
 						ops1.add("No.")
 								.addSimple("Your choice. Come back if you change your mind.", () -> {
-									//player.voiceEffect(7878); //Need a way to reset sounds on dialogue exit
 								});
 					})
 			);

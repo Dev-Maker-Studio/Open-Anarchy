@@ -26,7 +26,6 @@ private val BUSH_IDS: IntArray = Arrays.stream(TrailObjects.entries.toTypedArray
 
 @ServerStartupEvent
 fun handleJadinkoClicks() {
-    // Initial burrow clicks
     onObjectClick(56732, 56733) { (player, obj, option) ->
         if (option != "Inspect") return@onObjectClick
         val trackerTypes = player.getAllActiveJadinkoTypes().filter { it.isTrackerJadinko() }
@@ -41,7 +40,6 @@ fun handleJadinkoClicks() {
         startTrackingTrail(player, burrow)
     }
 
-    // Tracking plants/holes
     onObjectClick(*TRACK_OBJECT_IDS.toTypedArray()) { (player, obj, option) ->
         if (option != "Inspect") {
             return@onObjectClick
@@ -86,7 +84,6 @@ fun handleJadinkoClicks() {
         }
     }
 
-    // Bush interactions
     onObjectClick(*BUSH_IDS.toTypedArray()) { (player, obj, option) ->
         if (option != "Search" && option != "Attack") return@onObjectClick
         val burrow = player.tempAttribs.getO<JadinkoBurrow>("currentTrail") ?: return@onObjectClick
@@ -102,7 +99,7 @@ fun handleJadinkoClicks() {
             "Search" -> {
                 val nextTarget = burrow.getNextTargetObject()
                 if (nextTarget != null && (nextTarget.objectId != obj.id || nextTarget.tile != obj.tile)) {
-                    player.sendMessage("You need to follow the full trail before searching here.") //This spams the user
+                    player.sendMessage("You need to follow the full trail before searching here.")
                     return@onObjectClick
                 }
                 if (!player.tempAttribs.getB("bushReady")) {

@@ -78,25 +78,12 @@ class Account {
 
     fun hasRights(checkRights: Rights) = rights.ordinal >= checkRights.ordinal
 
-    /**
-     * True until the account holds a name of its own: either it has never picked one - a client
-     * sign-up starts with the email as the username - or a moderator has revoked the one it had.
-     */
     @BsonIgnore
     fun mustChooseName() = nameChangeRequired || isUnnamedSignup()
 
-    /**
-     * A sign-up that has not been through the name screen yet: `Accounts.createLobby` seeds both
-     * the username and the email with the address the client signed up with. Only such an account
-     * may have its username written, so this is also what tells a first naming from a rename.
-     */
     @BsonIgnore
     fun isUnnamedSignup() = username == email
 
-    /**
-     * Forced renames leave [prevDisplayName] alone so the old name never surfaces again; a rename
-     * the player chose to spend a change on is remembered the usual way.
-     */
     fun renameTo(newDisplayName: String, forced: Boolean) {
         if (!forced) {
             prevDisplayName = displayName
@@ -111,11 +98,6 @@ class Account {
     fun onlineTo(other: Account) =
         !(other.social.status.toInt() == 2 || (other.social.status.toInt() == 1 && !other.social.friends.contains(username)))
 
-    /**
-     * Replaces the Argon2 hash and drops every legacy credential (the AES [password] and the
-     * SHA-1 [legacyPass]), so the login path can never fall back to the old secret. The hash being
-     * replaced is remembered in [previousPasswords].
-     */
     fun changePassword(newPasswordHash: String) {
         if (passwordHash.isNotEmpty()) previousPasswords.add(passwordHash)
         passwordHash = newPasswordHash
@@ -123,7 +105,6 @@ class Account {
         legacyPass = null
     }
 
-    // NEVER CALL THIS EVER. ONLY TO BE USED FOR ACCOUNT CREATION WHEN PLAYER SELECTS A DISPLAY NAME
     @Deprecated("Only for initial account creation")
     fun initializeUsername(newUsername: String) {
         username = newUsername.formatPlayerNameForProtocol()
@@ -140,11 +121,6 @@ data class Social(
     var fcStatus: Byte = 0,
     var clanName: String? = null,
     var connectedToClan: Boolean = false,
-    /**
-     * Display name of the owner of the friends chat this account is in, remembered across logins
-     * so the lobby and the worlds can re-join it (legacy `Social.currentFriendsChat`). Null means
-     * "in no channel" - explicitly leaving a channel clears it, logging out does not.
-     */
     var currentFriendsChat: String? = "help",
     var guestedClanChat: String? = null,
     var friendsChat: FriendsChat = FriendsChat()

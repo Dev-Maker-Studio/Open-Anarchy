@@ -4,14 +4,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.definition.data.FontDefinition
 import world.gregs.voidps.cache.definition.decoder.FontDecoder
 
-/**
- * The exact inverse of [FontDecoder].
- *
- * A fixed width font is 263 bytes and has no choices in it. The variable width form writes the two
- * coverage tables and re-delta-codes the offset profiles; nothing in the 727 cache uses it, so it
- * is here for completeness rather than because a font exercises it, and it refuses to guess -
- * a definition whose profiles do not agree with its coverage widths is an error, not a wrong file.
- */
 class FontEncoder {
 
     fun Writer.encode(definition: FontDefinition) {
@@ -44,7 +36,6 @@ class FontEncoder {
         writeByte(definition.bottomPadding)
     }
 
-    /** One offset table, delta coded from 0 and wrapped in a byte, as the decoder read it. */
     private fun Writer.writeProfiles(
         definition: FontDefinition,
         profiles: Array<IntArray>?,

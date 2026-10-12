@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.magic;
 
 import com.rs.engine.quest.Quest;
@@ -195,38 +179,38 @@ public class Magic {
 				player.stopAll();
 				player.getInterfaceManager().sendInterface(432);
 				break;
-			case 24: // Home teleport
+			case 24:
 				useHomeTele(player);
 				break;
-			case 37: // Mobilising Armies teleport
+			case 37:
 				sendNormalTeleportSpell(player, 10, 19, Tile.of(2413, 2848, 0), new RuneSet(Rune.LAW, 1, Rune.WATER, 1, Rune.AIR, 1));
 				break;
-			case 40: // Varrock teleport
+			case 40:
 				sendNormalTeleportSpell(player, 25, 19, Tile.of(3212, 3424, 0), new RuneSet(Rune.FIRE, 1, Rune.AIR, 3, Rune.LAW, 1));
 				break;
-			case 43: // Lumbridge teleport
+			case 43:
 				sendNormalTeleportSpell(player, 31, 41, Tile.of(3222, 3218, 0), new RuneSet(Rune.EARTH, 1, Rune.AIR, 3, Rune.LAW, 1));
 				break;
-			case 46: // Falador teleport
+			case 46:
 				sendNormalTeleportSpell(player, 37, 48, Tile.of(2964, 3379, 0), new RuneSet(Rune.WATER, 1, Rune.AIR, 3, Rune.LAW, 1));
 				break;
-			case 48: // PoH teleport
+			case 48:
 				sendNormalTeleportSpell(player, 40, 48, Tile.of(player.getHouse().getLocation().getTile()), new RuneSet(Rune.AIR, 1, Rune.EARTH, 1, Rune.LAW, 1), () -> {
 					player.tele(Tile.of(player.getTile()));
 					enterHouseAndResetDamage(player);
 				});
 				break;
-			case 51: // Camelot teleport
+			case 51:
 				sendNormalTeleportSpell(player, 45, 55.5, Tile.of(2757, 3478, 0), new RuneSet(Rune.AIR, 5, Rune.LAW, 1));
 				break;
-			case 57: // Ardougne teleport
+			case 57:
 				if (player.isQuestComplete(Quest.PLAGUE_CITY) && player.getBool(ARDOUGNE_TELEPORT_UNLOCKED)) {
 					sendNormalTeleportSpell(player, 51, 61, Tile.of(2664, 3305, 0), new RuneSet(Rune.WATER, 2, Rune.LAW, 2));
 				} else {
 					player.sendMessage("You have not yet learned this spell.");
 				}
 				break;
-			case 62: // Watchtower teleport
+			case 62:
 				if (player.isQuestComplete(Quest.WATCHTOWER) && player.getBool(WATCHTOWER_SCROLL_READ)) {
 					final Tile WATCHTOWER_TILE = Tile.of(2547, 3113, 2);
 					final Tile YANILLE_TILE = Tile.of(2576, 3089, 0);
@@ -237,14 +221,14 @@ public class Magic {
 					player.sendMessage("You have not yet learned this spell.");
 				}
 				break;
-			case 69: // Trollheim teleport
+			case 69:
 				if (player.isQuestComplete(Quest.EADGARS_RUSE)) {
 					sendNormalTeleportSpell(player, 51, 61, Tile.of(2882, 3668, 0), new RuneSet(Rune.FIRE, 2, Rune.LAW, 2));
 				} else {
 					player.sendMessage("You have not yet learned this spell.");
 				}
 				break;
-			case 72: // Ape Atoll teleport
+			case 72:
 				sendNormalTeleportSpell(player, 64, 76, Tile.of(2797, 2798, 1), new RuneSet(Rune.FIRE, 2, Rune.WATER, 2, Rune.LAW, 2));
 				break;
 			case 83:

@@ -7,31 +7,6 @@ import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 
-/**
- * The JS5 sector store: `main_file_cache.dat2` and its `.idx<n>` companions.
- *
- * `dat2` is a flat array of 520 byte sectors. `.idx<n>` is a flat array of six byte entries, one
- * per archive id, holding the container's length (u24) and the sector its chain starts at (u24);
- * an entry of all zeroes means the archive does not exist. Sector 0 is never used because a zero
- * next-pointer terminates a chain.
- *
- * Each sector begins with a header naming the archive and index it belongs to and the chunk of
- * the container it carries, which makes the whole store self-describing and lets a read reject a
- * chain that has been rewritten underneath it:
- *
- * ```
- * u16 archive (i32 when the archive id is above 65535)
- * u16 chunk
- * u24 next sector
- * u8  index
- * ```
- *
- * Reads are positional [FileChannel] reads and safe from any number of threads. Writes take a
- * lock, reuse the archive's existing chain when the new container needs no more sectors than the
- * old one and append past the end of `dat2` otherwise, so a neighbouring archive's chain is never
- * touched. The container's sectors are forced to disk before the index entry that points at them,
- * so a crash can only ever leave unreferenced bytes behind, never a dangling entry.
- */
 class FileStore private constructor(
     val directory: File,
     private val data: RandomAccessFile,
@@ -44,17 +19,9 @@ class FileStore private constructor(
     private val indexChannels: Array<FileChannel?> = Array(indexFiles.size) { indexFiles[it]?.channel }
     private val lock = Any()
 
-    /**
-     * Whether every [write] forces its sectors and its index entry to disk before returning.
-     *
-     * On by default, which is what makes a write crash safe. A build that creates a store from
-     * scratch turns it off: a quarter of a million archives means half a million `fsync` calls,
-     * and a crash mid-build only costs the build, which starts over anyway.
-     */
     @Volatile
     var durable: Boolean = true
 
-    /** Number of indices the store has, which is index 255's archive count. */
     fun indexCount(): Int {
         val fromTable = ((indexChannels[REFERENCE_INDEX]?.size() ?: 0L) / INDEX_ENTRY_SIZE).toInt()
         return maxOf(indexCount, fromTable)
@@ -62,10 +29,6 @@ class FileStore private constructor(
 
     fun hasIndex(index: Int): Boolean = indexChannels.getOrNull(index) != null
 
-    /**
-     * The container bytes of [archive], or null when the index or the archive does not exist or
-     * its sector chain is broken.
-     */
     fun read(index: Int, archive: Int): ByteArray? {
         val indexChannel = indexChannels.getOrNull(index) ?: return null
         if (archive < 0) {
@@ -119,7 +82,6 @@ class FileStore private constructor(
         return output
     }
 
-    /** Replace (or create) [archive]'s container bytes. */
     fun write(index: Int, archive: Int, container: ByteArray) {
         check(writable) { "This store was opened read only." }
         require(index in 0 until indexFiles.size) { "Index $index is out of range." }
@@ -139,9 +101,6 @@ class FileStore private constructor(
 
             val sectors = reusableChain(index, archive, needed, payloadSize, big) ?: appendChain(needed)
 
-            // A chain that runs straight through the file - which every appended chain does -
-            // is built up whole and written in one call; 520 byte writes cost more in syscalls
-            // than the data itself when a whole cache is being packed.
             val contiguous = (1 until needed).all { sectors[it] == sectors[it - 1] + 1 }
             val buffer = ByteArray(if (contiguous) needed * SECTOR_SIZE else SECTOR_SIZE)
             var written = 0
@@ -177,7 +136,6 @@ class FileStore private constructor(
                 data.seek(sectors[0].toLong() * SECTOR_SIZE)
                 data.write(buffer, 0, (needed - 1) * SECTOR_SIZE + headerSize + minOf(container.size - (needed - 1) * payloadSize, payloadSize))
             }
-            // The entry must not become visible before the sectors it points at.
             if (durable) {
                 data.fd.sync()
             }
@@ -196,10 +154,6 @@ class FileStore private constructor(
         }
     }
 
-    /**
-     * Forget [archive]. Its sectors are left in place unreferenced; only the index entry is
-     * cleared, which is what makes the archive disappear.
-     */
     fun remove(index: Int, archive: Int) {
         check(writable) { "This store was opened read only." }
         require(archive >= 0) { "Archive id $archive is negative." }
@@ -216,7 +170,6 @@ class FileStore private constructor(
         }
     }
 
-    /** Every archive id [index]'s idx file has an entry for, ascending. */
     fun archives(index: Int): IntArray {
         val channel = indexChannels.getOrNull(index) ?: return IntArray(0)
         val length = channel.size()
@@ -243,12 +196,6 @@ class FileStore private constructor(
         return ids.copyOf(found)
     }
 
-    /**
-     * The first [needed] sectors of [archive]'s current chain when the chain is intact and long
-     * enough to hold the new container, otherwise null. Reusing the chain keeps `dat2` from
-     * growing on every save; anything longer has to be appended because the tail of the old
-     * chain cannot be extended without walking into whatever follows it.
-     */
     private fun reusableChain(index: Int, archive: Int, needed: Int, payloadSize: Int, big: Boolean): IntArray? {
         val channel = indexChannels[index] ?: return null
         val entry = ByteBuffer.allocate(INDEX_ENTRY_SIZE)
@@ -290,7 +237,6 @@ class FileStore private constructor(
         return sectors
     }
 
-    /** Contiguous sectors past the end of the data file, rounded up to a sector boundary. */
     private fun appendChain(needed: Int): IntArray {
         val start = (data.length() + SECTOR_SIZE - 1) / SECTOR_SIZE
         check(start + needed <= MAX_SECTOR) {
@@ -312,7 +258,6 @@ class FileStore private constructor(
     companion object {
         const val CACHE_FILE_NAME = "main_file_cache"
 
-        /** Index 255 holds one archive per index: that index's reference table. */
         const val REFERENCE_INDEX = 255
 
         const val SECTOR_SIZE = 520
@@ -322,18 +267,14 @@ class FileStore private constructor(
         const val SECTOR_DATA_SIZE_BIG = 510
         const val INDEX_ENTRY_SIZE = 6
 
-        /** Above this an archive id no longer fits a sector header's u16 and the header grows. */
         const val MAX_SMALL_ARCHIVE = 0xffff
 
-        /** The index entry stores the container size in three bytes. */
         const val MAX_CONTAINER_SIZE = 0xffffff
 
-        /** Sector pointers are three bytes wide, in index entries and sector headers alike. */
         const val MAX_SECTOR = 0xffffffL
 
         private const val INDEX_SLOTS = 256
 
-        /** Open the store in [dir]. The data file must already exist. */
         fun open(dir: File, writable: Boolean = false): FileStore {
             val dataFile = File(dir, "$CACHE_FILE_NAME.dat2")
             if (!dataFile.exists()) {
@@ -352,11 +293,6 @@ class FileStore private constructor(
             return FileStore(dir, data, indexFiles, writable, (referenceLength / INDEX_ENTRY_SIZE).toInt())
         }
 
-        /**
-         * Create an empty writable store in [dir] with idx files for indices 0 until
-         * [indexCount] and for index 255. The data file starts one sector long because sector 0
-         * is unusable - a zero next-pointer ends a chain.
-         */
         fun create(dir: File, indexCount: Int): FileStore {
             require(indexCount in 0 until REFERENCE_INDEX) { "Index count $indexCount is out of range." }
             dir.mkdirs()

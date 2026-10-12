@@ -5,13 +5,6 @@ import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.BillboardType
 import world.gregs.voidps.cache.definition.decoder.BillboardDecoder
 
-/**
- * Writes a billboard (index 29 archive 0) file.
- *
- * Opcodes 6 and 7 are bare markers, so a billboard's flags are written by their presence alone.
- * The two records that are not the value they set are inverted here: opcode 1 writes the `0xffff`
- * sentinel for a billboard with no material, and opcode 2's shorts are one less than the sizes.
- */
 class BillboardEncoder : OpcodeEncoder<BillboardType>() {
 
     override fun opcodes(definition: BillboardType): IntArray {

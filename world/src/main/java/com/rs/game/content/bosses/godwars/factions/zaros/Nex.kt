@@ -123,12 +123,10 @@ class Nex(id: Int, tile: Tile, spawned: Boolean) : MinionHost(id, tile, spawned,
         summon()
     }
 
-    /** Her prayer switches and her death throes are all transformations; a fresh Nex wears none. */
     private fun restoreForm() {
         if (id != baseId) transformIntoNPC(baseId)
     }
 
-    /** Nex takes her minions' power before she will fight: nothing can touch her until she has. */
     private fun summon() {
         WorldTasks.scheduleTimer { tick ->
             if (hasFinished() || isDead) return@scheduleTimer false

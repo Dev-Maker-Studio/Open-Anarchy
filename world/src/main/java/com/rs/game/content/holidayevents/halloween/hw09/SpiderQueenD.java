@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.holidayevents.halloween.hw09;
 
 import com.rs.engine.dialogue.Conversation;
@@ -92,7 +76,6 @@ public class SpiderQueenD extends Conversation {
 			addNPC(8975, HeadE.SPIDER_CALM, "Now go, both of you.");
 			addNext(() -> {
 				player.set(Halloween2009.STAGE_KEY, 10);
-				//player.getInventory().addItemDrop(new Item(15352, 1));
 				player.getInventory().addItemDrop(9921, 1);
 				player.getInventory().addItemDrop(9922, 1);
 				player.getInventory().addItemDrop(9923, 1);
@@ -101,7 +84,6 @@ public class SpiderQueenD extends Conversation {
 				player.getInventory().addItemDrop(1053, 1);
 				player.getInventory().addItemDrop(1055, 1);
 				player.getInventory().addItemDrop(1057, 1);
-				//player.addDiangoReclaimItem(15352);
 				player.addDiangoReclaimItem(9921);
 				player.addDiangoReclaimItem(9922);
 				player.addDiangoReclaimItem(9923);

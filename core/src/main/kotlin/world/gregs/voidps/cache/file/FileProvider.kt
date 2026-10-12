@@ -10,9 +10,6 @@ import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.file.type.CacheFileProvider
 import world.gregs.voidps.cache.file.type.MemoryFileProvider
 
-/**
- * Provides cache sectors requested by the client
- */
 interface FileProvider {
 
     fun data(index: Int, archive: Int): ByteArray?
@@ -34,10 +31,6 @@ interface FileProvider {
         write.writeByte(if (prefetch) compression or 0x80 else compression)
         write.writeInt(size)
         encode(write, data)
-        //TODO if encryption ever gets set:
-        //if (encryptionValue != 0)
-        //  for (int i = 0; i < writeBuffer.length; i++)
-        //    writeBuffer[i] = writeBuffer[i] ^ encryptionValue
         write.flush()
         return true
     }

@@ -70,7 +70,6 @@ fun handleFurniturePlacementClick(player: Player, tile: Tile): Boolean {
     return true
 }
 
-/** The ghost exists only on the player's client, so its options never find a world object; this takes them before that lookup. */
 fun handleGhostClick(player: Player, tile: Tile, objectId: Int, opNum: Int): Boolean {
     val placement = player.tempAttribs.getO<Placement>(PLACEMENT_KEY) ?: return false
     val ghost = placement.ghost ?: return false

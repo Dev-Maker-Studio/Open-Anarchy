@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.db.collection;
 
 import com.google.gson.JsonIOException;
@@ -51,12 +35,6 @@ public class PlayerManager extends DBItemManager {
 		save(player, null);
 	}
 
-	/**
-	 * Serializing on the caller's thread is what makes a save atomic. Handing the live player to the
-	 * DB thread let Gson walk it while the world thread was still moving items, so a save could hold
-	 * an inventory read before a removal and a world that had already been given the items - the
-	 * dropped-and-kept duplication. Callers must be on the world thread; only the write is deferred.
-	 */
 	public void save(Player player, Runnable done) {
 		String username = player.getUsername();
 		String json = snapshot(player);
@@ -91,12 +69,6 @@ public class PlayerManager extends DBItemManager {
 		}
 	}
 
-	/**
-	 * Result of a player lookup for login. {@code loadError} is set when an existing player document
-	 * could not be read/decoded from Mongo (a corrupt or schema-drifted save). This must be kept
-	 * distinct from a null player - which legitimately means "no save yet, create a fresh player" -
-	 * so a decode failure never silently wipes a character.
-	 */
 	public record PlayerResult(Player player, boolean loadError) {
 		public static PlayerResult of(Player player) {
 			return new PlayerResult(player, false);
@@ -107,11 +79,6 @@ public class PlayerManager extends DBItemManager {
 		}
 	}
 
-	/**
-	 * Loads a player for login, reporting a decode failure separately from "not found" via
-	 * {@link PlayerResult}. Callers that only want a best-effort lookup should use the null-safe
-	 * {@link #getSyncUsername(String)}.
-	 */
 	public PlayerResult loadForLogin(String username) {
 		Player loggedIn = World.getPlayerByUsername(username);
 		if (loggedIn != null)

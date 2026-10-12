@@ -44,10 +44,6 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
         return this
     }
 
-    /**
-     * Initialize vars without a session for offline/tool usage.
-     * This allows using getVar/setVar/getVarBit/setVarBit without network sync.
-     */
     fun initWithoutSession(): Vars {
         varpValues = IntArray(varpTableSize())
         modified = HashSet()
@@ -55,10 +51,6 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
         return this
     }
 
-    /**
-     * Wide enough for every varp the catalogs name as well as every one the cache holds, so a varp
-     * added to the source tree is writable against a cache packed before it existed.
-     */
     private fun varpTableSize(): Int {
         val fromCache = Cache.get().lastFileId(Index.CONFIGS, Config.VARP) + 1
         val fromCatalog = (Gameval.allEntries(Gameval.VARP).keys.maxOrNull() ?: -1) + 1
@@ -98,30 +90,11 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
 
     fun saveVarBit(id: Int, value: Int) = setVarBit(id, value, forceSend = false, save = true)
 
-    /**
-     * Reads a varp, treating anything outside the varp table as unset (0), for the same reason
-     * [getVarBit] does: object and NPC transforms name varps straight out of the cache, and one
-     * dangling reference coming into view would otherwise take region loading down with it.
-     */
     fun getVar(id: Int): Int {
         if (id < 0 || id >= varpValues.size) return 0
         return varpValues[id]
     }
 
-    /**
-     * Reads a varbit, treating anything the cache cannot resolve as unset (0).
-     *
-     * This used to index straight through and throw. The cache genuinely contains
-     * dangling references: 40 objects name a varbit past the end of the varbit table
-     * (the table holds 2697 entries; object transforms reference ids as high as 2703).
-     * Since object transforms are resolved during region loading, one of those objects
-     * coming into view took the whole load path down with an
-     * `ArrayIndexOutOfBoundsException` -- a hard crash caused purely by data, on a path
-     * with no way to recover.
-     *
-     * 0 is the right answer rather than merely a safe one: it is what an unset var
-     * reads as, so an unresolvable varbit selects the transform's default.
-     */
     fun getVarBit(id: Int): Int {
         val defs = VarBitDefinitions.getDefs(id)
         if (defs.index < 0 || defs.index >= varpValues.size) return 0

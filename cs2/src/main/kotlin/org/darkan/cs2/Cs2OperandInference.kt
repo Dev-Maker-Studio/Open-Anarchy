@@ -3,22 +3,8 @@ package org.darkan.cs2
 import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.Cache
 
-/**
- * Recovers operand widths for opcodes the reference client no longer defines.
- *
- * The deobfuscated client enumerates 962 of the 1006 opcodes this cache uses;
- * the rest were dropped along the way. Their operand width is still recoverable
- * from the files themselves: a script's instruction stream must consume exactly
- * the bytes between the name and the header, and yield exactly the instruction
- * count the header declares. Where one width fits and the other does not, the
- * width is proven.
- *
- * The solver propagates: each pass fixes whatever is unambiguous, which shrinks
- * the search space for scripts that use several unknown opcodes at once.
- */
 object Cs2OperandInference {
 
-    /** Operand encodings an unknown opcode could plausibly use. */
     enum class Width(val bytes: Int) { BYTE(1), INT(4) }
 
     data class Result(
@@ -44,7 +30,6 @@ object Cs2OperandInference {
         }
         log("${pending.size} scripts use at least one undefined opcode")
 
-        // Every opcode starts out able to take either width.
         val candidates = HashMap<Int, MutableSet<Width>>()
 
         var pass = 0
@@ -60,7 +45,6 @@ object Cs2OperandInference {
                     stillUnsolved.add(id)
                     continue
                 }
-                // Widths that appear in at least one valid parse of this script.
                 val union = HashMap<Int, MutableSet<Width>>()
                 for (solution in solutions) {
                     for ((op, width) in solution) {
@@ -137,8 +121,6 @@ object Cs2OperandInference {
     private fun usesUnknownOpcode(raw: ByteArray): Boolean {
         val (headerStart, _) = bounds(raw) ?: return false
         var at = instructionStart(raw)
-        // A single unknown opcode desynchronises the walk, so this is only a
-        // cheap pre-filter: anything that fails to parse cleanly is a candidate.
         while (at + 2 <= headerStart) {
             val opcodeId = ((raw[at].toInt() and 0xFF) shl 8) or (raw[at + 1].toInt() and 0xFF)
             val op = Cs2Op.find(opcodeId) ?: return true
@@ -158,11 +140,6 @@ object Cs2OperandInference {
         else -> 1
     }
 
-    /**
-     * All assignments of widths to the unknown opcodes in this script that make
-     * the instruction stream land exactly on the header with the declared count.
-     * Bounded so a pathological file cannot blow up the search.
-     */
     private fun solve(raw: ByteArray, known: Map<Int, Set<Width>>): List<Map<Int, Width>> {
         val (headerStart, instructionCount) = bounds(raw) ?: return emptyList()
         val start = instructionStart(raw)

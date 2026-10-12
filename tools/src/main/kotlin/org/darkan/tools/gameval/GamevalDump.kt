@@ -37,22 +37,8 @@ import world.gregs.voidps.cache.definition.decoder.StructDecoder
 import world.gregs.voidps.cache.definition.decoder.VarBitDecoder
 import java.io.File
 
-/**
- * Dumps the whole 727 cache to one JSONL file per gameval type.
- *
- * The corpus exists to be diffed against other revisions' dumps, so it is written for a differ and
- * not for a human: one JSON object per line, ascending id, every array inline and complete, and
- * one file per type so a type can be reloaded on its own. Types are decoded one at a time and
- * streamed straight out, so peak memory is one type's definitions rather than the whole cache.
- *
- * Usage: `gameval dump <outDir>`
- */
 object GamevalDump {
 
-    /**
-     * Config-index archives the 727 tree has no decoder for. They are still dumped, as raw
-     * bytes, because an id-to-bytes listing is enough to line the ids up with an RS3 name list.
-     */
     private val RAW_CONFIG_ARCHIVES = listOf(
         "cursor" to Config.CURSORS,
         "headbar" to Config.HIT_BARS,
@@ -69,16 +55,8 @@ object GamevalDump {
         "vargroup" to Config.VAR_GROUP
     )
 
-    /** Above this size a raw config file is identified by digest only, not spelled out in hex. */
     private const val MAX_HEX_BYTES = 4096
 
-    /**
-     * Where a dump lands when no directory is given.
-     *
-     * The catalogs the dump is evidence for live in the cache source tree
-     * (`cache-source/gamevals`, see `docs/cache-source.md`), so the working files belong beside
-     * them rather than in a `gamevals/` directory that no longer exists at the repository root.
-     */
     private const val DEFAULT_OUTPUT = "cache-source/gamevals/work/727"
 
     fun run(cache: Cache, args: List<String>) {
@@ -100,7 +78,6 @@ object GamevalDump {
         println("  gameval dump [outDir]    Dump every decoded cache type as JSONL (default $DEFAULT_OUTPUT)")
     }
 
-    /** What one type's dump produced, for the manifest. */
     private class TypeReport(
         val type: String,
         val fileName: String,
@@ -160,15 +137,6 @@ object GamevalDump {
             manifest(System.currentTimeMillis() - start)
         }
 
-        /**
-         * Decode a whole type through its own decoder and write it out, id ascending.
-         *
-         * A decoder that throws part-way through takes the whole type down with it, and the 727
-         * tree has decoders that do - the identity kit files this revision writes are read past
-         * their end. So a failed bulk load is retried id by id: every id that does decode is
-         * still written, and the ones that do not carry a `decodeError` field instead of
-         * silently vanishing from the corpus.
-         */
         private fun <T : Definition> definitions(
             type: String,
             source: String,
@@ -199,18 +167,9 @@ object GamevalDump {
             }
         }
 
-        /**
-         * Whether the cache holds a file for [id] under [decoder]'s archive/file layout.
-         *
-         * The decoders size their arrays one past the last file, so a bulk load always ends on
-         * an id that has no file, and some archives have holes (`obj`, `varp`, `varc`). Those ids
-         * decode to a default definition; without this check they would be dumped as if the
-         * cache had them, and a consumer would take placeholders for ids that do not exist.
-         */
         private fun hasFile(decoder: DefinitionDecoder<*>, id: Int): Boolean =
             cache.files(decoder.index, decoder.getArchive(id)).contains(decoder.getFile(id))
 
-        /** Decode every id of a type separately, recording rather than propagating failures. */
         private fun <T : Definition> perId(decoder: DefinitionDecoder<T>, errors: MutableMap<Int, String>): Array<T> {
             val size = decoder.size(cache) + 1
             val definitions = decoder.create(size)
@@ -226,19 +185,6 @@ object GamevalDump {
 
         private fun describe(e: Throwable) = "${e.javaClass.simpleName}: ${e.message ?: "no message"}"
 
-        /**
-         * Clientscripts come from the tools CS2 codec, not from the core `ClientScriptDecoder`.
-         *
-         * The core decoder is written for a header this revision does not have: it skips the
-         * long locals/args counts unless told it is reading 667, and it sizes the instruction
-         * arrays from a fixed 12-byte back-offset instead of the switch block's own length. On
-         * 727 that reads a garbage instruction count - millions of entries for a script with a
-         * few hundred - so it produces both wrong counts and gigabytes of padding. The CS2 codec
-         * here is verified by re-encoding every script back to identical bytes (`cs2 verify`).
-         *
-         * The three operand arrays run parallel to the instruction array: index n holds the
-         * operand of instruction n, with the two unused stacks left at their zero value.
-         */
         private fun clientScripts() {
             write("clientscript", "index ${Index.CLIENT_SCRIPTS}") { lines, report ->
                 val hashes = cache.archiveNameHashes(Index.CLIENT_SCRIPTS)
@@ -301,11 +247,6 @@ object GamevalDump {
             }
         }
 
-        /**
-         * Interfaces are streamed one at a time: a single interface can hold hundreds of
-         * components, and holding all 1300 of them at once is the only part of this dump that
-         * would need real heap.
-         */
         private fun interfaces() {
             write("interface", "index ${Index.INTERFACES}") { lines, _ ->
                 val decoder = InterfaceDecoder()
@@ -320,7 +261,6 @@ object GamevalDump {
             }
         }
 
-        /** Font metrics carry their decoded kerning table plus the raw archive's identity. */
         private fun fontMetrics() {
             write("fontmetrics", "index ${Index.FONT_METRICS}") { lines, _ ->
                 val loaded = FontDecoder().load(cache)
@@ -331,11 +271,6 @@ object GamevalDump {
             }
         }
 
-        /**
-         * Models are dumped as identity plus the header counts only. Full geometry is megabytes
-         * per model and says nothing about which dev name an id carries; the vertex and face
-         * counts are read straight from the footer without running a decode.
-         */
         private fun models() {
             write("model", "index ${Index.MODELS}") { lines, _ ->
                 for (id in archiveIds(Index.MODELS)) {
@@ -345,10 +280,6 @@ object GamevalDump {
             }
         }
 
-        /**
-         * Graphics are dumped from the trailer only: frame count, canvas size, palette size and
-         * each frame's placement. The pixel rasters are skipped, so nothing decompresses twice.
-         */
         private fun graphics() {
             write("graphic", "index ${Index.GRAPHICS}") { lines, _ ->
                 for (id in archiveIds(Index.GRAPHICS)) {
@@ -358,7 +289,6 @@ object GamevalDump {
             }
         }
 
-        /** Identity-only dump of an index whose archives have no decoder in this tree. */
         private fun rawArchives(type: String, index: Int) {
             write(type, "index $index") { lines, _ ->
                 for (id in archiveIds(index)) {
@@ -368,10 +298,6 @@ object GamevalDump {
             }
         }
 
-        /**
-         * Identity plus full hex of every file in a config archive with no decoder. These
-         * archives are tiny, and the bytes are what a future decoder would be written against.
-         */
         private fun rawConfigArchive(type: String, archive: Int) {
             write(type, "config archive $archive") { lines, _ ->
                 val last = cache.lastFileId(Index.CONFIGS, archive)
@@ -383,7 +309,6 @@ object GamevalDump {
             }
         }
 
-        /** Ascending archive ids for [index], falling back to the raw archive listing. */
         private fun archiveIds(index: Int): IntArray {
             val ids = cache.archiveIds(index)
             return if (ids.isNotEmpty()) ids else cache.archives(index).sortedArray()
@@ -395,12 +320,6 @@ object GamevalDump {
             "sha1" to data?.let { Json.sha1(it) }
         )
 
-        /**
-         * Vertex and face counts from a model footer.
-         *
-         * Both 727 footer layouts open with the same four bytes, so the counts are readable
-         * without decoding any geometry. The sizes match the tools model decoder's.
-         */
         private fun modelHeader(data: ByteArray?): List<Pair<String, Any?>> {
             if (data == null || data.size < MIN_MODEL_BYTES) {
                 return listOf("headerRead" to false)
@@ -426,14 +345,6 @@ object GamevalDump {
             )
         }
 
-        /**
-         * Frame layout from a graphic trailer.
-         *
-         * The trailer is `7 + 8 * frames` bytes: the canvas size, the palette size, then four
-         * shorts per frame, then the frame count itself as the final two bytes. Reading it is
-         * the same walk the core graphic decoder makes
-         * before it touches any pixels.
-         */
         private fun graphicHeader(data: ByteArray?): List<Pair<String, Any?>> {
             if (data == null || data.size < 9) {
                 return listOf("headerRead" to false)
@@ -471,7 +382,6 @@ object GamevalDump {
             )
         }
 
-        /** Every index that names its archives, as `{index: {archiveId: nameHash}}`. */
         private fun indexNameHashes() {
             val file = File(directory, "index-name-hashes.json")
             val builder = StringBuilder()
@@ -507,7 +417,6 @@ object GamevalDump {
             println("index-name-hashes.json: ${file.length()} bytes")
         }
 
-        /** Run one type's dump, timing it and recording whatever went wrong. */
         private fun write(type: String, source: String, block: (JsonLines, TypeReport) -> Unit) {
             val report = TypeReport(type, "$type.jsonl", source)
             reports.add(report)
@@ -525,8 +434,6 @@ object GamevalDump {
                 report.bytes = lines.file.length()
                 report.durationMs = System.currentTimeMillis() - start
                 if (report.records == 0 && report.error == null) {
-                    // Nothing under this source in this revision. An empty file would read as a
-                    // dump that failed; the manifest entry says plainly that there was nothing.
                     lines.file.delete()
                     report.note = "no records: nothing under this source in the cache, file not written"
                 }
@@ -573,14 +480,10 @@ object GamevalDump {
     }
 }
 
-/** Smallest archive that could hold a model header. */
 private const val MIN_MODEL_BYTES = 20
 
-/** Footer size for the `0xFFFF`-terminated model format: 21 header bytes plus the marker. */
 private const val NEW_FORMAT_FOOTER_BYTES = 23
 
-/** Footer size for the pre-`0xFFFF` model format. */
 private const val OLD_FORMAT_FOOTER_BYTES = 18
 
-/** Entry point for the `gameval` CLI mode. */
 fun runGameval(cache: Cache, args: List<String>) = GamevalDump.run(cache, args)

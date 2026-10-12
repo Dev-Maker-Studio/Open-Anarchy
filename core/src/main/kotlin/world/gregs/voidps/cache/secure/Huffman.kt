@@ -11,9 +11,6 @@ class Huffman {
     private lateinit var decryptedKeys: IntArray
     private var decryptionValues = listOf(0, 0x40, 0x20, 0x10, 0x8, 0x4, 0x2, 0x1)
 
-    /**
-     * Load huffman tree from cache for compression
-     */
     fun load(huffman: ByteArray) : Huffman {
         val start = System.currentTimeMillis()
         frequencies = huffman
@@ -21,19 +18,13 @@ class Huffman {
         decryptKeys = IntArray(8)
         val freq = IntArray(33)
         var key = 0
-        // For each non-zero frequency
         for (index in huffman.indices) {
             val size = huffman[index].toInt()
             if (size == 0) continue
-            // Calculate maximum frequency
             val maximumFreq = 1 shl 32 - size
-            // zero or the previous minimum
             val currentFreq = freq[size]
-            // Store the min
             masks!![index] = currentFreq
-            // Set the frequency to the
-            freq[size] = if (currentFreq and maximumFreq == 0) { // If the min and max are equal ish?
-                // Starting from the bottom find the smallest frequency indices
+            freq[size] = if (currentFreq and maximumFreq == 0) {
                 for (idx in size - 1 downTo 1) {
                     val leftFreq = freq[idx]
                     if (leftFreq != currentFreq) {
@@ -41,17 +32,13 @@ class Huffman {
                     }
                     val rightFreq = 1 shl 32 - idx
                     if (rightFreq and leftFreq != 0) {
-                        // Move up the tree?
                         freq[idx] = freq[idx - 1]
                         break
                     }
-                    // Merge the two smallest trees
                     freq[idx] = leftFreq + rightFreq
                 }
-                // Sum of their frequencies
                 maximumFreq + currentFreq
             } else {
-                // Move up the tree?
                 freq[size - 1]
             }
             for (idx in size + 1..32) {
@@ -88,11 +75,6 @@ class Huffman {
         return this
     }
 
-    /**
-     * Decompresses string of length [characters] using Huffman coding
-     * @param packet The packet containing the compressed data
-     * @param characters The number of string characters to decompress
-     */
     fun decompress(packet: Reader, characters: Int): String {
         val textBuffer = ByteArray(packet.readableBytes())
         packet.readBytes(textBuffer)
@@ -132,18 +114,11 @@ class Huffman {
         }
     }
 
-    /**
-     * Formats, compresses and writes [message] using Huffman coding
-     * @param message The message to encode
-     */
     fun compress(message: String): ByteArray {
         val writer = BufferWriter(message.length * 2 + 2)
         try {
-            // Format the message
             val messageData = formatMessage(message)
-            // Write message length
             writer.writeSmart(messageData.size)
-            // Write the compressed message
             compress(messageData, writer)
         } catch (exception: Throwable) {
             exception.printStackTrace()
@@ -151,11 +126,6 @@ class Huffman {
         return writer.toArray()
     }
 
-    /**
-     * Compresses [message] using Huffman coding and writes to [builder]
-     * @param message The message to compress, split by symbol into a byte array
-     * @param builder The packet to write the compressed data too
-     */
     private fun compress(message: ByteArray, builder: BufferWriter) {
         try {
             if (masks == null) {
@@ -185,18 +155,12 @@ class Huffman {
                 }
             }
 
-            // Set the packet position to the correct place
             builder.position(7 + position shr 3)
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
-    /**
-     * Replaces unknown symbols with question marks
-     * @param message The text to format
-     * @return message split by character
-     */
     private fun formatMessage(message: String): ByteArray {
         val len = message.length
         val bytes = ByteArray(len)
@@ -205,34 +169,34 @@ class Huffman {
             if (ch.code > 0 && ch.code < 128 || ch.code >= 160 && ch.code <= 255) {
                 bytes[i] = ch.code.toByte()
             } else when (ch.code) {
-                8364 -> bytes[i] = -128  // €
-                8218 -> bytes[i] = -126  // ‚
-                402 -> bytes[i] = -125   // ƒ
-                8222 -> bytes[i] = -124  // „
-                8230 -> bytes[i] = -123  // …
-                8224 -> bytes[i] = -122  // †
-                8225 -> bytes[i] = -121  // ‡
-                710 -> bytes[i] = -120   // ˆ
-                8240 -> bytes[i] = -119  // ‰
-                352 -> bytes[i] = -118   // Š
-                8249 -> bytes[i] = -117  // ‹
-                338 -> bytes[i] = -116   // Œ
-                381 -> bytes[i] = -114   // Ž
-                8216 -> bytes[i] = -111  // '
-                8217 -> bytes[i] = -110  // '
-                8220 -> bytes[i] = -109  // "
-                8221 -> bytes[i] = -108  // "
-                8226 -> bytes[i] = -107  // •
-                8211 -> bytes[i] = -106  // –
-                8212 -> bytes[i] = -105  // —
-                732 -> bytes[i] = -104   // ˜
-                8482 -> bytes[i] = -103  // ™
-                353 -> bytes[i] = -102   // š
-                8250 -> bytes[i] = -101  // ›
-                339 -> bytes[i] = -100   // œ
-                382 -> bytes[i] = -98    // ž
-                376 -> bytes[i] = -97    // Ÿ
-                else -> bytes[i] = 63    // ?
+                8364 -> bytes[i] = -128
+                8218 -> bytes[i] = -126
+                402 -> bytes[i] = -125
+                8222 -> bytes[i] = -124
+                8230 -> bytes[i] = -123
+                8224 -> bytes[i] = -122
+                8225 -> bytes[i] = -121
+                710 -> bytes[i] = -120
+                8240 -> bytes[i] = -119
+                352 -> bytes[i] = -118
+                8249 -> bytes[i] = -117
+                338 -> bytes[i] = -116
+                381 -> bytes[i] = -114
+                8216 -> bytes[i] = -111
+                8217 -> bytes[i] = -110
+                8220 -> bytes[i] = -109
+                8221 -> bytes[i] = -108
+                8226 -> bytes[i] = -107
+                8211 -> bytes[i] = -106
+                8212 -> bytes[i] = -105
+                732 -> bytes[i] = -104
+                8482 -> bytes[i] = -103
+                353 -> bytes[i] = -102
+                8250 -> bytes[i] = -101
+                339 -> bytes[i] = -100
+                382 -> bytes[i] = -98
+                376 -> bytes[i] = -97
+                else -> bytes[i] = 63
             }
         }
         return bytes

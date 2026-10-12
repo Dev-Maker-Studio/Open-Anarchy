@@ -70,7 +70,6 @@ class HousePlayerManager(private val house: House) {
         when (type) {
             House.LOGGED_OUT -> player.tile = house.location.tile
             House.KICKED     -> player.useStairs(-1, house.location.tile, 0, 1)
-            // House.TELEPORTED or anything else: do nothing special
         }
         players.remove(player)
         if (players.isEmpty()) {

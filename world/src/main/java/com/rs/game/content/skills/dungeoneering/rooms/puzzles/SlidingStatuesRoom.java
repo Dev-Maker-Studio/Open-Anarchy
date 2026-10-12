@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.rooms.puzzles;
 
 import org.darkan.core.map.ClipFlag;
@@ -30,17 +14,14 @@ import org.darkan.core.Utils;
 public class SlidingStatuesRoom extends PuzzleRoom {
 
 	public final int[][] STATUES_INACTIVE = {
-		//{7809, 7810, 7811, 7812}, //??
-		//range1, warr1, range2, warr2
-		{ 10942, 10943, 10944, 10945 }, //frozen
-		{ 10946, 10947, 10948, 10949 }, //aba
-		{ 10950, 10951, 10952, 10953 }, //furn
-		{ 12117, 12118, 12119, 12120 }, //occ
-		{ 12952, 12953, 12954, 12955 }, //warp
+		{ 10942, 10943, 10944, 10945 },
+		{ 10946, 10947, 10948, 10949 },
+		{ 10950, 10951, 10952, 10953 },
+		{ 12117, 12118, 12119, 12120 },
+		{ 12952, 12953, 12954, 12955 },
 	};
 
 	public final int[][] STATUES_ACTIVE = {
-		//{7813, 7814, 7815, 7817}, //??
 		{ 10954, 10955, 10956, 10957 },
 		{ 10958, 10959, 10960, 10961 },
 		{ 10962, 10963, 10964, 10965 },
@@ -96,7 +77,6 @@ public class SlidingStatuesRoom extends PuzzleRoom {
 		}
 
 		public void handle(final Player player, final boolean push) {
-			//TODO: make sure 2 players can't move 2 statues ontop of eachother in the same tick? although it doesn't really matter
 			boolean pull = !push;
 
 			int x = transform(-baseX, -baseY, 0).getXInChunk();

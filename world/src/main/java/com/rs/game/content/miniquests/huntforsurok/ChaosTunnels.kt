@@ -121,9 +121,7 @@ fun mapChaosTunnels() {
                             npc(DAHCSNU, HeadE.AMAZED, "Really?")
                             player(HeadE.FRUSTRATED, "Yes! Be afraid! Be very afraid! Ha ha ha!")
                             npc(DAHCSNU, HeadE.CALM_TALK, "I see. Well then, let's see how you handle this!")
-                            player(HeadE.AMAZED, "What...?!?!") //TODO deflect spell based on magic level?
-                            //If fail, player jumps and says they can't stop jumping
-                            //then CHEERFUL, "Hah! I knew you were no mage! Let that be a lesson to you! Now, please leave.
+                            player(HeadE.AMAZED, "What...?!?!")
                             npc(DAHCSNU, HeadE.AMAZED, "So! You are a good mage! You deflected my spell.")
                             player(HeadE.CALM_TALK, "Hah! Yes. I told you so! Now, I have work to be done.")
                             npc(DAHCSNU, HeadE.CALM_TALK, "Of course. Goodbye!")
@@ -184,7 +182,6 @@ fun mapChaosTunnels() {
         e.player.controllerManager.startController(WildernessController())
     }
 
-    //map portal types to walk on top of
     Stream.of(28779, 28888, 29537, 23095).forEach { id -> setObjectRouteType(id, GameObject.RouteType.WALK_ONTO) }
 
     onObjectClick(28779, 28888, 29537, 23095) { e ->
@@ -267,7 +264,6 @@ enum class PortalPair(val tile1: Tile, val tile2: Tile, private val surokLocked:
         if (surokLocked && !player.isMiniquestComplete(Miniquest.HUNT_FOR_SUROK, "to travel through this portal.", true)) return
         if (this == _16 && player.getMiniquestStage(Miniquest.HUNT_FOR_SUROK) == 2) {
             player.cutscene {
-                //Prep cutscene
                 endTile = Tile.of(3262, 5552, 0)
                 fadeInAndWait()
                 player.setMiniquestStage(Miniquest.HUNT_FOR_SUROK, 3)
@@ -283,7 +279,6 @@ enum class PortalPair(val tile1: Tile, val tile2: Tile, private val surokLocked:
                 camPos(13, 6, 3722, 0, 5)
                 fadeOutAndWait()
 
-                //Play the cutscene
                 surok.forceTalk("Pathetic creatures.")
                 surok.sync(6098, 1009)
                 surok.faceTile(tileFromLocal(10, 16))

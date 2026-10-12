@@ -44,68 +44,24 @@ import org.lwjgl.opengl.GL30.glGenVertexArrays
 import org.lwjgl.system.MemoryUtil
 import world.gregs.voidps.cache.Cache
 
-/**
- * Draws the RS727 sky.
- *
- * Appearance is taken from the reference client's `graphics/light/Skybox.kt`,
- * the implementation is not: the client blits a CPU graphic across the whole
- * viewport every frame, this builds one texture per material and then costs a
- * single attribute-less draw call.
- *
- * ### Where it goes in a frame
- *
- * Draw it **after** opaque scene geometry and before transparent geometry / UI.
- * The full-screen triangle sits exactly on the far plane with depth writes off
- * and a `GL_LEQUAL` test, so every pixel the scene already covers is rejected
- * by the depth test and never shades. Drawing it first would work too, but
- * would shade the whole viewport.
- *
- * ```kotlin
- * // once
- * val sky = SkyRenderer(cache)
- * sky.init()
- *
- * // whenever the map environment changes
- * sky.settings = SkySettings(materialId = ..., backgroundColor = fogColour)
- *
- * // per frame, after the opaque pass
- * sky.render(camera, window.width, window.height)
- * ```
- *
- * @param cache game cache used to build skybox material textures; may be null,
- *        in which case only the solid-colour fallback is available
- */
 class SkyRenderer(private val cache: Cache? = null) {
 
-    /**
-     * How the renderer puts back the GL state it changes.
-     *
-     * [SkyStateRestore.QUERY] is correct anywhere but costs a driver round trip; see the
-     * enum for why that matters when the sky is the last pass of a heavy frame.
-     */
     var stateRestore: SkyStateRestore = SkyStateRestore.QUERY
 
-    /** Sky parameters used by the next [render] call. Cheap to replace. */
     var settings: SkySettings = SkySettings.DEFAULT
 
     private var backgroundShader: ShaderProgram? = null
     private var vaoId: Int = 0
 
-    /** materialId -> built texture. Built lazily, kept for the renderer's life. */
     private val textures = HashMap<Int, SkyMaterial?>()
 
     private val solidColor = Vector3f()
     private val topColor = Vector3f()
     private val bottomColor = Vector3f()
 
-    // ShaderProgram has no vec2 setter, so the two-component uniforms are
-    // resolved and written here directly.
     private var uSkyViewport = -1
     private var uSkyOffset = -1
 
-    /**
-     * Compile shaders and create the empty VAO. Requires a current GL context.
-     */
     fun init() {
         if (backgroundShader != null) {
             return
@@ -118,27 +74,13 @@ class SkyRenderer(private val cache: Cache? = null) {
         uSkyViewport = glGetUniformLocation(background.id, "skyViewport")
         uSkyOffset = glGetUniformLocation(background.id, "skyOffset")
         backgroundShader = background
-        // Core profile forbids drawing with no VAO bound, even for an
-        // attribute-less shader that only reads gl_VertexID.
         vaoId = glGenVertexArrays()
     }
 
-    /**
-     * Draw the sky for [camera]'s orientation.
-     *
-     * Only the camera's yaw and pitch matter: the sky is infinitely far away,
-     * so its position and the projection matrix never enter the math.
-     */
     fun render(camera: Camera, viewportWidth: Int, viewportHeight: Int) {
         render(camera.yaw, camera.pitch, viewportWidth, viewportHeight)
     }
 
-    /**
-     * Lower level entry point for viewers that do not drive a [Camera].
-     *
-     * @param yawDegrees camera heading in degrees, matching [Camera.yaw]
-     * @param pitchDegrees camera pitch in degrees, matching [Camera.pitch]
-     */
     fun render(
         yawDegrees: Float,
         pitchDegrees: Float,
@@ -153,9 +95,6 @@ class SkyRenderer(private val cache: Cache? = null) {
         val width = viewportWidth.toFloat()
         val height = viewportHeight.toFloat()
 
-        // The client's scroll math, in floats. rotationX/rotationY are RS angle
-        // units (16384 == a full turn) and are negated relative to the camera so
-        // the sky reads as world-locked: turning right slides the sky left.
         val rotationX = wrap(-toAngleUnits(yawDegrees) + settings.rotation.toFloat(), ANGLE_UNITS)
         val rotationY = -toAngleUnits(pitchDegrees)
         val xOffset = wrap(rotationX * height / 4096f + (width - height) * 0.5f, height)
@@ -171,9 +110,6 @@ class SkyRenderer(private val cache: Cache? = null) {
         val alpha = settings.alpha.coerceIn(0f, 1f)
         val blended = alpha < 1f
 
-        // Save the pieces of GL state this pass changes. glIsEnabled and glGetBoolean are
-        // synchronous, so a caller that draws the sky at the end of a heavy frame can opt
-        // out of the readback (see SkyStateRestore).
         val query = stateRestore == SkyStateRestore.QUERY
         val cullWasEnabled = if (query) glIsEnabled(GL_CULL_FACE) else true
         val blendWasEnabled = if (query) glIsEnabled(GL_BLEND) else false
@@ -221,7 +157,6 @@ class SkyRenderer(private val cache: Cache? = null) {
         glBindVertexArray(0)
         glBindTexture(GL_TEXTURE_2D, 0)
 
-        // Restore.
         glDepthMask(depthWriteWasEnabled)
         if (!depthWasEnabled) {
             glDisable(GL_DEPTH_TEST)
@@ -237,14 +172,6 @@ class SkyRenderer(private val cache: Cache? = null) {
         }
     }
 
-    /**
-     * Build (or fetch) the GL texture for a skybox material.
-     *
-     * Uses the same procedural texture pipeline the model renderer uses, so a
-     * skybox material costs exactly one generation regardless of how many
-     * regions reference it. Failures are cached as null so a broken material is
-     * not retried every frame.
-     */
     private fun material(materialId: Int): SkyMaterial? {
         if (materialId < 0) {
             return null
@@ -275,15 +202,11 @@ class SkyRenderer(private val cache: Cache? = null) {
         glBindTexture(GL_TEXTURE_2D, textureId)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
-        // No mipmaps: the fragment shader wraps the coordinate itself, and
-        // mipmapped derivatives would bleed a seam across the tile boundary.
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
 
         val buffer = MemoryUtil.memAlloc(width * height * 4)
         try {
-            // Row 0 stays at v = 0: the fragment shader addresses the graphic in
-            // top-down window space, matching the client's blit.
             for (i in 0 until (width * height)) {
                 val pixel = argb[i]
                 buffer.put(((pixel shr 16) and 0xFF).toByte())
@@ -304,14 +227,11 @@ class SkyRenderer(private val cache: Cache? = null) {
             textureId = textureId,
             topColor = unpack(first, Vector3f()),
             bottomColor = unpack(last, Vector3f()),
-            // The client only paints the transition bands when the sampled
-            // pixel carries alpha (`srcBackgroundColor and 0xffffff.inv() != 0`).
             topOpaque = ((first shr 24) and 0xFF) != 0,
             bottomOpaque = ((last shr 24) and 0xFF) != 0
         )
     }
 
-    /** Drops cached material textures; call after the texture cache is cleared. */
     fun clearTextureCache() {
         textures.values.forEach { it?.let { m -> glDeleteTextures(m.textureId) } }
         textures.clear()
@@ -345,7 +265,6 @@ class SkyRenderer(private val cache: Cache? = null) {
         private const val MODE_REPEAT = 1
         private const val MODE_TRANSITION = 2
 
-        /** Degrees to RS angle units (16384 per full turn). */
         private fun toAngleUnits(degrees: Float): Float = degrees / 360f * ANGLE_UNITS
 
         private fun wrap(value: Float, range: Float): Float {
@@ -353,7 +272,6 @@ class SkyRenderer(private val cache: Cache? = null) {
             return if (remainder < 0f) remainder + range else remainder
         }
 
-        /** Unpacks 0xRRGGBB into 0..1 components. */
         fun unpack(color: Int, out: Vector3f): Vector3f = out.set(
             ((color shr 16) and 0xFF) / 255f,
             ((color shr 8) and 0xFF) / 255f,

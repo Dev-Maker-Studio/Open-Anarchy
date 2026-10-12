@@ -124,36 +124,6 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
-/**
- * Differential test: every rewritten revision 727 server encoder is asked to produce exactly the
- * payload bytes the corresponding encoder in the legacy `rs.darkan:core` library produces, from
- * the same logical inputs.
- *
- * ### What is compared, and why that is like for like
- *
- * Only the packet **body**. The opcode and length prefix are framing, and the two stacks frame in
- * different places: legacy [LegacyEncoder.writeToStream] writes opcode + length itself, while the
- * modern stack does that in `Session.writePacket` and hands the codec a bare payload channel. So
- * this calls `encodeBody` directly on the legacy side and `Codec.encodeServerProt` on the modern
- * side. ISAAC never enters the picture: it only ever touches the opcode byte(s), which are
- * separately pinned by [Rev727ProtCoverageTest].
- *
- * ### Reading a failure
- *
- * A mismatch is not automatically a modern bug - both stacks are fallible, and where they disagree
- * the 727 client decides. Resolved disagreements are recorded in [KNOWN_DIVERGENCES] with the
- * client evidence. Do not make a case pass by nudging its inputs.
- *
- * ### Field names are not wire semantics
- *
- * Several packets carry the same bytes under different field names in the two stacks (legacy
- * `TileMessage.delay` is the modern `priority`, and so on). Those cases pin the *wire* value on
- * both sides and say so in a comment; they are still genuine byte-equality checks.
- *
- * ### What is not compared
- *
- * [UNCOVERED] lists every legacy encoder with no byte-equality case, and why.
- */
 class Rev727LegacyEncoderDifferentialTest {
 
     private lateinit var codec: Codec
@@ -163,7 +133,6 @@ class Rev727LegacyEncoderDifferentialTest {
         codec = register727()
     }
 
-    /** One packet, encoded by both stacks from the same logical inputs. */
     private class Case(val name: String, val legacy: LegacyEncoder, val modern: ServerProt)
 
     private class CaseBuilder {
@@ -191,8 +160,6 @@ class Rev727LegacyEncoderDifferentialTest {
                 continue
             }
             if (legacyBytes.isEmpty()) {
-                // A case that encodes to nothing on both sides would "pass" without comparing
-                // anything, so an empty payload is itself a failure: every packet here has a body.
                 failures.add("${case.name}: legacy encoder produced an empty payload")
                 continue
             }
@@ -209,9 +176,6 @@ class Rev727LegacyEncoderDifferentialTest {
 
     @Test
     fun `the harness detects a difference when there is one`() {
-        // Negative control. Everything else in this class asserts that two encoders agree, which
-        // is also what a harness that silently compares nothing would report, so pin that a real
-        // difference is actually caught.
         val legacy = encodeLegacy(LegacyRunEnergy(97))
         val modern = encodeModern(RunEnergy(98))
         assertTrue(legacy.isNotEmpty() && modern.isNotEmpty(), "both sides must produce bytes")
@@ -220,8 +184,6 @@ class Rev727LegacyEncoderDifferentialTest {
 
     @Test
     fun `the coverage bookkeeping is honest`() {
-        // If a packet gains a case, it must leave the uncovered list, and vice versa. Without this
-        // the documented "not covered, because..." list quietly rots into a lie.
         val covered = cases().map { it.modern::class.simpleName }.toSet()
         val overlap = covered.intersect(UNCOVERED.keys)
         assertTrue(overlap.isEmpty(), "Listed as uncovered but actually covered: $overlap")
@@ -231,7 +193,6 @@ class Rev727LegacyEncoderDifferentialTest {
         )
     }
 
-    // --- Encoding ------------------------------------------------------------------------------
 
     private fun encodeLegacy(encoder: LegacyEncoder): ByteArray {
         val stream = LegacyStream(BUFFER_CAPACITY)
@@ -263,12 +224,9 @@ class Rev727LegacyEncoderDifferentialTest {
 
     private fun hex(bytes: ByteArray) = bytes.joinToString(" ") { "%02x".format(it) }
 
-    // --- Fixtures ------------------------------------------------------------------------------
 
-    /** Legacy chunk id packing, from `MapUtils.Structure.CHUNK`. Pure arithmetic, no cache. */
     private fun chunkId(x: Int, y: Int, plane: Int) = (x shl 11) or y or (plane shl 22)
 
-    /** The zone-local coordinate byte both stacks put on the wire. */
     private fun chunkLocalHash(localX: Int, localY: Int) = ((localX and 0x7) shl 4) or (localY and 0x7)
 
     private fun legacyTile(x: Int, y: Int, plane: Int = 0): LegacyTile = LegacyTile.of(x, y, plane)
@@ -310,11 +268,8 @@ class Rev727LegacyEncoderDifferentialTest {
         socialCases()
     }.cases
 
-    // --- Account, session and stats ------------------------------------------------------------
 
     private fun CaseBuilder.accountCases() {
-        // Legacy takes the raw code the client switches on; the modern packets name it, so each
-        // case pairs the enum with its value to pin the byte the client sees.
         case(
             "CREATE_CHECK_EMAIL_REPLY",
             LegacyCheckEmailResponse(CheckEmailReplyOpcode.EMAIL_ALREADY_IN_USE.value),
@@ -325,8 +280,6 @@ class Rev727LegacyEncoderDifferentialTest {
             LegacyCreateAccountResponse(CreateAccountReplyOpcode.SERVER_ERROR.value),
             CreateAccountReply(CreateAccountReplyOpcode.SERVER_ERROR),
         )
-        // Legacy hard-codes the quick-chat, "members" and date-of-birth fields; the modern packet
-        // takes them as parameters, so they are pinned to the legacy constants here.
         case(
             "WORLD_LOGIN_DETAILS",
             LegacyWorldLoginDetails(2, 1337, "Zezima", 3, true, true),
@@ -361,40 +314,30 @@ class Rev727LegacyEncoderDifferentialTest {
         )
     }
 
-    // --- Camera --------------------------------------------------------------------------------
 
     private fun CaseBuilder.cameraCases() {
         case("CAM_FORCEANGLE", LegacyCamForceAngle(40_000, 50_000), CamForceAngle(40_000, 50_000))
         case("CAM_LOOKAT", LegacyCamLookAt(30, 45, 3000, 7, 9), CamLookAt(30, 45, 3000, 7, 9))
         case("CAM_MOVETO", LegacyCamMoveTo(30, 45, 3000, 7, 9), CamMoveTo(30, 45, 3000, 7, 9))
-        // Legacy packs the tile inline as `localY + (localX shl 14)`, which is a plane-0 tile hash.
         case("CAM_REMOVEROOF", LegacyCamRemoveRoof(3222, 3218), CamRemoveRoof(tile(3222, 3218)))
         case("CAM_SHAKE", LegacyCamShake(1, 2, 3, 4, 5000), CamShake(slotId = 1, v1 = 2, v2 = 3, v3 = 4, v4 = 5000))
     }
 
-    // --- Interfaces ----------------------------------------------------------------------------
 
     private fun CaseBuilder.interfaceCases() {
         case("IF_SETPLAYERHEAD", LegacyIfSetPlayerHead(750, 31), IfSetPlayerHead(750, 31))
-        // Wire order is kit1, kit3, kit2: the client packs shorts 1 and 3 into one media id and
-        // short 2 into the other. Legacy names the wire slots 1, 2, 3 positionally, so its second
-        // argument is the modern `identiKit3` and its third is `identiKit2`.
         case(
             "IF_SETPLAYERHEAD_IGNOREWORN",
             LegacyIfSetPlayerHeadIgnoreWorn(750, 31, 100, 200, 300),
             IfSetPlayerHeadIgnoreWorn(750, 31, identiKit1 = 100, identiKit2 = 300, identiKit3 = 200),
         )
         case("IF_SETTEXTFONT", LegacyIfSetTextFont(750, 31, 495), IfSetTextFont(750, 31, 495))
-        // Legacy hard-codes all four xtea words to zero, so the case pins zeros on both sides.
-        // See KNOWN_DIVERGENCES: legacy writes the last two little-endian, the client reads big.
         case("IF_OPENTOP", LegacyIfOpenTop(548, 2), IfOpenTop(548, 2, zeroXteas()))
         case("IF_SETHIDE", LegacyIfSetHide(750, 31, true), IfSetHide(750, 31, true))
         case("IF_SETGRAPHIC", LegacyIfSetGraphic(750, 31, 0x0BADF00D), IfSetGraphic(750, 31, 0x0BADF00D))
         case("IF_OPENSUB", LegacyIfOpenSub(548, 23, 750, true), IfOpenSub(548, 23, 750, true, zeroXteas()))
         case("IF_SETANGLE", LegacyIfSetAngle(750, 31, 100, 200, 40_000), IfSetAngle(750, 31, 100, 200, 40_000))
         case("IF_SETPOSITION", LegacyIfSetPosition(750, 31, 40, 50), IfSetPosition(750, 31, 40, 50))
-        // Legacy sends a player id and a hashed display name; the modern packet carries the two
-        // model ids the client actually reads, in the same wire slots.
         case(
             "IF_SETPLAYERMODEL_OTHER",
             LegacyIfSetPlayerModelOther(750, 31, "Zezima", 1337),
@@ -420,8 +363,6 @@ class Rev727LegacyEncoderDifferentialTest {
             IfSetTargetParam(750, 31, targetInterfaceId = 1000, fromSlot = 0, toSlot = 27),
         )
         case("IF_SETCLICKMASK", LegacyIfSetClickMask(750, 31, true), IfSetClickMask(750, 31, true))
-        // Legacy hashes a display name into the first int; the modern packet carries the already
-        // hashed key, so the same 4 bytes land on the wire.
         case(
             "IF_SETPLAYERHEAD_OTHER",
             LegacyIfSetPlayerHeadOther(750, 31, "Zezima", 1337),
@@ -467,11 +408,8 @@ class Rev727LegacyEncoderDifferentialTest {
         )
     }
 
-    // --- Region, map and hint arrows -----------------------------------------------------------
 
     private fun CaseBuilder.regionCases() {
-        // `MapXTEAs` is unpopulated in a test JVM, so the legacy encoder writes zeroed keys for
-        // every region; the modern packet is handed the same zeros.
         val regionIds = BuildRegion.regionIds(400, 402, RegionSize.SIZE_104)
         case(
             "REGION",
@@ -511,7 +449,6 @@ class Rev727LegacyEncoderDifferentialTest {
             LegacyHintArrow(HintIcon().apply { targetType = 0; index = 3 }),
             HintArrow(iconIndex = 3, targetType = 0),
         )
-        // Legacy hard-codes the denominator to 2500 for the entity forms.
         case(
             "HINT_ARROW (player)",
             LegacyHintArrow(
@@ -536,8 +473,6 @@ class Rev727LegacyEncoderDifferentialTest {
                 targetIndex = 4321, denominator = 2500, modelId = 0x0BADF00D,
             ),
         )
-        // Legacy writes `distanceFromFloor * 4 shr 2` for the height byte and hard-codes the
-        // trailing "distance to show" short to -1.
         case(
             "HINT_ARROW (tile)",
             LegacyHintArrow(
@@ -553,11 +488,8 @@ class Rev727LegacyEncoderDifferentialTest {
         )
     }
 
-    // --- Sound ---------------------------------------------------------------------------------
 
     private fun CaseBuilder.soundCases() {
-        // The legacy `Sound` object serves five opcodes and reuses its fields differently in each;
-        // the modern packets name each wire slot for what that opcode actually reads.
         case(
             "SOUND_SYNTH",
             LegacySound(2677, 40, 200, 8192, LegacySoundType.EFFECT).repeat(3),
@@ -573,7 +505,6 @@ class Rev727LegacyEncoderDifferentialTest {
             LegacySound(2677, 40, 200, 8192, LegacySoundType.VOICE).repeat(3),
             VorbisSpeechSound(soundId = 2677, repeat = 3, delay = 40, volume = 200),
         )
-        // The client reads the leading 3 bytes and discards them; legacy hard-codes them to zero.
         case(
             "MUSIC_EFFECT",
             LegacySound(1234, 40, 200, 8192, LegacySoundType.JINGLE),
@@ -586,7 +517,6 @@ class Rev727LegacyEncoderDifferentialTest {
         )
     }
 
-    // --- Vars ----------------------------------------------------------------------------------
 
     private fun CaseBuilder.varCases() {
         case("VARP_SMALL", LegacySetVarp(1234, 100), VarpSmall(1234, 100))
@@ -599,7 +529,6 @@ class Rev727LegacyEncoderDifferentialTest {
         case("CLIENT_SETVARCSTR_LARGE", LegacySetVarcString(1234, LONG_STRING), ClientSetVarcStrLarge(1234, LONG_STRING))
     }
 
-    // --- Zone ----------------------------------------------------------------------------------
 
     private fun CaseBuilder.zoneCases() {
         val hash = chunkLocalHash(5, 6)
@@ -613,8 +542,6 @@ class Rev727LegacyEncoderDifferentialTest {
             LegacyUpdateZonePartial(chunkId(400, 402, 0), chunkId(404, 405, 1)),
             UpdateZonePartialFollows(chunkX = 4, chunkY = 3, plane = 1),
         )
-        // Also pins the sub-packet ordinals, which are the client's `UpdateZonePacket` enum
-        // ordinals rather than the standalone opcodes.
         case(
             "UPDATE_ZONE_PARTIAL_ENCLOSED",
             LegacyUpdateZonePartialEnclosed(
@@ -683,8 +610,6 @@ class Rev727LegacyEncoderDifferentialTest {
             LegacySetGroundItemAmount(hash, legacyGroundItem(4151, 40_000, 3222, 3218), 20_000),
             GroundItemCount(localX = 5, localY = 6, itemId = 4151, oldAmount = 20_000, newAmount = 40_000),
         )
-        // Legacy's `delay` is divided by 30 into the wire short the modern packet calls `priority`,
-        // and legacy's `height` is the modern `duration`.
         case(
             "TILE_MESSAGE",
             LegacyTileMessage(hash, "Hello, world!", 900, 40, 0xFF0000),
@@ -707,7 +632,6 @@ class Rev727LegacyEncoderDifferentialTest {
                 height = 100,
             ),
         )
-        // Legacy's `Sound.radius`/`repeat` are the modern `range`/`mode` nibbles.
         case(
             "MIDI_SONG_LOCATION (zone sound effect)",
             LegacyTileSound(hash, LegacySound(2677, 40, 200, 8192, LegacySoundType.EFFECT).radius(3).repeat(2)),
@@ -716,8 +640,6 @@ class Rev727LegacyEncoderDifferentialTest {
                 delay = 40, volume = 200, sampleRate = 8192,
             ),
         )
-        // SOUND_AREA has no standalone opcode in either stack, so it is pinned enclosed;
-        // the trailing byte is the client's voice-over flag.
         case(
             "SOUND_AREA (zone vorbis sound)",
             LegacyUpdateZonePartialEnclosed(
@@ -744,9 +666,6 @@ class Rev727LegacyEncoderDifferentialTest {
                 ),
             ),
         )
-        // Height units differ by design: the legacy `Projectile` carries the raw wire byte, the
-        // modern packet carries world height and divides by 4, which is exactly the multiply the
-        // client applies on the way back in. See KNOWN_DIVERGENCES.
         case(
             "MAP_PROJANIM",
             LegacyProjAnim(hash, projectile()),
@@ -773,8 +692,6 @@ class Rev727LegacyEncoderDifferentialTest {
                 basOffIdx = -1, useFloorHeight = false,
             ),
         )
-        // Legacy sends the projectile's in-air duration in the slot the client reads as end time,
-        // rather than start + in-air; the modern packet takes the wire value directly.
         case(
             "PROJANIM_SPECIFIC",
             LegacyProjAnimSpecific(projectile()),
@@ -786,13 +703,11 @@ class Rev727LegacyEncoderDifferentialTest {
         )
     }
 
-    /** A fixed projectile both stacks describe: (3222, 3218) -> (3226, 3221). */
     private fun projectile() = Projectile(
         legacyTile(3222, 3218), 1337, legacyTile(3226, 3221),
         4321, 1234, WIRE_START_HEIGHT, WIRE_END_HEIGHT, 30, 60, 12, 15,
     )
 
-    // --- Everything else -----------------------------------------------------------------------
 
     private fun CaseBuilder.miscCases() {
         case("PROCESS_DEV_CONSOLE_COMMAND", LegacySendDevConsoleCommand("::reload"), ProcessDevConsoleCommand("::reload"))
@@ -821,8 +736,6 @@ class Rev727LegacyEncoderDifferentialTest {
             "REFLECTION_CHECK",
             LegacyReflectionCheckRequest(legacyChecks),
             ReflectionRequest(
-                // The legacy holder seeds its id randomly, so the modern packet is given whatever
-                // this run produced rather than a literal.
                 id = legacyChecks.id,
                 checks = arrayOf(ReflectionCheck(ReflectionCheckType.GET_FIELD_MODIFIERS, "java.lang.System", "out")),
             ),
@@ -852,11 +765,8 @@ class Rev727LegacyEncoderDifferentialTest {
         )
     }
 
-    // --- Social --------------------------------------------------------------------------------
 
     private fun CaseBuilder.socialCases() {
-        // Legacy writes each entry's current then previous display name; the modern packet calls
-        // those two wire slots `username` and `displayName`.
         case(
             "UPDATE_IGNORE_LIST",
             LegacyIgnoreList(linkedMapOf("zezima" to DisplayNamePair("Zezima", "Zezima_old"))),
@@ -867,9 +777,6 @@ class Rev727LegacyEncoderDifferentialTest {
             LegacyMessageGame(LegacyMessageGame.MessageType.GAME, "Hello, world!"),
             GameMessage(type = ChatMessageType.GAME, message = "Hello, world!"),
         )
-        // Opcode 22. The legacy `ServerPacket` enum has this pair the wrong way round relative to
-        // the client, so the legacy class named `QuickChatPrivate` is the echo. See
-        // KNOWN_DIVERGENCES.
         case(
             "MESSAGE_QUICKCHAT_PRIVATE_ECHO",
             LegacyQuickChatPrivate("Zezima", legacyQuickChat()),
@@ -883,37 +790,20 @@ class Rev727LegacyEncoderDifferentialTest {
     private fun legacyQuickChat() = LegacyQuickChatMessage(1234, QC_DATA)
 
     private companion object {
-        /** Big enough for every case here; the legacy stream grows by doubling if it is not. */
         const val BUFFER_CAPACITY = 8192
 
-        /**
-         * Projectile heights as the client reads them off the wire, before its `* 4` scale. The
-         * legacy `Projectile` stores this raw byte; the modern packet stores `wire * 4` and
-         * divides on the way out.
-         */
         const val WIRE_START_HEIGHT = 10
         const val WIRE_END_HEIGHT = 5
 
-        /** Long enough that `SetVarcString` picks the VarShort ("large") packet on both sides. */
         val LONG_STRING = "x".repeat(200)
 
-        /** Opaque pre-encoded payload for the packets that carry one. */
         val BLOB = byteArrayOf(0x00, 0x7f, -0x80, -0x01, 0x2a)
 
-        /** Quick-chat dynamic-value payload; opaque to both encoders. */
         val QC_DATA = byteArrayOf(0x01, 0x02, 0x03)
 
         const val MINIMUM_CASE_COUNT = 95
 
-        /**
-         * Legacy encoders with no byte-equality case, and why. This list is the deliverable half
-         * of the coverage story: anything here is *not* verified against the legacy library.
-         *
-         * Keyed by modern packet class where one exists, or by the legacy class name where the
-         * modern side has no counterpart at all.
-         */
         val UNCOVERED: Map<String, String> = mapOf(
-            // -- Non-deterministic on one or both sides -----------------------------------------
             "MessagePublic" to
                 "Legacy compresses the body with the cache Huffman table; the modern encoder " +
                 "stamps a live tick counter (`writeHashedMessageTimestamp`). Neither side is " +
@@ -930,7 +820,6 @@ class Rev727LegacyEncoderDifferentialTest {
                 "Modern stamps a live tick counter into the five bytes where legacy writes zeros; " +
                 "the value is not derivable from the packet's own fields.",
 
-            // -- Legacy needs an initialised cache ----------------------------------------------
             "Cutscene" to
                 "Legacy resolves `CutsceneDefinitions.getDefs(id)` and `MapXTEAs` to build the " +
                 "region key block. The modern packet takes the keys as data, so there is no " +
@@ -943,7 +832,6 @@ class Rev727LegacyEncoderDifferentialTest {
             "VarclanSetInt" to "Legacy `SetVarClan` picks its opcode from `ClanVarDefinitions`, which needs the cache.",
             "VarclanSetByte" to "Legacy `SetVarClan` picks its opcode from `ClanVarDefinitions`, which needs the cache.",
 
-            // -- No structural counterpart on the legacy side -----------------------------------
             "ClanChannelFull" to
                 "Legacy takes the channel block pre-encoded, built by a static helper that returns " +
                 "`OutputStream.getBuffer()` - the whole doubling-grown backing array rather than " +
@@ -970,7 +858,6 @@ class Rev727LegacyEncoderDifferentialTest {
                 "display name then previous display name where the modern packet writes username " +
                 "then display name. No shared seam.",
 
-            // -- No legacy encoder at all -------------------------------------------------------
             "IfSetReTex" to "No legacy encoder (`IF_SETRETEX`, opcode 132).",
             "IfSetReCol" to "No legacy encoder (`IF_SETRECOL`, opcode 144).",
             "IfMoveSub" to "No legacy encoder (`IF_MOVESUB`, opcode 13).",
@@ -1006,7 +893,6 @@ class Rev727LegacyEncoderDifferentialTest {
             "WorldListPacket" to "No legacy encoder in `rs.darkan:core`; the lobby server built the list itself.",
             "LobbyLoginDetails" to "No legacy encoder in `rs.darkan:core`; the lobby server wrote this blob inline.",
 
-            // -- Empty payloads -----------------------------------------------------------------
             "LogoutLobby" to "Zero-length payload; nothing to compare.",
             "LogoutFull" to "Zero-length payload; nothing to compare.",
             "CamResetHard" to "Zero-length payload; nothing to compare.",
@@ -1022,10 +908,6 @@ class Rev727LegacyEncoderDifferentialTest {
             "FriendlistLoaded" to "Zero-length payload; nothing to compare.",
         )
 
-        /**
-         * Places where the two stacks genuinely disagree, and which one the 727 client sides with.
-         * Every entry here has been checked against the decompiled client.
-         */
         @Suppress("unused")
         val KNOWN_DIVERGENCES: Map<String, String> = mapOf(
             "IF_OPENTOP" to

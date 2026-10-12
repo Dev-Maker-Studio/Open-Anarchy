@@ -20,23 +20,12 @@ import org.darkan.lobby.name.LobbyNameScreen
 import org.darkan.lobby.social.SocialGateway
 import java.util.concurrent.TimeUnit
 
-/**
- * Chatbox text for somebody sitting in the lobby.
- *
- * It has to be [ChatMessageType.FC_NOTIFICATION]. The lobby screen has no game chatbox - its
- * friends-chat window is the only thing that renders server text - so a `GAME` message is encoded,
- * sent, and silently dropped by the client. Legacy drew exactly this distinction:
- * `SocialPlayer.sendMessage` used FC_NOTIFICATION for lobby players while `sendGameMessage` (GAME)
- * was for players on a world, and `ChatManager.sendBroadcast` sent the same broadcast as both
- * (lobby-server `com/rs/lobby/model/SocialPlayer.java`, `com/rs/lobby/social/ChatManager.java`).
- */
 suspend fun Session.sendLobbyMessage(text: String) = send(GameMessage(ChatMessageType.FC_NOTIFICATION, text))
 
 private const val SOCIAL_HANDLERS = "org.darkan.lobby.server.packet.social"
 
 class LobbyPlayer(val session: Session, val account: Account) {
 
-    /** Chatbox text for this player; see [sendLobbyMessage] for why the type is not `GAME`. */
     suspend fun message(text: String) = session.sendLobbyMessage(text)
 
     val vars = Vars().setSession(session)
@@ -50,8 +39,6 @@ class LobbyPlayer(val session: Session, val account: Account) {
 
     suspend fun login(read: ByteReadChannel) {
         try {
-            // The client caches the world it is told to "play now" on, so hand it a world that
-            // actually exists; the placeholder only stands in until a world registers.
             val defaultWorld = Lobby.worldList.getDefault()?.metadata?.takeIf { it.isValid }
             session.send(
                 account.toLobbyLoginDetails(
@@ -66,10 +53,10 @@ class LobbyPlayer(val session: Session, val account: Account) {
             vars.setVar(2528, 1)
             vars.setVar(2567, 1)
 
-            vars.setVarBit(10242, 1) // 2 for validating email address
+            vars.setVarBit(10242, 1)
             vars.setVarBit(10243, 12)
 
-            vars.setVarc(1919, 1) // set email to validated
+            vars.setVarc(1919, 1)
             vars.setVarBit(11162, 1)
             vars.syncVarsToClient()
 
@@ -87,10 +74,6 @@ class LobbyPlayer(val session: Session, val account: Account) {
         }
     }
 
-    /**
-     * The client cannot take the name screen on the tick it logs in - the sub-interface is dropped
-     * and the lobby comes up empty - so it is opened a tick later, from the engine loop.
-     */
     private var openNameScreenIn = -1
 
     suspend fun enterLobby() {

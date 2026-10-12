@@ -4,12 +4,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.DefinitionEncoder
 import world.gregs.voidps.cache.definition.data.WorldMapDefinition
 
-/**
- * Index 23's `details` files, byte for byte.
- *
- * A flat struct, so there is nothing to decide: the two strings, the origin, the colour, the render
- * boolean, the raw zoom byte, the map size byte, the section count and 17 bytes per section.
- */
 class WorldMapDetailsEncoder : DefinitionEncoder<WorldMapDefinition> {
 
     override fun Writer.encode(definition: WorldMapDefinition) {

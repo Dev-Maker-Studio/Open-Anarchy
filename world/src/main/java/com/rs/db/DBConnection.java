@@ -9,10 +9,6 @@ import org.bson.Document;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Stub replacement for the deleted library DBConnection class.
- * TODO: Migrate to core MongoDB module (org.darkan.core.mongo).
- */
 public class DBConnection {
     private static MongoClient client;
     private static MongoDatabase database;

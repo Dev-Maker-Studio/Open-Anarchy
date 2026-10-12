@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.minigames.fightpits;
 
 import com.rs.engine.dialogue.HeadE;
@@ -74,8 +58,7 @@ public final class FightPits {
 						if (minutes == 0)
 							for (Player player : arena)
 								player.npcDialogue(THHAAR_MEJ_KAH, HeadE.T_CALM_TALK, "FIGHT!");
-						else if (minutes == 5) { // spawn tz-kih
-							// spawns
+						else if (minutes == 5) {
 							spawns = new ArrayList<>();
 							for (int i = 0; i < 10; i++)
 								spawns.add(new FightPitsNPC(2734, Tile.of(GAME_TELEPORTS[Utils.random(GAME_TELEPORTS.length)], 3)));
@@ -86,7 +69,6 @@ public final class FightPits {
 							for (int i = 0; i < 10; i++)
 								spawns.add(new FightPitsNPC(2739, Tile.of(GAME_TELEPORTS[Utils.random(GAME_TELEPORTS.length)], 3)));
 						else if (minutes == 10)
-							// alot hits appears on players
 							WorldTasks.scheduleLooping(new Task() {
 
 								@Override
@@ -117,9 +99,6 @@ public final class FightPits {
 
 	}
 
-	/*
-	 * because of the lvl 22s
-	 */
 	public static void addNPC(NPC n) {
 		synchronized (lock) {
 			if (gameTask == null || gameTask.spawns == null)
@@ -164,9 +143,6 @@ public final class FightPits {
 		arena.add(player);
 	}
 
-	/*
-	 * 0 - logout, 1 - walk, 2 - dead, 3 - teled
-	 */
 	public static void leaveArena(Player player, int type) {
 		synchronized (lock) {
 			arena.remove(player);
@@ -182,9 +158,7 @@ public final class FightPits {
 				player.setCanPvp(false);
 				player.setCantTrade(false);
 				player.getInterfaceManager().removeOverlay();
-				if (player.hasSkull() && player.getSkullId() == 1) {// if has
-					// champion
-					// skull
+				if (player.hasSkull() && player.getSkullId() == 1) {
 					player.removeSkull();
 					player.npcDialogue(THHAAR_MEJ_KAH, HeadE.T_CALM_TALK, "Well done in the pit, here take TokKul as reward.");
 					int tokkul = (lobby.size() + arena.size()) * 100;
@@ -216,9 +190,6 @@ public final class FightPits {
 		}
 	}
 
-	/*
-	 * 0 - logout, 1 normal, 2 death/tele
-	 */
 	public static void leaveLobby(Player player, int type) {
 		synchronized (lock) {
 			if (type != 0) {
@@ -235,7 +206,7 @@ public final class FightPits {
 
 	public static void checkPlayersAmmount() {
 		if (gameTask == null) {
-			if (lobby.size() + arena.size() >= 2) // 2players in
+			if (lobby.size() + arena.size() >= 2)
 				startGame(false);
 		} else if (lobby.size() + arena.size() < 2)
 			cancelGame();

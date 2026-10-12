@@ -124,13 +124,13 @@ public class HolyGrail extends QuestOutline {
 	}
 
 	public static NPCClickHandler handleFisherNPCs = new NPCClickHandler(new Object[]{210, 214, 215}, new String[]{"Talk-to"}, e -> {
-		if (e.getNPCId() == 214)// peasent
+		if (e.getNPCId() == 214)
 			e.getPlayer().startConversation(new Dialogue()
 					.addNPC(214, HeadE.SAD_CRYING, "Woe is me! Our crops are all failing... how shall I feed myself this winter?"));
-		if (e.getNPCId() == 215)// paesent
+		if (e.getNPCId() == 215)
 			e.getPlayer().startConversation(new Dialogue()
 					.addNPC(215, HeadE.HAPPY_TALKING, "Oh happy day! Suddenly our crops are growing again! It'll be a bumper harvest this year!"));
-		if (e.getNPCId() == 210)// grail maiden
+		if (e.getNPCId() == 210)
 			e.getPlayer().startConversation(new Dialogue()
 					.addNPC(210, HeadE.CALM_TALK, "Welcome to the Grail Castle."));
 	});

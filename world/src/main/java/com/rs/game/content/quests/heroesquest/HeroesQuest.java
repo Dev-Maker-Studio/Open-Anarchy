@@ -66,7 +66,7 @@ public class HeroesQuest extends QuestOutline {
 				}
 			}
 			case GET_ITEMS -> {
-				if (!player.getInventory().containsItem(2149, 1)) { //Lava Eel
+				if (!player.getInventory().containsItem(2149, 1)) {
 					lines.add("You need a cooked Lava eel. Maybe Gerrant in");
 					lines.add("Port Sarim can help?");
 					lines.add("");
@@ -146,7 +146,7 @@ public class HeroesQuest extends QuestOutline {
 
 	public static ItemAddedToInventoryHandler handleFireFeather = new ItemAddedToInventoryHandler(1583, e -> {
 		Player p = e.getPlayer();
-		if (p.getEquipment().getGlovesId() == 1580)//ice gloves
+		if (p.getEquipment().getGlovesId() == 1580)
 			return;
 		else {
 			e.cancel();

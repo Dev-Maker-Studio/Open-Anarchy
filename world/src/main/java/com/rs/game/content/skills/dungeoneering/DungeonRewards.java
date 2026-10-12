@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering;
 
 import org.darkan.core.cache.ItemDefinitions;
@@ -249,42 +233,21 @@ public class DungeonRewards {
 	public static void checkScrollOfLife(FarmPatch patch, Player player) {
 		if (!player.hasScrollOfLife)
 			return;
-		/**
-		 * https://runescape.wiki/w/Scroll_of_life?oldid=6151122
-		 *
-		 * The wiki states the following:
-		 *
-		 * When harvesting non-tree non-flower patches (including dead ones), the player will have a 10% chance of receiving seeds back
-		 * There is also a 5% chance of getting a seed back from a dead tree or stump.
-		 * Seeds returned from dead herb patches will be random, but seeds returned from a live herb patch will be the same type as the herb being harvested
-		 * The Scroll of Life works on all patches within the Herblore Habitat.
-		 * Special patches, however, (including Spirit trees and Calquat trees) do not give replacement seeds.
-		 */
 		switch(patch.seed.type) {
 			case SPIRIT:
 			case CALQUAT:
 			case FLOWER:
 			case COMPOST:
-				/**
-				 * Spirit tree's and calquats specifically do not give replacement seeds.
-				 * Although strange, the wiki seems to state that flowers do not give seeds back either.
-				 */
 				break;
 			case TREE:
 			case FRUIT_TREE:
-				/**
-				 * Tree's have a 5% chance of giving seeds back. The wiki does not state "fruit" tree's however
-				 * from a balancing point of view I think giving fruit tree's a 5% chance is good as well.
-				 */
 				if (5 > Utils.random(100)) {
 					player.getInventory().addItemDrop(patch.seed.seedId, 1);
 					player.sendMessage("<col=00EE00>Your Scroll of Life saves you a seed!");
 				}
 				break;
 			default:
-				// Give a 10% chance for all other types of seeds.
 				if (10 > Utils.random(100)) {
-					// Dead herbs return a random herb seed back
 					if (patch.seed.type == PatchType.HERB && patch.dead) {
 						player.getInventory().addItemDrop(ELIGIBLE_HERB_SEED_IDS[Utils.random(ELIGIBLE_HERB_SEED_IDS.length)], 1);
 					} else {

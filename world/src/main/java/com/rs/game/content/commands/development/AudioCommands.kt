@@ -40,9 +40,9 @@ fun loadAudioCommands() {
 
     Commands.add(Rights.DEVELOPER, "familiarhead", "Tests familiar/pet chathead icons") { p, args ->
         val pouch = Pouch.valueOf(args[0])
-        p.vars.setVar(Varp.follower_obj, pouch.id) // configures familiar type
-        p.vars.setVar(1174, 0, true) // refresh familiar head
-        p.vars.setVarBit(Varbit.lore_interface_boolean, args[1].toInt()) // refresh familiar emote
+        p.vars.setVar(Varp.follower_obj, pouch.id)
+        p.vars.setVar(1174, 0, true)
+        p.vars.setVarBit(Varbit.lore_interface_boolean, args[1].toInt())
     }
 
     Commands.add(Rights.DEVELOPER, "playthroughvoices [start finish tick_delay]", "Plays through voice range.") { p, args ->
@@ -100,14 +100,14 @@ fun loadAudioCommands() {
 
     Commands.add(Rights.DEVELOPER, "frogland", "Plays frogland to everyone on the server.") { _, _ ->
         World.allPlayers { target ->
-            target?.packets?.sendRunScript(1764, 12451857, 12451853, 20, 0) // music/sound volumes
+            target?.packets?.sendRunScript(1764, 12451857, 12451853, 20, 0)
             target?.musicTrack(409)
         }
     }
 
     Commands.add(Rights.DEVELOPER, "musicall [id]", "Plays music to everyone on the server.") { _, args ->
         World.allPlayers { target ->
-            target?.packets?.sendRunScript(1764, 12451857, 12451853, 20, 0) // music/sound volumes
+            target?.packets?.sendRunScript(1764, 12451857, 12451853, 20, 0)
             target?.musicTrack(args[0].toInt())
         }
     }

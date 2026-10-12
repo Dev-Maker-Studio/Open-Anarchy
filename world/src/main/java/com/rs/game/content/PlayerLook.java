@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content;
 
 import org.darkan.core.cache.EnumDefinitions;
@@ -39,7 +23,7 @@ public final class PlayerLook {
 	}
 
 	public static ButtonClickHandler handleCharacterCustomizingButtons = new ButtonClickHandler(1028, e -> {
-		if (e.getComponentId() == 138) { // confirm
+		if (e.getComponentId() == 138) {
 			e.getPlayer().getInterfaceManager().setDefaultTopInterface();
 			e.getPlayer().getTempAttribs().removeI("SelectWearDesignD");
 			e.getPlayer().getTempAttribs().removeI("ViewWearDesign");
@@ -253,18 +237,18 @@ public final class PlayerLook {
 			e.getPlayer().getTempAttribs().setI("ThessaliasMakeOver", 3);
 		else if (e.getComponentId() == 19)
 			e.getPlayer().closeInterfaces();
-		else if (e.getComponentId() == 12) { // set part
+		else if (e.getComponentId() == 12) {
 			int stage = e.getPlayer().getTempAttribs().getI("ThessaliasMakeOver");
 			if (stage == 0)
 				e.getPlayer().getAppearance().setTopStyle(EnumDefinitions.getEnum(e.getPlayer().getAppearance().isMale() ? 690 : 1591).getIntValue(e.getSlotId() / 2));
-			else if (stage == 1) // arms
+			else if (stage == 1)
 				e.getPlayer().getAppearance().setArmsStyle(EnumDefinitions.getEnum(e.getPlayer().getAppearance().isMale() ? 711 : 693).getIntValue(e.getSlotId() / 2));
-			else if (stage == 2) // wrists
+			else if (stage == 2)
 				e.getPlayer().getAppearance().setWristsStyle(EnumDefinitions.getEnum(e.getPlayer().getAppearance().isMale() ? 749 : 751).getIntValue(e.getSlotId() / 2));
 			else
 				e.getPlayer().getAppearance().setLegsStyle(EnumDefinitions.getEnum(e.getPlayer().getAppearance().isMale() ? 1586 : 1607).getIntValue(e.getSlotId() / 2));
 
-		} else if (e.getComponentId() == 17) {// color
+		} else if (e.getComponentId() == 17) {
 			int stage = e.getPlayer().getTempAttribs().getI("ThessaliasMakeOver");
 			if (stage == 0 || stage == 1)
 				e.getPlayer().getAppearance().setTopColor(EnumDefinitions.getEnum(3282).getIntValue(e.getSlotId() / 2));
@@ -338,10 +322,10 @@ public final class PlayerLook {
 	public static ButtonClickHandler handleYrsaShoes = new ButtonClickHandler(728, e -> {
 		if (e.getComponentId() == 14)
 			e.getPlayer().closeInterfaces();
-		else if (e.getComponentId() == 12) {// setting the colors.
+		else if (e.getComponentId() == 12) {
 			e.getPlayer().getAppearance().setBootsColor(EnumDefinitions.getEnum(3297).getIntValue(e.getSlotId() / 2));
 			e.getPlayer().getAppearance().generateAppearanceData();
-		} else if (e.getComponentId() == 7) {// /boot style
+		} else if (e.getComponentId() == 7) {
 			e.getPlayer().getAppearance().setBootsStyle(EnumDefinitions.getEnum(e.getPlayer().getAppearance().isMale() ? 3290 : 3293).getIntValue(e.getSlotId() / 2));
 			e.getPlayer().getAppearance().generateAppearanceData();
 		}

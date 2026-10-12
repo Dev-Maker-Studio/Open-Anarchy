@@ -14,8 +14,6 @@ import com.rs.plugin.handlers.NPCClickHandler;
 @PluginEventHandler
 public class FatherAereck extends Conversation {
 
-	//Identify NPC by ID
-	//NPC handler was 9827? check restless ghost quest..
 	private static final int npcId = 456;
 	public static NPCClickHandler FatherAereck = new NPCClickHandler(new Object[]{npcId}, e -> {
 		switch (e.getOption()) {
@@ -50,4 +48,3 @@ public class FatherAereck extends Conversation {
 	}
 }
 
-//TODO restore standard conversation options

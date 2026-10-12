@@ -46,15 +46,6 @@ import org.darkan.tools.rsinterface.OptionKind
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.decoder.InterfaceDecoder
 
-/**
- * `cs2` sub-commands for the tools CLI.
- *
- * ```
- * cs2 verify              decode + re-encode every script, assert byte identity
- * cs2 dump <id>           print the raw instruction listing for one script
- * cs2 info <id>           print one script's header
- * ```
- */
 fun runCs2(cache: Cache, args: List<String>) {
     when (args.firstOrNull() ?: "help") {
         "verify" -> cs2Verify(cache)
@@ -134,20 +125,14 @@ private fun cs2Decompile(cache: Cache, scriptId: Int?) {
     print(Cs2Corpus.notes(function, structurer.deadCode, "// "))
 }
 
-/** One line per finding kind, as `2 unreachable, 1 dead store`. */
 private fun summary(findings: List<Cs2DeadCode>): String =
     Cs2DeadCodeKind.entries.mapNotNull { kind ->
         val count = findings.count { it.kind == kind }
         if (count == 0) null else "$count ${kind.label}"
     }.joinToString(", ")
 
-/** Writes the ambient TypeScript declarations next to the decompiled scripts. */
 private fun cs2Declarations(cache: Cache, directory: String?) {
     val target = File(directory ?: ".").apply { mkdirs() }
-    // The param types are the one thing in cs2.d.ts that comes from the cache rather than from the
-    // opcode table, and they are what lets the folder be compiled back with no cache at all, so
-    // the analysis is worth its two seconds even for a bare `declarations` run - see
-    // Cs2SourceContext. A folder written before the declaration existed is fixed by running this.
     val analyzer = Cs2Analyzer(cache)
     analyzer.analyse()
     val params = analyzer.stringParams()
@@ -158,14 +143,6 @@ private fun cs2Declarations(cache: Cache, directory: String?) {
     Cs2Names.warnings.forEach { println("  note: $it") }
 }
 
-/**
- * Writes the three generated declaration files and the project file.
- *
- * `gamevals.d.ts` and `cs2.d.ts` are derived wholesale - from the catalogs and
- * from the opcode table - so they are always rewritten. `vars.d.ts` is not
- * written here: it is produced by a whole-cache decompile and carries the
- * developer's own renames.
- */
 private fun writeDeclarations(
     target: File,
     learned: Map<String, ArgType> = emptyMap(),
@@ -184,14 +161,6 @@ private fun writeDeclarations(
     return written
 }
 
-/**
- * Re-derives a folder's names from the catalogs.
- *
- * This is the catalog-first half of the workflow: edit a name in
- * `gamevals/<type>.json`, run this, and the declarations and every identifier in
- * every script follow. Nothing else has to be touched, and nothing can be left
- * pointing at the old name.
- */
 private fun cs2ApplyNames(directory: String?) {
     val folder = File(directory ?: Cs2SourceProject.DEFAULT_FOLDER)
     val report = Cs2NameSync.apply(folder)
@@ -206,13 +175,6 @@ private fun cs2ApplyNames(directory: String?) {
     if (report.changes.size > 40) println("  ... ${report.changes.size - 40} more")
 }
 
-/**
- * Writes a folder's renames back into the catalogs, then re-derives it.
- *
- * This is the editor-first half: rename a symbol in VS Code, which rewrites every
- * reference and the binding it hangs on, then run this to make the catalog say
- * the same thing. `--dry-run` reports what it would write without touching a file.
- */
 private fun cs2SyncNames(directory: String?, options: List<String>) {
     val folder = File(directory ?: Cs2SourceProject.DEFAULT_FOLDER)
     val dryRun = options.contains("--dry-run") || options.contains("-n")
@@ -244,7 +206,6 @@ private fun cs2SyncNames(directory: String?, options: List<String>) {
     }
 }
 
-/** Reports where a folder and the catalogs disagree, without changing either. */
 private fun cs2CheckNames(directory: String?) {
     val folder = File(directory ?: Cs2SourceProject.DEFAULT_FOLDER)
     if (!folder.isDirectory) {
@@ -274,24 +235,11 @@ private fun cs2CheckNames(directory: String?) {
     println("or `cs2 apply-names ${folder.path}` to make the folder match the catalogs")
 }
 
-/**
- * Decompiles the whole corpus into a folder.
- *
- * The folder this writes is the cache source tree's `clientscripts/` directory
- * (`docs/cache-source.md`), so the layout belongs to [Cs2Corpus] and not to this
- * command: two implementations of it would show up as a tree that churns
- * depending on which tool touched it last.
- */
 private fun cs2DecompileAll(cache: Cache, directory: String?) {
     println("Decompiling every clientscript...")
-    // With no folder named, this writes the project folder every other command
-    // already defaults to, which is where an editor keeps the sources.
     val target = File(directory ?: Cs2SourceProject.DEFAULT_FOLDER)
     val corpus = Cs2Corpus(cache).write(target) { println("  $it") }
 
-    // A folder written by an older build holds the same scripts at the flat
-    // `clientscript-<id>.ts` paths. Left in place they would declare every
-    // function a second time, so they are named rather than silently shadowed.
     val stale = Cs2Layout.legacyFiles(target)
     if (stale.isNotEmpty()) {
         println()
@@ -324,7 +272,6 @@ private fun cs2DecompileAll(cache: Cache, directory: String?) {
     }
 }
 
-/** What the corpus-wide type inference worked out, and what it was read from. */
 private fun cs2Types(cache: Cache, slot: String?) {
     val analyzer = Cs2Analyzer(cache)
     analyzer.analyse()
@@ -409,11 +356,6 @@ private fun cs2Analyse(cache: Cache) {
     println(if (report.ok) "PASS - every script balances." else "FAIL")
 }
 
-/**
- * Underflows surface at whichever opcode happens to consume the stack, not at
- * the one whose signature is wrong. Ranking opcodes by how much more often they
- * appear in failing scripts than in passing ones points at the real culprit.
- */
 private fun printSuspectOpcodes(cache: Cache, report: Cs2Analyzer.Report) {
     val scripts = Cs2Cache(cache)
     val failing = report.problems.map { it.scriptId }.toSet()
@@ -548,7 +490,6 @@ private fun printHeader(scriptId: Int, script: Cs2Script) {
     println("  switch tables: ${script.switchTables.size}")
 }
 
-/** Shows the original and re-compiled instruction listings side by side. */
 private fun cs2Diff(cache: Cache, scriptId: Int?) {
     if (scriptId == null) {
         println("usage: cs2 diff <scriptId>")
@@ -587,8 +528,6 @@ private fun cs2Diff(cache: Cache, scriptId: Int?) {
     for (index in 0 until count) {
         val left = original.instructions.getOrNull(index)
         val right = rebuilt.instructions.getOrNull(index)
-        // Jump distances shift as soon as anything else differs, so only flag
-        // places where the actual opcode sequence diverges.
         val jump = left?.op?.let { Cs2Cfg.isConditionalBranch(it) || Cs2Cfg.isUnconditionalBranch(it) } == true
         val same = if (jump) left?.op == right?.op else left?.toString() == right?.toString()
         if (same) continue
@@ -611,7 +550,6 @@ private fun cs2Diff(cache: Cache, scriptId: Int?) {
     }
 }
 
-/** Lists instructions the rebuilt script gained or lost, ignoring jumps. */
 private fun reportWorkDifference(original: Cs2Script, rebuilt: Cs2Script) {
     fun census(script: Cs2Script) = script.instructions
         .filterNot { Cs2Cfg.isConditionalBranch(it.op) || Cs2Cfg.isUnconditionalBranch(it.op) }
@@ -634,7 +572,6 @@ private fun reportWorkDifference(original: Cs2Script, rebuilt: Cs2Script) {
     }
 }
 
-/** Runs a script on the virtual machine with a do-nothing host, for smoke testing. */
 private fun cs2Run(cache: Cache, scriptId: Int?, args: List<String>) {
     if (scriptId == null) {
         println("usage: cs2 run <scriptId> [intArgs...]")
@@ -671,25 +608,6 @@ private fun cs2Run(cache: Cache, scriptId: Int?, args: List<String>) {
     calls.take(40).forEach { println("  $it") }
 }
 
-/**
- * Opens an interface headlessly, runs its components' load scripts through the
- * virtual machine, and reports what the scripts actually did. This is the same
- * path the editor takes, minus the rendering.
- *
- * [extra] optionally fires more hooks, in order, and dumps the resolved box model:
- *
- * ```
- * cs2 interface 1102 tree                              boxes after loading
- * cs2 interface 1102 mouse_press:47 tree               open the dropdown, then boxes
- * cs2 interface 1102 mouse_press:47 mouse_enter:148    open it, then hover a row
- * ```
- *
- * The tree is the only way to see what a widget built at runtime actually looks
- * like without a window: it lists the components `CC_CREATE` made, which the
- * cache knows nothing about, with the position and size the layout gave them.
- * Chaining hooks is what makes a widget that only exists once the user has touched
- * it reachable at all.
- */
 private fun cs2Interface(cache: Cache, interfaceId: Int?, extra: List<String> = emptyList()) {
     if (interfaceId == null) {
         println("usage: cs2 interface <interfaceId> [<event> <componentIndex>] [tree]")
@@ -720,16 +638,10 @@ private fun cs2Interface(cache: Cache, interfaceId: Int?, extra: List<String> = 
         params = { id -> Cache.params.getOrNull(id) },
     )
     val dispatcher = Cs2HookDispatcher(analyzer, host)
-    // Only used to answer "what would a click here do" for the `hit` request; it is
-    // never stepped, so its hover and press state stay empty.
     val interaction = InterfaceInteraction({ current }, dispatcher, host)
 
-    // Snapshot the fields scripts most often change, so the report can show
-    // what running the interface actually did rather than just that it ran.
     val before = instance.components.map { Triple(it.hidden, it.text, it.graphicId) }
 
-    // The client only ever runs a load hook on an interface it has already drawn,
-    // so the box model has to exist before the scripts that read it do.
     instance.layoutDeclared()
 
     var ran = 0
@@ -794,25 +706,12 @@ private fun cs2Interface(cache: Cache, interfaceId: Int?, extra: List<String> = 
     }
 }
 
-/**
- * Fires one more hook after the load pass, so a widget that only builds itself
- * when the user touches it can be inspected headlessly.
- *
- * The box model is resolved first. A real interaction always happens on a drawn
- * frame, so every geometry opcode the hook calls would see a laid-out tree; skip
- * it here and the hook reads zero heights that the editor never would, which
- * makes the diagnostic lie in the one direction that matters.
- */
 private fun fireHook(
     instance: InterfaceInstance,
     host: InterfaceCs2Host,
     dispatcher: Cs2HookDispatcher,
     eventName: String,
     componentIndex: Int?,
-    /**
-     * The event's `mouseY`, which is also where the client smuggles a wheel notch
-     * count into a hook - `mouse_wheel:57:1` is one notch over component 57.
-     */
     value: Int = -1,
 ) {
     val event = InterfaceEvent.entries.firstOrNull { it.name.equals(eventName, ignoreCase = true) }
@@ -839,8 +738,6 @@ private fun fireHook(
     })
     val logFrom = host.log.size
     host.setActive(0, state)
-    // A runtime component reports the slot it was created in, which is what the
-    // client substitutes for `event_comsubid` and how a row hook identifies itself.
     val data = Cs2Event(
         mouseY = value,
         source = state.hash,
@@ -858,11 +755,6 @@ private fun fireHook(
     }
 }
 
-/**
- * Prints every component's resolved box, cache and runtime alike, indented by
- * depth. This is the headless equivalent of looking at the stage: rows that all
- * report the same `y`, or a size of zero, show up here immediately.
- */
 private fun printResolvedTree(instance: InterfaceInstance) {
     instance.layoutDeclared()
     println()
@@ -891,8 +783,6 @@ private fun printResolvedTree(instance: InterfaceInstance) {
                     state.width, state.height, absX, absY, label,
                 )
             )
-            // Only containers give their children a coordinate space, and they shift
-            // it by their scroll offset - the same rule the renderer walks.
             if (state.type == ComponentType.CONTAINER) {
                 walk(state.index, depth + 1, absX - state.scrollX, absY - state.scrollY)
             }
@@ -901,16 +791,6 @@ private fun printResolvedTree(instance: InterfaceInstance) {
     walk(-1, 0, 0, 0)
 }
 
-/**
- * Prints what the pointer would hit at ([pointX], [pointY]) in stage coordinates,
- * back to front, and which of those hits the interaction runtime would keep.
- *
- * This is the headless answer to "why does hovering that row do nothing". The
- * three columns that matter are whether the component is in the raw hit list at
- * all (it is clipped or hidden if not), whether it survived the click-through
- * rule, and whether [org.darkan.tools.rsinterface.ComponentState.interactive]
- * admits it - a component that fails the last one is drawn and nothing more.
- */
 private fun printHitChain(
     instance: InterfaceInstance,
     host: InterfaceCs2Host,
@@ -957,7 +837,6 @@ private fun printHitChain(
     println("  interaction target: " + (
         instance.interactiveAt(0, 0, width, height, pointX, pointY)?.index?.toString() ?: "none"
         ))
-    // What a plain left click would run, resolved by the same rule the runtime uses.
     val entries = ArrayList<ComponentOption>()
     for (state in hover) {
         entries.addAll(interaction.optionsFor(state, pointX, pointY).reversed())
@@ -971,7 +850,6 @@ private fun printHitChain(
         ))
 }
 
-/** Runs every interface's load scripts, checking the whole path holds up. */
 private fun cs2InterfaceSweep(cache: Cache) {
     println("Running load scripts for every interface...")
     val analyzer = Cs2Analyzer(cache)
@@ -1024,9 +902,6 @@ private fun cs2InterfaceSweep(cache: Cache) {
                 state.hidden != hidden || state.text != text || state.graphicId != graphic
             }
             hooksBound += host.boundHooks.values.sumOf { it.size }
-            // An error the machine reports is not an exception - it logs and carries
-            // on - so a sweep that only counts exceptions calls a runaway script a
-            // success. These are what actually tell you an interface is broken.
             host.log.filter { it.startsWith("error: ") }
                 .forEach { scriptErrors.add(id to it.removePrefix("error: ")) }
         } catch (e: Exception) {
@@ -1060,12 +935,6 @@ private fun cs2InterfaceSweep(cache: Cache) {
     }
 }
 
-/**
- * Seeds a source folder: one script, or the ambient declarations it needs.
- *
- * A folder with no `cs2.d.ts` will not type-check in an editor even though it
- * compiles here, so exporting nothing but a script is rarely what is wanted.
- */
 private fun cs2Export(cache: Cache, directory: String?, scriptId: Int?) {
     if (directory == null) {
         println("usage: cs2 export <dir> [scriptId]")
@@ -1085,14 +954,6 @@ private fun cs2Export(cache: Cache, directory: String?, scriptId: Int?) {
     if (result.ok) println(project.verify(scriptId).summary)
 }
 
-/**
- * Compiles every source file in a folder and reports how many still encode to
- * exactly the cached bytes.
- *
- * This is the number that decides how much hot reload can be trusted: a script
- * that does not round-trip untouched will not round-trip edited either, and the
- * developer needs to know that before wondering why their change misbehaves.
- */
 private fun cs2VerifySources(cache: Cache, directory: String?, limit: Int?) {
     val folder = File(directory ?: Cs2SourceProject.DEFAULT_FOLDER)
     if (!folder.isDirectory) {
@@ -1131,15 +992,6 @@ private fun cs2VerifySources(cache: Cache, directory: String?, limit: Int?) {
     }
 }
 
-/**
- * Runs one script as the cache has it, then as the source folder has it.
- *
- * This is the whole hot reload path in one command - compile, install, dispatch
- * through [Cs2HookDispatcher] against the overlay context - which is what proves
- * an edit reaches the running virtual machine rather than merely compiling. The
- * dispatcher is deliberately built *before* the reload, mirroring the editor,
- * where it is constructed once when the interface opens.
- */
 private fun cs2Hotswap(cache: Cache, directory: String?, scriptId: Int?, args: List<String>) {
     if (scriptId == null) {
         println("usage: cs2 hotswap <dir> <scriptId> [intArgs...]")
@@ -1180,13 +1032,6 @@ private fun cs2Hotswap(cache: Cache, directory: String?, scriptId: Int?, args: L
     run("from source")
 }
 
-/**
- * Runs the hot reload watcher without a window.
- *
- * Same pipeline the editor uses, so a reload that works here works there. With a
- * duration it runs unattended, which is how it gets tested; without one it takes
- * commands on stdin.
- */
 private fun cs2Watch(cache: Cache, directory: String?, seconds: Int?) {
     val folder = File(directory ?: Cs2SourceProject.DEFAULT_FOLDER)
     println("Analysing the cache...")
@@ -1218,7 +1063,6 @@ private fun cs2Watch(cache: Cache, directory: String?, seconds: Int?) {
                 Thread.sleep(100)
             }
         } catch (e: InterruptedException) {
-            // Shutting down.
         }
     }
     printer.isDaemon = true
@@ -1241,8 +1085,6 @@ private fun cs2Watch(cache: Cache, directory: String?, seconds: Int?) {
                 else -> println("  commands: r <id>, v <id>, l, q")
             }
         }
-        // `gradle run` does not forward stdin, so an immediate EOF means there is
-        // no console rather than a developer asking to stop.
         if (!interactive) {
             println("no console input; watching until interrupted")
             printer.join()
@@ -1253,11 +1095,6 @@ private fun cs2Watch(cache: Cache, directory: String?, seconds: Int?) {
     println("stopped. ${reload.log.count { !it.ok }} failures in ${reload.log.size} events")
 }
 
-/**
- * Compiles an edited script back from disk and reports whether it still matches
- * the cache. Names are resolved through the folder's declarations, so a renamed
- * variable or function compiles to exactly what it did before.
- */
 private fun cs2Compile(cache: Cache, directory: String?, scriptId: Int?) {
     if (directory == null || scriptId == null) {
         println("usage: cs2 compile <dir> <scriptId>")

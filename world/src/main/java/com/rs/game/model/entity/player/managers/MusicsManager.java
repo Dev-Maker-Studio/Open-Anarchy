@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.model.entity.player.managers;
 
 import org.darkan.core.cache.EnumDefinitions;
@@ -61,7 +45,6 @@ public final class MusicsManager {
     public MusicsManager() {
         unlockedMusics = new ArrayList<>();
         playList = new ArrayList<>(12);
-        // auto unlocked musics
         unlockedMusics.add(62);
         unlockedMusics.add(400);
         unlockedMusics.add(16);
@@ -96,10 +79,6 @@ public final class MusicsManager {
             e.getPlayer().getMusicsManager().switchShuffleOn();
     });
 
-    /**
-     * Only for debug use
-     *
-     */
     public void clearUnlocked() {
         unlockedMusics.clear();
         unlockedMusics.add(62);
@@ -293,17 +272,14 @@ public final class MusicsManager {
         return playingMusic != NULL_SOUND_TRACK && playingMusicDelay + (180000) < System.currentTimeMillis();
     }
 
-	/**
-	 * Next ambient song by genre or region.
-	 */
     public void nextAmbientSong() {
         if (player.getCutsceneManager().hasCutscene() || combatMusicActive())
             return;
         if (player.getControllerManager().getController() != null && !player.getControllerManager().getController().playAmbientMusic())
             return;
-        if (playListOn && playList.size() > 0)//playlist
+        if (playListOn && playList.size() > 0)
             pickPlaylistSong();
-        else if (unlockedMusics.size() > 0) {//ambient music at random
+        else if (unlockedMusics.size() > 0) {
             lastTenSongs.addFirst(playingMusic);
 			if(lastTenSongs.size() > 10)
 				lastTenSongs.removeLast();
@@ -319,12 +295,6 @@ public final class MusicsManager {
 		playSpecificAmbientSong(song, false);
 	}
 
-	/**
-	 * Play song but not
-	 * 1. if in the last ten
-	 * 2. if a playlist is on
-	 * @param song
-	 */
 	public void playSpecificAmbientSong(int song, boolean unlock) {
 		if(playListOn && playList.size() > 0)
 			return;
@@ -340,9 +310,6 @@ public final class MusicsManager {
 		playSongWithoutUnlocking(song);
 	}
 
-    /**
-     * Only for use in nextAmbientSong
-     */
     private void pickPlaylistSong() {
         if (shuffleOn)
             playingMusic = playList.get(Utils.getRandomInclusive(playList.size() - 1));
@@ -353,22 +320,16 @@ public final class MusicsManager {
         }
     }
 
-    /**
-     * Only for use with dungeoneering. It does not include unlocked musics
-     */
     private void pickAmbientStrictlyBackgroundMusic() {
 		playingGenre = player.getControllerManager().getController().getGenre();
 		if (playingGenre == null) {
-			playingMusic = NULL_SOUND_TRACK;//don't play music
+			playingMusic = NULL_SOUND_TRACK;
 			return;
 		}
 		List<Integer> genreSongs = Arrays.stream(playingGenre.getSongs()).boxed().collect(Collectors.toList());
 		cycleMusic(null, genreSongs);
     }
 
-    /**
-     * Only for use in nextAmbientSong.
-     */
     private void pickAmbientSong() {
         playingGenre = player.getControllerManager().getController() == null ?
                 Music.getGenre(player) : player.getControllerManager().getController().getGenre();
@@ -404,7 +365,7 @@ public final class MusicsManager {
 			} else
 				genreSongs.remove(random);
 		}
-		playingMusic = NULL_SOUND_TRACK;//Don't play music.
+		playingMusic = NULL_SOUND_TRACK;
 	}
 
     public void playSongWithoutUnlocking(int musicId) {
@@ -423,11 +384,6 @@ public final class MusicsManager {
         playingMusic = musicId;
     }
 
-    /**
-     * Plays music if checked music is not on but includes hints
-     *
-     * @param requestMusicId
-     */
     public void checkMusic(int requestMusicId) {
         if (playListOn || settedMusic && playingMusicDelay + (180000) >= System.currentTimeMillis())
             return;

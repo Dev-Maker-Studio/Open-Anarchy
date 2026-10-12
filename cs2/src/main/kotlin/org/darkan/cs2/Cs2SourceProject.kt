@@ -6,56 +6,16 @@ import org.darkan.cs2.compile.Cs2Lexer
 import org.darkan.cs2.compile.Cs2Parser
 import world.gregs.voidps.cache.Cache
 
-/**
- * A folder of decompiled clientscripts, and the path from a file on disk back to
- * bytecode.
- *
- * The folder is the same shape `cs2 decompile-all` writes: `<category>/<name>.ts`
- * per script - `proc/quicksort.ts` - plus `cs2.d.ts` for the opcode signatures,
- * `gamevals.d.ts` for the id constants and `vars.d.ts` binding renamed variables
- * to their ids. Two facts about that layout drive everything here:
- *
- *  - **The gameval name is the script's identity**, not the function name.
- *    `gamevals/clientscript.json` maps it to the archive id, and the header and
- *    the path both spell it out ([Cs2Layout]), so a renamed function still
- *    compiles to the right script.
- *  - **Renamed identifiers only resolve through the folder's declarations.**
- *    [Cs2SymbolTable.read] scans `vars.d.ts`, `gamevals.d.ts` and every script
- *    header, so it is folder-scoped state that has to be re-read whenever those
- *    files change.
- *
- * Compilation happens on whichever thread asks - in practice the hot reload
- * watcher thread - so the mutable state here ([folder], [symbols]) is volatile
- * and replaced wholesale rather than mutated in place.
- */
 class Cs2SourceProject private constructor(
-    /**
-     * What compiling one file has to know about the others: every callee's signature, and which
-     * params yield strings.
-     *
-     * Either the whole-cache analysis ([Cs2Analyzer]) or the folder's own declarations
-     * ([Cs2SourceContext]). Nothing in the compile path can tell the difference, which is the
-     * point: a cache source tree is packed by a server that has no other cache to analyse.
-     */
     private val context: Cs2Context,
-    /** Index 12's bytes, for [verify]; null for a project that only compiles. */
     cache: Cache?,
-    /** The analysis, where there is one: decompiling into the folder needs it, compiling does not. */
     private val analyzer: Cs2Analyzer?,
     folder: File,
 ) {
 
-    /** A project over a cache: compiles, verifies against it and decompiles out of it. */
     constructor(cache: Cache, analyzer: Cs2Analyzer, folder: File = File(DEFAULT_FOLDER)) :
         this(analyzer, cache, analyzer, folder)
 
-    /**
-     * A project that only compiles, from [folder] and [context] alone.
-     *
-     * There is no cache, so [verify] has nothing to compare against and [exportSource] has nothing
-     * to decompile; both say so. Everything else - [compile], [compileFile], [scriptIdOf], the
-     * symbol table - works exactly as it does with one.
-     */
     constructor(context: Cs2Context, folder: File) : this(context, null, null, folder)
 
     @Volatile
@@ -72,10 +32,6 @@ class Cs2SourceProject private constructor(
         reloadSymbols()
     }
 
-    /**
-     * Points the project at a different folder and re-reads its declarations.
-     * Returns the folder actually in use, which is unchanged when it is missing.
-     */
     fun useFolder(directory: File): File {
         if (!directory.isDirectory) return folder
         folder = directory
@@ -83,7 +39,6 @@ class Cs2SourceProject private constructor(
         return folder
     }
 
-    /** Re-reads `vars.d.ts` and the per-script name bindings. */
     fun reloadSymbols() {
         symbols = try {
             if (folder.isDirectory) Cs2SymbolTable.read(folder) else Cs2SymbolTable.EMPTY
@@ -92,33 +47,21 @@ class Cs2SourceProject private constructor(
         }
     }
 
-    // -------------------------------------------------------------- diagnostics
 
-    /**
-     * A compile failure with somewhere to jump to.
-     *
-     * The lexer and parser signal problems with plain `error(...)`, so there is no
-     * structured position to read: [line] and [column] are recovered from the
-     * message and the token stream on a best-effort basis (see [locate]) and
-     * default to the top of the file when nothing is recoverable.
-     */
     data class Diagnostic(
         val file: File?,
         val scriptId: Int,
         val message: String,
         val line: Int,
         val column: Int,
-        /** True when [line] and [column] were actually recovered rather than guessed. */
         val located: Boolean,
     ) {
-        /** `file:line:col`, the form editors and terminals both understand. */
         val location: String
             get() = "${file?.path ?: "<unknown>"}:$line:$column"
 
         override fun toString(): String = "$location: $message"
     }
 
-    /** A successful compile: the script, and the bytes it encodes to. */
     class Compiled(
         val scriptId: Int,
         val file: File,
@@ -134,13 +77,7 @@ class Cs2SourceProject private constructor(
         val diagnostic: Diagnostic? get() = (this as? Failed)?.error
     }
 
-    // ------------------------------------------------------------------- paths
 
-    /**
-     * Where a script's source belongs: `<category>/<name>.ts`, from its gameval
-     * name. A folder written by an older build still holds it at the numbered flat
-     * path, so that is accepted where it is what actually exists.
-     */
     fun fileFor(scriptId: Int): File {
         val derived = Cs2Layout.fileFor(folder, scriptId)
         if (derived.isFile) return derived
@@ -150,23 +87,19 @@ class Cs2SourceProject private constructor(
 
     fun hasSource(scriptId: Int): Boolean = fileFor(scriptId).isFile
 
-    /** The id a file declares - its gameval name, or the path it sits at. */
     fun scriptIdOf(file: File): Int? = try {
         Cs2Layout.scriptIdOf(file.readText(), Cs2Layout.relativePath(folder, file))
     } catch (e: Exception) {
         null
     }
 
-    /** True when a file is one of the folder's scripts rather than a declaration file. */
     fun isScriptFile(file: File): Boolean = Cs2Layout.isScriptFile(file)
 
-    /** True when a file changing invalidates the symbol table for the whole folder. */
     fun isDeclarationFile(file: File): Boolean =
         file.name == Cs2Declarations.VARS_FILE ||
             file.name == Cs2Declarations.OPCODES_FILE ||
             file.name == Cs2Declarations.GAMEVALS_FILE
 
-    /** Every script id the folder has a source file for, ascending. */
     fun sourceIds(): List<Int> =
         Cs2Layout.scriptFiles(folder).mapNotNull { scriptIdOf(it) }.distinct().sorted()
 
@@ -176,7 +109,6 @@ class Cs2SourceProject private constructor(
         null
     }
 
-    // ----------------------------------------------------------------- compile
 
     fun compile(scriptId: Int): CompileResult {
         val file = fileFor(scriptId)
@@ -188,16 +120,6 @@ class Cs2SourceProject private constructor(
         return compileFile(file)
     }
 
-    /**
-     * Parses and lowers one file.
-     *
-     * The [context] is used twice over: as the parser's param-type oracle (a
-     * `*_PARAM` opcode pushes an int or a string depending on the param's declared
-     * type, which the source cannot say) and as the code generator's context, so a
-     * statement-position call discards exactly what its callee leaves behind.
-     * Whether it came from a cache or from the folder's own declarations makes no
-     * difference here - see [Cs2SourceContext].
-     */
     fun compileFile(file: File): CompileResult {
         val source = try {
             file.readText()
@@ -208,8 +130,6 @@ class Cs2SourceProject private constructor(
         }
         val relative = Cs2Layout.relativePath(folder, file)
         val headerId = Cs2Layout.scriptIdOf(source, relative) ?: -1
-        // A name that means one id here and another in the catalogs would compile
-        // either way, so the folder is refused rather than read one of the two ways.
         symbols.refusal()?.let {
             return CompileResult.Failed(Diagnostic(file, headerId, it, 1, 1, located = false))
         }
@@ -223,15 +143,7 @@ class Cs2SourceProject private constructor(
         }
     }
 
-    // ------------------------------------------------------------------ verify
 
-    /**
-     * Whether a file still compiles to the bytes the cache holds.
-     *
-     * Worth doing before editing: the decompiler round-trips most scripts exactly
-     * but not all of them, and knowing an untouched file is byte-exact is what
-     * separates "my edit broke this" from "this script never round-tripped".
-     */
     data class VerifyResult(
         val scriptId: Int,
         val identical: Boolean,
@@ -262,20 +174,11 @@ class Cs2SourceProject private constructor(
         )
     }
 
-    // ------------------------------------------------------------------ export
 
     data class ExportResult(val file: File?, val message: String) {
         val ok: Boolean get() = file != null
     }
 
-    /**
-     * Decompiles a cached script into the folder so it can be edited.
-     *
-     * Uses the same structurer and emitter the CLI does; where the structurer
-     * cannot reproduce a script's branch layout exactly the faithful rendering
-     * can, so that is tried as a fallback rather than emitting source that will
-     * not compile back.
-     */
     fun exportSource(scriptId: Int, overwrite: Boolean = false): ExportResult {
         val target = fileFor(scriptId)
         if (target.isFile && !overwrite) {
@@ -307,11 +210,6 @@ class Cs2SourceProject private constructor(
     private fun emit(analysis: Cs2Analyzer, script: Cs2Script, scriptId: Int, faithful: Boolean): String =
         Cs2Emitter(analysis.types().apply(Cs2Structurer(script, scriptId, analysis, faithful).structure())).emit()
 
-    /**
-     * Writes the ambient declarations a fresh folder needs for the editor to
-     * resolve opcode names. `vars.d.ts` is deliberately left alone: it is produced
-     * by a whole-cache decompile and carries the developer's renames.
-     */
     fun exportDeclarations(): ExportResult = try {
         folder.mkdirs()
         folder.resolve(Cs2Declarations.OPCODES_FILE)
@@ -327,25 +225,7 @@ class Cs2SourceProject private constructor(
         ExportResult(null, "cannot write declarations: ${e.message}")
     }
 
-    // --------------------------------------------------------------- positions
 
-    /**
-     * Best-effort position for a compiler message.
-     *
-     * Neither the lexer nor the parser carries a position into its errors, but
-     * both leave a trail:
-     *
-     *  - the lexer's own message ends in `on line N`, and every parser message
-     *    built from a [org.darkan.cs2.compile.Token] ends in `at line N`,
-     *    because that is what `Token.toString` prints;
-     *  - the rest quote the offending identifier (`Unknown identifier 'foo'`),
-     *    which can be found in the token stream, giving the line of its first
-     *    occurrence.
-     *
-     * The column is then the offset of that text on the line, or the first
-     * non-blank column. Both handles are all that is available without editing the
-     * lexer and parser, which are owned elsewhere.
-     */
     private fun locate(file: File, scriptId: Int, source: String, message: String): Diagnostic {
         val lines = source.lines()
         val reported = LINE_IN_MESSAGE.find(message)?.groupValues?.get(1)?.toIntOrNull()
@@ -374,10 +254,6 @@ class Cs2SourceProject private constructor(
     }
 
     companion object {
-        /**
-         * Resolved against the working directory, which for `gradle :tools:run` is
-         * the repository root.
-         */
         const val DEFAULT_FOLDER = "cs2-dump"
 
         private val LINE_IN_MESSAGE = Regex("""(?:at|on) line (\d+)""")

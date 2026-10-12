@@ -24,34 +24,19 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * The item container layer, end to end, against the real cache.
- *
- * Every assertion here is a legacy behaviour: `com.rs.lib.game.Item`,
- * `com.rs.game.model.item.ItemsContainer` and the `Inventory`/`Equipment`/`Bank` containers built on
- * them, plus the ground-item round trip. Container ids are the legacy ones - 93 inventory, 94
- * equipment, 95 bank - and the packets are asserted through the session, so a container that mutates
- * without telling the client fails here.
- */
 class ContainerRoundTripTest {
 
     private companion object {
-        /** Abyssal whip: weapon slot, not stackable, no metadata. */
         const val WHIP = 4151
 
-        /** Steel two-hander: weapon slot, `isEquipType(5)`, so it takes the shield slot too. */
         const val TWO_HANDER = 1307
 
-        /** Wooden shield. */
         const val SHIELD = 1171
 
-        /** Bronze arrows: ammo slot, stackable. */
         const val ARROWS = 882
 
-        /** Coins: stackable, un-notable. */
         const val COINS = 995
 
-        /** Iron ore: not stackable, has a note form. */
         const val ORE = 440
 
         const val INV_CONTAINER = 93
@@ -63,8 +48,6 @@ class ContainerRoundTripTest {
 
     @AfterTest
     fun tearDown() {
-        // Every harness player spawns on the same tile, so a drop one test leaves behind is a drop
-        // the next test finds. Clear the chunks these players stood in before logging them out.
         loggedIn.map { it.player.tile.getChunkId() }.distinct().forEach { chunkId ->
             ChunkManager.getChunk(chunkId).allGroundItems.toList().forEach { World.removeGroundItem(it) }
         }
@@ -79,10 +62,8 @@ class ContainerRoundTripTest {
             it.clearSent()
         }
 
-    /** Runs a world tick, which is where the deferred inventory refresh and the flush happen. */
     private fun tick() = WorldHarness.tick()
 
-    /** Ticks, then hands back everything the client would actually have received. */
     private fun HarnessPlayer.settle(): List<ServerProt> {
         tick()
         return session.flushed
@@ -105,13 +86,7 @@ class ContainerRoundTripTest {
         inventory.refresh()
     }
 
-    // ------------------------------------------------------------------ ItemsContainer unit behaviour
 
-    /**
-     * `ItemsContainer.add` must leave the container untouched when it returns false, or the caller's
-     * "not enough space" branch silently eats items. Legacy `ItemsContainer.java:91-107`: the
-     * multi-slot branch checks `freeSlots() < item.getAmount()` *before* writing anything.
-     */
     @Test
     fun addReturningFalseNeverMutatesTheContainer() {
         WorldHarness.boot()
@@ -126,17 +101,12 @@ class ContainerRoundTripTest {
         )
         assertEquals(2, container.freeSlots, "free slots changed after a failed add")
 
-        // A full container refuses a single item too, and still does not mutate.
         for (slot in 26 until 28) container.set(slot, Item(ORE, 1))
         val full = container.itemsCopy
         assertFalse(container.add(Item(WHIP, 1)), "a full container accepted another item")
         assertTrue(full.contentEquals(container.itemsCopy), "a failed add into a full container mutated it")
     }
 
-    /**
-     * `add` merges stackables into the existing stack rather than taking a new slot, and refuses the
-     * merge when it would overflow. Legacy `ItemsContainer.java:80-90`.
-     */
     @Test
     fun addMergesStackablesAndRefusesOverflow() {
         WorldHarness.boot()
@@ -147,17 +117,12 @@ class ContainerRoundTripTest {
         assertEquals(150, container.get(0)!!.amount)
 
         container.set(1, Item(COINS, Int.MAX_VALUE))
-        // Slot 0 is found first, and 150 + MAX_VALUE overflows negative, so the merge is refused.
         container.clear()
         container.set(0, Item(COINS, Int.MAX_VALUE))
         assertFalse(container.add(Item(COINS, 10)), "an overflowing stack merge was allowed")
         assertEquals(Int.MAX_VALUE, container.get(0)!!.amount, "a refused merge changed the stack")
     }
 
-    /**
-     * A non-stackable added with amount > 1 becomes that many single items, one per slot. Legacy
-     * `ItemsContainer.java:91-99`.
-     */
     @Test
     fun addSpreadsNonStackablesOverOneSlotEach() {
         WorldHarness.boot()
@@ -167,10 +132,6 @@ class ContainerRoundTripTest {
         for (slot in 0 until 5) assertEquals(1, container.get(slot)!!.amount)
     }
 
-    /**
-     * `remove` takes from a partial stack in place and returns how much it actually removed, and
-     * clears the slot when it takes the whole stack. Legacy `ItemsContainer.java:125-143`.
-     */
     @Test
     fun removeTakesPartialStacksAndReportsTheAmountRemoved() {
         WorldHarness.boot()
@@ -186,7 +147,6 @@ class ContainerRoundTripTest {
         assertEquals(0, container.remove(Item(COINS, 5)), "removing from an empty container reported a removal")
     }
 
-    /** `remove` walks every slot holding the id, not just the first. Legacy `ItemsContainer.java:127-141`. */
     @Test
     fun removeDrainsAcrossSlots() {
         WorldHarness.boot()
@@ -199,11 +159,6 @@ class ContainerRoundTripTest {
         assertEquals(1, container.getNumberOf(ORE), "removing two of three left the wrong amount")
     }
 
-    /**
-     * `set` stamps the slot onto the item so later `getSlot()` reads are right, `set2` deliberately
-     * does not, and both ignore out-of-range slots instead of throwing. Legacy
-     * `ItemsContainer.java:57-69`.
-     */
     @Test
     fun setStampsTheSlotAndIgnoresOutOfRangeSlots() {
         WorldHarness.boot()
@@ -223,7 +178,6 @@ class ContainerRoundTripTest {
         assertNull(container.get(28))
     }
 
-    /** `Inventory.switchItem` swaps two slots and reports both as changed. */
     @Test
     fun switchItemSwapsTwoSlotsAndRefreshesBoth() {
         val harness = login("switcher")
@@ -250,7 +204,6 @@ class ContainerRoundTripTest {
         )
     }
 
-    /** `freeSlots`/`usedSlots`/`freeSlot` all agree, and `freeSlot` is -1 only when truly full. */
     @Test
     fun freeSlotAccountingIsConsistent() {
         WorldHarness.boot()
@@ -272,10 +225,6 @@ class ContainerRoundTripTest {
         assertEquals(0, container.freeSlots)
     }
 
-    /**
-     * `containsOne` is id-only and ignores amount, while `contains` sums the amounts across slots.
-     * Legacy `ItemsContainer.java:159-176`.
-     */
     @Test
     fun containsOneIgnoresAmountAndContainsSumsAcrossSlots() {
         WorldHarness.boot()
@@ -291,7 +240,6 @@ class ContainerRoundTripTest {
         assertFalse((container as ItemsContainer<Item?>).contains(null), "contains(null) must be false, not a crash")
     }
 
-    /** `sortByItemId` orders by id and pushes the empty slots to the end. Legacy `ItemsContainer.java:385-392`. */
     @Test
     fun sortByItemIdOrdersIdsAndPushesEmptySlotsLast() {
         WorldHarness.boot()
@@ -307,12 +255,7 @@ class ContainerRoundTripTest {
         assertNull(container.get(4))
     }
 
-    // ------------------------------------------------------------------ Item metadata
 
-    /**
-     * `getMetaDataI(key)` with no default returns -1 for an absent key, so callers can tell "absent"
-     * from a stored zero. Legacy `com.rs.lib.game.Item:153-155`.
-     */
     @Test
     fun getMetaDataIDefaultsToMinusOneForAnAbsentKey() {
         val item = Item(WHIP, 1)
@@ -322,12 +265,6 @@ class ContainerRoundTripTest {
         assertEquals(7, item.getMetaDataI("nope", 7), "the explicit default was ignored")
     }
 
-    /**
-     * `getMetaData()` hands back the live map reference, and `containsMetaData()` is "has a map at
-     * all". Legacy `com.rs.lib.game.Item:110-112` and `:175-177`. `ItemsContainer.getNumberOf` and
-     * `remove(preferredSlot, item)` compare those references with `==`, so collapsing an empty map to
-     * null makes two unrelated items compare equal.
-     */
     @Test
     fun metaDataIdentityIsPreservedForEmptyMaps() {
         val item = Item(WHIP, 1)
@@ -350,7 +287,6 @@ class ContainerRoundTripTest {
         )
     }
 
-    /** `setMetaDataO` returns the value it replaced, the way legacy `Item:120-130` does. */
     @Test
     fun setMetaDataOReturnsThePreviousValue() {
         val item = Item(WHIP, 1)
@@ -360,12 +296,6 @@ class ContainerRoundTripTest {
         assertNull(item.getMetaData("charges"))
     }
 
-    /**
-     * Legacy never throws on a bad amount: the two- and three-argument constructors clamp anything
-     * `<= 0` up to 1 (`com.rs.lib.game.Item:59-65`), and `Equipment.setSlot` relies on it - it
-     * returns `new Item(-1, -1)` as its "a plugin cancelled the equip" sentinel
-     * (`Equipment.java:405` and `:414`).
-     */
     @Test
     fun itemConstructionClampsNonPositiveAmountsInsteadOfThrowing() {
         assertEquals(1, Item(WHIP, 0).amount, "amount 0 must clamp to 1 the way legacy does")
@@ -376,7 +306,6 @@ class ContainerRoundTripTest {
         assertEquals(-5, Item(WHIP, -5, true).amount, "the amt0 constructor must keep the exact amount")
     }
 
-    /** `withAmount` is legacy `setAmount`, which ignores a negative amount. Legacy `Item:75-80`. */
     @Test
     fun withAmountIgnoresNegativeAmounts() {
         val item = Item(COINS, 10)
@@ -386,11 +315,6 @@ class ContainerRoundTripTest {
         assertEquals(3, item.withAmount(-1).amount, "a negative amount must be ignored")
     }
 
-    /**
-     * An item with metadata is unique: it never merges into another stack, `getNumberOf` counts it as
-     * one, and it survives every container op with the map intact. Legacy `ItemsContainer.java:81`
-     * gates stacking on `item.getMetaData() == null`, and `:209-217` returns 1 for a metadata item.
-     */
     @Test
     fun metadataItemsNeverStackAndSurviveContainerOps() {
         WorldHarness.boot()
@@ -406,22 +330,17 @@ class ContainerRoundTripTest {
         assertEquals(100, container.getNumberOf(plain), "the plain stack lost its amount")
         assertEquals(30, container.get(1)!!.getMetaDataI("combatCharges"), "the metadata was dropped by add")
 
-        // Legacy quirk worth pinning: a *stackable* item carrying metadata skips the merge branch
-        // and falls into the one-slot-per-unit branch, so a stack of more than one is refused
-        // outright rather than merged (ItemsContainer.java:81 vs :91-93).
         val bigCharged = Item(COINS, 100).apply { addMetaData("combatCharges", 30) }
         assertFalse(
             container.add(bigCharged),
             "a metadata stack of 100 must be refused: it needs 100 free slots, not a merge"
         )
 
-        // Partial removal from a metadata slot keeps the map on the remainder.
         container.set(2, Item(COINS, 100, bigCharged.metadata))
         assertEquals(40, container.remove(2, Item(COINS, 40, bigCharged.metadata)))
         assertEquals(60, container.get(2)!!.amount)
         assertEquals(30, container.get(2)!!.getMetaDataI("combatCharges"), "a partial remove dropped the metadata")
 
-        // set moves the item without touching the map, and restamps the slot.
         val moved = container.get(2)
         container.set(2, null)
         container.set(20, moved)
@@ -429,7 +348,6 @@ class ContainerRoundTripTest {
         assertEquals(20, container.get(20)!!.slot)
     }
 
-    /** A cloned item gets its own map, so editing the copy cannot reach back into the original. */
     @Test
     fun cloneCopiesTheMetadataMap() {
         val original = Item(WHIP, 1).apply { addMetaData("combatCharges", 30) }
@@ -441,9 +359,7 @@ class ContainerRoundTripTest {
         assertNull(Item(WHIP, 1).clone().getMetaData(), "cloning a plain item invented a metadata map")
     }
 
-    // ------------------------------------------------------------------ Equip / unequip
 
-    /** The whip goes to the weapon slot, the inventory slot is freed, and both containers are told. */
     @Test
     fun equippingAWeaponMovesItAndRefreshesBothContainers() {
         val harness = login("equipper")
@@ -470,7 +386,6 @@ class ContainerRoundTripTest {
         )
     }
 
-    /** Unequipping puts the item back in the inventory - it must not vanish. */
     @Test
     fun unequippingReturnsTheItemToTheInventory() {
         val harness = login("unequipper")
@@ -492,7 +407,6 @@ class ContainerRoundTripTest {
         assertTrue(flushed.touches(EQUIP_CONTAINER), "no equipment (94) update was flushed for the unequip")
     }
 
-    /** A two-hander takes the shield slot, so the worn shield has to come back to the inventory. */
     @Test
     fun equippingATwoHanderMovesTheWornShieldToTheInventory() {
         val harness = login("twohander")
@@ -511,10 +425,6 @@ class ContainerRoundTripTest {
         assertEquals(1, player.inventory.getNumberOf(SHIELD, false), "the shield was destroyed instead of returned")
     }
 
-    /**
-     * With a full inventory and a shield worn, a two-hander has nowhere to put the shield, so the
-     * equip is refused and nothing is lost. Legacy `Equipment.java:766-770`.
-     */
     @Test
     fun equippingATwoHanderWithAFullInventoryRefusesWithoutLoss() {
         val harness = login("nospace")
@@ -538,11 +448,6 @@ class ContainerRoundTripTest {
         )
     }
 
-    /**
-     * Ammo stacks: equipping more arrows onto arrows already worn adds to the worn stack instead of
-     * replacing it. Legacy `Equipment.java:804` skips the swap-out when the ids match and the item is
-     * stackable, and `:818` sums the amounts.
-     */
     @Test
     fun equippingStackableAmmoMergesWithTheWornStack() {
         val harness = login("arrows")
@@ -566,9 +471,7 @@ class ContainerRoundTripTest {
         assertEquals(0, player.inventory.getNumberOf(ARROWS, false), "arrows were duplicated back into the inventory")
     }
 
-    // ------------------------------------------------------------------ Bank
 
-    /** A plain deposit moves the whole stack into the bank and empties the inventory slot. */
     @Test
     fun depositAndWithdrawRoundTripsAStackable() {
         val harness = login("banker")
@@ -597,7 +500,6 @@ class ContainerRoundTripTest {
         assertTrue(afterWithdraw.touches(INV_CONTAINER), "no inventory (93) update was flushed for the withdrawal")
     }
 
-    /** Depositing a note stores the unnoted id, so notes and singles share one bank stack. */
     @Test
     fun depositingANoteBanksTheUnnotedItem() {
         val harness = login("noter")
@@ -617,7 +519,6 @@ class ContainerRoundTripTest {
         assertNull(player.inventory.getItem(0), "the notes stayed in the inventory")
     }
 
-    /** With "withdraw as note" on, a notable item comes out as its note form. */
     @Test
     fun withdrawingAsNoteHandsBackTheNoteForm() {
         val harness = login("notewithdraw")
@@ -638,10 +539,6 @@ class ContainerRoundTripTest {
         assertEquals(15, assertNotNull(player.bank.getItem(ORE)).amount, "the bank stack was not reduced")
     }
 
-    /**
-     * A withdrawal is clamped to the free inventory slots for a non-stackable item, and refused
-     * outright when there is no room at all. Legacy `Bank.java:743-755`.
-     */
     @Test
     fun withdrawIsClampedToFreeInventorySlots() {
         val harness = login("bankfull")
@@ -656,13 +553,11 @@ class ContainerRoundTripTest {
         assertEquals(3, player.inventory.getNumberOf(ORE, false), "the withdrawal was not clamped to three free slots")
         assertEquals(17, assertNotNull(player.bank.getItem(ORE)).amount, "the bank lost more than it handed over")
 
-        // Now the inventory is full: the withdrawal must be refused with nothing taken.
         player.bank.withdrawItem(0, 5)
         assertEquals(3, player.inventory.getNumberOf(ORE, false), "items appeared with no free slot")
         assertEquals(17, assertNotNull(player.bank.getItem(ORE)).amount, "the bank was debited for a refused withdrawal")
     }
 
-    /** A deposit of a metadata item banks exactly one and keeps the map. */
     @Test
     fun depositingAMetadataItemBanksOneAndKeepsTheMetadata() {
         val harness = login("metabank")
@@ -679,9 +574,7 @@ class ContainerRoundTripTest {
         assertNull(player.inventory.getItem(0), "the whip stayed in the inventory")
     }
 
-    // ------------------------------------------------------------------ Ground items
 
-    /** Dropping and picking an item back up returns exactly what was dropped. */
     @Test
     fun dropThenPickUpReturnsTheItem() {
         val harness = login("dropper")
@@ -714,7 +607,6 @@ class ContainerRoundTripTest {
         )
     }
 
-    /** A pickup into a full inventory is refused and leaves the item on the floor. */
     @Test
     fun pickUpWithAFullInventoryLeavesTheItemOnTheFloor() {
         val harness = login("fullpickup")
@@ -735,7 +627,6 @@ class ContainerRoundTripTest {
         assertEquals(0, player.inventory.getNumberOf(WHIP, false), "the whip appeared in a full inventory")
     }
 
-    /** A ground item carries its metadata through the drop and back into the inventory. */
     @Test
     fun groundItemsCarryMetadataBothWays() {
         val harness = login("metaground")
@@ -756,13 +647,6 @@ class ContainerRoundTripTest {
         assertEquals(30, back.getMetaDataI("combatCharges"), "the metadata did not survive the round trip")
     }
 
-    /**
-     * When a private drop turns public it keeps its own identity: the same instance is re-keyed, so
-     * its tick counter (and with it the absolute `deleteTime` deadline) survives, and the creator is
-     * still recorded for the pickup log and the ironman restriction. Legacy `Chunk.java:166-168`
-     * mutated the item in place; `GroundItem.removeOwner` (legacy `GroundItem.java:111-113`) clears
-     * only the visibility.
-     */
     @Test
     fun revealingAPrivateDropKeepsItsTicksAndItsCreator() {
         val harness = login("revealer")
@@ -795,7 +679,6 @@ class ContainerRoundTripTest {
         )
     }
 
-    /** The pickup event can cancel a pickup, and then nothing moves. */
     @Test
     fun aCancelledPickupEventLeavesEverythingAlone() {
         val harness = login("cancelpickup")

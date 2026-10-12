@@ -22,8 +22,6 @@ import com.rs.plugin.handlers.NPCClickHandler;
 @PluginEventHandler
 public class Interactions {
 	
-	//spotanim 1575 mining boost
-	//TODO 8320 8321 anim interaction to search for fruit fruit bat
 	
 	public static NPCClickHandler handleInteract = new NPCClickHandler(Pouch.getAllNPCIdKeys(), new String[] { "Interact" }, e -> {
 		if (!(e.getNPC() instanceof Familiar familiar))
@@ -521,12 +519,10 @@ public class Interactions {
 			case VAMPYRE_BAT -> {
 				if(!canTalk)
 					yield new Dialogue().addNPC(familiar.getId(), HeadE.CAT_CALM_TALK2, "Ree! Ree! Reeeee!");
-				//less than half hp is this dialogue
 				if(player.getHitpoints() < (player.getMaxHitpoints()/2))
 					yield new Dialogue()
 							.addNPC(familiar.getId(), HeadE.CAT_CALM_TALK2, "You're vasting all that blood, can I have some?")
 							.addPlayer(HeadE.HAPPY_TALKING, "No!");
-				//darkness
 				if((player.getControllerManager().getController() != null && player.getControllerManager().getController() instanceof UndergroundDungeonController))
 					yield new Dialogue()
 							.addNPC(familiar.getId(), HeadE.CAT_CALM_TALK2, "Ze creatures ov ze dark; vat vonderful music zey make.")
@@ -569,7 +565,6 @@ public class Interactions {
 			case BEAVER -> {
 				if(!canTalk)
 					yield new Dialogue().addNPC(familiar.getId(), HeadE.CAT_CALM_TALK2, "Chip chip!");
-				//logs in inventory
 				if(player.getInventory().containsOneItem(1511, 1513, 1515, 1517, 1519, 1521, 2862, 3438, 3440, 3442, 3444, 3446, 3448, 4445, 5211, 5213, 6332, 6333))
 					yield new Dialogue()
 							.addNPC(familiar.getId(), HeadE.CAT_CALM_TALK2, "'Ere, you 'ave ze logs, now form zem into a mighty dam!")
@@ -627,7 +622,6 @@ public class Interactions {
 			case VOID_SPINNER -> {
 				if(!canTalk)
 					yield new Dialogue().addNPC(familiar.getId(), HeadE.CAT_CALM_TALK2, "Psssst!");
-				//purple sweets
 				if(player.getInventory().containsOneItem(10476, 4561))
 					yield new Dialogue()
 							.addNPC(familiar.getId(), HeadE.CAT_CALM_TALK2, "You have sweeties for spinner?")
@@ -1480,7 +1474,6 @@ public class Interactions {
 			case BUNYIP -> {
 				if(!canTalk)
 					yield new Dialogue();
-				//has fish
 				if(player.getInventory().containsOneItem(13435, 317, 321, 327, 338, 345, 335, 331, 349, 359, 371, 377, 353, 341, 363, 11328, 2148, 11330, 11332, 7944, 383, 15264, 15270)) {
 					yield new Dialogue()
 							.addNPC(familiar.getId(), HeadE.CAT_CALM_TALK2, "I see you've got some fish there, mate.")
@@ -2005,7 +1998,6 @@ public class Interactions {
 			case ICE_TITAN -> {
 				if(!canTalk)
 					yield new Dialogue().addNPC(familiar.getId(), HeadE.CAT_CALM_TALK2, "Brrrrrr...");
-				//in kharidian desert
 				if(player.getX() > 3130 && player.getX() < 3520 && player.getY() < 3130 && player.getY() > 2755)
 					yield new Dialogue()
 							.addNPC(familiar.getId(), HeadE.CAT_CALM_TALK2, "I'm melting!")

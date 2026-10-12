@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.npcs.combat;
 
 import com.rs.game.World;
@@ -51,7 +35,6 @@ public class YkLagorThunderousCombat extends CombatScript {
 		if (boss.getNextAttack() < 2) {
 			if (boss.getNextAttack() == 0) {
 				boss.setNextForceTalk(new ForceTalk("Come closer!"));
-				// boss.playSoundEffect(1930);
 				WorldTasks.scheduleTimer((ticks) -> {
 					if (ticks == 3) {
 						boss.setNextAnimation(new Animation(14390));
@@ -68,7 +51,6 @@ public class YkLagorThunderousCombat extends CombatScript {
 								boss.heal((int) (boss.getMaxHitpoints() * 0.15));
 								if (!recovered) {
 									boss.setNextForceTalk(new ForceTalk("There is no escape!"));
-									// boss.playSoundEffect(1934);
 									recovered = true;
 								}
 							} else
@@ -78,9 +60,8 @@ public class YkLagorThunderousCombat extends CombatScript {
 					}
 					return true;
 				});
-			} else if (boss.getNextAttack() == 1) {// earthquake shit
+			} else if (boss.getNextAttack() == 1) {
 				boss.setNextForceTalk(new ForceTalk("This is..."));
-				// boss.playSoundEffect(1929);
 				WorldTasks.scheduleTimer((ticks) -> {
 					if (ticks == 2) {
 						boss.setNextAnimation(new Animation(14384));
@@ -92,7 +73,6 @@ public class YkLagorThunderousCombat extends CombatScript {
 						}
 					} else if (ticks == 5) {
 						boss.setNextForceTalk(new ForceTalk("TRUE POWER!"));
-						// boss.playSoundEffect(1936);
 						boss.sendBrokenFloor();
 					} else if (ticks == 7) {
 						for (Player player : boss.getManager().getParty().getTeam()) {
@@ -152,10 +132,8 @@ public class YkLagorThunderousCombat extends CombatScript {
 		npc.setNextSpotAnim(new SpotAnim(2754));
 		if (specialAttack)
 			npc.setNextForceTalk(new ForceTalk("You dare steal my power?!"));
-		// npc.playSoundEffect(1926);
 		else if (Utils.random(5) == 0)
 			npc.setNextForceTalk(new ForceTalk("Fear my wrath!"));
-		///////// npc.playSoundEffect(1927);
 		if (!npc.getPossibleTargets().isEmpty())
 			for (Player player : npc.getManager().getParty().getTeam()) {
 				if (player.isDead() || !npc.getManager().isAtBossRoom(player.getTile()))
@@ -169,10 +147,8 @@ public class YkLagorThunderousCombat extends CombatScript {
 				if (mage.isDead() || mage.hasFinished())
 					continue;
 				mage.applyHit(new Hit(npc, mage.getMaxHitpoints(), HitLook.MAGIC_DAMAGE, 60));
-				// delayHit(mage, 1, mage, Hit.magic(npc, mage.getMaxHitpoints()));
 				mage.setNextSpotAnim(new SpotAnim(2755, 85, 0));
 			}
-		// for mages kill blablalb,we dont want to kill familiars lol
 
 	}
 }

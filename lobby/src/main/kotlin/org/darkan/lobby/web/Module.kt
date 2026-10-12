@@ -35,5 +35,6 @@ fun Application.module() {
         installCoreValidators()
     }
 
+    configureWebApi()
     configureRouting()
 }

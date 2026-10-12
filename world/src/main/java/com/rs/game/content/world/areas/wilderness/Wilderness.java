@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.world.areas.wilderness;
 
 import com.rs.engine.dialogue.Dialogue;
@@ -37,7 +21,6 @@ import org.darkan.core.model.SpotAnim;
 import org.darkan.core.model.Rights;
 import org.darkan.core.model.GroundItem;
 import org.darkan.core.model.WorldObject;
-// Hit class from com.rs.game.model.entity.Hit (not core module)
 import org.darkan.core.model.HintIcon;
 import org.darkan.core.model.Projectile;
 import com.rs.plugin.annotations.PluginEventHandler;
@@ -97,7 +80,6 @@ public class Wilderness {
 			return;
 		}
 
-		//Wildy
 		if(obj.getId() == 26327)
 			e.getPlayer().forceMove(Tile.of(2943, 3767, 0), 2049, 25, 60);
 		if(obj.getId() == 26328) {
@@ -105,7 +87,6 @@ public class Wilderness {
 			e.getPlayer().forceMove(Tile.of(2950, 3767, 0), 2050, 25, 60);
 		}
 
-		//Outside GWD
 		if(obj.getId() == 26324)
 			e.getPlayer().forceMove(Tile.of(2928, 3757, 0), 2049, 25, 60);
 		if(obj.getId() == 26323)
@@ -241,7 +222,6 @@ public class Wilderness {
 
 					@Override
 					public void close(Player player) {
-						// No action needed on close
 					}
 				})
 				.addNext(() -> {

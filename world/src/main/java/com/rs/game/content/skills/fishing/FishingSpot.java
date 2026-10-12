@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.fishing;
 
 import org.darkan.core.model.Animation;
@@ -37,7 +21,7 @@ public enum FishingSpot {
 	FLY_FISHING(new int[] { 309 }, new int[] { 314, 10087, 10088, 10089, 10090, 10091 }, new Animation(622), Fish.TROUT, Fish.SALMON),
 	BARBARIAN_FLY_FISHING(new int[] { 11323 }, new int[] { 11326, 11324, 11334, 313, 314, 10087, 10088, 10089, 10090, 10091 }, new Animation(622), Fish.LEAPING_TROUT, Fish.LEAPING_SALMON, Fish.LEAPING_STURGEON),
 	PIKE(new int[] { 307 }, new int[] { 313 }, new Animation(622), Fish.PIKE),
-    LAVA_EEL(new int[] { 1585 }, new int[] { 313 }, new Animation(622), Fish.LAVA_EEL),//oily fishing rod, bait
+    LAVA_EEL(new int[] { 1585 }, new int[] { 313 }, new Animation(622), Fish.LAVA_EEL),
 	MONKFISH(new int[] { 303 }, null, new Animation(621), Fish.MONKFISH),
 	FROGSPAWN(new int[] { 303 }, null, new Animation(621), Fish.FROGSPAWN),
 	CAVEFISH(new int[] { 307 }, new int[] { 313 }, new Animation(622), Fish.CAVEFISH),

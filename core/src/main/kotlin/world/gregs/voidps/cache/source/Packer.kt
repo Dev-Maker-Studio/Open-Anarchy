@@ -8,32 +8,17 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
-/** What one [Packer.pack] produced. */
 class PackResult(
     val indices: Int,
     val archives: Int,
-    /** Total size of the containers written, trailers included. */
     val bytes: Long,
     val millis: Long
 ) {
     override fun toString(): String = "$indices indices, $archives archives, $bytes bytes, in ${millis}ms"
 }
 
-/**
- * Builds a packed cache from a source tree, from nothing.
- *
- * Every archive is repacked, recompressed, re-encrypted and written into a fresh sector store,
- * and every reference table is rebuilt from the metadata and the archives that were just written,
- * so nothing in the output can disagree with anything else in it. [Builder] is the incremental
- * version and does the same thing to the archives that changed; this is what it falls back to.
- *
- * The version table is not written: it is derived from the reference table containers whenever
- * the cache is opened ([world.gregs.voidps.cache.FileCache]), signed with whichever RSA key the
- * server is configured with, and is never stored on disk in the first place.
- */
 object Packer {
 
-    /** Pack [tree] into [output], replacing whatever cache is already there. */
     fun pack(tree: SourceTree, output: File, report: (String) -> Unit = {}): PackResult {
         val start = System.nanoTime()
         val threads = PackThreads.count()
@@ -47,8 +32,6 @@ object Packer {
         try {
             clear(output)
             FileStore.create(output, tree.indexCount).use { store ->
-                // Nothing in a from-scratch build survives a crash anyway, and half a million
-                // fsync calls would cost more than the compression does.
                 store.durable = false
                 for (index in tree.indices()) {
                     val written = packIndex(tree, index, store, pool, manifest, threads, report)
@@ -65,7 +48,6 @@ object Packer {
         return PackResult(indices, archives, bytes, (System.nanoTime() - start) / 1_000_000)
     }
 
-    /** Pack one index into [store], returning its archive count and byte total. */
     private fun packIndex(
         tree: SourceTree,
         index: Int,
@@ -83,14 +65,9 @@ object Packer {
         val states = manifest.archives(index)
         var bytes = 0L
         if (ids.isNotEmpty()) {
-            // Before the loop, once: a codec with shared state to build - index 12's corpus
-            // analysis - must not build it per archive, and a pack of every archive is the one
-            // case where every one of them is going to need it.
             codec.packIndex(directory, index, ids, emptyList())
         }
 
-        // Compression runs ahead of the store, which can only be written one archive at a time,
-        // but only so far ahead: a whole index's containers at once is hundreds of megabytes.
         val window = threads * PIPELINE
         val pending = ArrayDeque<Pair<Int, Future<PackedContainer>>>()
         var next = 0
@@ -119,7 +96,6 @@ object Packer {
         return ids.size to bytes
     }
 
-    /** A pack writes a whole cache; anything already in [output] is last build's, not this one's. */
     private fun clear(output: File) {
         output.mkdirs()
         for (file in output.listFiles() ?: emptyArray()) {
@@ -129,6 +105,5 @@ object Packer {
         }
     }
 
-    /** How many archives per thread may be compressed ahead of the store writer. */
     private const val PIPELINE = 8
 }

@@ -4,13 +4,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.config.data.MapSceneDefinition
 
-/**
- * Writes a map scene (`mapscene`, index 2 archive 34) file.
- *
- * Opcode 4 is the bare "no graphic" marker; opcode 1 carries a graphic as a big smart. A definition
- * with no graphic is written as opcode 4 unless its file used opcode 1 with the -1 sentinel, which
- * the recorded opcode order preserves.
- */
 class MapSceneEncoder : OpcodeEncoder<MapSceneDefinition>() {
 
     override fun opcodes(definition: MapSceneDefinition): IntArray {

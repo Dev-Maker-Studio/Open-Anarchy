@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.npcs.bosses.balak;
 
 import com.rs.game.World;
@@ -59,7 +43,6 @@ public class BalLakThePummelerCombat extends CombatScript {
 		if (smash) {
 			npc.setNextAnimation(new Animation(14384));
 			npc.setNextForceTalk(new ForceTalk("Rrrraargh!"));
-			//npc.playSoundEffect(3038);
 			final Tile center = manager.getRoomCenterTile(boss.getReference());
 			WorldTasks.schedule(new Task() {
 
@@ -91,7 +74,7 @@ public class BalLakThePummelerCombat extends CombatScript {
 		}
 
 		switch (Utils.random(2)) {
-		case 0://reg melee left
+		case 0:
 
 			final boolean firstHand = Utils.random(2) == 0;
 
@@ -107,7 +90,7 @@ public class BalLakThePummelerCombat extends CombatScript {
 
 			}, 1);
 			break;
-		case 1://magic attack multi
+		case 1:
 			boss.setNextAnimation(new Animation(14380));
 			boss.setNextSpotAnim(new SpotAnim(2441));
 			for (Entity t : npc.getPossibleTargets()) {

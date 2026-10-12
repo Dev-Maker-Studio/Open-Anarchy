@@ -13,27 +13,8 @@ import java.lang.ProcessBuilder.Redirect
 import org.darkan.cs2.Cs2HotReload
 import org.darkan.cs2.Cs2SourceProject
 
-/**
- * Drives CS2 hot reload from the editor.
- *
- * The panel is the only thing that touches the reload machinery from the render
- * thread, and it does two jobs there: it drains the watcher's event queue once
- * per frame (see [render] - this happens whether or not the window is visible,
- * because a hidden panel must not stall the pipeline), and it turns compile
- * diagnostics into somewhere the developer can actually go, by shelling out to
- * their editor with a `file:line:col` target.
- *
- * Everything else - compiling, installing, watching - happens on the watcher
- * thread inside [Cs2HotReload]; nothing here blocks on it.
- */
 class Cs2ReloadPanel(
     private val reload: Cs2HotReload,
-    /**
-     * Script ids the open interface's hooks reference, for the "export what this
-     * interface runs" button. A lambda rather than a viewer reference so this
-     * panel does not depend on the viewer or on the interaction runtime; phase 2
-     * supplies the real provider.
-     */
     private val hookScripts: () -> List<Int> = { emptyList() },
     private val liveSource: () -> String = { "" },
 ) {
@@ -45,7 +26,6 @@ class Cs2ReloadPanel(
     private val scriptInput = ImInt(0)
     private val autoReload = ImBoolean(reload.autoReload)
 
-    /** Events drained this frame, kept only for the status line. */
     private val drained = ArrayList<Cs2HotReload.Event>()
 
     private var status: String = "idle"
@@ -55,12 +35,6 @@ class Cs2ReloadPanel(
         folderInput.set(reload.project.folder.path)
     }
 
-    /**
-     * Called every frame. The drain happens before the visibility check on
-     * purpose: the queue is unbounded, and a panel the developer closed should not
-     * quietly turn into a memory leak or delay [Cs2HotReload.onReload] callbacks
-     * the viewer depends on.
-     */
     fun render(windowHeight: Int) {
         drained.clear()
         if (reload.drainInto(drained) > 0) {
@@ -70,11 +44,6 @@ class Cs2ReloadPanel(
 
         if (!visible) return
         if (firstFrame) {
-            // Only a size hint, and only as a default: setting an explicit position
-            // marks the window PosUndock in ImGui, which tears it back out of the
-            // dockspace on every launch no matter what the dock builder asked for.
-            // FirstUseEver lets a saved layout win, so the panel stays where it was
-            // put.
             ImGui.setNextWindowSize(430f, (windowHeight * 0.55f).coerceAtLeast(340f), ImGuiCond.FirstUseEver)
             firstFrame = false
         }
@@ -104,7 +73,6 @@ class Cs2ReloadPanel(
         ImGui.end()
     }
 
-    // ------------------------------------------------------------------- source
 
     private fun renderSource() {
         val live = liveSource()
@@ -151,7 +119,6 @@ class Cs2ReloadPanel(
         }
     }
 
-    // ----------------------------------------------------------------- controls
 
     private fun renderControls() {
         ImGui.inputInt("script id", scriptInput)
@@ -201,8 +168,6 @@ class Cs2ReloadPanel(
         ImGuiText.wrapped(status)
         val event = lastEvent ?: return
         if (event.signatureChanged) {
-            // A moved return signature invalidates every existing call site, and
-            // no incremental patch can fix that; say so instead of pretending.
             warn(
                 "script ${event.scriptId} changed what it returns - ${event.staleCallers.size} " +
                     "callers still discard the old number of results",
@@ -215,15 +180,12 @@ class Cs2ReloadPanel(
                 }
             }
             if (ImGui.button("Re-analyse whole cache")) {
-                // Seconds-long and single-threaded by design; the alternative is
-                // leaving every caller's discard count wrong.
                 val report = reload.reanalyse()
                 status = "re-analysed ${report.analysed} scripts, ${report.problems.size} problems"
             }
         }
     }
 
-    // ------------------------------------------------------------------- errors
 
     private fun renderErrors() {
         val errors = reload.errors.asReversed()
@@ -236,8 +198,6 @@ class Cs2ReloadPanel(
         if (ImGui.beginChild("Cs2ReloadErrors", 0f, 140f, ImGuiChildFlags.Borders)) {
             for ((index, event) in errors.withIndex()) {
                 val diagnostic = event.diagnostic
-                // Bound to a local: `Diagnostic.file` lives in the :cs2 module now, and a public
-                // property from another module cannot be smart cast.
                 val diagnosticFile = diagnostic?.file
                 val label = if (diagnostic == null) {
                     "script ${event.scriptId}: ${event.message}"
@@ -311,10 +271,6 @@ class Cs2ReloadPanel(
         ImGui.endChild()
     }
 
-    /**
-     * Exports the scripts the open interface actually runs, so a developer can go
-     * from "this button does nothing" to editing the script behind it.
-     */
     private fun renderHookScripts() {
         val ids = hookScripts().distinct().sorted()
         if (ids.isEmpty()) {
@@ -341,7 +297,6 @@ class Cs2ReloadPanel(
         ImGui.endChild()
     }
 
-    // -------------------------------------------------------------------- editor
 
     private fun exportAndOpen(scriptId: Int): String {
         val result = reload.project.exportSource(scriptId)
@@ -349,14 +304,6 @@ class Cs2ReloadPanel(
         return "${result.message}; ${open(file, 1, 1)}"
     }
 
-    /**
-     * Opens a file at a position in the developer's editor.
-     *
-     * `$VISUAL`/`$EDITOR` win when set, since that is where the preference lives;
-     * otherwise VS Code, whose `-g file:line:col` is the form the diagnostics are
-     * already printed in. A missing editor is a status line, never an exception -
-     * the render thread must survive it.
-     */
     private fun open(file: File, line: Int, column: Int): String {
         if (!file.isFile) return "no such file: ${file.path}"
         val editor = System.getenv("VISUAL")?.takeIf { it.isNotBlank() }
@@ -387,7 +334,6 @@ class Cs2ReloadPanel(
 
     private fun warn(text: String) = ImGuiText.coloured(1f, 0.75f, 0.3f, 1f, text)
 
-    /** Diagnostics the viewer can surface elsewhere, newest first. */
     val errors: List<Cs2SourceProject.Diagnostic>
         get() = reload.errors.mapNotNull { it.diagnostic }.asReversed()
 }

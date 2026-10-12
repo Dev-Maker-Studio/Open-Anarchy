@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content;
 
 import org.darkan.core.model.IFEvents;
@@ -83,7 +67,7 @@ public final class Notes {
 				.enableDrag());
 		player.getPackets().setIFHidden(34, 3, false);
 		player.getPackets().setIFHidden(34, 44, false);
-		player.getVars().setVar(Varp.notes_loaded, 1); // unlocks add notes
+		player.getVars().setVar(Varp.notes_loaded, 1);
 		player.getVars().setVar(Varp.notes_selected, -1);
 		refresh();
 	}
@@ -175,13 +159,6 @@ public final class Notes {
 		refresh();
 	}
 
-	/**
-	 * Gets the primary colour of the notes.
-	 *
-	 * @param notes
-	 *            The notes.
-	 * @return
-	 */
 	public static int getPrimaryColour(Notes notes) {
 		int color = 0;
 		for (int i = 0; i < 16; i++) {
@@ -192,13 +169,6 @@ public final class Notes {
 		return color;
 	}
 
-	/**
-	 * Gets the secondary colour of the notes.
-	 *
-	 * @param notes
-	 *            The notes.
-	 * @return
-	 */
 	public static int getSecondaryColour(Notes notes) {
 		int color = 0;
 		for (int i = 0; i < 14; i++) {

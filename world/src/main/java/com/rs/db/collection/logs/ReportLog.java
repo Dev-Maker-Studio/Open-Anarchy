@@ -11,7 +11,5 @@ public class ReportLog {
         String reporter1 = reporter.getUsername();
     }
 
-	//TODO finish
 
-	//TODO create hashCode and equals
 }

@@ -1,24 +1,11 @@
-/**
- * Input, telemetry and anti-cheat packets sent by the client.
- */
 package org.darkan.core.net.prot.packet
 
 import org.darkan.core.clientwatch.MouseTrailStep
 import org.darkan.core.clientwatch.ReflectionResponseCode
 import org.darkan.core.net.prot.ClientProt
 
-// Utility/Clientwatch packets
-@JvmInline value class Ping(val dummy: Int = 0) : ClientProt // KEEPALIVE
+@JvmInline value class Ping(val dummy: Int = 0) : ClientProt
 
-/**
- * Response to [ReflectionRequest].
- *
- * The client writes the four byte check [id] it was given in the request, followed by one
- * result blob per requested operation. Each blob starts with a status byte
- * ([ReflectionResponseCode]) whose payload depends on the type of
- * the operation that was requested, so [data] can only be parsed against the pending request
- * identified by [id] and is kept raw here.
- */
 data class ReflectionResponse(val id: Int, val data: ByteArray) : ClientProt {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

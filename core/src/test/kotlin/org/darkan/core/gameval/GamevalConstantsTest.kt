@@ -10,21 +10,12 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/**
- * The generated constants (`org.darkan.core.gameval.gen.*`, from `:core:generateGamevalConstants`)
- * must agree with the runtime catalog they were generated from, and must now cover it completely:
- * every id of every type has a constant, an unnamed one under its placeholder.
- *
- * The constants are read from the generated class files so the test still runs (and says what is
- * missing) when a catalog or a class is not there.
- */
 class GamevalConstantsTest {
 
     private val genPackage = "org.darkan.core.gameval.gen"
 
     private val regenerate = "regenerate with ./gradlew :core:generateGamevalConstants"
 
-    /** Catalog type -> generated class, for every type except the nested `component` layout. */
     private val classes = mapOf(
         Gameval.OBJ to "Obj", Gameval.NPC to "Npc", Gameval.LOC to "Loc", Gameval.SEQ to "Seq",
         Gameval.SPOTANIM to "Spotanim", Gameval.ENUM to "Enum", Gameval.STRUCT to "Struct",
@@ -51,14 +42,8 @@ class GamevalConstantsTest {
 
     private val constantsByClass = HashMap<String, Map<String, Int>?>()
 
-    /** `<Class>.<field>` walked up the generated superclass chain, or `null` when either is absent. */
     private fun constant(cls: String, field: String): Int? = constants(cls)?.get(field)
 
-    /**
-     * Every static int constant reachable through the class, superclass chain included, read from
-     * the class files' ConstantValue attributes. Reflection is out: resolving a field makes the JVM
-     * scan the class's field table, which over 290,000 constants in shards of 65,000 took 40 s.
-     */
     private fun constants(cls: String): Map<String, Int>? {
         val name = "$genPackage.$cls"
         if (name !in constantsByClass) constantsByClass[name] = readConstants(name)
@@ -104,7 +89,6 @@ class GamevalConstantsTest {
             println("skipped: no clientscript.json catalog with [proc,quicksort]")
             return
         }
-        // Bare name unless the catalog also carries a [clientscript,quicksort], then category-prefixed.
         val generated = constant("Cs2", "quicksort") ?: constant("Cs2", "proc_quicksort")
         assertNotNull(generated, "clientscript.json exists but Cs2.quicksort was not generated; $regenerate")
         assertEquals(id, generated)
@@ -157,8 +141,6 @@ class GamevalConstantsTest {
         }
         val outer = generatedClass("Component")
         assertNotNull(outer, "component.json exists but no Component class was generated; $regenerate")
-        // Keyed by the interface id the class itself declares rather than by its name, so this check
-        // stays independent of the generator's identifier-escaping rules.
         val nested = outer.declaredClasses.associateBy { it.getDeclaredField("IFACE").also { f -> f.isAccessible = true }.getInt(null) }
         val raw = Gameval.rawEntries(GamevalCatalog.COMPONENT)
         val byIface = raw.keys.groupBy { it.substringBefore(':').toInt() }
@@ -169,8 +151,6 @@ class GamevalConstantsTest {
             val cls = nested[iface]
             assertNotNull(cls, "no Component class declares IFACE = $iface; $regenerate")
             val fields = cls.declaredFields.filter { it.type == Int::class.javaPrimitiveType }
-            // IFACE and a component can share a value (interface 0, component 0 both pack to 0), so
-            // count the fields and match on the set of values.
             val values = fields.map { it.also { f -> f.isAccessible = true }.getInt(null) }.toHashSet()
             assertEquals(keys.size + 1, fields.size, "Component class for interface $iface has ${fields.size} constants for ${keys.size} components plus IFACE; $regenerate")
             for (key in keys) {
@@ -180,7 +160,6 @@ class GamevalConstantsTest {
             }
         }
 
-        // And one entry whose two halves need no escaping, to pin the name -> constant mapping.
         val plain = Regex("[a-z][a-z0-9_]*")
         val sample = raw.entries.firstOrNull { (_, name) ->
             name.count { it == ':' } == 1 && name.split(":").all { plain.matches(it) && it !in setOf("class", "val", "int") }

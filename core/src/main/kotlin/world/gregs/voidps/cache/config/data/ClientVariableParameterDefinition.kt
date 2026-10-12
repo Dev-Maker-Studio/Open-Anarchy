@@ -9,13 +9,7 @@ data class ClientVariableParameterDefinition(
     var anInt3208: Int = 1
 ) : Definition, OpcodeOrdered {
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var opcodeOrder: IntArray? = null
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var shadowedPayloads: Array<ByteArray?>? = null
 }

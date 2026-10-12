@@ -313,7 +313,7 @@ class EadgarD(player: Player, npc: NPC) {
                 op("What do you have to offer?") {
                     player(CALM_TALK, "What do you have to offer?")
                     npc(npc, CALM_TALK, "The chef's recommendation for today is mountain goat stew. I'll give some stew in exchange for logs for my fire. They're hard to come by around here.")
-                    if (player.inventory.containsOneItem(NORMAL_LOGS)) { // Contains regular logs
+                    if (player.inventory.containsOneItem(NORMAL_LOGS)) {
                         player(CALM_TALK, "Here's some logs.")
                         npc(npc, HAPPY_TALKING, "Thank you. Here's some mountain goat stew, as promised.") { player.inventory.replace(NORMAL_LOGS, STEW) }
                     } else {

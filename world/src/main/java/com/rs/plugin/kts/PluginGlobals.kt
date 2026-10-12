@@ -70,15 +70,11 @@ fun onInterfaceOnInterface(biDirectional: Boolean = false, fromInterfaceIds: Int
     IFOnIFEvent.registerMethod(IFOnIFEvent::class.java, InterfaceOnInterfaceHandler(biDirectional, fromInterfaceIds, fromComponentIds, toInterfaceIds, toComponentIds) { eventHandler(it) })
 }
 
-//TODO allow object names and ids mappings
-fun onInterfaceOnNPC(/*vararg npcNamesOrIds: Any, */checkDistance: Boolean = true, fromInterfaceIds: IntArray, fromComponentIds:IntArray?, eventHandler: (IFOnNPCEvent) -> Unit) {
-    //npcNamesOrIds.forEach { require(it is String || it is Int) { "npcNamesOrIds must contain only String or Int types" } }
+fun onInterfaceOnNPC( checkDistance: Boolean = true, fromInterfaceIds: IntArray, fromComponentIds:IntArray?, eventHandler: (IFOnNPCEvent) -> Unit) {
     IFOnNPCEvent.registerMethod(IFOnNPCEvent::class.java, InterfaceOnNPCHandler(checkDistance, fromInterfaceIds, fromComponentIds) { eventHandler(it) })
 }
 
-//TODO allow object names and ids mappings
-fun onInterfaceOnObject(/*vararg objectNamesOrIds: Any, */checkDistance: Boolean = true, fromInterfaceIds: IntArray, fromComponentIds:IntArray?, eventHandler: (InterfaceOnObjectEvent) -> Unit) {
-    //objectNamesOrIds.forEach { require(it is String || it is Int) { "npcNamesOrIds must contain only String or Int types" } }
+fun onInterfaceOnObject( checkDistance: Boolean = true, fromInterfaceIds: IntArray, fromComponentIds:IntArray?, eventHandler: (InterfaceOnObjectEvent) -> Unit) {
     InterfaceOnObjectEvent.registerMethod(InterfaceOnObjectEvent::class.java, InterfaceOnObjectHandler(checkDistance, fromInterfaceIds, fromComponentIds) { eventHandler(it) })
 }
 
@@ -123,7 +119,6 @@ fun onItemOnPlayer(vararg itemNamesOrIds: Any, eventHandler: (ItemOnPlayerEvent)
     ItemOnPlayerEvent.registerMethod(ItemOnPlayerEvent::class.java, ItemOnPlayerHandler(itemNamesOrIds) { eventHandler(it) })
 }
 
-//TODO allow mapping by item names and ids
 fun onItemOnNpc(vararg npcNamesOrIds: Any, checkDistance: Boolean = true, eventHandler: (ItemOnNPCEvent) -> Unit) {
     npcNamesOrIds.forEach { require(it is String || it is Int) { "npcNamesOrIds must contain only String or Int types" } }
     ItemOnNPCEvent.registerMethod(ItemOnNPCEvent::class.java, ItemOnNPCHandler(checkDistance, npcNamesOrIds) { eventHandler(it) })

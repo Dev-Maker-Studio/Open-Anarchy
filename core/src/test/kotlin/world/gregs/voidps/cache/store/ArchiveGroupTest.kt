@@ -21,7 +21,6 @@ class ArchiveGroupTest {
     fun `a one chunk group round trips`() {
         val files = listOf(bytes(10, 1), bytes(0, 2), bytes(33, 3))
         val group = ArchiveGroup.join(files)
-        // 43 bytes of data, three int deltas and the chunk count.
         assertEquals(43 + 3 * 4 + 1, group.size)
         assertEquals(1, group[group.size - 1].toInt())
 
@@ -36,8 +35,6 @@ class ArchiveGroupTest {
 
     @Test
     fun `a three chunk group keeps its layout byte for byte`() {
-        // The shape index 0 uses: a small first chunk of every file, then a chunk that skips
-        // file 0 entirely, then the remainder.
         val chunks = listOf(
             intArrayOf(4, 4, 4),
             intArrayOf(0, 20, 20),

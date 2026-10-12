@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.model.entity;
 
 import org.darkan.core.gameval.gen.Spotanim;
@@ -90,7 +74,6 @@ import java.util.stream.Collectors;
 
 public abstract class Entity {
 
-	// transient stuff
 	private transient int index;
 	private final String uuid;
 	private transient int sceneBaseChunkId;
@@ -116,14 +99,13 @@ public abstract class Entity {
 	private transient ActionManager actionManager;
 	private transient InteractionManager interactionManager;
 	private transient CollisionStrategy collisionStrategy = CollisionStrategyType.NORMAL.getStrategy();
-	private transient long lockDelay; // used for doors and stuff like that
+	private transient long lockDelay;
 
 	private transient BodyGlow nextBodyGlow;
 	private transient ConcurrentLinkedQueue<Hit> receivedHits;
 	private transient Map<Entity, Integer> receivedDamage;
 	private transient boolean finished;
 	private transient long tickCounter = 0;
-	// entity masks
 	private transient int bas = -1;
 	private transient Animation nextAnimation;
 	private transient SpotAnim nextSpotAnim1;
@@ -137,8 +119,8 @@ public abstract class Entity {
 	private transient ForceTalk nextForceTalk;
 	private transient int nextFaceEntity;
 	private transient int lastFaceEntity;
-	private transient Entity attackedBy; // whos attacking you, used for single
-	protected transient long attackedByDelay; // delay till someone else can attack you
+	private transient Entity attackedBy;
+	protected transient long attackedByDelay;
 	protected transient long timeLastHit;
 	private transient boolean multiArea;
 	private transient boolean hasNearbyInstancedChunks;
@@ -146,7 +128,6 @@ public abstract class Entity {
 	private transient boolean forceMultiArea;
 	private transient long findTargetDelay;
 
-	// saving stuff
 	private int hitpoints;
 	private Tile tile;
 	private RegionSize regionSize;
@@ -158,7 +139,6 @@ public abstract class Entity {
 	private transient AsyncTaskScheduler asyncTasks = new AsyncTaskScheduler();
 	private transient TaskManager tasks = new TaskManager();
 
-	// creates Entity and saved classes
 	public Entity(Tile tile) {
 		this.tile = tile;
 		this.uuid = UUID.randomUUID().toString();
@@ -442,7 +422,6 @@ public abstract class Entity {
 	public Sound sound(Entity playTo, Sound sound, boolean alsoAmbient) {
 		if (sound.getId() == -1)
 			return sound;
-		//Logger.info(Entity.class, "sound", this + " playing " + sound.getType() + " sound to " + playTo + ", " + alsoAmbient + " -> [id: " + sound.getId() + ", rad: " + sound.getRadius() + ", vol: " + sound.getVolume() + "]");
 		if (this instanceof Player player)
 			player.addSound(sound);
 		if (playTo instanceof Player player && this != playTo)
@@ -601,8 +580,6 @@ public abstract class Entity {
 			Route route = RouteFinderKt.routeEntityTo(this, target, maxStepsCount < 0 ? 25 : maxStepsCount);
 			if (route.getFailed())
 				return false;
-//			if (route.getStepCount() == 0) //TODO why did I add this?
-//				return DumbRouteFinder.addDumbPathfinderSteps(this, target, getClipType());
 			RouteFinderKt.addSteps(this, route,true, maxStepsCount);
 			return true;
 		}
@@ -682,9 +659,6 @@ public abstract class Entity {
 		return !walkSteps.isEmpty() || walkedThisTick;
 	}
 
-//	public boolean isMoving() {
-//		return hasWalkSteps() || walkedThisTick;
-//	}
 
 	public abstract void sendDeath(Entity source);
 
@@ -766,7 +740,7 @@ public abstract class Entity {
 				nextRunDirection = nextStep.dir;
 			tileBehind = Tile.of(getTile());
 			moveLocation(nextStep.dir.dx, nextStep.dir.dy, 0);
-			if (moveType == MoveType.RUN && stepCount == 0) { // fixes impossible steps TODO is this even necessary?
+			if (moveType == MoveType.RUN && stepCount == 0) {
 				WalkStep previewStep = previewNextWalkStep();
 				if (previewStep == null)
 					break;
@@ -803,7 +777,6 @@ public abstract class Entity {
 
 	public boolean needMapUpdate(Tile tile) {
 		int[] baseChunk = MapUtils.decode(Structure.CHUNK, sceneBaseChunkId);
-		// chunks length - offset. if within 16 tiles of border it updates map
 		int limit = getMapSize().getSize() / 8 - 2;
 
 		int offsetX = tile.getChunkX() - baseChunk[0];
@@ -920,12 +893,11 @@ public abstract class Entity {
 	}
 
 	public boolean addWalkStep(int nextX, int nextY, int lastX, int lastY, boolean check, boolean force) {
-		//World.sendSpotAnim(Tile.of(nextX, nextY, getPlane()), new SpotAnim(2000));
 		Direction dir = Direction.forDelta(nextX - lastX, nextY - lastY);
 		StepValidator step = new StepValidator(WorldCollision.allFlags);
 		if (dir == null)
 			return false;
-		if (!force && check && !step.canTravel(getPlane(), lastX, lastY, dir.dx, dir.dy, getSize(), 0, getCollisionStrategy()) || (check && this instanceof NPC n && !n.checkNPCCollision(dir)))// double
+		if (!force && check && !step.canTravel(getPlane(), lastX, lastY, dir.dx, dir.dy, getSize(), 0, getCollisionStrategy()) || (check && this instanceof NPC n && !n.checkNPCCollision(dir)))
 			return false;
 		if (this instanceof Player player)
 			if (!player.getControllerManager().checkWalkStep(lastX, lastY, nextX, nextY))
@@ -1098,9 +1070,6 @@ public abstract class Entity {
 		return mapChunkIds;
 	}
 
-	/**
-	 * use .anim(id) instead
-	 */
 	@Deprecated()
 	public void setNextAnimation(Animation nextAnimation) {
 		if (nextAnimation != null && nextAnimation.getIds()[0] >= 0)
@@ -1118,10 +1087,6 @@ public abstract class Entity {
 		return nextAnimation;
 	}
 
-	/**
-	 * Use .spotAnim(id) instead
-	 * @param nextSpotAnim
-	 */
 	@Deprecated
 	public void setNextSpotAnim(SpotAnim nextSpotAnim) {
 		if (nextSpotAnim == null) {
@@ -1189,10 +1154,6 @@ public abstract class Entity {
 		return finished;
 	}
 
-	/**
-	 * This method will NOT teleport the player if the player is close to the destination tile.
-	 * @param tile
-	 */
 	public void move(Tile tile) {
 		this.nextTile = Tile.of(tile);
 	}
@@ -1259,10 +1220,6 @@ public abstract class Entity {
 		setNextFaceEntity(null);
 	}
 
-	/**
-	 * Use faceEntity() instead
-	 * @param entity
-	 */
 	@Deprecated
 	public void setNextFaceEntity(Entity entity) {
 		if (entity == null) {
@@ -1520,10 +1477,6 @@ public abstract class Entity {
 		return nextForceTalk;
 	}
 
-	/**
-	 * Use forceTalk(string message) instead
-	 * @param nextForceTalk
-	 */
 	@Deprecated
 	public void setNextForceTalk(ForceTalk nextForceTalk) {
 		this.nextForceTalk = nextForceTalk;
@@ -1539,64 +1492,63 @@ public abstract class Entity {
 
 	public void faceObject(GameObject object) {
 		int x = -1, y = -1;
-		if (object.getType() == ObjectShape.WALL_STRAIGHT) { // wall
-			if (object.getRotation() == 0) { // west
+		if (object.getType() == ObjectShape.WALL_STRAIGHT) {
+			if (object.getRotation() == 0) {
 				x = object.getX() - 1;
 				y = object.getY();
-			} else if (object.getRotation() == 1) { // north
+			} else if (object.getRotation() == 1) {
 				x = object.getX();
 				y = object.getY() + 1;
-			} else if (object.getRotation() == 2) { // east
+			} else if (object.getRotation() == 2) {
 				x = object.getX() + 1;
 				y = object.getY();
-			} else if (object.getRotation() == 3) { // south
+			} else if (object.getRotation() == 3) {
 				x = object.getX();
 				y = object.getY() - 1;
 			}
-		} else if (object.getType() == ObjectShape.WALL_DIAGONAL_CORNER || object.getType() == ObjectShape.WALL_WHOLE_CORNER) { // corner and corner wall
-			if (object.getRotation() == 0) { // nw
+		} else if (object.getType() == ObjectShape.WALL_DIAGONAL_CORNER || object.getType() == ObjectShape.WALL_WHOLE_CORNER) {
+			if (object.getRotation() == 0) {
 				x = object.getX() - 1;
 				y = object.getY() + 1;
-			} else if (object.getRotation() == 1) { // ne
+			} else if (object.getRotation() == 1) {
 				x = object.getX() + 1;
 				y = object.getY() + 1;
-			} else if (object.getRotation() == 2) { // se
+			} else if (object.getRotation() == 2) {
 				x = object.getX() + 1;
 				y = object.getY() - 1;
-			} else if (object.getRotation() == 3) { // sw
+			} else if (object.getRotation() == 3) {
 				x = object.getX() - 1;
 				y = object.getY() - 1;
 			}
-		} else if (object.getType() == ObjectShape.WALL_STRAIGHT_CORNER) { // inverted corner
-			if (object.getRotation() == 0) { // se
+		} else if (object.getType() == ObjectShape.WALL_STRAIGHT_CORNER) {
+			if (object.getRotation() == 0) {
 				x = object.getX() + 1;
 				y = object.getY() - 1;
-			} else if (object.getRotation() == 1) { // sw
+			} else if (object.getRotation() == 1) {
 				x = object.getX() - 1;
 				y = object.getY() - 1;
-			} else if (object.getRotation() == 2) { // nw
+			} else if (object.getRotation() == 2) {
 				x = object.getX() - 1;
 				y = object.getY() + 1;
-			} else if (object.getRotation() == 3) { // ne
+			} else if (object.getRotation() == 3) {
 				x = object.getX() + 1;
 				y = object.getY() + 1;
 			}
-		} else if (object.getType().getId() < ObjectShape.SCENERY_INTERACT.getId()) { // walldeco's
-			if (object.getRotation() == 0) { // west
+		} else if (object.getType().getId() < ObjectShape.SCENERY_INTERACT.getId()) {
+			if (object.getRotation() == 0) {
 				x = object.getX() - 1;
 				y = object.getY();
-			} else if (object.getRotation() == 1) { // north
+			} else if (object.getRotation() == 1) {
 				x = object.getX();
 				y = object.getY() + 1;
-			} else if (object.getRotation() == 2) { // east
+			} else if (object.getRotation() == 2) {
 				x = object.getX() + 1;
 				y = object.getY();
-			} else if (object.getRotation() == 3) { // south
+			} else if (object.getRotation() == 3) {
 				x = object.getX();
 				y = object.getY() - 1;
 			}
 		} else {
-			// rest
 			x = object.getCoordFaceX();
 			y = object.getCoordFaceY();
 		}
@@ -2157,11 +2109,6 @@ public abstract class Entity {
 		return lockDelay >= tickCounter;
 	}
 
-	/**
-	 * You are invincible & cannot use your character until unlocked.
-	 * All hits are processed after unlocking.
-	 * If you use resetRecievedHits you lose those hits.
-	 */
 	public void lock() {
 		lockDelay = Long.MAX_VALUE;
 	}

@@ -79,7 +79,6 @@ fun postQuest(p: Player, npc: NPC) {
                         exec { RobinLostHerMarbles(p, npc) }
                     }
                     if (p.isMiniquestStarted(Miniquest.A_GUILD_OF_OUR_OWN) && !p.isMiniquestComplete(Miniquest.A_GUILD_OF_OUR_OWN)) {
-                        //AGuildOfOurOwnOptions(player);
                     }
                     npc(
                         npc,

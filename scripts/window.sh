@@ -1,13 +1,4 @@
 #!/bin/bash
-# Creates a 15,000 x 15,000 sector of the 26 x 26 sector world (only generated sectors, default MM) when a player needs it, and hands the
-# player over to it. A world runs this itself (WINDOW_LAUNCH_SCRIPT) when a player nears the edge of its window.
-#
-#   window.sh ensure <wx> <wy> [gateway url]      start the window's world if it is not running, wait until it listens
-#   window.sh handover <user> <gx> <gy> [level]    store the player's global tile, ensure the window that owns it, print its world id
-#   window.sh status                               list the running windows
-#   window.sh stop <wx> <wy>                       stop a window's world
-#
-# See docs/infinite-world.md.
 set -eu
 cd "$(dirname "$0")/.."
 . scripts/window-math.sh

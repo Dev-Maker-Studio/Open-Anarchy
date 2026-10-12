@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.achievements;
 
 import org.darkan.core.cache.EnumDefinitions;
@@ -42,7 +26,6 @@ public class AchievementDef {
 	private static final Map<Area, Map<Difficulty, Map<Integer, Integer>>> TASK_SET_LEVEL_REQS = new HashMap<>();
 
 	public enum Area {
-		//0=3000, 1=346, 2=426, 3=115, 4=221, 5=0, 6=182, 7=152, 8=531, 9=944, 10=995, 11=4091, 12=4091, 13=4091, 14=4091, 15=4091, 16=4091, 17=4091, 18=4091, 19=4091, 20=4091, 60=3522, 62=4091, 63=4090
 		MINIGAMES(0),
 		LUMBRIDGE(1),
 		VARROCK(2),

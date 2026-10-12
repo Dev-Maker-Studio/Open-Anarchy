@@ -49,7 +49,7 @@ class RobinLostHerMarbles(p: Player, npc: NPC) {
                     npc,
                     CALM_TALK,
                     "Failing that, you could check in on the Dorgeshuun, they are always picking up strange rocks."
-                ) //<- Creative liberty here, goblins aren't originally mentioned in the quest but do have a set.
+                )
                 options {
                     op("How am I doing so far?") {
                         npc(npc, CALM_TALK, getMessageForPlayer(p))

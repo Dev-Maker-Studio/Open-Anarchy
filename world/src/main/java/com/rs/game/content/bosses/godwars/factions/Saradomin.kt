@@ -40,7 +40,7 @@ fun mapSaradominGodwars() {
             npc.forceTalk(text)
             npc.voiceEffect(target, voiceEffect, true)
         }
-        if (Utils.getRandomInclusive(1) == 0) { // mage magical attack
+        if (Utils.getRandomInclusive(1) == 0) {
             npc.anim(6967)
             for (t in npc.possibleTargets) {
                 if (!t.withinDistance(npc.tile, 3)) continue
@@ -50,7 +50,7 @@ fun mapSaradominGodwars() {
                     t.spotAnim(1194)
                 }
             }
-        } else { // melee attack
+        } else {
             npc.anim(defs.attackEmote)
             delayHit(npc, 0, target, Hit.melee(npc, getMaxHit(npc, defs.maxHit, CombatStyle.MELEE, target)))
         }

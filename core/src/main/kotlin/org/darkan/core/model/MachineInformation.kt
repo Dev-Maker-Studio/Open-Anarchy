@@ -12,12 +12,10 @@ data class MachineInformation(
     var operatingSystem: Int = 0,
     var x64os: Boolean = false,
     var osVendor: Int = 0,
-    /** The client's vendor classification: 1 sun, 2 microsoft, 3 apple, 4 other. */
     var javaVendor: Int = 0,
     var javaBuild: Int = 0,
     var javaSubBuild: Int = 0,
     var javaUpdate: Int = 0,
-    /** Human-readable form of the four fields above. */
     var javaVersion: String = "",
     var ram: Int = 0,
     var gpuModel: String? = null,
@@ -135,15 +133,15 @@ data class MachineInformation(
             info.javaSubBuild = stream.readUByte()
             info.javaUpdate = stream.readUByte()
             info.javaVersion = "${info.javaBuild}.${info.javaSubBuild}.${info.javaUpdate}"
-            stream.readBoolean() //always false hardcoded
+            stream.readBoolean()
             info.maxMem = stream.readUShort()
             info.processors = stream.readUByte()
             info.ram = stream.readUMedium()
             info.cpuClock = stream.readUShort()
             info.gpuModel = stream.readJagString()
-            stream.readJagString() //always blank placeholder
+            stream.readJagString()
             info.dwDirectXVersion = stream.readJagString()
-            stream.readJagString() //always blank placeholder
+            stream.readJagString()
             info.dxDriverMonth = stream.readUByte()
             info.dxDriverYear = stream.readUShort()
             info.cpuType = stream.readJagString()

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering;
 
 import java.awt.*;
@@ -58,14 +42,11 @@ public class DungeonStructure {
 		queue.add(new Point(getBase().x, getBase().y - 1));
 		queue.add(new Point(getBase().x, getBase().y + 1));
 
-		//Generate full dungeon
 		while (!queue.isEmpty()) {
 			Point next = random(queue);
-			//Ensure the edge is within the dungeon boundary and it doesn't already exist
 			if (next.x < 0 || next.y < 0 || next.x >= rooms.length || next.y >= rooms[0].length || getRoom(next.x, next.y) != null)
 				continue;
 
-			//Connect this edge to a random neighboring room
 			RoomNode parent = randomParent(next.x, next.y);
 
 			RoomNode room = new RoomNode(parent, next.x, next.y);
@@ -82,15 +63,12 @@ public class DungeonStructure {
 		double multiplier = 1D - ((6D - complexity) * 0.06D);
 		maxSize *= multiplier;
 		minSize *= multiplier;
-		//Create gaps by removing random DE's
 		int remove = rooms.length * rooms[0].length - maxSize +  random.nextInt(maxSize - minSize);
 		for (int i = 0; i < remove; i++)
 			removeRoom(shuffledRooms().filter(r -> r.children.isEmpty()).findFirst().get());
 
 		RoomNode boss;
-		//Choose crit
 		while (true) {
-			//Sets only have distinct elements so no need to worry about overlapping paths
 			Set<RoomNode> critPath = new HashSet<>();
 			boss = shuffledRooms().filter(r -> r.children.isEmpty()).findFirst().get();
 			critPath.addAll(boss.pathToBase());
@@ -107,22 +85,15 @@ public class DungeonStructure {
 			}
 		}
 
-		//Move the base somewhere randomly on crit, base can't be a straight 2 way though
 		setBase(shuffledRooms().filter(r -> !r.isBoss && r.isCritPath && !(r.west() && r.east() && !r.north() && !r.south())  && !(!r.west() && !r.east() && r.north() && r.south())).findFirst().get());
 
-		//Crit DE locks, if we do these first these can't 'fail', and this mathematically ensures crit is actually crit because each branch will lock out another branch
 		rooms().filter(r -> !r.isBoss && r.children.stream().noneMatch(c -> c.isCritPath) && r.isCritPath).forEach(r -> assignKey(r, true));
 
-		//Some extra crit locks, to make things more interesting, these may 'fail' to add, but it doesn't matter
 		shuffledRooms().filter(r -> !r.isBoss && r.isCritPath && r.key == -1).limit((size.ordinal() * 2L) +1).forEach(r -> assignKey(r, true));
 
 		if (boss.lock == -1) {
-			//Should we force a lock on the boss? RS has a lock about 95% of the time
-			//We could put the key anywhere on crit, because the lock doesn't actually lock out anything at all, and is redundant with keyshare on
-			//Perhaps the lock is to force bosses not to move if you stand under them, i.e. behemoth will stomp you until you move
 		}
 
-		//Bonus keys can be found anywhere that isn't the boss or has a key already
 		long bonusLockCount = rooms().filter(r -> !r.isCritPath).count() / 4 + random.nextInt((size.ordinal() + 1) * 2);
 		shuffledRooms().filter(r -> !r.isBoss && r.key == -1).limit(bonusLockCount).forEach(r -> assignKey(r, false));
 
@@ -134,7 +105,7 @@ public class DungeonStructure {
 		neighbors.add(getRoom(x + 1, y));
 		neighbors.add(getRoom(x, y - 1));
 		neighbors.add(getRoom(x, y + 1));
-		neighbors.removeIf(r -> r == null || r.isBoss); //These are not valid parents
+		neighbors.removeIf(r -> r == null || r.isBoss);
 		return (RoomNode) neighbors.toArray()[random.nextInt(neighbors.size())];
 	}
 

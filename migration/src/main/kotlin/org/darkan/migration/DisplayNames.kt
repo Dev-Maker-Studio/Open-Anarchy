@@ -16,14 +16,6 @@ private const val RIGHTS = "rights"
 
 private data class Offender(val username: String, val displayName: String, val verdict: String, val term: String, val flagged: Boolean)
 
-/**
- * The one-off pass over accounts that already hold a name the filter now refuses. Accounts are read
- * as raw documents and flagged with a single field update, so nothing here re-encodes an account
- * and no other field can be touched.
- *
- * Staff are left alone - they hold the reserved names legitimately - and so is an account whose
- * username is still its sign-up email, which the lobby already holds at the name screen.
- */
 fun displayNames(target: MongoTarget, approved: File?, apply: Boolean): Boolean {
     val collection = target.database.getCollection(ACCOUNTS)
     var skipped = 0

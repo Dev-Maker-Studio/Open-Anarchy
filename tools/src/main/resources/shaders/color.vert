@@ -19,8 +19,6 @@ void main() {
     vColor = aColor;
     gl_Position = projection * view * vec4(vFragPos, 1.0);
 
-    // Detect mirroring by checking if the determinant of the 3x3 rotation/scale matrix is negative
-    // A negative determinant indicates a reflection (mirroring) transform
     mat3 normalMatrix = mat3(model);
     float det = determinant(normalMatrix);
     vMirrored = (det < 0.0) ? 1 : 0;

@@ -79,7 +79,6 @@ class AccountCreationSession(val session: Session) {
         else CreateAccountReplyOpcode.SUCCESS
 
     private companion object {
-        /** Below this length the client's own script explains the minimum; above it, only that the password is weak. */
         const val CLIENT_PASSWORD_MIN_LENGTH = 5
     }
 }

@@ -35,18 +35,6 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
 
-/**
- * Immediate-mode 2D quad batcher for screen-space (UI) drawing.
- *
- * Coordinates are in pixels with the origin at the top-left of the window and
- * +Y running down, matching the RS software toolkit that the interface renderer
- * is modelled on. Quads are accumulated into a single dynamic VBO and flushed
- * whenever the bound texture or the scissor rectangle changes, so a whole
- * interface tree usually costs a handful of draw calls.
- *
- * Clipping uses `glScissor`, which is an exact match for the client's
- * rectangular `setClipping` regions.
- */
 class Canvas2D(
     vertexSource: String,
     fragmentSource: String,
@@ -66,14 +54,12 @@ class Canvas2D(
 
     private var quadCount = 0
 
-    /** Currently bound GL texture, or 0 when drawing untextured geometry. */
     private var boundTexture = 0
     private var currentClip = intArrayOf(0, 0, 0, 0)
 
     private var screenWidth = 0
     private var screenHeight = 0
 
-    /** Number of draw calls issued since the last [begin]. Useful for profiling. */
     var drawCalls: Int = 0
         private set
 
@@ -97,10 +83,6 @@ class Canvas2D(
         glBindVertexArray(0)
     }
 
-    /**
-     * Begins a UI pass covering the whole window. Depth testing is disabled and
-     * alpha blending enabled for the duration of the pass; [end] restores them.
-     */
     fun begin(width: Int, height: Int) {
         screenWidth = width
         screenHeight = height
@@ -126,11 +108,6 @@ class Canvas2D(
         shader.setUniform("useTexture", false)
     }
 
-    /**
-     * Re-applies the pass's GL state after something else has drawn in the
-     * middle of it - a 3D model rendered into a component viewport, say, which
-     * rebinds shaders and moves the viewport and scissor box. Flush first.
-     */
     fun restoreState() {
         glDisable(GL_DEPTH_TEST)
         glEnable(GL_BLEND)
@@ -144,10 +121,8 @@ class Canvas2D(
         shader.setUniform("useTexture", false)
     }
 
-    /** The clip rectangle currently in force, as left, top, right, bottom. */
     fun clip(): IntArray = currentClip.copyOf()
 
-    /** Flushes any pending geometry and restores the default 3D render state. */
     fun end() {
         flush()
         shader.unbind()
@@ -157,11 +132,6 @@ class Canvas2D(
         clipStack.clear()
     }
 
-    /**
-     * Intersects the current clip rectangle with the given bounds and pushes the
-     * result. Returns false when the intersection is empty, in which case the
-     * caller should skip drawing entirely - but [popClip] must still be called.
-     */
     fun pushClip(x0: Int, y0: Int, x1: Int, y1: Int): Boolean {
         clipStack.add(currentClip)
         val clipped = intArrayOf(
@@ -190,7 +160,6 @@ class Canvas2D(
         }
     }
 
-    /** Fills the axis-aligned rectangle [x, x + width) x [y, y + height). */
     fun fillRect(x: Int, y: Int, width: Int, height: Int, argb: Int) {
         if (width <= 0 || height <= 0) {
             return
@@ -203,10 +172,6 @@ class Canvas2D(
         quad(left, top, right, top, right, bottom, left, bottom, 0f, 0f, 1f, 1f, argb)
     }
 
-    /**
-     * Draws a rectangle outline inside the component bounds, matching the
-     * client's `drawRectangleOutline` which strokes the border on the inside.
-     */
     fun drawRectOutline(x: Int, y: Int, width: Int, height: Int, argb: Int, thickness: Int = 1) {
         if (width <= 0 || height <= 0) {
             return
@@ -218,15 +183,6 @@ class Canvas2D(
         fillRect(x + width - stroke, y + stroke, stroke, height - stroke * 2, argb)
     }
 
-    /**
-     * Draws a line between two points as a thickness-wide quad, centred on the
-     * line. The end point is inclusive: the client's line rasteriser covers
-     * (x1, y1) itself, so the quad is extended one pixel along the direction,
-     * the same correction the client's GL toolkit applies.
-     *
-     * The client rasterises thin lines with Bresenham; for the axis-aligned and
-     * diagonal cases interface components use, the quad is pixel-equivalent.
-     */
     fun drawLine(x0: Int, y0: Int, x1: Int, y1: Int, argb: Int, thickness: Int = 1) {
         val stroke = thickness.coerceAtLeast(1)
         val dx = (x1 - x0).toFloat()
@@ -241,7 +197,6 @@ class Canvas2D(
         val dirY = dy / length
         val endX = x1 + dirX
         val endY = y1 + dirY
-        // Perpendicular offset of half the stroke width on each side of the line.
         val offsetX = -dirY * stroke * 0.5f
         val offsetY = dirX * stroke * 0.5f
         quad(
@@ -253,10 +208,6 @@ class Canvas2D(
         )
     }
 
-    /**
-     * Draws a texture stretched over the given rectangle, modulated by [argb].
-     * The UV rectangle allows drawing a sub-region, e.g. a glyph from an atlas.
-     */
     fun drawTexture(
         textureId: Int,
         x: Float,
@@ -282,11 +233,6 @@ class Canvas2D(
         )
     }
 
-    /**
-     * Draws a texture rotated about its centre. [angle] is in radians, clockwise
-     * on screen (matching the client's 2D graphic angle, which increases clockwise
-     * because +Y runs down).
-     */
     fun drawTextureRotated(
         textureId: Int,
         centreX: Float,
@@ -321,7 +267,6 @@ class Canvas2D(
         )
     }
 
-    /** Submits the pending batch. Called automatically on state changes. */
     fun flush() {
         if (quadCount == 0) {
             return
@@ -365,7 +310,6 @@ class Canvas2D(
     private fun applyScissor() {
         val width = (currentClip[2] - currentClip[0]).coerceAtLeast(0)
         val height = (currentClip[3] - currentClip[1]).coerceAtLeast(0)
-        // glScissor is bottom-left origin, our coordinates are top-left origin.
         glScissor(currentClip[0], screenHeight - currentClip[1] - height, width, height)
     }
 

@@ -20,20 +20,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * The seven audio and native asset indices through the real framework: unpack them into a tree,
- * pack that tree into a cache, and demand that every container and every reference table comes out
- * byte for byte as it went in.
- *
- * `WholeCacheSourceTest` does this for all thirty-seven indices and is the guarantee; this is the
- * same run over these seven alone, so a regression in one of them is a one minute test rather than
- * a twenty minute one, and so the timings and sizes `docs/cache-source.md` publishes per index have
- * somewhere to come from.
- *
- * The one thing it cannot assert is the derived version table, which is a digest of *every* index's
- * reference table: a tree of seven indices has a different one from a cache of thirty-seven by
- * construction. Every reference table these seven own is compared, which is what parity means here.
- */
 class AudioSourceTreeTest {
 
     @Test
@@ -87,7 +73,6 @@ class AudioSourceTreeTest {
             assertEquals(emptyList(), status.stale, "no sidecar may be stale")
             assertEquals(INDICES.size, status.indices.size)
 
-            // And the cache that was actually written holds those containers, read back off disk.
             assertEquals(0, differences(packed, output), "the packed output must match the cache it came from")
 
             val build = Builder.build(SourceTree.open(tree), output) { println("  build $it") }
@@ -108,7 +93,6 @@ class AudioSourceTreeTest {
         }
     }
 
-    /** Every container of the seven indices, in the built cache against the shipped one. */
     private fun differences(packed: File, output: File): Int {
         var different = 0
         val shipped = FileCache.load(packed.absolutePath)
@@ -135,12 +119,6 @@ class AudioSourceTreeTest {
         return different
     }
 
-    /**
-     * A cache with only some of its indices, so the unpacker walks exactly those.
-     *
-     * It asks every index for its reference table and skips the ones that answer null, which is
-     * how an index that does not exist is handled, so hiding a table hides the index.
-     */
     private class Subset(private val cache: Cache, private val indices: Set<Int>) : Cache by cache {
         override fun referenceTable(index: Int): ReferenceTable? =
             if (indices.contains(index)) cache.referenceTable(index) else null
@@ -189,7 +167,6 @@ class AudioSourceTreeTest {
             Index.SHADERS
         )
 
-        /** 10,084 + 1,137 + 525 + 16,825 + 247 + 33 + 2. */
         private const val ARCHIVES = 28_853
     }
 }

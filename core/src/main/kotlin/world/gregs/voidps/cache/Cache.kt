@@ -45,13 +45,6 @@ interface Cache : Closeable {
 
     fun sector(index: Int, archive: Int): ByteArray?
 
-    /**
-     * [archive]'s container bytes, read straight through without being retained.
-     *
-     * [sector] memoises what it reads so JS5 can serve the same archive again for nothing; a
-     * whole-cache walk - unpacking, verifying - reads every container exactly once and would
-     * only be filling a cache with 876 MB it will never look at again.
-     */
     fun container(index: Int, archive: Int): ByteArray? = sector(index, archive)
 
     fun archives(index: Int): IntArray
@@ -70,17 +63,8 @@ interface Cache : Closeable {
 
     fun hasNameFlag(index: Int): Boolean = false
 
-    /**
-     * Every archive id present in [index]'s reference table, ascending.
-     * Empty when the index has no reference table.
-     */
     fun archiveIds(index: Int): IntArray = IntArray(0)
 
-    /**
-     * Archive id to name hash for [index], for archives whose reference table entry carries a
-     * name hash (the table's NAME_FLAG is set). Empty when the index stores no archive names.
-     * A hash of 0 means the entry exists but has no real name.
-     */
     fun archiveNameHashes(index: Int): Map<Int, Int> = emptyMap()
 
     fun archiveNameCount(index: Int): Int = 0
@@ -91,16 +75,10 @@ interface Cache : Closeable {
 
     fun hasFileNames(index: Int): Boolean = fileNameCount(index) > 0
 
-    /**
-     * [index]'s decoded reference table, or null when the index has none.
-     * The returned model is the cache's own; a writable cache mutates it as archives are written.
-     */
     fun referenceTable(index: Int): ReferenceTable? = null
 
-    /** The reference table's version for [archive], or -1 when the archive is not in the table. */
     fun archiveVersion(index: Int, archive: Int): Int = -1
 
-    /** The reference table's CRC for [archive]'s container, or 0 when the archive is not in the table. */
     fun archiveCrc(index: Int, archive: Int): Int = 0
 
     fun files(index: Int, archive: Int): IntArray
@@ -212,11 +190,8 @@ interface Cache : Closeable {
 
         @JvmStatic fun get() = singleton
 
-        /** Legacy init method. Triggers lazy initialization of the cache. */
         @JvmStatic
         fun init(cachePath: String) {
-            // The cachePath is already set via EnvVars.cachePath
-            // Just trigger lazy initialization
             singleton
         }
 

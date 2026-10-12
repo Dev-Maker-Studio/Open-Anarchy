@@ -3,11 +3,6 @@ package org.darkan.core.net
 import org.darkan.core.EnvVars
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * Simple IP-based concurrent connection limiter.
- * Tracks active connections per IP address and enforces a limit.
- * Connections are removed when disconnect() is called.
- */
 class MultilogLimiter {
     private val connected = ConcurrentHashMap<String, Int>()
     private val whitelistedIps: Set<String> = parseWhitelist(EnvVars.multiLogWhitelist)
@@ -16,8 +11,7 @@ class MultilogLimiter {
         var s = ip.trim()
         if (s.isEmpty()) return s
         if (s.startsWith("[") && s.endsWith("]")) s = s.substring(1, s.length - 1)
-        s = s.substringBefore('%') // strip ipv6 scope id
-        // canonicalize ipv6 loopback long form
+        s = s.substringBefore('%')
         if (s == "0:0:0:0:0:0:0:1") s = "::1"
         return s
     }
@@ -30,10 +24,6 @@ class MultilogLimiter {
             ?.toSet()
             ?: emptySet()
 
-    /**
-     * Attempts to add a connection for the given IP.
-     * @return true if the connection was allowed, false if limit exceeded
-     */
     fun add(ip: String): Boolean {
         val key = normalizeIpKey(ip)
         if (key.isEmpty() || key in whitelistedIps) return true
@@ -46,16 +36,12 @@ class MultilogLimiter {
                 current + 1
             } else {
                 allowed = false
-                current // Keep current count, don't increment
+                current
             }
         }
         return allowed
     }
 
-    /**
-     * Removes a connection for the given IP.
-     * Called when a connection disconnects.
-     */
     fun remove(ip: String) {
         val key = normalizeIpKey(ip)
         if (key.isEmpty() || key in whitelistedIps) return

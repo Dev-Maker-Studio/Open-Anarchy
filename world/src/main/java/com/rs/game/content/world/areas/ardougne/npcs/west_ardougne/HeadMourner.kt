@@ -13,7 +13,7 @@ class HeadMourner(player: Player, npc: NPC) {
     init {
         player.startConversation {
             options {
-                if (player.questManager.getStage(Quest.PLAGUE_CITY) > STAGE_UNSTARTED /*&& !player.isQuestComplete(Quest.PLAGUE_CITY)*/)
+                if (player.questManager.getStage(Quest.PLAGUE_CITY) > STAGE_UNSTARTED )
                     op("Talk about Plague City.") { exec { HeadMournerD(player, npc) } }
             }
         }

@@ -11,13 +11,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** What the packed cache actually holds: table sizes, sparse archives and the id space they imply. */
 class CacheDerivedBoundsTest {
 
-    /**
-     * The varp array was sized by the archive's *file count*, but config archive 16 is sparse, so
-     * the top varps (2697-2714) sat past the end of the array and `setVar` returned silently.
-     */
     @Test
     fun varpsPastTheArchiveFileCountAreSettable() {
         WorldHarness.bootWithCacheDefinitions()
@@ -36,7 +31,6 @@ class CacheDerivedBoundsTest {
         assertEquals(3, harness.player.vars.getVar(count), "varp $count (== fileCount) was unreachable")
     }
 
-    /** These returned a hard-coded 0, which made every `i >= size` loop guard break immediately. */
     @Test
     fun definitionSizeHelpersAreCacheDerived() {
         WorldHarness.bootWithCacheDefinitions()
@@ -47,7 +41,6 @@ class CacheDerivedBoundsTest {
         assertTrue(Utils.getNPCDefinitionsSize() > 0, "npc table size is 0")
     }
 
-    /** `::varloop` had no bound at all, `::varbitloop`'s bound was 0 so it set nothing. */
     @Test
     fun varLoopAndVarbitLoopReachTheTopOfTheirIdSpace() {
         WorldHarness.bootWithCacheDefinitions()
@@ -66,7 +59,6 @@ class CacheDerivedBoundsTest {
         )
     }
 
-    /** `::companim` printed `renderEmote=N` instead of the compatible animation list. */
     @Test
     fun companimPrintsTheCompatibleAnimationList() {
         WorldHarness.bootWithCacheDefinitions()

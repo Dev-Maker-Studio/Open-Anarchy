@@ -18,11 +18,6 @@ import org.darkan.core.social.SocialJson
 import org.darkan.core.worldlist.Country
 import org.darkan.core.worldlist.WorldMetadata
 
-/**
- * SocialGateway WebSocket wire protocol: the one multiplexed socket between a world and the lobby.
- * Nothing on it is revision-specific - social traffic is a [SocialAction] or [SocialEvent] with the
- * player it concerns, and each side renders its own client packets from the events.
- */
 object SocialGatewayWireJson {
     val serializersModule: SerializersModule = SerializersModule {
         include(SocialJson.serializersModule)
@@ -132,7 +127,6 @@ data class WorldHello(
     val token: String,
 ) : SocialGatewayWireMessage
 
-/** One player a world currently has in game, as the world sees them. */
 @Serializable
 data class GatewayPlayerPresence(
     val username: String,
@@ -141,30 +135,13 @@ data class GatewayPlayerPresence(
     val privateStatus: Int,
 )
 
-/** Why a world is sending its online list; it decides how much the lobby pushes back. */
 @Serializable
 enum class PresenceSyncReason {
-    /**
-     * The socket has just come up. Either side may have restarted, so the lobby rebuilds its
-     * presence for this world from scratch and re-sends every listed player the social state
-     * their client needs - friend list, ignores, chat filter, friends chat and clan channels -
-     * without anybody having to relog.
-     */
     CONNECT,
 
-    /**
-     * A periodic drift check. The lobby only applies the difference: players it did not know
-     * about come online, players it still thought were here go offline, and nobody else is
-     * disturbed.
-     */
     PERIODIC,
 }
 
-/**
- * Everyone a world currently has online, which is the authority for that world's presence. Sent
- * immediately after the [WorldHello] handshake and again on a timer, so a lobby restart, a world
- * restart or a dropped socket can never leave the two sides disagreeing about who is where.
- */
 @Serializable
 @SerialName("WorldPresenceSnapshot")
 data class WorldPresenceSnapshot(
@@ -187,10 +164,6 @@ data class VerifyLoginToken(
     val token: String,
 ) : SocialGatewayWireMessage
 
-/**
- * Why the lobby would not admit a login token. The world renders each of these as its own response
- * code, so a refusal the player can act on never reaches them as "your password has been updated".
- */
 @Serializable
 enum class LoginRefusal {
     TOKEN,
@@ -209,11 +182,6 @@ data class LoginTokenVerdict(
     val refusal: LoginRefusal? = null,
 ) : SocialGatewayWireMessage
 
-/**
- * World → lobby: [username] wants [action] applied to an account. Worlds never read or write the
- * accounts collection; the lobby judges the actor's rights, persists the change and answers every
- * world the target is on with an [AccountUpdate].
- */
 @Serializable
 @SerialName("AccountCommand")
 data class AccountCommand(
@@ -274,17 +242,14 @@ data class PlayerOffline(
     val username: String,
 ) : SocialGatewayWireMessage
 
-/** World → lobby: a player is close to the handover into window ([windowX], [windowY], org.darkan.core.map.WorldWindow), so that world should be running. */
 @Serializable
 @SerialName("WindowDemand")
 data class WindowDemand(val windowX: Int, val windowY: Int) : SocialGatewayWireMessage
 
-/** World → lobby: [regionIds] (`regionX shl 8 or regionY`) were sent to a player, so the lobby may serve those map squares. */
 @Serializable
 @SerialName("MapDiscovered")
 data class MapDiscovered(val regionIds: IntArray) : SocialGatewayWireMessage
 
-/** World → lobby: the player [username] asks for [action]. */
 @Serializable
 @SerialName("SocialCommand")
 data class SocialCommand(
@@ -292,7 +257,6 @@ data class SocialCommand(
     val action: SocialAction,
 ) : SocialGatewayWireMessage
 
-/** Lobby → world: [event] happened to each of [usernames]; the world renders it for each of them. */
 @Serializable
 @SerialName("SocialNotification")
 data class SocialNotification(
@@ -300,12 +264,7 @@ data class SocialNotification(
     val event: SocialEvent,
 ) : SocialGatewayWireMessage
 
-// ─── Clans (docs/clans.md) ───────────────────────────────────────────
 
-/**
- * World → lobby: the player [username] asks for [action]. [requestId] is world-local and is
- * echoed in the [ClanCommandResult] so the world can run the callback it kept for it.
- */
 @Serializable
 @SerialName("ClanCommand")
 data class ClanCommand(
@@ -314,16 +273,10 @@ data class ClanCommand(
     val action: ClanAction,
 ) : SocialGatewayWireMessage
 
-/** World → lobby: send me [clanName] as a [ClanSnapshot], or [ClanDeleted] if it does not exist. */
 @Serializable
 @SerialName("ClanFetch")
 data class ClanFetch(val clanName: String) : SocialGatewayWireMessage
 
-/**
- * Lobby → world: the outcome of one [ClanCommand]. [action] is the [ClanAction.serialName] of
- * the request so a world can act without keeping it; [message] is shown to the player verbatim
- * when present.
- */
 @Serializable
 @SerialName("ClanCommandResult")
 data class ClanCommandResult(
@@ -334,29 +287,18 @@ data class ClanCommandResult(
     val message: String? = null,
 ) : SocialGatewayWireMessage
 
-/**
- * Lobby → world: the whole clan document. Broadcast to every world on every change and sent in
- * answer to a [ClanFetch]; worlds replace their copy wholesale.
- */
 @Serializable
 @SerialName("ClanSnapshot")
 data class ClanSnapshot(val clan: Clan) : SocialGatewayWireMessage
 
-/** Lobby → world: the clan no longer exists. */
 @Serializable
 @SerialName("ClanDeleted")
 data class ClanDeleted(val clanName: String) : SocialGatewayWireMessage
 
-/** Lobby → world: a channel's chatter list. Broadcast to every world on every change. */
 @Serializable
 @SerialName("ClanChannelUpdate")
 data class ClanChannelUpdate(val state: ClanChannelState) : SocialGatewayWireMessage
 
-/**
- * Lobby → world: the authoritative clan fields of one player's `Social`, sent to their world
- * whenever they change and on world connect, so the world's own account saves never clobber
- * them. [inChannel] is `connectedToClan`, [guestChannel] is `guestedClanChat`.
- */
 @Serializable
 @SerialName("ClanMembership")
 data class ClanMembership(
@@ -366,12 +308,6 @@ data class ClanMembership(
     val guestChannel: String? = null,
 ) : SocialGatewayWireMessage
 
-/**
- * Lobby → world: one line said in [clanName]'s channel by [sender] (a display name) whose
- * rights crown is [rights]. Sent to every world holding a chatter of that channel; the world
- * delivers it to its local chatters with `guest = false` for members and `guest = true` for
- * guests of that clan.
- */
 @Serializable
 @SerialName("ClanChatMessage")
 data class ClanChatMessage(
@@ -381,7 +317,6 @@ data class ClanChatMessage(
     val message: ChatMessage,
 ) : SocialGatewayWireMessage
 
-/** Lobby → world: the quick-chat form of [ClanChatMessage]. */
 @Serializable
 @SerialName("ClanQuickChatMessage")
 data class ClanQuickChatMessage(

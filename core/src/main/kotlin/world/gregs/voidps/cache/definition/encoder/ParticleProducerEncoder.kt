@@ -4,15 +4,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.ParticleProducerDefinition
 
-/**
- * Writes a particle producer (index 27 archive 0) file.
- *
- * Every record is written from the field it read into, which is only possible because the decoder
- * kept the file's values rather than the client's derived ones. The four opcodes whose absence a
- * default cannot be told apart from - 2, 5, 16, 27, 29 and 31 all set values a file could
- * legitimately carry as zero - are nullable on the definition instead, so presence is a null check
- * and not a guess.
- */
 class ParticleProducerEncoder : OpcodeEncoder<ParticleProducerDefinition>() {
 
     override fun opcodes(definition: ParticleProducerDefinition): IntArray {
@@ -197,10 +188,8 @@ class ParticleProducerEncoder : OpcodeEncoder<ParticleProducerDefinition>() {
     }
 
     private companion object {
-        /** What a display plane is when the file says nothing, and what makes opcodes 12 and 13 absent. */
         private const val DEFAULT_PLANE = -2
 
-        /** The fade and change percentages all default to a whole life. */
         private const val DEFAULT_PERCENT = 100
     }
 }

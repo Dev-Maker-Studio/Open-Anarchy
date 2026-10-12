@@ -3,15 +3,9 @@ package org.darkan.tools.cache.texture.ops
 import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 
-/**
- * Type 10: Maps grayscale input to a color gradient.
- * Takes a monochrome input and maps it through a configurable color gradient.
- */
 class TextureOpColorGradient : TextureOperation(1, false) {
-    /** Gradient stops: [stopIndex][position, r, g, b] */
     private var gradientStops: Array<IntArray>? = null
 
-    /** Precomputed gradient lookup table (257 entries of packed RGB) */
     private val gradientLut = IntArray(257)
 
     override fun getColorOutput(y: Int): Array<IntArray> {
@@ -36,17 +30,13 @@ class TextureOpColorGradient : TextureOperation(1, false) {
         return output
     }
 
-    /**
-     * Compute the gradient lookup table from gradient stops.
-     */
     private fun computeGradientLut() {
         val stops = gradientStops
         if (stops == null || stops.isEmpty()) return
 
         for (i in 0..256) {
-            val pos = i shl 4  // Position in 12-bit fixed-point
+            val pos = i shl 4
 
-            // Find the gradient segment containing this position
             var stopIndex = 0
             for (s in stops.indices) {
                 if (pos >= stops[s][0]) {
@@ -61,7 +51,6 @@ class TextureOpColorGradient : TextureOperation(1, false) {
             if (stopIndex < stops.size) {
                 val stop = stops[stopIndex]
                 if (stopIndex > 0) {
-                    // Interpolate between two stops
                     val prevStop = stops[stopIndex - 1]
                     val t = ((pos - prevStop[0]) shl 12) / (stop[0] - prevStop[0])
                     val invT = 4096 - t
@@ -69,20 +58,17 @@ class TextureOpColorGradient : TextureOperation(1, false) {
                     g = (t * stop[2] + invT * prevStop[2]) shr 12
                     b = (t * stop[3] + invT * prevStop[3]) shr 12
                 } else {
-                    // Before first stop
                     r = stop[1]
                     g = stop[2]
                     b = stop[3]
                 }
             } else {
-                // After last stop
                 val lastStop = stops[stops.size - 1]
                 r = lastStop[1]
                 g = lastStop[2]
                 b = lastStop[3]
             }
 
-            // Pack into RGB (clamped)
             val rClamped = (r shr 4).coerceIn(0, 255)
             val gClamped = (g shr 4).coerceIn(0, 255)
             val bClamped = (b shr 4).coerceIn(0, 255)
@@ -90,20 +76,15 @@ class TextureOpColorGradient : TextureOperation(1, false) {
         }
     }
 
-    /**
-     * Initialize a preset gradient.
-     */
     private fun initPresetGradient(preset: Int) {
         gradientStops = when (preset) {
             1 -> {
-                // Black to white
                 arrayOf(
                     intArrayOf(0, 0, 0, 0),
                     intArrayOf(4096, 4096, 4096, 4096)
                 )
             }
             2 -> {
-                // Wood grain
                 arrayOf(
                     intArrayOf(0, 2650, 2602, 2361),
                     intArrayOf(2867, 2313, 1799, 1558),
@@ -116,7 +97,6 @@ class TextureOpColorGradient : TextureOperation(1, false) {
                 )
             }
             3 -> {
-                // Rainbow
                 arrayOf(
                     intArrayOf(0, 0, 0, 4096),
                     intArrayOf(663, 0, 4096, 4096),
@@ -128,7 +108,6 @@ class TextureOpColorGradient : TextureOperation(1, false) {
                 )
             }
             4 -> {
-                // Cold blue
                 arrayOf(
                     intArrayOf(0, 0, 0, 0),
                     intArrayOf(1843, 0, 0, 1493),
@@ -139,7 +118,6 @@ class TextureOpColorGradient : TextureOperation(1, false) {
                 )
             }
             5 -> {
-                // Terrain
                 arrayOf(
                     intArrayOf(0, 80, 192, 321),
                     intArrayOf(155, 321, 449, 562),
@@ -160,7 +138,6 @@ class TextureOpColorGradient : TextureOperation(1, false) {
                 )
             }
             6 -> {
-                // Fire
                 arrayOf(
                     intArrayOf(2048, 0, 4096, 0),
                     intArrayOf(2867, 4096, 4096, 0),
@@ -183,7 +160,6 @@ class TextureOpColorGradient : TextureOperation(1, false) {
         if (opcode == 0) {
             val presetOrCount = buffer.readUnsignedByte()
             if (presetOrCount == 0) {
-                // Custom gradient
                 val stopCount = buffer.readUnsignedByte()
                 gradientStops = Array(stopCount) { IntArray(4) }
                 for (i in 0 until stopCount) {
@@ -193,7 +169,6 @@ class TextureOpColorGradient : TextureOperation(1, false) {
                     gradientStops!![i][3] = buffer.readUnsignedByte() shl 4
                 }
             } else {
-                // Preset gradient
                 initPresetGradient(presetOrCount)
             }
         }

@@ -14,7 +14,6 @@ class ReferenceTableTest {
         val table = ReferenceTable(format = 7, revision = 1005, named = true, whirlpool = true)
         table.add(entry(0, nameHash = -12345, crc = 0x1234, version = 3, files = intArrayOf(0)))
         table.add(entry(1, nameHash = 99, crc = -1, version = 70000, files = intArrayOf(0, 1, 5)))
-        // Above 0x7fff an id delta has to use the four byte big-smart form.
         table.add(entry(40000, nameHash = 0, crc = 7, version = 0, files = intArrayOf(2)))
 
         val encoded = table.encode()
@@ -42,7 +41,6 @@ class ReferenceTableTest {
         table.add(entry(5, crc = 1, version = 1, files = intArrayOf(0, 1)))
         table.add(entry(9, crc = 2, version = 2, files = intArrayOf(0)))
         val encoded = table.encode()
-        // format, revision, flags, count, two deltas, two crcs, two versions, two counts, three file deltas
         assertEquals(1 + 4 + 1 + 2 + 2 * 2 + 2 * 4 + 2 * 4 + 2 * 2 + 3 * 2, encoded.size)
         val decoded = ReferenceTable.decode(encoded)
         assertContentEquals(encoded, decoded.encode())

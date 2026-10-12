@@ -92,7 +92,6 @@ fun mapStaffPotato() {
     }
 }
 
-/** How long the potato hands out anything it hands out. */
 private const val POTATO_HOURS = 1000
 
 private enum class Command(val cmdName: String, val action: (Player) -> Unit) {

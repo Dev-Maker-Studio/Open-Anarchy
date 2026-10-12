@@ -14,7 +14,6 @@ import com.rs.plugin.handlers.NPCClickHandler;
 @PluginEventHandler
 public class Scalectrix extends Conversation {
 
-	// npc id
 	final static int SCALECTRIX = 15055;
 
 	public Scalectrix(Player p) {
@@ -39,7 +38,6 @@ public class Scalectrix extends Conversation {
 						.addOptions("Select an Option", new Options() {
 							@Override
 							public void create() {
-								// TODO:
 								option("Look, I'll just go and take a look myself...", new Dialogue()
 										.addPlayer(HeadE.CALM_TALK, "Look, I'll just go and take a look myself. I am trained for this sort of thing, after all.")
 										.addNPC(SCALECTRIX, HeadE.AMAZED_MILD, "Be careful!", () -> p.getQuestManager().setStage(Quest.WOLF_WHISTLE, WolfWhistle.PIKKUPSTIX_HELP)));

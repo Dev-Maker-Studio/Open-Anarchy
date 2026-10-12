@@ -14,35 +14,17 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 
-/** What one tree file looked like the last time the cache was built from it. */
 class FileState(val size: Long, val mtimeNanos: Long, val sha256: String)
 
-/** What one archive was built into: the container's CRC and a digest of its metadata line. */
 class ArchiveState(val crc: Int, val metadata: String)
 
-/** What a tree walk found against the previous build. */
 class ScanResult(
     val files: MutableMap<String, FileState>,
-    /** Paths that are new or whose contents differ from the manifest. */
     val changed: Set<String>,
-    /** Paths the manifest knows and the tree no longer has. */
     val removed: Set<String>,
-    /** How many files had to be hashed because their size or mtime moved. */
     val hashed: Int
 )
 
-/**
- * `manifest.json` beside a packed build: what the build was made from.
- *
- * It holds the tree it was built from, every input file's size, mtime and content hash, and per
- * archive the CRC of the container it produced together with a digest of its `index.json` line.
- * That is enough for [Builder] to answer "what changed" without opening the cache: files whose
- * size and mtime are unchanged are taken on trust, everything else is hashed, and an archive
- * whose metadata digest moved is repacked even though none of its files did.
- *
- * The two bulky tables are one newline separated string each rather than a quarter of a million
- * JSON objects, which keeps a no-op build's parse in the same order of magnitude as its stat walk.
- */
 class BuildManifest(
     var tree: String,
     val files: MutableMap<String, FileState> = HashMap(),
@@ -87,17 +69,14 @@ class BuildManifest(
     }
 
     companion object {
-        /** The manifest's own format. A manifest from an older one is thrown away and rebuilt. */
         const val FORMAT = 1
 
-        /** The builder's version. Bumped when a change makes old builds wrong rather than stale. */
         const val BUILDER = 1
 
         const val FILE = "manifest.json"
 
         private val json = Json { ignoreUnknownKeys = true }
 
-        /** Read [output]'s manifest, or null when there is none this builder can use. */
         fun read(output: File): BuildManifest? {
             val file = File(output, FILE)
             if (!file.isFile) {
@@ -129,13 +108,6 @@ class BuildManifest(
             }
         }
 
-        /**
-         * Stat every file in [tree] and work out what moved since [previous].
-         *
-         * The walk is one pass with the attributes the directory listing already carries, so it
-         * costs a stat per file and nothing more; only files whose size or mtime disagree with
-         * the manifest are opened and hashed, in parallel.
-         */
         fun scan(tree: SourceTree, previous: Map<String, FileState>, pool: ExecutorService): ScanResult {
             val capacity = previous.size.coerceAtLeast(1024)
             val paths = ArrayList<Path>(capacity)
@@ -202,7 +174,6 @@ class BuildManifest(
             return ScanResult(files, changed, removed, suspect.size)
         }
 
-        /** Hashing a file at a time across a pool costs more in scheduling than it saves. */
         private const val BATCH = 64
     }
 }

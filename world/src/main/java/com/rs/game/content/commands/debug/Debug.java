@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.commands.debug;
 
 import com.rs.Settings;
@@ -83,9 +67,6 @@ public class Debug {
 		if (!Settings.getConfig().isDebug())
 			return;
 
-		//		Commands.add(Rights.PLAYER, "example [arg1 (optionalArg2)]", "This is an example command to replicate.", (p, args) -> {
-		//
-		//		});
 
 		Commands.add(Rights.ADMIN, "shapemusic", "Starts showing music shape.", (p, args) -> musicMoveOn = !musicMoveOn);
 
@@ -495,30 +476,7 @@ public class Debug {
 				p.tele(Tile.of(Integer.parseInt(args[0]), Integer.parseInt(args[1]), args.length >= 3 ? Integer.parseInt(args[2]) : p.getPlane()));
 			}
 		});
-		// case "load":
-		// if (!player.getInterfaceManager().containsInterface(762) || (Boolean)
-		// player.getTemporaryAttributes().get("viewingOtherBank") != null && (Boolean)
-		// player.getTemporaryAttributes().get("viewingOtherBank") == true) {
-		// player.sendMessage("You must be in your bank screen to do
-		// this.");
-		// return true;
-		// }
-		// player.loadLoadout(cmd[1]);
-		// return true;
-		//
-		// case "saveload":
-		// player.saveLoadout(cmd[1]);
-		// return true;
-		//
-		// case "delload":
-		// player.deleteLoadout(cmd[1]);
-		// return true;
-		//
-		// case "loadouts":
-		// player.sendLoadoutText();
-		// return true;
 
-		// Start Penguin Hide And Seek debug commands
 		Commands.add(Rights.ADMIN, "penguin_points [set/add/remove]", "Manipulates the player's Penguin Points by the action chosen (Set/Add/Remove).", (p, args) -> {
 			if (args.length < 3) {
 				p.getPackets().sendDevConsoleMessage("Usage: ::penguin_points [set/add/remove] [username] [points]");
@@ -574,9 +532,7 @@ public class Debug {
 				}
 			});
 		});
-		// End Penguin Hide And Seek debug commands
 
-		// Start Wicked Outfit debug commands
 		Commands.add(Rights.PLAYER, "wickedoutfit [check/remove/add/refresh/points/talismans]", "Does various operations with Wicked outfit (Check/Remove/Add/Refresh/Points/Talismans)", (p, args) -> {
 			try {
 				String action = args[0].toLowerCase();
@@ -632,6 +588,5 @@ public class Debug {
 				p.getPackets().sendGameMessage("Usage: ::wickedoutfit [check/remove/add/refresh/points]");
 			}
 		});
-		// end Wicked Outfit debug commands
 	}
 }

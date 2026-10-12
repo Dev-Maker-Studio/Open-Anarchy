@@ -31,9 +31,6 @@ import org.darkan.core.gameval.gen.Varbit;
 )
 @PluginEventHandler
 public class WhatLiesBelow extends QuestOutline {
-    /**
-     * inter 250/251
-     */
 
     @Override
     public List<String> getJournalLines(Player player, int stage) {

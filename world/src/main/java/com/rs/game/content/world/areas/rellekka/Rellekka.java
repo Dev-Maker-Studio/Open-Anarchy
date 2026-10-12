@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.world.areas.rellekka;
 
 import com.rs.engine.dialogue.Conversation;
@@ -127,7 +111,7 @@ public class Rellekka {
 	}
 
 	public static ItemOnObjectHandler handleChargeLyre = new ItemOnObjectHandler(new Object[] { 4141 }, new Object[] { 383, 395, 363 }, e -> {
-		rechargeLyre(e.getPlayer()); //TODO no way is this real in RS lmao
+		rechargeLyre(e.getPlayer());
 	});
 
 	private static final int[] LYRE_IDS = { 3690, 3691, 6125, 6126, 6127, 14590, 14591 };
@@ -181,10 +165,6 @@ public class Rellekka {
 	public static ObjectClickHandler handleLallisCave = new ObjectClickHandler(new Object[] { 4147 }, e -> e.getPlayer().startConversation(new Dialogue().addNPC(1270, HeadE.T_ANGRY, "Hey human! You not go in my house! It where me keep all my stuff!")));
 
 	public static NPCClickHandler handleLallisConversation = new NPCClickHandler(new Object[] { 1270 }, e -> {
-		//			e.getPlayer().startConversation(new Dialogue()
-		//			.addPlayer(HeadE.CALM, "Hello there.")
-		//			.addNPC(1270, HeadE.T_ANGRY, "Bah! Puny humans always try steal Lallis' golden apples! You go away now!")
-		//			.addPlayer(HeadE.CONFUSED, "Uh.... Okay..."));
 		e.getPlayer().startConversation(new Dialogue()
 				.addPlayer(HeadE.CALM, "Hello there.")
 				.addNPC(1270, HeadE.T_ANGRY, "Bah! Puny humans always try steal Lallis' golden apples! You go away now!")

@@ -7,25 +7,14 @@ import world.gregs.voidps.cache.definition.cs2.CS2Type
 data class ClanVarDefinition(
     override var id: Int = -1,
     var type: CS2Type? = null,
-    /**
-     * The cp1252 descriptor byte opcode 1 carried. [type] is [CS2Type.forJagexDesc] of it, which
-     * collapses `o`/`O` onto one type and every unknown descriptor onto `int`, so the descriptor
-     * itself is kept for the encoder.
-     */
     var typeChar: Char = 0.toChar(),
     var baseVar: Int = -1,
     var startBit: Int = 0,
     var endBit: Int = 0
 ) : Definition, OpcodeOrdered {
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var opcodeOrder: IntArray? = null
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var shadowedPayloads: Array<ByteArray?>? = null
 
 

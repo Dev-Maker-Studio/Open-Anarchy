@@ -1,16 +1,8 @@
 package org.darkan.tools.cache.terrain
 
-/**
- * A mutable deep copy of [TerrainLoader.RegionData] with dirty tracking.
- * Editor tools modify this data, and the dirty tracking system tells
- * [TerrainEditManager] which chunks need rebuilding.
- *
- * Chunk coordinates map tiles to 8x8 chunks: chunkX = tileX / 8, chunkY = tileY / 8.
- */
 class MutableRegionData(source: TerrainLoader.RegionData) {
     val regionId = source.regionId
 
-    /** Mutable tile data: [plane][x][y] */
     val tiles: Array<Array<Array<MutableTileData>>> = Array(4) { plane ->
         Array(64) { x ->
             Array(64) { y ->
@@ -20,7 +12,6 @@ class MutableRegionData(source: TerrainLoader.RegionData) {
         }
     }
 
-    // Dirty tracking
     private val dirtyChunks = mutableSetOf<ChunkCoord>()
     var heightsDirty = false; private set
     var blendingDirty = false; private set
@@ -28,14 +19,12 @@ class MutableRegionData(source: TerrainLoader.RegionData) {
     fun setHeight(plane: Int, x: Int, y: Int, height: Int) {
         tiles[plane][x][y].height = height
         heightsDirty = true
-        // Mark chunks for tiles within 1-tile radius (shared corners affect normals)
         markChunksDirty(x - 1, y - 1, x + 1, y + 1)
     }
 
     fun setUnderlayId(plane: Int, x: Int, y: Int, id: Int) {
         tiles[plane][x][y].underlayId = id
         blendingDirty = true
-        // 5-tile radius for blending window cascade
         markChunksDirty(x - 5, y - 5, x + 5, y + 5)
     }
 
@@ -45,7 +34,6 @@ class MutableRegionData(source: TerrainLoader.RegionData) {
             overlayShape = shape
             overlayRotation = rot
         }
-        // 1-tile radius for neighbor blend analysis
         markChunksDirty(x - 1, y - 1, x + 1, y + 1)
     }
 
@@ -74,7 +62,6 @@ class MutableRegionData(source: TerrainLoader.RegionData) {
         blendingDirty = false
     }
 
-    /** Convert to immutable TileData array for TerrainLoader functions. */
     fun toTileArray(): Array<Array<Array<TerrainLoader.TileData>>> = Array(4) { plane ->
         Array(64) { x ->
             Array(64) { y ->
@@ -84,7 +71,6 @@ class MutableRegionData(source: TerrainLoader.RegionData) {
         }
     }
 
-    /** Convert to immutable RegionData for TerrainLoader functions. */
     fun toRegionData(): TerrainLoader.RegionData = TerrainLoader.RegionData(regionId, toTileArray())
 
     companion object {
@@ -101,5 +87,4 @@ data class MutableTileData(
     var flags: Int
 )
 
-/** Identifies a chunk within a region (0-7, 0-7). */
 data class ChunkCoord(val chunkX: Int, val chunkY: Int)

@@ -9,7 +9,6 @@ import com.rs.plugin.handlers.NPCClickHandler;
 @PluginEventHandler
 public class GuardsmanDante extends Conversation {
 
-    //Identify NPC by ID
     private static final int npcId = 7885;
 
     public static NPCClickHandler GuardsmanDante = new NPCClickHandler(new Object[]{npcId}, e -> {
@@ -21,7 +20,6 @@ public class GuardsmanDante extends Conversation {
 
     public GuardsmanDante(Player player) {
         super(player);
-        //TODO replace placeholder conversation
         addNPC(npcId, HeadE.FRUSTRATED, "Not right now, I'm Busy!");
         create();
     }

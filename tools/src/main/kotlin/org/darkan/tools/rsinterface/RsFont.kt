@@ -4,16 +4,6 @@ import org.darkan.tools.engine.render.Canvas2D
 import world.gregs.voidps.cache.definition.data.FontDefinition
 import world.gregs.voidps.cache.definition.data.IndexedGraphic
 
-/**
- * A cache font: the metrics from index 13 plus a glyph atlas built from the
- * matching graphic group in index 8.
- *
- * The atlas is a 16x16 grid of equally sized cells holding all 256 cp1252
- * glyphs. Interface fonts are "plain" in client terms, meaning the glyph bitmap
- * is a coverage mask rather than pre-coloured art, so the atlas stores white RGB
- * with the coverage in alpha and the draw colour arrives as a vertex tint - the
- * same trick the client's modern font renderer uses.
- */
 class RsFont(
     val id: Int,
     val definition: FontDefinition,
@@ -23,7 +13,6 @@ class RsFont(
     private val atlasHeight: Int
 ) {
 
-    /** One glyph's placement in the atlas and its blit offsets within the line. */
     class Glyph(
         val width: Int,
         val height: Int,
@@ -33,19 +22,8 @@ class RsFont(
         val atlasY: Int
     )
 
-    /** Natural line height; used whenever a component leaves line spacing at 0. */
     val verticalSpacing: Int get() = definition.verticalSpacing
 
-    /**
-     * Lays out and draws [text] inside the box at ([x], [y]) with the client's
-     * alignment rules.
-     *
-     * @param colour ARGB draw colour; alpha carries `255 - transparency`.
-     * @param shadowArgb ARGB shadow colour, or -1 for no shadow. The client
-     *   offsets the shadow by exactly one pixel right and down, per glyph.
-     * @param lineSpacing 0 means "use the font's natural spacing".
-     * @param maxLines 0 means unlimited; otherwise the last line is ellipsised.
-     */
     @Suppress("LongParameterList")
     fun drawText(
         canvas: Canvas2D,
@@ -68,7 +46,6 @@ class RsFont(
         val topPadding = definition.topPadding
         val bottomPadding = definition.bottomPadding
 
-        // The client only wraps when the box can hold more than a single line.
         val wraps = height >= spacing + bottomPadding + topPadding || height >= spacing * 2
         var lines = if (wraps) {
             definition.splitLines(text, widths = intArrayOf(width), icons = null)
@@ -91,7 +68,6 @@ class RsFont(
                 (height - topPadding - bottomPadding - effectiveSpacing * (lines.size - 1)) / 2
             ALIGN_END -> y + height - bottomPadding - effectiveSpacing * (lines.size - 1)
             else -> {
-                // Spread: distribute the slack evenly above, between and below.
                 val slack = (height - topPadding - bottomPadding - effectiveSpacing * (lines.size - 1)) /
                     (lines.size + 1)
                 val extra = slack.coerceAtLeast(0)
@@ -111,13 +87,6 @@ class RsFont(
         }
     }
 
-    /**
-     * Draws a single already-wrapped line. The pen advances by the metric glyph
-     * width plus the kerning pair adjustment, while the glyph bitmap itself is
-     * placed at the pen plus the graphic's own trim offsets. The blit row is
-     * measured up from the line's baseline by the font's vertical spacing,
-     * matching the client's `renderLine`.
-     */
     private fun drawLine(canvas: Canvas2D, line: String, x: Int, y: Int, colour: Int, shadowArgb: Int) {
         var penX = x
         val top = y - definition.verticalSpacing
@@ -158,7 +127,6 @@ class RsFont(
         }
     }
 
-    /** Draws one glyph and returns the advanced pen position. */
     private fun drawGlyph(
         canvas: Canvas2D,
         character: Char,
@@ -196,7 +164,6 @@ class RsFont(
         return x + (definition.glyphWidths[code].toInt() and 0xff)
     }
 
-    /** Handles the colour tags the client acts on; everything else is ignored. */
     private fun applyTag(tag: String, current: Int, original: Int, alpha: Int): Int {
         if (tag.startsWith("col=")) {
             val rgb = tag.substring(4).toIntOrNull(16) ?: return current
@@ -210,7 +177,6 @@ class RsFont(
 
     fun textWidth(text: String): Int = definition.textWidth(text, null)
 
-    /** How many lines [text] wraps to in [width] pixels, which is what `PARAHEIGHT` answers. */
     fun lineCount(text: String, width: Int): Int {
         if (text.isEmpty()) return 1
         if (width <= 0) return 1
@@ -235,11 +201,6 @@ class RsFont(
             else -> null
         }
 
-        /**
-         * Maps a character onto its cp1252 glyph slot. Mirrors the private
-         * conversion inside [FontDefinition] so that measured and drawn text
-         * agree on which glyph a character uses.
-         */
         fun glyphIndex(character: Char): Int {
             val code = character.code
             if (code in 1..127 || code in 160..255) {
@@ -278,14 +239,6 @@ class RsFont(
             return mapped and 0xff
         }
 
-        /**
-         * Builds the glyph atlas for a decoded font.
-         *
-         * Coverage comes from the graphic's alpha plane when it has one, and from
-         * the palette index otherwise (index 0 transparent, anything else solid).
-         * The palette itself is discarded: interface fonts are masks, tinted by
-         * the component colour at draw time.
-         */
         fun buildAtlas(id: Int, definition: FontDefinition, graphics: Array<IndexedGraphic>): RsFont? {
             var cellWidth = 1
             var cellHeight = 1

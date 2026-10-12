@@ -1,6 +1,3 @@
-/**
- * Chat and game message packets.
- */
 package org.darkan.core.net.prot.packet
 
 import kotlinx.serialization.Serializable
@@ -17,7 +14,6 @@ data class UpdateFriendchatChannelSingleUser(
     val worldName: String? = null,
 ) : ServerProt
 
-// Messaging protocols
 @Serializable data class MessagePrivate(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: String) : ServerProt
 
 @Serializable data class MessagePrivateEcho(val senderDisplayName: String, val message: String) : ServerProt

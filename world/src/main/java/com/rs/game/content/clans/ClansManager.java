@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.clans;
 
 import com.google.common.collect.BiMap;
@@ -51,19 +35,9 @@ import java.util.function.Consumer;
 import org.darkan.core.gameval.gen.Varbit;
 import org.darkan.core.gameval.gen.Varp;
 
-/**
- * The clan interfaces as a world player sees them (docs/clans.md).
- *
- * Nothing here writes to a clan. The lobby owns every clan document and every channel, so each
- * button becomes a typed {@link ClanAction} handed to {@link ClanRegistry#send} - which checks the
- * shared {@code ClanRules} first so the player gets a denial straight away - and the change comes
- * back as the snapshot the lobby broadcasts. What the interfaces read is the world's replica,
- * {@link ClanRegistry}.
- */
 @PluginEventHandler
 public class ClansManager {
 
-	/** The clan the world knows under this name, asking the lobby for it if it has never seen it. */
 	public static Clan getClan(String name) {
 		return ClanRegistry.clanOrFetch(name);
 	}
@@ -96,8 +70,6 @@ public class ClansManager {
 		player.sendOptionDialogue("The name " + name + " is available. Create the clan?", ops -> {
 			ops.add("Yes, create " + name + ".", () -> {
 				player.getTempAttribs().setB("ccCreateLock", true);
-				// The snapshot the lobby broadcasts after the create is what regenerates the
-				// appearance and draws the clan; all this callback owns is the lock.
 				if (!ClanRegistry.send(player, new ClanAction.Create(name), result -> {
 					player.getTempAttribs().removeB("ccCreateLock");
 					if (result.getOk())
@@ -116,8 +88,6 @@ public class ClansManager {
 				return;
 			}
 			player.getTempAttribs().setB("ccCreateLock", true);
-			// The result has already shown the player why a name was rejected, so a rejection
-			// just puts them back on the name prompt.
 			if (!ClanRegistry.send(player, new ClanAction.CheckName(name), result -> {
 				player.getTempAttribs().removeB("ccCreateLock");
 				if (result.getOk())
@@ -185,7 +155,7 @@ public class ClansManager {
 		case 124 -> openClanMotifInterface(e.getPlayer());
 		case 131 -> openClanMottoInterface(e.getPlayer());
 		case 160 -> openKeywordEditor(e.getPlayer());
-		case 222 -> ClanRegistry.send(e.getPlayer(), new ClanAction.SetVar(2811, Utils.clampI(e.getSlotId(), 0, 4))); //signpost permissions
+		case 222 -> ClanRegistry.send(e.getPlayer(), new ClanAction.SetVar(2811, Utils.clampI(e.getSlotId(), 0, 4)));
 		case 207 -> updateSetting(e.getPlayer(), ClanSetting.GUEST_CITADEL_ACCESS, Utils.clampI(e.getSlotId(), 0, 3));
 		case 240 -> updateSetting(e.getPlayer(), ClanSetting.GAME_TIME, -720 + e.getSlotId() * 10);
 		case 290 -> updateSetting(e.getPlayer(), ClanSetting.HOME_WORLD, Utils.clampI(e.getSlotId(), 0, 200));
@@ -264,11 +234,6 @@ public class ClansManager {
 		KEYWORD_INDICES.put(ClanSetting.KEYWORD9_INDEX, 9174);
 	}
 
-	/**
-	 * The motif interface edits a copy: the icons and the four colours are held in temp attribs
-	 * (and mirrored into the player's own vars so the interface draws them) until the save button
-	 * sends them as one {@link ClanAction.UpdateSettings}. The clan itself is read-only here.
-	 */
 	private static final ClanSetting[] MOTIF_SETTINGS = {
 		ClanSetting.MOTIF_TOP_ICON, ClanSetting.MOTIF_BOTTOM_ICON,
 		ClanSetting.MOTIF_PRIMARY_COLOR, ClanSetting.MOTIF_SECONDARY_COLOR,
@@ -358,7 +323,6 @@ public class ClansManager {
 		Clan clan = player.getClan();
 		if (clan == null)
 			return;
-		// Rows are in the order ClanSettingsFull listed the members, not the map's iteration order.
 		List<String> members = ClanRegistry.orderedMembers(clan);
 		if (index >= members.size()) {
 			player.sendMessage("This is a placeholder character to unlock all clan features without needing 5 players.");
@@ -439,12 +403,6 @@ public class ClansManager {
 		player.getPackets().sendRunScriptBlank(4319);
 	}
 
-	/**
-	 * The rank and job picked in the clanmate panel, as one UpdateMember. Everything the legacy
-	 * code checked by hand - who may edit whom, which ranks may be assigned, the owner needing a
-	 * deputy before stepping down, and handing the clan over when they do - is now the lobby's
-	 * (and {@code ClanRules}') job, so this only says what changed.
-	 */
 	private static void saveClanmateDetails(Player player) {
 		Clan clan = player.getClan();
 		if (clan == null)
@@ -487,7 +445,6 @@ public class ClansManager {
 		Clan clan = player.getClan();
 		if (clan == null)
 			return;
-		// The ban list interface shows bannedUsers in the order the settings packet sent them.
 		List<String> banned = ClanRegistry.orderedBans(clan);
 		if (slotId < 0 || slotId >= banned.size())
 			return;
@@ -559,19 +516,17 @@ public class ClansManager {
 			player.sendMessage("You must be in a clan to do that.");
 			return;
 		}
-		// Every setting button sends its own UpdateSettings, so there is nothing left to save on
-		// close the way the legacy batch sync did.
 		player.getInterfaceManager().sendInterface(1096);
 		showClanSettingsClanMates(player);
 		selectPermissionTab(player, 1);
-		player.getPackets().setIFRightClickOps(1096, 240, 0, 144, 0); // unlocks timezone setting
-		player.getPackets().setIFRightClickOps(1096, 290, 0, 200, 0); // unlocks worldid setting
-		player.getPackets().setIFRightClickOps(1096, 41, 0, Clan.MAX_MEMBERS, 0); // unlocks clanmates
-		player.getPackets().setIFRightClickOps(1096, 276, 0, 125, 0); // set member rank
-		player.getPackets().setIFRightClickOps(1096, 262, 0, 500, 0); // set member profession
-		player.getPackets().setIFRightClickOps(1096, 366, 0, 127, 0); // unlocks rank filters
-		player.getPackets().setIFRightClickOps(1096, 222, 0, 4, 0); // unlocks signpost permissions
-		player.getPackets().setIFRightClickOps(1096, 207, 0, 3, 0); // unlocks guest access to citadel settings
+		player.getPackets().setIFRightClickOps(1096, 240, 0, 144, 0);
+		player.getPackets().setIFRightClickOps(1096, 290, 0, 200, 0);
+		player.getPackets().setIFRightClickOps(1096, 41, 0, Clan.MAX_MEMBERS, 0);
+		player.getPackets().setIFRightClickOps(1096, 276, 0, 125, 0);
+		player.getPackets().setIFRightClickOps(1096, 262, 0, 500, 0);
+		player.getPackets().setIFRightClickOps(1096, 366, 0, 127, 0);
+		player.getPackets().setIFRightClickOps(1096, 222, 0, 4, 0);
+		player.getPackets().setIFRightClickOps(1096, 207, 0, 3, 0);
 	}
 
 	private static void selectPermissionRank(Player player, ClanRank rank) {
@@ -614,7 +569,6 @@ public class ClansManager {
 			player.sendMessage("Error loading clan details.");
 			return;
 		}
-		// The invite panel only reads the clan, so it gets the guest form of the settings block.
 		player.getSession().queuePacket(ClanRegistry.settingsFull(clan, false));
 		player.getInterfaceManager().sendInterface(1095);
 		player.getTempAttribs().setO("clanInviter", inviter);
@@ -630,9 +584,7 @@ public class ClansManager {
 		player.getInterfaceManager().sendInterface(1107);
 		if (vexPlanter != null) {
 			player.getPackets().setIFText(1107, 92, vexPlanter.getDisplayName());
-			//player.getPackets().sendRunScript(4423);
 		} else
-			//player.getPackets().sendRunScript(4422);
 		player.getPackets().sendRunScript(4413);
 	}
 
@@ -667,7 +619,6 @@ public class ClansManager {
 		player.setCloseInterfacesEvent(() -> openSettings(player));
 	}
 
-	/** The ten keyword pairs the editor built up in varbits, as one UpdateSettings. */
 	private static void saveKeywords(Player player) {
 		Clan clan = player.getClan();
 		if (clan == null)
@@ -714,8 +665,8 @@ public class ClansManager {
 		player.stopAll();
 		player.getInterfaceManager().sendInterface(1105);
 		player.getPackets().sendRunScript(4400, 72417446);
-		player.getPackets().setIFRightClickOps(1105, 66, 0, 116, 0); // top
-		player.getPackets().setIFRightClickOps(1105, 63, 0, 116, 0); // button
+		player.getPackets().setIFRightClickOps(1105, 66, 0, 116, 0);
+		player.getPackets().setIFRightClickOps(1105, 63, 0, 116, 0);
 		player.getVars().setVarBit(Varbit.clan_custom_motif_a_varp, motifValue(player, clan, 0));
 		player.getVars().setVarBit(Varbit.clan_custom_motif_b_varp, motifValue(player, clan, 1));
 		for (int i = 0; i < 4; i++)
@@ -749,7 +700,6 @@ public class ClansManager {
 		player.getVars().setVarBit(Varbit.clan_custom_motif_b_varp, motifValue(player, clan, 1));
 	}
 
-	/** Everything the motif editor changed, in one UpdateSettings; nothing changed sends nothing. */
 	private static void saveMotif(Player player) {
 		Clan clan = player.getClan();
 		if (clan == null)
@@ -788,7 +738,6 @@ public class ClansManager {
 		ClanRegistry.send(player, new ClanAction.SetChannelRanks(talk ? rank : null, talk ? null : rank));
 	}
 
-	/** Flips a 0/1 clan setting. */
 	private static void toggleSetting(Player player, ClanSetting setting) {
 		Clan clan = player.getClan();
 		if (clan == null) {
@@ -798,7 +747,6 @@ public class ClansManager {
 		updateSetting(player, setting, ((Number) clan.getSetting(setting)).intValue() == 1 ? 0 : 1);
 	}
 
-	/** Asks the lobby to change one setting, unless it already holds that value. */
 	private static void updateSetting(Player player, ClanSetting setting, Object value) {
 		Clan clan = player.getClan();
 		if (clan == null) {

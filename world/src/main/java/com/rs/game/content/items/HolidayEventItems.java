@@ -107,7 +107,7 @@ public class HolidayEventItems {
             public void run() {
                 e.getPlayer().setNextSpotAnim(new SpotAnim(263));
             }
-        }, 4000); // 4000 milliseconds = 4 seconds
+        }, 4000);
     });
 
     public static ItemClickHandler handleRubberChicken = new ItemClickHandler(new Object[]{4566}, new String[]{"Dance", "Operate"}, e -> {
@@ -136,7 +136,7 @@ public class HolidayEventItems {
     public static ItemClickHandler SquirrelEars = new ItemClickHandler(new Object[]{"Squirrel ears"}, new String[]{"Summon Minion", "Juggle"}, e -> {
         switch (e.getOption()) {
             case "Summon Minion":
-                e.getPlayer().setNextAnimation(new Animation(-1)); //Still looking for this one.
+                e.getPlayer().setNextAnimation(new Animation(-1));
                 e.getPlayer().setNextSpotAnim(new SpotAnim(-1));
                 break;
             case "Juggle":
@@ -163,7 +163,7 @@ public class HolidayEventItems {
     public static ItemClickHandler Yoyo = new ItemClickHandler(new Object[]{4079}, new String[]{"Play", "Loop", "Walk", "Crazy"}, e -> {
         switch (e.getOption()) {
             case "Play":
-                e.getPlayer().setNextAnimation(new Animation(1457));    // The animation on "play" on weird. Needs to be looked at/fixed. It is the correct ID.
+                e.getPlayer().setNextAnimation(new Animation(1457));
                 break;
             case "Loop":
                 e.getPlayer().setNextAnimation(new Animation(1458));

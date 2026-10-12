@@ -50,7 +50,6 @@ public class Muggh {
                                 else {
                                     Equipment.sendWear(player, Equipment.HEAD, 12558);
                                     player.sendMessage("Muggh smacks a fistful of mud on your face.");
-                                    //TODO npc.anim();
                                     World.sendProjectile(npc, player, 1462, new Pair<>(30, 30), 45, 5, 15);
                                     player.delayLock(2, () -> {
                                         player.getEquipment().setSlot(Equipment.HEAD, new Item(12558));

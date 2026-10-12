@@ -32,10 +32,9 @@ enum class MapAndPortrait(val itemName: String, val itemID: Int, val price: Int,
 
 }
 
-//TODO Add option dialogues - POC
 @ServerStartupEvent
 fun mapSirRenitee() {
-    val npcId = 4249 // Replace with the actual NPC ID
+    val npcId = 4249
 
     onNpcClick(npcId, options = arrayOf("Talk-to")) { e ->
         val player = e.player

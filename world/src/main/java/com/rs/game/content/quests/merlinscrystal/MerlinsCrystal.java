@@ -41,7 +41,6 @@ public class MerlinsCrystal extends QuestOutline {
 	public static final int TALK_TO_ARTHUR = 7;
 	public static final int QUEST_COMPLETE = 8;
 
-	//item
 	protected static final int EXCALIBUR = 35;
 
 	protected Tile crate = Tile.of(2778, 9839, 0);

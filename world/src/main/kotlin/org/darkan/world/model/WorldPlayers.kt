@@ -3,10 +3,6 @@ package org.darkan.world.model
 import com.rs.game.model.entity.player.Player
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * Registry of online players by username.
- * Provides O(1) username lookup for social/gateway features.
- */
 object WorldPlayers {
     private val playersByUsername = ConcurrentHashMap<String, Player>()
 

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.magic;
 
 import com.rs.engine.quest.Quest;
@@ -237,7 +221,6 @@ public class Enchanting {
 		if (!player.canCastSpell())
 			return;
 		switch (comp1) {
-		// Sapphire
 		case 29: {
 			Sapphire sapphire = Sapphire.forId(item.getId());
 			if (sapphire != null) {
@@ -254,7 +237,6 @@ public class Enchanting {
 				player.sendMessage("That item cannot be enchanted with this spell.");
 		}
 		break;
-		// Emerald
 		case 41: {
 			Emerald emerald = Emerald.forId(item.getId());
 			if (emerald != null) {
@@ -271,7 +253,6 @@ public class Enchanting {
 				player.sendMessage("That item cannot be enchanted with this spell.");
 		}
 		break;
-		// Ruby
 		case 53: {
 			Ruby ruby = Ruby.forId(item.getId());
 			if (ruby != null) {
@@ -292,7 +273,6 @@ public class Enchanting {
 				player.sendMessage("That item cannot be enchanted with this spell.");
 		}
 		break;
-		// Diamond
 		case 61: {
 			Diamond diamond = Diamond.forId(item.getId());
 			if (diamond != null) {
@@ -309,7 +289,6 @@ public class Enchanting {
 				player.sendMessage("That item cannot be enchanted with this spell.");
 		}
 		break;
-		// Dragonstone
 		case 76: {
 			Dragonstone dragonstone = Dragonstone.forId(item.getId());
 			if (dragonstone != null) {
@@ -326,7 +305,6 @@ public class Enchanting {
 				player.sendMessage("That item cannot be enchanted with this spell.");
 		}
 		break;
-		// Onyx
 		case 88: {
 			Onyx onyx = Onyx.forId(item.getId());
 			if (onyx != null) {

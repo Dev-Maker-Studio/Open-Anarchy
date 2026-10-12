@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.minigames.sorcgarden;
 
 import com.rs.game.content.transportation.FadingScreen;
@@ -41,15 +25,6 @@ public class Elemental extends NPC {
 			{ Tile.of(2921, 5491, 0), Tile.of(2923, 5491, 0), Tile.of(2923, 5495, 0), Tile.of(2921, 5495, 0) }, { Tile.of(2899, 5466, 0), Tile.of(2899, 5468, 0), Tile.of(2897, 5468, 0), Tile.of(2897, 5466, 0), Tile.of(2897, 5468, 0), Tile.of(2899, 5468, 0) }, { Tile.of(2897, 5470, 0), Tile.of(2891, 5470, 0) },
 			{ Tile.of(2897, 5471, 0), Tile.of(2899, 5471, 0), Tile.of(2899, 5478, 0), Tile.of(2897, 5478, 0) }, { Tile.of(2896, 5483, 0), Tile.of(2900, 5483, 0), Tile.of(2900, 5480, 0), Tile.of(2897, 5480, 0), Tile.of(2896, 5482, 0) }, { Tile.of(2896, 5483, 0), Tile.of(2896, 5481, 0), Tile.of(2891, 5481, 0), Tile.of(2891, 5483, 0) }, { Tile.of(2889, 5485, 0), Tile.of(2900, 5485, 0) } };
 
-	/**
-	 *
-	 * @param id
-	 *            NPC id
-	 * @param tile
-	 *            Tile
-	 * @param spawned
-	 *            false
-	 */
 	public Elemental(int id, Tile tile, boolean spawned) {
 		super(id, tile, spawned);
 		setCantFollowUnderCombat(true);

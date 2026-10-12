@@ -84,7 +84,6 @@ class TransformsTest {
             val out = assertNotNull(PlayersTransform.apply(document("""{"username":"p","dateJoined":"$text"}"""), Report("players")))
             assertTrue(out["dateJoined"] is Date, "not converted: $text")
         }
-        // The legacy reader's week-year bug must not be reproduced: Dec 30 2023 stays in 2023.
         val out = assertNotNull(PlayersTransform.apply(document("""{"username":"p","dateJoined":"Dec 30, 2023, 1:00:00 AM"}"""), Report("players")))
         assertTrue((out["dateJoined"] as Date).toInstant().toString().startsWith("2023-12-"))
     }

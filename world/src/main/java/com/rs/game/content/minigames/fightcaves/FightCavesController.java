@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.minigames.fightcaves;
 
 import com.rs.engine.dialogue.HeadE;
@@ -101,9 +85,6 @@ public class FightCavesController extends Controller {
 		return true;
 	}
 
-	/**
-	 * return process normaly
-	 */
 	@Override
 	public boolean processObjectClick1(GameObject object) {
 		if (object.getId() == 9357) {
@@ -115,9 +96,6 @@ public class FightCavesController extends Controller {
 		return true;
 	}
 
-	/*
-	 * return false so wont remove script
-	 */
 	@Override
 	public boolean login() {
 		loadCave(true);
@@ -127,7 +105,7 @@ public class FightCavesController extends Controller {
 	public void loadCave(final boolean login) {
 		this.login = login;
 		stage = Stages.LOADING;
-		player.lock(); // locks player
+		player.lock();
 		region = Instance.of(OUTSIDE, 8, 8);
 		region.copyMapAllPlanes(552, 640).thenAccept(e -> {
 			selectedMusic = MUSICS[Utils.random(MUSICS.length)];
@@ -142,7 +120,7 @@ public class FightCavesController extends Controller {
 				player.npcDialogue(THHAAR_MEJ_JAL, HeadE.T_CALM_TALK, "You're on your own now, JalYt.<br>Prepare to fight for your life!");
 				player.setForceMultiArea(true);
 				playMusic();
-				player.unlock(); // unlocks player
+				player.unlock();
 				if (!login) {
 					WorldTasks.schedule(new Task() {
 						@Override
@@ -269,12 +247,9 @@ public class FightCavesController extends Controller {
 		return false;
 	}
 
-	/*
-	 * logout or not. if didnt logout means lost, 0 logout, 1, normal, 2 tele
-	 */
 	public void exitCave(int type) {
 		stage = Stages.DESTROYING;
-		Tile outside = Tile.of(OUTSIDE, 2); // radomizes alil
+		Tile outside = Tile.of(OUTSIDE, 2);
 		if (type == 0 || type == 2)
 			player.setTile(outside);
 		else {
@@ -304,7 +279,6 @@ public class FightCavesController extends Controller {
 					if (!player.getInventory().addItem(6529, tokkul))
 						World.addGroundItem(new Item(6529, tokkul), Tile.of(player.getTile()), player, true, 180);
 					player.npcDialogue(THHAAR_MEJ_JAL, HeadE.T_CALM_TALK, "Well done in the cave, here, take TokKul as reward.");
-					// TODO tokens
 				}
 			}
 			removeController();
@@ -335,9 +309,6 @@ public class FightCavesController extends Controller {
 
 	@Override
 	public void forceClose() {
-		/*
-		 * shouldnt happen
-		 */
 		if (stage != Stages.RUNNING)
 			return;
 		exitCave(2);

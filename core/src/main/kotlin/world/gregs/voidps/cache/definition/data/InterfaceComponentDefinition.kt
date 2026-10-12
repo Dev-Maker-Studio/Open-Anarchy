@@ -66,13 +66,13 @@ data class InterfaceComponentDefinition(
     var options: Array<String>? = null,
     var mouseIcon: IntArray? = null,
     var optionOverride: String? = null,
-    var anInt4708: Int = 0,// Drag type
-    var anInt4795: Int = 0,// Drag slider?
-    var anInt4860: Int = 0,// Friends list icons/buttons?
+    var anInt4708: Int = 0,
+    var anInt4795: Int = 0,
+    var anInt4860: Int = 0,
     var useOption: String = "",
     var anInt4698: Int = -1,
-    var anInt4839: Int = -1,// Unused
-    var anInt4761: Int = -1,// Unused
+    var anInt4839: Int = -1,
+    var anInt4761: Int = -1,
     var setting: InterfaceComponentSetting = InterfaceComponentSetting(0, -1),
     val clientParams: HashMap<Long, Any>? = null,
     var onLoadScript: InterfaceComponentHook? = null,
@@ -85,7 +85,7 @@ data class InterfaceComponentDefinition(
     var onStatTransmit: InterfaceComponentHook? = null,
     var onTimer: InterfaceComponentHook? = null,
     var params: InterfaceComponentHook? = null,
-    var onTargetLeave: InterfaceComponentHook? = null,// Component formats 0 and above only
+    var onTargetLeave: InterfaceComponentHook? = null,
     var popupScript: InterfaceComponentHook? = null,
     var onClick: InterfaceComponentHook? = null,
     var onClickRepeat: InterfaceComponentHook? = null,
@@ -96,19 +96,16 @@ data class InterfaceComponentDefinition(
     var onMouseMove: InterfaceComponentHook? = null,
     var onKey: InterfaceComponentHook? = null,
     var onScrollWheel: InterfaceComponentHook? = null,
-    var varps: IntArray? = null,// onVarpTransmit filter
-    var mouseLeaveArrayParams: IntArray? = null,// mouseLeaveScript filter
-    var statTransmitFilter: IntArray? = null,// onStatTransmit filter
-    var keyPressArray: IntArray? = null,// onKey filter
-    var mouseWheelArray: IntArray? = null,// onScrollWheel filter
+    var varps: IntArray? = null,
+    var mouseLeaveArrayParams: IntArray? = null,
+    var statTransmitFilter: IntArray? = null,
+    var keyPressArray: IntArray? = null,
+    var mouseWheelArray: IntArray? = null,
     var hasScript: Boolean = false,
     override var stringId: String = "",
     override var extras: Map<String, Any>? = null
 ) : Definition, Extra {
 
-    /**
-     * Every event hook set on this component, keyed by the name of the field it was decoded into.
-     */
     fun hooks(): Map<String, InterfaceComponentHook> {
         val hooks = LinkedHashMap<String, InterfaceComponentHook>()
         onLoadScript?.let { hooks["onLoadScript"] = it }

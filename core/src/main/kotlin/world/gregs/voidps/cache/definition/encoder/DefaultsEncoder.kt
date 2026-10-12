@@ -5,13 +5,6 @@ import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.DefaultsDefinition
 import world.gregs.voidps.cache.definition.data.InputSubscriberRecord
 
-/**
- * Index 28's archives, except equipment, byte for byte.
- *
- * Like the decoder, the layout is chosen by the definition's id - which archive it is - because the same
- * opcode means a different thing in each. Every record is written from a field that is null when the file
- * did not carry it, so presence needs no separate flag.
- */
 class DefaultsEncoder : OpcodeEncoder<DefaultsDefinition>() {
 
     override fun opcodes(definition: DefaultsDefinition): IntArray = opcodesOf(definition)
@@ -82,7 +75,6 @@ class DefaultsEncoder : OpcodeEncoder<DefaultsDefinition>() {
         }
     }
 
-    /** The type byte and the body it names. */
     private fun Writer.subscriber(record: InputSubscriberRecord) {
         val type = record.type ?: error("Input binding ${record.opcode} has no subscriber type.")
         writeByte(type)
@@ -115,7 +107,6 @@ class DefaultsEncoder : OpcodeEncoder<DefaultsDefinition>() {
 
     companion object {
 
-        /** The opcodes a file with these values carries when it was packed canonically, ascending. */
         fun opcodesOf(definition: DefaultsDefinition): IntArray {
             val opcodes = ArrayList<Int>(16)
             when (definition.id) {

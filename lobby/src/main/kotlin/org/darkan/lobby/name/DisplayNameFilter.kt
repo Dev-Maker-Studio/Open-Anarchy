@@ -4,20 +4,6 @@ enum class DisplayNameVerdict { PROFANE, RESERVED }
 
 data class DisplayNameMatch(val verdict: DisplayNameVerdict, val term: String)
 
-/**
- * Matches a display name against `display-name-vocabulary.txt` through three forms, each closing
- * an evasion the others leave open: every word on its own, every word with repeated letters
- * squeezed out ("Niiigggerr"), and the whole name with its separators dropped ("F u c k"). The
- * squeezed form of a word is only used when the word actually had a repeat, so "As" never
- * collapses into "Ass".
- *
- * The separator-stripped form is scanned with the long terms only, because two innocent words run
- * together can spell a short one; the short terms reach it only when the name has a one or
- * two-letter word, which is the only way to split a short term across words.
- *
- * A word of digits alone is a number, not disguised text, so it is dropped rather than read through
- * the leet table - otherwise "Player 455" spells one of the terms.
- */
 object DisplayNameFilter {
 
     private const val COMPACT_MIN_LENGTH = 6
@@ -87,11 +73,6 @@ object DisplayNameFilter {
 
     private fun profane(term: String) = DisplayNameMatch(DisplayNameVerdict.PROFANE, term)
 
-    /**
-     * [read] is the word with its leetspeak resolved; [bare] is the same word with digits simply
-     * dropped, which is what rescues "Lollipop1994" - resolving its digits spells a word no
-     * allow-list entry covers, while dropping them leaves the ordinary word behind.
-     */
     private class Word(val read: String, val bare: String) {
         val allowed: Boolean get() = read in DisplayNameFilter.allowed || bare in DisplayNameFilter.allowed
     }

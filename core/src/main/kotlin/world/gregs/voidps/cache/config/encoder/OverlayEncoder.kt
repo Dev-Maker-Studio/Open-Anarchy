@@ -4,14 +4,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.config.data.OverlayDefinition
 
-/**
- * Writes an overlay (`flo`, index 2 archive 4) file.
- *
- * Opcodes 1 and 7 carry rgb that the decoder converts to packed hsl and cannot convert back, so
- * they are written from [OverlayDefinition.colourRgb] / [OverlayDefinition.blendColourRgb].
- * Opcode 11's byte is [OverlayDefinition.slot], the raw byte, not the `slot shl 8 or id` the decoder
- * packs it into afterwards (client `FloType.postDecode`).
- */
 class OverlayEncoder : OpcodeEncoder<OverlayDefinition>() {
 
     override fun opcodes(definition: OverlayDefinition): IntArray {

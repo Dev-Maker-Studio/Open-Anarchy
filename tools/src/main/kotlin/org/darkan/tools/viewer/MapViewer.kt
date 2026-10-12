@@ -79,169 +79,80 @@ import org.lwjgl.opengl.GL13.GL_TEXTURE0
 import org.lwjgl.opengl.GL13.glActiveTexture
 import world.gregs.voidps.cache.Cache
 
-/** ImGui id of the unsaved-edit confirmation modal. */
 private const val UNSAVED_EDITS_POPUP = "Unsaved edits##unsaved_edits"
 
-/**
- * Map/terrain viewer with full scene rendering support.
- *
- * Features:
- * - Single-region terrain rendering with actual underlay/overlay colors
- * - XTEA-encrypted object loading
- * - Multi-plane object rendering (renders ALL planes 0-3 simultaneously)
- * - Roof toggling (hide shapes 12-21 to see inside buildings)
- * - Plane selection (0-3) for terrain and bridge shifting
- * - Quick navigation to known locations
- * - Integrated map editor panel with inspection tools
- *
- * Controls:
- * - WASD: Move camera
- * - Space/Shift: Up/Down
- * - Right-click drag: Look around
- * - Scroll: Zoom
- * - Ctrl: Fast movement
- * - Arrow Keys: Navigate regions
- * - PgUp/PgDn: Change plane
- * - 1-4: Select plane directly
- * - F1: Toggle debug panel
- * - F3: Wireframe mode
- * - F5: Toggle map editor panel
- * - T: Toggle terrain
- * - R: Toggle roofs (hide to see inside buildings)
- * - G: Toggle grid
- */
 class MapViewer(
     private val cache: Cache
 ) : Engine(WindowConfig(title = "Darkan Map Viewer", width = 1280, height = 720)) {
 
-    // UBO-based shaders for efficient rendering
     private lateinit var uniformBuffers: UniformBuffers
     private lateinit var uboColorShader: ShaderProgram
     private lateinit var uboTexturedShader: ShaderProgram
     private lateinit var terrainAlphaShader: ShaderProgram
 
-    // Atlas shaders for unified terrain rendering
     private var terrainAtlasShader: ShaderProgram? = null
     private var terrainAtlasAlphaShader: ShaderProgram? = null
 
-    // Terrain texture atlas
     private var terrainAtlas: TextureAtlas? = null
     private val SENTINEL_TEXTURE_ID = Int.MAX_VALUE
 
-    // Object texture atlas for collapsing texture-based draw call splits.
-    // Built incrementally as models are registered with the InstanceManager.
-    // Separate from the terrain atlas (different lifecycle and texture set).
     private var objectAtlas: TextureAtlas? = null
 
-    // Async region manager: handles loading, object creation, displacement,
-    // static batching, and dynamic render distance for all regions.
-    // Center region loads synchronously; context regions load in the background.
     private lateinit var asyncRegionManager: AsyncRegionManager
 
-    // Instanced shaders for object rendering (center region)
     private lateinit var instancedColorShader: ShaderProgram
     private lateinit var instancedTexturedShader: ShaderProgram
 
-    // Multi-Draw Indirect shaders and renderer for center region objects (GL 4.3).
-    // When available, replaces per-mesh instanced draws with 1-3 MDI calls.
-    // Falls back to InstanceManager if initialization fails.
-    //
-    // Multi-Draw Indirect path for center-region objects. Enabled by default; set
-    // -Ddarkan.indirect=false to force the legacy InstanceManager path. Also disabled
-    // automatically when the GL context is too old (see IndirectRenderer.isSupported)
-    // or when shader compilation / geometry build fails, in which case renderObjects()
-    // falls through to the InstanceManager path unchanged.
     private var useIndirectRendering = System.getProperty("darkan.indirect", "true").toBoolean()
     private var indirectColorShader: ShaderProgram? = null
     private var indirectTexturedShader: ShaderProgram? = null
     private var indirectRenderer: IndirectRenderer? = null
 
-    // ---- Culling -------------------------------------------------------
-    //
-    // Center-region objects are culled on the GPU: their transforms and world bounding
-    // spheres are uploaded once per scene and a compute shader rebuilds the indirect draw
-    // commands every frame, so the CPU never decides what is visible and never reads the
-    // result back. Context regions and their static batches are culled on the CPU instead,
-    // where the granularity is a whole merged mesh and a handful of AABB tests replaces
-    // hundreds of draw calls.
-    //
-    // -Ddarkan.gpuCull=false draws everything, for A/B comparison against the culled image.
-    // -Ddarkan.staticInstances=false goes back to streaming instance transforms every
-    // frame (which cannot be culled), keeping the previous path exercisable.
     private val useGpuCulling = System.getProperty("darkan.gpuCull", "true").toBoolean()
     private val useStaticInstances = System.getProperty("darkan.staticInstances", "true").toBoolean()
     private val useCpuBatchCulling = System.getProperty("darkan.batchCull", "true").toBoolean()
 
-    /**
-     * Whether context regions draw their terrain out of the merged atlas buffers.
-     *
-     * `-Ddarkan.mergeContextTerrain=false` restores the previous arrangement, where the
-     * merged meshes were submitted whole and every context region additionally drew its own
-     * per-texture terrain batches on top. Kept switchable because it is the only way to A/B
-     * the merged terrain against what it replaced from a single build.
-     */
     private val mergeContextTerrain = System.getProperty("darkan.mergeContextTerrain", "true").toBoolean()
 
     private val frustum = Frustum()
     private val frustumViewProjection = Matrix4f()
     private val frustumPlanes = FloatArray(24)
 
-    /** Every ready context region this frame. Refilled every frame. */
     private val readyContextRegions = mutableListOf<AsyncRegionData>()
 
-    /** Context regions whose terrain survived the frustum test. Refilled every frame. */
     private val visibleContextRegions = mutableListOf<AsyncRegionData>()
 
-    /** Set when the object set changes, so the static instance buffers are rebuilt. */
     private var objectSceneDirty = true
 
-    /** Compute shader sources for the culling passes, loaded once. */
     private var cullShaderSource: String? = null
     private var cullResetShaderSource: String? = null
 
-    /** Per-pass GPU timers. Results lag by a few frames and never stall the pipeline. */
     private val gpuTimers = GpuTimerPool(RenderMetrics.GPU_PASS_NAMES)
 
-    // Non-instanced UBO shaders for static batched context objects
     private lateinit var staticColorShader: ShaderProgram
     private lateinit var staticTexturedShader: ShaderProgram
 
-    // UI
     private lateinit var imGui: ImGuiLayer
     private lateinit var debugPanel: DebugPanel
     private lateinit var loadingScreen: LoadingScreen
 
-    // Current state. -Ddarkan.region=<x>,<y> picks the region to open on, so a
-    // specific area can be brought up without driving the UI (e.g. Canifis = 54,54).
     private var currentRegionX = regionProperty()?.first ?: 52
     private var currentRegionY = regionProperty()?.second ?: 50
     private var currentPlane = 0
 
-    // UI state
     private val regionXInput = ImInt(50)
     private val regionYInput = ImInt(50)
-    // Capture-harness isolation switches, same family as -Ddarkan.capture / -Ddarkan.hideUi:
-    // `-Ddarkan.objects=false` renders terrain alone and `-Ddarkan.terrain=false` renders
-    // objects alone, which is the only way to tell from a screenshot whether a given piece of
-    // geometry came from the ground mesh or from a placed model.
     private var showTerrain = System.getProperty("darkan.terrain", "true").toBoolean()
     private val showObjects = System.getProperty("darkan.objects", "true").toBoolean()
-    private var showRoofs = true  // Toggle roof visibility (shapes 12-21)
-    private val renderDistanceInput = intArrayOf(1)  // Dynamic render distance (0-5)
+    private var showRoofs = true
+    private val renderDistanceInput = intArrayOf(1)
 
-    // Sun / fog / skybox for the region being viewed. Seeded from the map archive on every
-    // region change, then live-editable from the Environment section of the editor panel.
     private val environment = EnvironmentSettings()
 
-    // Skybox pass. Drawn after the opaque scene so covered pixels are depth-rejected;
-    // with no skybox reference it degrades to a flat fill in the fog colour.
     private var sky: SkyRenderer? = null
 
-    // Only ever seen for the single frame before the sky pass runs, so it tracks the fog
-    // colour rather than sitting on a hardcoded blue.
     private val clearColor = Vector3f()
 
-    // Known regions for quick navigation
     private val knownRegions = listOf(
         "Lumbridge" to Pair(50, 50),
         "Varrock" to Pair(51, 51),
@@ -255,74 +166,45 @@ class MapViewer(
         "Wilderness" to Pair(48, 55)
     )
 
-    // Region rendering state -- one terrain edit manager per region being edited.
-    //
-    // Keyed by (regionX, regionY). The centre region's manager is created eagerly by
-    // [loadRegionAsync], because the legacy render path draws the centre's ground from it and
-    // that path is what `-Ddarkan.terrainAtlas=false` runs on. Every other region gets one
-    // lazily, on the first edit that lands in it, and keeps it for as long as the centre
-    // region does not change: a manager holds a MutableRegionData copy, 64 chunk meshes and a
-    // set of merged meshes, which is too much to hand every loaded region up front and too
-    // much to throw away the moment the cursor moves off it.
     private val editManagers = LinkedHashMap<Pair<Int, Int>, TerrainEditManager>()
 
-    /** The centre region's manager, which is the one the legacy render path always draws. */
     private val centerEditManager: TerrainEditManager?
         get() = editManagers[Pair(currentRegionX, currentRegionY)]
 
-    // Pre-allocated texture binding callback to avoid per-frame lambda allocation
     private val terrainTextureBinding: (Int) -> Unit = { texId ->
         TextureLoader.bindTexture(TextureLoader.getTextureForMaterial(cache, texId))
     }
 
-    // Tile picker for debugging UV issues
     private val tilePicker = TilePicker()
     private var tileHighlightMesh: Mesh? = null
 
-    // Editing follows the cursor across every loaded region, so the panel says which region
-    // the next stroke would land in rather than whether it would land at all.
-    //
-    // `hoveredEditRegion` is the region under the cursor whenever it is not the centre one,
-    // refreshed by every edit-tool raycast. The notice fields hold the louder, timed version,
-    // now raised only for the two things that genuinely cannot be done: editing a region
-    // whose terrain will not load, and moving a context region's baked scenery.
     private var hoveredEditRegion: Pair<Int, Int>? = null
     private var editRejectNotice: String? = null
     private var editRejectNoticeExpiry = 0L
     private val EDIT_REJECT_NOTICE_NANOS = 5_000_000_000L
 
-    // Map editor panel state
     private var showEditorPanel = true
     private var editorPanelFirstFrame = true
     private var currentEditorTool = EditorTool.SELECT
 
-    // Editor panel input state
     private val editorObjectSearchQuery = ImString(256)
     private val editorOverlayUnderlayId = ImInt(0)
-    private var editorPaintMode = 0  // 0 = Overlay, 1 = Underlay
+    private var editorPaintMode = 0
     private val editorBrushSize = intArrayOf(1)
     private val editorHeightBrushRadius = intArrayOf(1)
     private val editorHeightStrength = intArrayOf(5)
-    private var editorHeightMode = 0  // 0 = Raise, 1 = Lower, 2 = Smooth
+    private var editorHeightMode = 0
 
-    // Overlay shape/rotation for terrain paint tool
     private val editorOverlayShape = intArrayOf(0)
     private val editorOverlayRotation = intArrayOf(0)
 
-    // Drag tracking for continuous tools (prevents re-painting same tile). Keyed by the full
-    // [EditTile], region included: a brush swept across a region border must be allowed to
-    // paint local (12, 40) again in the next region along.
     private val editedTilesThisDrag = mutableSetOf<EditTile>()
 
-    // Object place tool state
     private var objectSearchResults: List<ObjectDefinition> = emptyList()
     private var selectedObjectId = -1
-    private val editorObjectShape = intArrayOf(10)  // Default to CENTREPIECE_STRAIGHT
+    private val editorObjectShape = intArrayOf(10)
     private val editorObjectRotation = intArrayOf(0)
 
-    // Object move tool state. The origin is stored as a region plus local coordinates because
-    // a cancelled drag has to be put back exactly where it started, and "local (12, 40)" only
-    // identifies a tile once you know which region it belongs to.
     private data class MovingObject(
         val instance: ObjectInstance,
         val originRegionX: Int,
@@ -333,64 +215,19 @@ class MapViewer(
     private var movingObject: MovingObject? = null
     private var moveOriginMesh: Mesh? = null
 
-    // Placed objects (user-placed via Object Place tool)
     private val placedObjects = mutableListOf<ObjectInstance>()
 
-    /**
-     * Mesh data for models the editor introduced, keyed by combined model id.
-     *
-     * The region loader hands the indirect renderer the models the region itself uses, via
-     * [AsyncRegionManager.centerModelMeshData]. A model that only exists because the user
-     * placed one is in neither that map nor the renderer's shared geometry, so it is kept
-     * here — decoded once at placement — and ingested by [ingestUnregisteredModels] on the
-     * next scene rebuild. That is the path that stops a placed object being invisible, and
-     * it is the one this map is actually exercised on.
-     *
-     * It is also read after a region load, when [loadRegionAsync] has thrown the shared
-     * geometry away and built it again. No route through the editor currently gets there
-     * with anything in [placedObjects] to re-ingest: every region load is behind
-     * [requestRegionChange], and its only pass-through — the modal's discard — runs
-     * [discardUnsavedEdits] first, which empties both this map and [placedObjects].
-     * Verified by driving the UI, not by reading: the reload leaves no late-ingest behind
-     * it. So the after-a-load half is a safety net for a route that does not exist yet
-     * (a reload that keeps placed objects), not something the editor relies on today.
-     */
     private val editorModelMeshData = mutableMapOf<Int, List<MeshData>>()
 
-    // ---- Unsaved edit tracking ----
-    //
-    // Terrain edits live in the TerrainEditManagers that loadRegionAsync() throws away and
-    // rebuilds from the cache on every region change, plane change and reload; placed and
-    // moved objects live in [placedObjects] / the region's own instance list, which the same
-    // call replaces. None of it has a write-back path to the cache - the editor can mutate
-    // terrain and objects but cannot persist either - so a region change destroys the work
-    // permanently and there is no "save first" to offer.
-    //
-    // These exist purely so that the loss is announced before it happens. They are the
-    // condition for [requestRegionChange] to interpose a confirmation, and for the banner at
-    // the top of the editor panel. Nothing here writes to the cache.
-    //
-    // Terrain edits are tracked per region, not as one flag, because editing now follows the
-    // cursor: a session can leave unsaveable work in the centre region and in three of its
-    // neighbours, and a warning that says only "terrain edits" understates what a region
-    // change is about to destroy. Insertion-ordered so the summary names them in the order
-    // they were first touched.
     private val terrainEditedRegions = LinkedHashSet<Pair<Int, Int>>()
     private var movedObjectCount = 0
 
-    // Whether the in-progress object drag has actually shifted the object off its origin.
-    // Tracked separately from [movedObjectCount] so that cancelling a drag (Escape or the
-    // Cancel Move button), which restores the original position, leaves no phantom edit
-    // behind to trigger a confirmation for work that no longer exists.
     private var movingObjectMoved = false
 
-    /** A region change deferred until the user answers the unsaved-edits modal. */
     private var pendingRegionChange: (() -> Unit)? = null
     private var pendingRegionChangeLabel = ""
     private var unsavedEditsPopupOpen = false
 
-    // Environment panel scratch buffers. Refreshed from [environment] every frame so a
-    // region change is picked up, and written back whenever a widget reports a change.
     private val envSunColourInput = FloatArray(3)
     private val envFogColourInput = FloatArray(3)
     private val envSunPositionInput = FloatArray(3)
@@ -401,93 +238,55 @@ class MapViewer(
     private val envViewRangeInput = FloatArray(1)
     private val envSkyboxInput = ImInt(-1)
 
-    // Cache write-back state. A plan is only ever produced by pressing "Preview changes",
-    // and only ever applied by pressing the save button with the confirmation ticked -
-    // nothing here runs on a region change, on a panel edit or on shutdown.
     private var envWritePlan: EnvironmentWritePlan? = null
     private var envWritePlanRegion: Int = -1
     private val envWriteConfirm = ImBoolean(false)
     private var envWriteLog: List<String> = emptyList()
     private var envWriteError: String? = null
 
-    // ---- Scripted edit probe (-Ddarkan.editProbe) ----
-    //
-    // Drives the edit tools from a script instead of from the mouse, one step per frame,
-    // and reports for each step which region the ray resolved to and which regions' tile
-    // data actually changed. Those two have to be the same region, and the check exists
-    // because the failure they guard against is silent: an edit addressed with the right
-    // local coordinates but the wrong region grid lands 64 tiles away and looks, on screen,
-    // like nothing happened at all.
-    //
-    // In the same family as -Ddarkan.pickProbe / -Ddarkan.cullProbe: it changes no behaviour
-    // when unset, and its only production hook is [editProbeAim], which substitutes for the
-    // cursor position inside the one function that reads it.
     private val editProbeScript: List<String> = System.getProperty("darkan.editProbe")
         ?.split(';')?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
     private var editProbeAim: Pair<Float, Float>? = null
     private var editProbeStep = 0
     private var editProbeSettle = 0
 
-    // A tile pinned by the `mark` step, reported on every subsequent step. Height edits move
-    // the surface the picker rays against, so the tile under a fixed screen point drifts as a
-    // stroke repeats; reading the same tile throughout is what makes a run of N brush steps
-    // measure one tile's travel rather than a walk across several.
     private var editProbeAnchor: EditTile? = null
 
-    // Brush preview state
     private var brushPreviewMesh: Mesh? = null
     private var lastBrushCenter: EditTile? = null
     private lateinit var brushPreviewShader: ShaderProgram
 
     override fun onInit() {
-        // Initialize texture loader
         TextureLoader.init(cache)
 
-        // Initialize ImGui
         imGui = ImGuiLayer(window)
         imGui.init()
         debugPanel = DebugPanel()
 
-        // Initialize uniform buffers
         uniformBuffers = UniformBuffers()
         uniformBuffers.init()
 
-        // Load UBO shaders
         loadUBOShaders()
 
-        // Skybox pass. One attribute-less triangle; the material texture (when a region
-        // references a skybox) is built lazily and cached inside the renderer.
         sky = SkyRenderer(cache).also {
             it.init()
-            // renderScene() always leaves the scene's steady state behind before the sky
-            // pass, so the renderer can skip its synchronous state readback.
             it.stateRestore = SkyStateRestore.ASSUME_SCENE_DEFAULTS
         }
 
-        // With dynamic sun lighting on, terrain meshes must be built *unlit* so the shader
-        // can light them. Has to be set before the first region build.
         TerrainLoader.bakeSunLighting = !environment.dynamicSunLighting
 
-        // Initialize async region manager (loads definitions and XTEA keys)
         asyncRegionManager = AsyncRegionManager(cache)
         asyncRegionManager.initialize()
 
-        // Build terrain texture atlas from all overlay/underlay texture definitions
         buildTerrainAtlas()
 
-        // Object atlas disabled: the CPU-side UV remap (remapUVsToAtlas) cannot handle
-        // model UVs outside [0,1] which rely on GL_REPEAT for tiling. This causes wrong
-        // UV projections and spurious transparency when remapped UVs sample empty atlas space.
-        // To re-enable, this needs shader-side fract()+remap like the terrain atlas does.
         objectAtlas = null
 
-        // Wire async region manager to atlas references
         asyncRegionManager.objectAtlas = objectAtlas
         asyncRegionManager.terrainAtlas = terrainAtlas
 
         loadingScreen = LoadingScreen()
 
-        // Load brush preview shader (RGBA vertex colors for semi-transparent overlay)
         val brushVertSrc = loadShaderSource("/shaders/brush_preview.vert")
         val brushFragSrc = loadShaderSource("/shaders/brush_preview.frag")
         brushPreviewShader = ShaderProgram.createWithUniforms(
@@ -495,7 +294,6 @@ class MapViewer(
             "model", "view", "projection"
         )
 
-        // Setup the scene camera (will be repositioned when region loads)
         scene.camera.setPosition(0f, 50f, 50f)
         scene.camera.pitch = -45f
         scene.camera.yaw = -90f
@@ -503,32 +301,20 @@ class MapViewer(
         scene.camera.nearPlane = 1.0f
         scene.camera.farPlane = 4000f
 
-        // Enable depth testing and multisampling
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_MULTISAMPLE)
 
-        // -Ddarkan.hideUi=true drops both panels. A capture taken for pixel-diffing has to
-        // contain nothing but the 3D scene: the panels report per-run counters, so leaving
-        // them in makes every comparison differ for reasons that have nothing to do with
-        // what was drawn.
         if (System.getProperty("darkan.hideUi", "false").toBoolean()) {
             debugPanel.visible = false
             showEditorPanel = false
         }
 
-        // `-Ddarkan.wireframe=true` starts in line mode. Missing geometry and geometry that
-        // is drawn but shaded to a dark colour look identical in a filled frame; in wireframe
-        // the first leaves a gap in the edge grid and the second does not, which decides
-        // between them from a single capture instead of by argument.
         if (System.getProperty("darkan.wireframe", "false").toBoolean()) {
             renderSystem.setWireframe(true)
         }
 
-        // GPU pass timing. Harvested several frames after the fact so the queries never
-        // force a sync; without this every performance claim rests on CPU timings alone.
         RenderMetrics.gpuTimingActive = gpuTimers.init()
 
-        // Opening render distance, so a measurement run does not have to drive the UI.
         System.getProperty("darkan.renderDistance")?.toIntOrNull()?.let {
             renderDistanceInput[0] = it.coerceIn(0, 5)
         }
@@ -537,31 +323,7 @@ class MapViewer(
         loadRegionAsync(currentRegionX, currentRegionY, currentPlane)
     }
 
-    /**
-     * Build the terrain texture atlas containing all overlay/underlay textures.
-     * Scans all overlay and underlay definitions for unique texture IDs, generates
-     * each texture's pixels via the procedural texture system, and packs them into
-     * a single atlas. Also adds a 1x1 white sentinel pixel for untextured (color-only)
-     * tiles so they can share the same shader as textured tiles.
-     *
-     * After building, wires up [TerrainLoader.atlasLookup] and
-     * [TerrainLoader.sentinelAtlasTransform] so that [TerrainLoader.computeTerrainMeshData]
-     * produces per-vertex atlas UV transforms.
-     */
     private fun buildTerrainAtlas() {
-        // -Ddarkan.terrainAtlas=false keeps every terrain batch on its own texture bind,
-        // the way the viewer drew terrain before the atlas existed. Slow, but it is the
-        // reference image: no atlas sampling, no merging, every layer composited once.
-        //
-        // It is a usable reference because it is the same geometry: the centre region's
-        // per-batch meshes come from TerrainEditManager and the merged atlas mesh from
-        // TerrainLoader.computeTerrainMeshData, and both tessellate through
-        // generateTileVertices with the same opaque/alpha split, so the two paths submit
-        // the same triangle count. Measured against a same-flags control pair (5e-05 to
-        // 1.2e-04 mean abs, 1280x720), atlas vs per-texture comes to 8e-04 (Sophanem
-        // 52,50), 3e-03 (Canifis 54,54), 1e-02 (Lumbridge 50,50) and 0.11 (Lumbridge with
-        // context regions) mean abs of 255 -- the residue of atlas sampling, not a
-        // different picture. Draw counts differ by design, pixels should not.
         if (!System.getProperty("darkan.terrainAtlas", "true").toBoolean()) {
             println("[MapViewer] Terrain atlas disabled by -Ddarkan.terrainAtlas=false")
             TerrainLoader.atlasLookup = null
@@ -581,18 +343,6 @@ class MapViewer(
 
         val sortedIds = textureIds.sorted()
 
-        // Pixel generation is pure CPU: it decodes a material's operation DAG and rasterises
-        // it into an IntArray without touching GL state. It ran here one texture at a time on
-        // the GL thread, with the other fifteen cores idle, because TextureRaster kept its
-        // scratch state in shared statics and generating two materials at once corrupted
-        // both. That state now lives on the operation objects -- verified with 8 threads over
-        // 5 rounds of the same materials, no failures and zero pixel mismatches against a
-        // single-threaded baseline -- so the work can fan out.
-        //
-        // Packing stays serial and stays in sortedIds order. The atlas shelf allocator places
-        // each texture relative to the ones already in the page, so packing order decides the
-        // UV transform every terrain vertex is given. Generate in whatever order the workers
-        // finish; insert in exactly the order this loop always used.
         val generated = arrayOfNulls<Triple<IntArray, Int, Int>>(sortedIds.size)
         val errors = arrayOfNulls<String>(sortedIds.size)
         val genStart = System.nanoTime()
@@ -639,28 +389,15 @@ class MapViewer(
                     ParallelChunks.TEXTURE_WORKER_COUNT, elapsed - genMs)
         )
 
-        // Add sentinel white pixel texture for color-only tiles.
-        // A 1x1 pure white pixel means texColor.rgb = (1,1,1), so
-        // finalColor = texColor * vertexColor = vertexColor (correct for untextured tiles).
         val whitePixel = intArrayOf(0xFFFFFFFF.toInt())
         atlas.addTexture(SENTINEL_TEXTURE_ID, whitePixel, 1, 1)
 
-        // Upload to GPU
         atlas.upload()
 
         val stats = atlas.getStats()
         println("[MapViewer] Terrain atlas built: ${stats.textureCount} textures on ${stats.pageCount} page(s), " +
                 "$loaded loaded, $failed failed, utilization ${(stats.utilization * 100).toInt()}%")
 
-        // Overflow handling. The terrain shaders sample a single bound page, so only
-        // textures that landed on page 0 can be reached through an atlas transform.
-        //
-        // The sentinel white pixel is what untextured tiles sample, so if the atlas
-        // overflowed hard enough to push it off page 0 there is no atlas path at all and
-        // the whole thing is abandoned in favour of the per-texture renderer. Individual
-        // textures beyond page 0 are handled more gently: the lookup returns null for
-        // them, which keeps their batches on the per-texture path and out of the merged
-        // mesh. Either way the pixels stay right and the cost shows up as draw calls.
         val sentinelRegion = atlas.getRegion(SENTINEL_TEXTURE_ID)
         if (sentinelRegion == null || sentinelRegion.atlasPageIndex != 0) {
             System.err.println("[MapViewer] Terrain atlas overflowed past its first page before the " +
@@ -684,10 +421,6 @@ class MapViewer(
 
         terrainAtlas = atlas
 
-        // Wire up TerrainLoader atlas lookup so computeTerrainMeshData produces
-        // per-vertex atlas transform arrays. A texture the atlas never managed to pack
-        // falls back to the sentinel exactly as before -- that is a texture generation
-        // failure, not an atlas capacity problem, and it has no pixels to show either way.
         TerrainLoader.atlasLookup = { textureId ->
             val region = atlas.getRegion(textureId)
             when {
@@ -700,7 +433,6 @@ class MapViewer(
     }
 
     private fun loadUBOShaders() {
-        // Load terrain color shader with RGB vertex colors
         val terrainColorVert = loadShaderSource("/shaders/terrain_color.vert")
         val terrainColorFrag = loadShaderSource("/shaders/terrain_color.frag")
 
@@ -710,7 +442,6 @@ class MapViewer(
         )
         uniformBuffers.bindToShader(uboColorShader)
 
-        // Load terrain textured shader with RGB vertex colors
         val terrainTexturedVert = loadShaderSource("/shaders/terrain_textured.vert")
         val terrainTexturedFrag = loadShaderSource("/shaders/terrain_textured.frag")
 
@@ -720,7 +451,6 @@ class MapViewer(
         )
         uniformBuffers.bindToShader(uboTexturedShader)
 
-        // Load terrain alpha shader for multi-pass alpha blending of underlay textures
         val terrainAlphaVert = loadShaderSource("/shaders/terrain_alpha.vert")
         val terrainAlphaFrag = loadShaderSource("/shaders/terrain_alpha.frag")
 
@@ -730,7 +460,6 @@ class MapViewer(
         )
         uniformBuffers.bindToShader(terrainAlphaShader)
 
-        // Load instanced shaders (for center region objects - use standard RGB shaders)
         val instancedColorVert = loadShaderSource("/shaders/ubo_instanced.vert")
         val instancedColorFrag = loadShaderSource("/shaders/ubo_color.frag")
         instancedColorShader = ShaderProgram.create(instancedColorVert, instancedColorFrag)
@@ -744,9 +473,6 @@ class MapViewer(
         )
         uniformBuffers.bindToShader(instancedTexturedShader)
 
-        // Load Multi-Draw Indirect shaders (GL 4.3 SSBO-based).
-        // These read instance matrices from an SSBO indexed by gl_BaseInstance + gl_InstanceID
-        // instead of per-instance vertex attributes. Falls back gracefully if shaders fail.
         if (useIndirectRendering && !IndirectRenderer.isSupported()) {
             println("[MapViewer] GL context lacks 4.3 + gl_BaseInstance; using legacy instanced path")
             useIndirectRendering = false
@@ -760,16 +486,12 @@ class MapViewer(
 
                 val indTexturedVert = loadShaderSource("/shaders/indirect_textured.vert")
                 val indTexturedFrag = loadShaderSource("/shaders/indirect_textured.frag")
-                // One sampler per array texture; IndirectRenderer binds each to the matching
-                // unit so a single draw can cover every material size at once.
                 indirectTexturedShader = ShaderProgram.createWithUniforms(
                     indTexturedVert, indTexturedFrag,
                     *IndirectRenderer.textureArrayUniformNames()
                 )
                 uniformBuffers.bindToShader(indirectTexturedShader!!)
 
-                // Compute sources for the culling passes. Kept as strings because the
-                // IndirectRenderer is rebuilt on every region change and needs them again.
                 if (useGpuCulling) {
                     cullShaderSource = loadShaderSource("/shaders/cull_instances.comp")
                     cullResetShaderSource = loadShaderSource("/shaders/cull_reset.comp")
@@ -788,9 +510,6 @@ class MapViewer(
             println("[MapViewer] Indirect rendering disabled, using legacy instanced path")
         }
 
-        // Load non-instanced UBO shaders for static batched context region objects.
-        // These use the same UBO blocks as instanced shaders but take a model uniform
-        // instead of per-instance matrix attributes.
         val staticColorVert = loadShaderSource("/shaders/ubo_color.vert")
         val staticColorFrag = loadShaderSource("/shaders/ubo_color.frag")
         staticColorShader = ShaderProgram.createWithUniforms(
@@ -807,7 +526,6 @@ class MapViewer(
         )
         uniformBuffers.bindToShader(staticTexturedShader)
 
-        // Load atlas terrain shaders
         val atlasVert = loadShaderSource("/shaders/terrain_atlas.vert")
         val atlasFrag = loadShaderSource("/shaders/terrain_atlas.frag")
         terrainAtlasShader = ShaderProgram.createWithUniforms(
@@ -826,17 +544,12 @@ class MapViewer(
     }
 
     override fun onInput() {
-        // Section 1: Keyboard input -- only gated by wantCaptureKeyboard
-        // Camera movement, toggles, plane nav, and escape-to-cancel still work
-        // even when the mouse is hovering over an ImGui panel.
         if (!imGui.wantCaptureKeyboard()) {
             val cam = scene.camera
 
-            // Speed multiplier
             val speedMult = if (input.keyboard.isKeyDown(GLFW_KEY_LEFT_CONTROL)) 4f else 1f
             cam.moveSpeed = 20f * speedMult
 
-            // Camera movement
             if (input.keyboard.isKeyDown(GLFW_KEY_W)) cam.moveForward(deltaTime)
             if (input.keyboard.isKeyDown(GLFW_KEY_S)) cam.moveBackward(deltaTime)
             if (input.keyboard.isKeyDown(GLFW_KEY_A)) cam.moveLeft(deltaTime)
@@ -844,25 +557,21 @@ class MapViewer(
             if (input.keyboard.isKeyDown(GLFW_KEY_SPACE)) cam.moveUp(deltaTime)
             if (input.keyboard.isKeyDown(GLFW_KEY_LEFT_SHIFT)) cam.moveDown(deltaTime)
 
-            // Toggle keys
             if (input.keyboard.isKeyPressed(GLFW_KEY_F1)) debugPanel.toggleVisibility()
             if (input.keyboard.isKeyPressed(GLFW_KEY_F3)) renderSystem.toggleWireframe()
             if (input.keyboard.isKeyPressed(GLFW_KEY_T)) showTerrain = !showTerrain
             if (input.keyboard.isKeyPressed(GLFW_KEY_R)) setShowRoofs(!showRoofs)
 
-            // Plane selection (1-4 keys)
             if (input.keyboard.isKeyPressed(GLFW_KEY_1)) setPlane(0)
             if (input.keyboard.isKeyPressed(GLFW_KEY_2)) setPlane(1)
             if (input.keyboard.isKeyPressed(GLFW_KEY_3)) setPlane(2)
             if (input.keyboard.isKeyPressed(GLFW_KEY_4)) setPlane(3)
 
-            // Region navigation (arrow keys)
             if (input.keyboard.isKeyPressed(GLFW_KEY_LEFT)) navigateRegion(-1, 0)
             if (input.keyboard.isKeyPressed(GLFW_KEY_RIGHT)) navigateRegion(1, 0)
             if (input.keyboard.isKeyPressed(GLFW_KEY_UP)) navigateRegion(0, 1)
             if (input.keyboard.isKeyPressed(GLFW_KEY_DOWN)) navigateRegion(0, -1)
 
-            // Plane navigation (PgUp/PgDn)
             if (input.keyboard.isKeyPressed(GLFW_KEY_PAGE_UP)) {
                 if (currentPlane < 3) setPlane(currentPlane + 1)
             }
@@ -870,7 +579,6 @@ class MapViewer(
                 if (currentPlane > 0) setPlane(currentPlane - 1)
             }
 
-            // Toggle map editor panel (F5)
             if (input.keyboard.isKeyPressed(GLFW_KEY_F5)) {
                 showEditorPanel = !showEditorPanel
                 if (showEditorPanel) {
@@ -878,10 +586,8 @@ class MapViewer(
                 }
             }
 
-            // Escape to cancel object move
             if (input.keyboard.isKeyPressed(GLFW_KEY_ESCAPE) && movingObject != null) {
                 val moving = movingObject!!
-                // Restore original world position
                 val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
                 val origWorldX = moving.originRegionX * 64 + moving.originalX
                 val origWorldY = moving.originRegionY * 64 + moving.originalY
@@ -903,9 +609,7 @@ class MapViewer(
                 moving.instance.worldPosition.x = basePosX + posOffsetX
                 moving.instance.worldPosition.z = basePosZ + posOffsetZ
                 objectSceneDirty = true
-                // Restore Y from terrain heights
                 recalcObjectHeight(moving.instance, force = true)
-                // The object is back where it was loaded, so the cancelled drag is not an edit.
                 movingObjectMoved = false
                 movingObject = null
                 moveOriginMesh?.cleanup()
@@ -913,22 +617,18 @@ class MapViewer(
             }
         }
 
-        // Section 2: Camera mouse input -- gated by wantCaptureMouse
         if (!imGui.wantCaptureMouse()) {
             val cam = scene.camera
 
-            // Camera rotation
             if (input.mouse.isButtonDown(GLFW_MOUSE_BUTTON_RIGHT)) {
                 cam.rotate(input.mouse.deltaX.toFloat(), input.mouse.deltaY.toFloat())
             }
 
-            // Scroll zoom
             if (input.mouse.scrollY != 0.0) {
                 cam.zoom(input.mouse.scrollY.toFloat())
             }
         }
 
-        // Section 3: Tool left-click dispatch -- gated by wantCaptureMouse
         if (!imGui.wantCaptureMouse()) {
             when (currentEditorTool) {
                 EditorTool.SELECT -> {
@@ -973,26 +673,7 @@ class MapViewer(
         }
     }
 
-    /**
-     * Tile grid for any region the picker's ray crosses, or null when that region is not
-     * on screen.
-     *
-     * The centre region answers from [AsyncRegionManager.centerTerrainData] because it is
-     * available a frame or two before the region reaches READY; every other region has to
-     * actually be drawn before it may absorb a click, otherwise the cursor would pick
-     * ground the user cannot see. Context regions come out of [TerrainLoader]'s region
-     * cache, which already holds them - they are what their meshes were built from - so
-     * this is a map lookup, not a decode.
-     */
     private val pickTerrainProvider = TilePicker.TerrainProvider { rx, ry ->
-        // An edited region answers from its edit manager's snapshot. Without this the ray is
-        // resolved against the region as it came out of the cache, so sculpting a hill would
-        // leave the cursor picking the flat ground that used to be there - the brush drifting
-        // further from the surface with every stroke.
-        //
-        // Still subject to the same "is this region on screen" gate as everything else: a
-        // region that has been unloaded by a render-distance cut keeps its manager and its
-        // edits, but must not absorb clicks while there is nothing drawn to click on.
         val loaded = (rx == currentRegionX && ry == currentRegionY) ||
                 asyncRegionManager.getReadyRegion(rx, ry) != null
         val edited = if (loaded) editManagers[Pair(rx, ry)]?.tileSnapshot else null
@@ -1007,7 +688,6 @@ class MapViewer(
         }
     }
 
-    /** Map objects of a loaded region, for the tile inspector. Null when not loaded. */
     private fun regionMapObjects(regionX: Int, regionY: Int): List<MapObject>? {
         if (regionX == currentRegionX && regionY == currentRegionY) {
             return asyncRegionManager.centerMapObjects
@@ -1016,20 +696,10 @@ class MapViewer(
         return region.objectInstances.map { it.mapObject }
     }
 
-    /**
-     * Handle tile picking via left-click.
-     *
-     * Selection spans every loaded region, and so does editing - see
-     * [getEditTileUnderCursor]. Both have to, because the camera sits outside its own region
-     * and most of the viewport is a neighbour's ground.
-     */
     private fun handleTilePick() {
         val selectedTile = pickTileUnderCursor()
 
         if (pickProbeEnabled) {
-            // The app's own mouse coordinates, not the ones a synthetic click was aimed
-            // at: driving the window from outside adds a frame offset that has to be
-            // measured rather than assumed, and this is the measurement.
             if (selectedTile == null) {
                 println("[PICKCLICK] mouse=(%.0f, %.0f) MISS".format(input.mouse.x.toFloat(), input.mouse.y.toFloat()))
             } else {
@@ -1051,17 +721,7 @@ class MapViewer(
         updateTileHighlight()
     }
 
-    /**
-     * Raycast the cursor against every loaded region's terrain.
-     *
-     * Unlike [handleTilePick] this does not refresh the details panel or the highlight
-     * mesh. It does update [TilePicker.selectedTile], which the picker sets as part of
-     * reporting a hit.
-     */
     private fun pickTileUnderCursor(): TilePicker.SelectedTile? {
-        // [editProbeAim] substitutes for the cursor when the scripted probe is driving. It is
-        // set only by -Ddarkan.editProbe and is null in every normal frame, so the tools reach
-        // the picker through exactly one code path whether a person or the probe aimed them.
         val aim = editProbeAim
         tilePicker.screenToWorldRay(
             aim?.first ?: input.mouse.x.toFloat(),
@@ -1074,26 +734,8 @@ class MapViewer(
         return tilePicker.pickTile(pickTerrainProvider, currentPlane)
     }
 
-    /**
-     * A tile identified by the region that owns it as well as its local 0-63 coordinates.
-     *
-     * Local coordinates alone are what made the editor single-region: every tool addressed
-     * `editManager.mutableData.tiles[plane][x][y]` with a bare pair, so a tile picked in a
-     * neighbouring region would have written to the centre region's grid at the same local
-     * coordinates - an edit landing 64 tiles away from the cursor, the same class of
-     * corruption as the old picker painting column x=0. Carrying the region alongside the
-     * coordinates is what lets the tools follow the cursor safely: nothing can resolve an
-     * edit manager without saying which region it is for.
-     */
     private data class EditTile(val regionX: Int, val regionY: Int, val localX: Int, val localY: Int)
 
-    /**
-     * The tile under the cursor, in whichever loaded region owns it.
-     *
-     * Deliberately does not create an edit manager: this runs every frame for the brush
-     * preview, and building a manager costs a region decode, 64 chunk meshes and a set of
-     * merged meshes. Hovering is free; only an actual edit pays, via [editManagerFor].
-     */
     private fun getEditTileUnderCursor(): EditTile? {
         val picked = pickTileUnderCursor()
         if (picked == null) {
@@ -1106,18 +748,6 @@ class MapViewer(
         return EditTile(picked.regionX, picked.regionY, picked.localX, picked.localY)
     }
 
-    /**
-     * The edit manager for a region, built on first use.
-     *
-     * The centre region's manager is made eagerly at load time; a neighbour's is made here,
-     * the first time an edit lands in it. Creating one suppresses the merged atlas terrain,
-     * which is what routes the frame onto the render path that can draw a region from its
-     * manager at all - see the legacy branch of [renderScene]. Without that the edit would be
-     * applied to the data and then hidden behind the pre-edit merged mesh drawn over it.
-     *
-     * @return null when the region's terrain could not be loaded, in which case the caller
-     *         must not edit and the panel says so.
-     */
     private fun editManagerFor(regionX: Int, regionY: Int): TerrainEditManager? {
         val key = Pair(regionX, regionY)
         editManagers[key]?.let { return it }
@@ -1132,9 +762,6 @@ class MapViewer(
         }
         editManagers[key] = manager
 
-        // The centre region is drawn from its manager only on the render path that already
-        // excludes it from the merge, so making one does not disturb the merged terrain.
-        // Every other region is inside the merge until this call, and has to leave it.
         if (regionX != currentRegionX || regionY != currentRegionY) {
             asyncRegionManager.invalidateMergedTerrain()
         }
@@ -1146,53 +773,28 @@ class MapViewer(
         return manager
     }
 
-    /** Raise a timed notice at the top of the editor panel for a few seconds. */
     private fun noteEditRejected(message: String) {
         editRejectNotice = message
         editRejectNoticeExpiry = System.nanoTime() + EDIT_REJECT_NOTICE_NANOS
     }
 
-    /** Wording shared by the click notice and the flag editor's refusal. */
     private fun uneditableRegionMessage(regionX: Int, regionY: Int): String =
         "Region ($regionX, $regionY) could not be opened for editing - its terrain failed to load, " +
                 "so there is nothing to write the edit into."
 
-    /**
-     * Say why a grab in a neighbouring region found nothing.
-     *
-     * Terrain editing follows the cursor but object moving does not follow it all the way:
-     * only the centre region's objects and user-placed ones exist as individual instances.
-     * Without this the tool looks broken rather than limited.
-     */
     private fun noteMoveUnavailable(regionX: Int, regionY: Int) = noteEditRejected(
         "Nothing grabbable at that tile. Region ($regionX, $regionY) draws its scenery as merged " +
                 "static batches, so only its terrain and objects you placed yourself can be moved - " +
                 "load region $regionX / $regionY as the centre to move its own objects."
     )
 
-    /**
-     * Raw RS tile height for any loaded region, reading through whatever edits it carries.
-     *
-     * Every consumer of terrain height in the editor - object seating, the brush preview, the
-     * move-origin marker - goes through here rather than through a captured edit manager, so
-     * that a region with a manager reads its edited heights and a region without one reads
-     * the cache. Returns 0 for a region that is not loaded, which only reaches a caller that
-     * already failed to pick a tile there.
-     */
     private fun tileHeightUnits(regionX: Int, regionY: Int, plane: Int, x: Int, y: Int): Int {
-        // Local coordinates may run one past the region edge: the object seating in
-        // ObjectRenderer samples corner tile 64 for anything on the last row or column,
-        // exactly as the client does against its scene-wide height array. Resolve those
-        // into the adjoining region so a re-seat here lands on the same height the loader
-        // used, rather than clamping back onto the near corner and stepping the object.
         val rx = regionX + Math.floorDiv(x, 64)
         val ry = regionY + Math.floorDiv(y, 64)
         val lx = Math.floorMod(x, 64)
         val ly = Math.floorMod(y, 64)
         editManagers[Pair(rx, ry)]?.let { return it.mutableData.tiles[plane][lx][ly].height }
         pickTerrainProvider.tiles(rx, ry)?.let { return it[plane][lx][ly].height }
-        // Neighbour not loaded: fall back to this region's own edge tile, matching
-        // TerrainLoader.getExtendedTileHeight's fallback rather than reporting zero.
         val cx = x.coerceIn(0, 63)
         val cy = y.coerceIn(0, 63)
         editManagers[Pair(regionX, regionY)]?.let { return it.mutableData.tiles[plane][cx][cy].height }
@@ -1200,17 +802,9 @@ class MapViewer(
         return tiles[plane][cx][cy].height
     }
 
-    /** [tileHeightUnits] converted to world units. */
     private fun tileHeightWorld(regionX: Int, regionY: Int, plane: Int, x: Int, y: Int): Float =
         tileHeightUnits(regionX, regionY, plane, x, y) * TerrainLoader.getHeightScale()
 
-    /**
-     * Write tile flags into the grid of the region that owns the tile.
-     *
-     * Shared by the flag panel and the scripted probe so there is exactly one place where a
-     * flag write resolves its region - the thing that has to be right for the edit to land
-     * under the cursor rather than 64 tiles away in the centre region.
-     */
     private fun applyTileFlags(regionX: Int, regionY: Int, x: Int, y: Int, newFlags: Int) {
         val em = editManagerFor(regionX, regionY)
         if (em == null) {
@@ -1219,9 +813,6 @@ class MapViewer(
         }
         em.mutableData.setFlags(currentPlane, x, y, newFlags)
         terrainEditedRegions.add(Pair(regionX, regionY))
-        // Refresh tile details so the inspector shows updated data. Sourced from the
-        // selection's own region throughout - grid, object list and world origin - or the
-        // inspector would describe a different tile than the one whose flags just changed.
         tilePicker.updateTileDetails(
             em.mutableData.toTileArray(),
             cache,
@@ -1231,46 +822,29 @@ class MapViewer(
         )
     }
 
-    /**
-     * Tile flags for any loaded region, reading through whatever edits it carries.
-     *
-     * Null when the region is not loaded, which the flag panel shows as "no selection"
-     * rather than as a grid of unchecked boxes it could not honour a click on.
-     */
     private fun tileFlags(regionX: Int, regionY: Int, plane: Int, x: Int, y: Int): Int? {
         editManagers[Pair(regionX, regionY)]?.let { return it.mutableData.tiles[plane][x][y].flags }
         val tiles = pickTerrainProvider.tiles(regionX, regionY) ?: return null
         return tiles[plane][x][y].flags
     }
 
-    /**
-     * Handle terrain painting. Called continuously while mouse button is held.
-     * Uses editorBrushSize radius, applies overlay or underlay based on editorPaintMode.
-     */
     private fun handleTerrainPaint() {
         val center = getEditTileUnderCursor() ?: return
         val em = editManagerFor(center.regionX, center.regionY) ?: return
-        val radius = editorBrushSize[0] - 1  // brush size 1 = single tile (radius 0)
+        val radius = editorBrushSize[0] - 1
         val id = editorOverlayUnderlayId.get()
 
         for (dx in -radius..radius) {
             for (dy in -radius..radius) {
                 val tx = center.localX + dx
                 val ty = center.localY + dy
-                // The brush is clipped to the region under its centre rather than spilling
-                // into the next one. Wrapping it across the border would need a manager per
-                // region touched and a per-tile owner lookup inside the inner loop; clipping
-                // keeps every write addressed to the one grid this call resolved.
                 if (tx < 0 || tx > 63 || ty < 0 || ty > 63) continue
                 val key = EditTile(center.regionX, center.regionY, tx, ty)
                 if (key in editedTilesThisDrag) continue
                 editedTilesThisDrag.add(key)
-                // Marked here rather than on entry so a brush swept off the region edge,
-                // which writes nothing, does not raise a confirmation for no edits.
                 terrainEditedRegions.add(Pair(center.regionX, center.regionY))
 
                 if (editorPaintMode == 0) {
-                    // Overlay
                     em.mutableData.setOverlayId(
                         currentPlane, tx, ty,
                         id,
@@ -1278,18 +852,12 @@ class MapViewer(
                         editorOverlayRotation[0]
                     )
                 } else {
-                    // Underlay
                     em.mutableData.setUnderlayId(currentPlane, tx, ty, id)
                 }
             }
         }
     }
 
-    /**
-     * Handle height editing. Called continuously while mouse button is held.
-     * Applies raise, lower, or smooth based on editorHeightMode.
-     * No drag throttle -- continuous application for sculpting feel.
-     */
     private fun handleHeightEdit() {
         val center = getEditTileUnderCursor() ?: return
         val em = editManagerFor(center.regionX, center.regionY) ?: return
@@ -1299,15 +867,6 @@ class MapViewer(
 
         when (editorHeightMode) {
             0, 1 -> {
-                // Raise (0) or Lower (1).
-                //
-                // Positive delta raises. This codebase stores heights POSITIVE-up, the
-                // opposite of the RS cache convention - see TerrainLoader's HEIGHT_SCALE
-                // doc and decodeRegion, which negate on the way in - and HEIGHT_SCALE is
-                // +1/128, so a larger stored height is a larger world Y all the way to the
-                // vertex. Do not "restore" the RS convention here: this sign was -1 for
-                // Raise under a comment citing that convention, and Raise sank the terrain
-                // (40 steps took world Y 8.50 -> 7.52).
                 val sign = if (editorHeightMode == 0) 1 else -1
                 for (dx in -radius..radius) {
                     for (dy in -radius..radius) {
@@ -1315,7 +874,6 @@ class MapViewer(
                         val ty = center.localY + dy
                         if (tx < 0 || tx > 63 || ty < 0 || ty > 63) continue
 
-                        // Distance-based falloff
                         val dist = sqrt((dx * dx + dy * dy).toFloat())
                         val falloff = (1f - dist / (radius + 1)).coerceIn(0f, 1f)
                         val delta = (strength * falloff * sign).toInt()
@@ -1327,7 +885,6 @@ class MapViewer(
                 }
             }
             2 -> {
-                // Smooth: average height in radius, move each tile halfway toward average
                 var sum = 0L
                 var count = 0
                 for (dx in -radius..radius) {
@@ -1357,40 +914,12 @@ class MapViewer(
         }
     }
 
-    /**
-     * Recompute Y positions for all center objects using current mutable tile heights.
-     * Called when terrain height edits occur so objects follow the terrain.
-     *
-     * The height sampling algorithm matches ObjectRenderer.createInstancesAllPlanes():
-     * for objects fitting within the region, it samples the center tiles of the
-     * bounding box rather than the full footprint corners.
-     */
     private fun updateObjectHeights() {
         if (editManagers.isEmpty()) return
         for (obj in asyncRegionManager.centerObjects) recalcObjectHeight(obj)
         for (obj in placedObjects) recalcObjectHeight(obj)
     }
 
-    /**
-     * Re-seat one object on the current terrain of whichever region it stands in.
-     *
-     * Restricted by default to regions that have an edit manager. A region with no manager
-     * has terrain exactly as the loader built it, so re-deriving its objects' heights during
-     * a sculpt could only disagree with the seating the loader already gave them; the objects
-     * that need moving are the ones standing on ground the user has sculpted. That rule is
-     * also what keeps a height edit in one region from nudging a neighbour's objects.
-     *
-     * [force] overrides it for the cancel-move paths, which have just put an object back at
-     * its original tile and must restore its height to match whatever the ground there is -
-     * edited or not. Without it, cancelling a drag of an object in an unedited region would
-     * restore X and Z and leave the object floating at the height it was dragged to.
-     *
-     * Only the centre region's objects and user-placed objects can actually move: a context
-     * region's objects are drawn from static batches with their transforms baked into merged
-     * geometry, so re-seating one would need its whole batch rebuilt. Height edits in a
-     * neighbour therefore move the ground and the placed objects on it, but leave that
-     * region's own scenery at its loaded height.
-     */
     private fun recalcObjectHeight(obj: ObjectInstance, force: Boolean = false) {
         val mo = obj.mapObject
         val regionX = mo.x / 64
@@ -1401,7 +930,6 @@ class MapViewer(
         val localTileX = mo.x - regionX * 64
         val localTileY = mo.y - regionY * 64
 
-        // Calculate object size (may be rotated)
         val sizeX: Int
         val sizeY: Int
         if (mo.rotation == 1 || mo.rotation == 3) {
@@ -1412,7 +940,6 @@ class MapViewer(
             sizeY = def.sizeY
         }
 
-        // Calculate center tile coordinates for height sampling (matching ObjectRenderer)
         val xA: Int
         val xB: Int
         if (localTileX + sizeX <= 64) {
@@ -1433,14 +960,11 @@ class MapViewer(
             yB = localTileY + 1
         }
 
-        // Unclamped: corner tile 64 belongs to the neighbouring region and
-        // [tileHeightUnits] resolves it there, matching ObjectRenderer's seating.
         val x0 = xA
         val x1 = xB
         val y0 = yA
         val y1 = yB
 
-        // Average height of 4 sample points (matching client algorithm)
         val plane = mo.level
         val h00 = tileHeightWorld(regionX, regionY, plane, x0, y0)
         val h10 = tileHeightWorld(regionX, regionY, plane, x1, y0)
@@ -1448,11 +972,9 @@ class MapViewer(
         val h11 = tileHeightWorld(regionX, regionY, plane, x1, y1)
         val newHeight = (h00 + h10 + h01 + h11) / 4f
 
-        // Update Y position (worldPosition is a mutable var Vector3f)
         obj.worldPosition.y = newHeight
         objectSceneDirty = true
 
-        // Recompute terrain alignment for type 3 objects (hillChange tilt)
         if (obj.groundContourType == 3) {
             obj.terrainAlignment = TerrainAligner.calculateObjectTilt(
                 localTileX = localTileX,
@@ -1469,22 +991,16 @@ class MapViewer(
         }
     }
 
-    /**
-     * Search object definitions by name (case-insensitive substring) or exact ID.
-     * Returns at most [limit] results.
-     */
     private fun searchObjectDefinitions(query: String, limit: Int = 50): List<ObjectDefinition> {
         val defs = Cache.objects
         val results = mutableListOf<ObjectDefinition>()
 
-        // Try exact ID match first
         val idMatch = query.toIntOrNull()
         if (idMatch != null && idMatch in defs.indices) {
             val def = defs[idMatch]
             if (def.name != "null") results.add(def)
         }
 
-        // Name search
         val lowerQuery = query.lowercase()
         for (def in defs) {
             if (results.size >= limit) break
@@ -1497,12 +1013,6 @@ class MapViewer(
         return results
     }
 
-    /**
-     * Compute world-space position for an object at a given local tile coordinate.
-     * Follows the same algorithm as ObjectRenderer.createInstances() for consistent positioning.
-     *
-     * @return Triple of (worldPosition, sizeX, sizeY) where sizes account for rotation
-     */
     private fun computeObjectWorldPosition(
         regionX: Int,
         regionY: Int,
@@ -1523,7 +1033,6 @@ class MapViewer(
             sizeY = def.sizeY
         }
 
-        // Height sampling from 4 center tiles (matching ObjectRenderer)
         val xA: Int
         val xB: Int
         if (localX + sizeX <= 64) {
@@ -1542,7 +1051,6 @@ class MapViewer(
             yA = localY
             yB = localY + 1
         }
-        // Unclamped; see [recalcObjectHeight] and ObjectRenderer.createInstancesAllPlanes.
         val x0 = xA
         val x1 = xB
         val y0 = yA
@@ -1568,18 +1076,6 @@ class MapViewer(
         )
     }
 
-    /**
-     * Ensure the model for an object definition has geometry behind it on every path that
-     * might draw it, and remember its meshes for later re-ingest.
-     *
-     * Registering with the [InstanceManager] alone is not enough: the map editor draws
-     * objects through the [IndirectRenderer], which packs geometry into shared buffers built
-     * once per region load. A model introduced after that build has to be ingested into
-     * those buffers as well or its instances are dropped every frame and the placed object
-     * is simply invisible.
-     *
-     * @return the combined model ID, or -1 if the model has no geometry to register.
-     */
     private fun ensureModelRegistered(def: ObjectDefinition, shape: Int): Int {
         val im = asyncRegionManager.instanceManager ?: return -1
         val modelIds = ObjectRenderer.getModelIds(def, shape)
@@ -1597,8 +1093,6 @@ class MapViewer(
             }
         if (meshDataList.isNullOrEmpty()) return -1
 
-        // Kept even when the model came from the region's own set: the next region load
-        // rebuilds that set around a different region, and a placed object outlives it.
         editorModelMeshData[combinedId] = meshDataList
 
         if (!im.isModelRegistered(combinedId)) im.registerModel(combinedId, meshDataList)
@@ -1606,18 +1100,6 @@ class MapViewer(
         return combinedId
     }
 
-    /**
-     * Give the indirect renderer geometry for every submitted model it does not already
-     * have, so nothing this frame is dropped for want of registration.
-     *
-     * Two distinct populations end up here. Models the editor introduced live in
-     * [editorModelMeshData]; models the region loader created after the renderer was built —
-     * mirrored and terrain-displaced variants, which [RegionManager] registers under ids of
-     * their own — are found in [AsyncRegionManager.centerModelMeshData]. Ids in
-     * [AsyncRegionManager.unavailableModels] are skipped: those decode to zero vertices and
-     * zero faces in the cache, so there is no geometry to ingest and the drop they cause is
-     * a data gap, not a registration failure.
-     */
     private fun ingestUnregisteredModels(ir: IndirectRenderer, entries: List<InstanceEntry>) {
         val centerMeshData = asyncRegionManager.centerModelMeshData
         val unavailable = asyncRegionManager.unavailableModels
@@ -1646,11 +1128,6 @@ class MapViewer(
         }
     }
 
-    /**
-     * Handle object placement at the clicked tile.
-     * Creates an ObjectInstance and adds it to the placedObjects list so it
-     * renders in the scene alongside loaded map objects.
-     */
     private fun handleObjectPlace() {
         if (selectedObjectId < 0) return
         val tile = getEditTileUnderCursor() ?: return
@@ -1659,7 +1136,6 @@ class MapViewer(
         val shape = editorObjectShape[0]
         val rotation = editorObjectRotation[0]
 
-        // Ensure model is registered with InstanceManager
         val combinedId = ensureModelRegistered(def, shape)
         if (combinedId == -1) return
 
@@ -1671,7 +1147,6 @@ class MapViewer(
         val modelIds = ObjectRenderer.getModelIds(def, shape)
         val modifications = ObjectRenderer.getModifications(def)
 
-        // Create a synthetic MapObject for the placed object
         val mapObject = MapObject(selectedObjectId, worldX, worldY, currentPlane, shape, rotation)
 
         val scaleX = def.modelSizeX / 128f
@@ -1700,23 +1175,12 @@ class MapViewer(
         println("[MapEditor] Placed object '${def.name}' (id=$selectedObjectId) at ($worldX, $worldY) plane=$currentPlane shape=$shape rot=$rotation")
     }
 
-    /**
-     * Start moving an object at the clicked tile, in whichever region owns it.
-     *
-     * Two populations are movable: the centre region's own objects and anything the user
-     * placed. A context region's objects are baked into static batch geometry and cannot be
-     * re-seated without rebuilding the batch, so a grab there finds nothing - which is why
-     * the miss is reported rather than silently ignored.
-     */
     private fun handleObjectMoveStart() {
         val tile = getEditTileUnderCursor() ?: return
 
         val worldX = tile.regionX * 64 + tile.localX
         val worldY = tile.regionY * 64 + tile.localY
 
-        // Find the ObjectInstance at this tile by matching through mapObject coordinates.
-        // Placed objects are searched last so a freshly placed object on top of a map object
-        // does not shadow it, matching the order these lists are drawn in.
         val searched = listOf(asyncRegionManager.centerObjects, placedObjects)
         for (instances in searched) {
             for (instance in instances) {
@@ -1736,16 +1200,12 @@ class MapViewer(
 
                 if (worldX in obj.x until (obj.x + sizeX) &&
                     worldY in obj.y until (obj.y + sizeY)) {
-                    // The object's own region, not the clicked tile's: a large object grabbed
-                    // by a tile on its far side can straddle a region border, and the origin
-                    // marker has to be drawn where the object actually starts.
                     val originRegionX = obj.x / 64
                     val originRegionY = obj.y / 64
                     val origLocalX = obj.x - originRegionX * 64
                     val origLocalY = obj.y - originRegionY * 64
                     movingObject = MovingObject(instance, originRegionX, originRegionY, origLocalX, origLocalY)
 
-                    // Build a tile outline mesh at the original position for reference
                     moveOriginMesh?.cleanup()
                     moveOriginMesh =
                         buildTileOutlineMesh(originRegionX, originRegionY, origLocalX, origLocalY, sizeX, sizeY)
@@ -1761,10 +1221,6 @@ class MapViewer(
         }
     }
 
-    /**
-     * Drag the moving object to a new tile position.
-     * Updates the object's worldPosition so it renders at the cursor location.
-     */
     private fun handleObjectMoveDrag() {
         val moving = movingObject ?: return
         val tile = getEditTileUnderCursor() ?: return
@@ -1775,8 +1231,6 @@ class MapViewer(
         val (newPos, _, _) =
             computeObjectWorldPosition(tile.regionX, tile.regionY, tile.localX, tile.localY, def, rotation)
         val wp = moving.instance.worldPosition
-        // Only a drag that actually shifts the object counts as an edit: grabbing an object
-        // and releasing it on the same tile leaves the region exactly as it was loaded.
         if (wp.x != newPos.x || wp.y != newPos.y || wp.z != newPos.z) {
             wp.set(newPos)
             movingObjectMoved = true
@@ -1784,9 +1238,6 @@ class MapViewer(
         }
     }
 
-    /**
-     * Finalize the object move. Clears the drag state and origin marker.
-     */
     private fun handleObjectMoveEnd() {
         if (movingObjectMoved) movedObjectCount++
         movingObjectMoved = false
@@ -1795,10 +1246,6 @@ class MapViewer(
         moveOriginMesh = null
     }
 
-    /**
-     * Build a bright wireframe outline mesh marking a tile footprint.
-     * Used to show where a dragged object originated from.
-     */
     private fun buildTileOutlineMesh(
         regionX: Int,
         regionY: Int,
@@ -1812,7 +1259,6 @@ class MapViewer(
         val worldOriginZ = -regionY * 64 * tileSize
         val yOffset = 0.2f
 
-        // Get height at origin tile
         val h = tileHeightWorld(regionX, regionY, currentPlane, localX.coerceIn(0, 63), localY.coerceIn(0, 63))
 
         val x0 = worldOriginX + localX * tileSize
@@ -1831,12 +1277,11 @@ class MapViewer(
             x0, h + yOffset, z0
         )
 
-        // Orange color for move origin marker
         val colors = FloatArray(8 * 3) { i ->
             when (i % 3) {
-                0 -> 1f   // R
-                1 -> 0.5f // G
-                2 -> 0f   // B
+                0 -> 1f
+                1 -> 0.5f
+                2 -> 0f
                 else -> 1f
             }
         }
@@ -1853,24 +1298,16 @@ class MapViewer(
         )
     }
 
-    /**
-     * Update the tile highlight mesh for the selected tile.
-     *
-     * Reads the grid of whichever region owns the selection rather than the centre one,
-     * since selection spans every loaded region.
-     */
     private fun updateTileHighlight() {
         val tile = tilePicker.selectedTile ?: return
         val terrainTiles = pickTerrainProvider.tiles(tile.regionX, tile.regionY) ?: return
         if (tile.plane >= terrainTiles.size) return
 
-        // Clean up old mesh
         tileHighlightMesh?.cleanup()
 
         val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
         val heightScale = TerrainLoader.getHeightScale()
 
-        // Get corner heights
         val x = tile.localX
         val y = tile.localY
         val nextX = (x + 1).coerceAtMost(63)
@@ -1881,8 +1318,6 @@ class MapViewer(
         val h01 = terrainTiles[tile.plane][x][nextY].height * heightScale
         val h11 = terrainTiles[tile.plane][nextX][nextY].height * heightScale
 
-        // Calculate WORLD positions for corners (with small Y offset to prevent z-fighting)
-        // Offset by the owning region's world origin so highlight aligns with world-space terrain
         val worldOriginX = tile.regionX * 64 * tileSize
         val worldOriginZ = -tile.regionY * 64 * tileSize
         val yOffset = 0.1f
@@ -1891,28 +1326,22 @@ class MapViewer(
         val z0 = worldOriginZ + (-y * tileSize)
         val z1 = worldOriginZ + (-(y + 1) * tileSize)
 
-        // Create line mesh for tile outline
         val positions = floatArrayOf(
-            // Bottom edge (SW -> SE)
             x0, h00 + yOffset, z0,
             x1, h10 + yOffset, z0,
-            // Right edge (SE -> NE)
             x1, h10 + yOffset, z0,
             x1, h11 + yOffset, z1,
-            // Top edge (NE -> NW)
             x1, h11 + yOffset, z1,
             x0, h01 + yOffset, z1,
-            // Left edge (NW -> SW)
             x0, h01 + yOffset, z1,
             x0, h00 + yOffset, z0
         )
 
-        // Bright yellow color for highlight
         val colors = FloatArray(8 * 3) { i ->
             when (i % 3) {
-                0 -> 1f  // R
-                1 -> 1f  // G
-                2 -> 0f  // B
+                0 -> 1f
+                1 -> 1f
+                2 -> 0f
                 else -> 1f
             }
         }
@@ -1929,18 +1358,9 @@ class MapViewer(
         )
     }
 
-    /**
-     * Update the brush preview mesh for terrain paint / height edit tools.
-     * Builds a semi-transparent filled quad mesh covering the brush area
-     * conforming to the terrain surface. Only rebuilt when the center tile changes.
-     */
     private fun updateBrushPreview() {
-        // Only show brush preview for paint and height tools, and only when mouse is not over ImGui
         val isBrushTool = currentEditorTool == EditorTool.TERRAIN_PAINT || currentEditorTool == EditorTool.HEIGHT_EDIT
         if (!isBrushTool || imGui.wantCaptureMouse()) {
-            // This is the only per-frame raycast, so it is also the only thing keeping the
-            // hover readout fresh; leaving it set here would strand a stale region name in
-            // the panel the moment the cursor moves onto the panel itself.
             hoveredEditRegion = null
             if (brushPreviewMesh != null) {
                 brushPreviewMesh?.cleanup()
@@ -1960,29 +1380,23 @@ class MapViewer(
             return
         }
 
-        // Skip rebuild if same tile
         if (center == lastBrushCenter) return
         lastBrushCenter = center
 
         brushPreviewMesh?.cleanup()
 
-        // Deliberately not resolved through editManagerFor: the preview follows the cursor
-        // every frame and must not build a manager for every region it crosses. Heights come
-        // from tileHeightWorld, which reads a manager when the region has one and the cache
-        // when it does not, so the preview lies on the ground either way.
         val radius = when (currentEditorTool) {
             EditorTool.TERRAIN_PAINT -> editorBrushSize[0] - 1
             EditorTool.HEIGHT_EDIT -> editorHeightBrushRadius[0]
             else -> 0
         }
 
-        // Determine brush color based on tool/mode
         val brushColor = when (currentEditorTool) {
-            EditorTool.TERRAIN_PAINT -> floatArrayOf(0.2f, 0.8f, 0.2f, 0.25f)  // Green
+            EditorTool.TERRAIN_PAINT -> floatArrayOf(0.2f, 0.8f, 0.2f, 0.25f)
             EditorTool.HEIGHT_EDIT -> when (editorHeightMode) {
-                0 -> floatArrayOf(0.2f, 0.4f, 0.9f, 0.25f)     // Blue for raise
-                1 -> floatArrayOf(0.9f, 0.2f, 0.2f, 0.25f)     // Red for lower
-                2 -> floatArrayOf(0.9f, 0.9f, 0.2f, 0.25f)     // Yellow for smooth
+                0 -> floatArrayOf(0.2f, 0.4f, 0.9f, 0.25f)
+                1 -> floatArrayOf(0.9f, 0.2f, 0.2f, 0.25f)
+                2 -> floatArrayOf(0.9f, 0.9f, 0.2f, 0.25f)
                 else -> floatArrayOf(0.5f, 0.5f, 0.5f, 0.25f)
             }
             else -> floatArrayOf(0.5f, 0.5f, 0.5f, 0.25f)
@@ -2004,9 +1418,6 @@ class MapViewer(
             for (dy in -radius..radius) {
                 val tx = center.localX + dx
                 val ty = center.localY + dy
-                // Same clip as the brushes themselves, so the preview shows exactly the tiles
-                // a stroke would write rather than promising a footprint that spills over the
-                // border into a region the stroke will not touch.
                 if (tx < 0 || tx > 63 || ty < 0 || ty > 63) continue
                 val nextX = (tx + 1).coerceAtMost(63)
                 val nextY = (ty + 1).coerceAtMost(63)
@@ -2021,17 +1432,11 @@ class MapViewer(
                 val z0 = worldOriginZ + (-ty * tileSize)
                 val z1 = worldOriginZ + (-(ty + 1) * tileSize)
 
-                // 4 corner vertices per tile quad (2 triangles)
-                // SW corner
                 positions.add(x0); positions.add(h00 + yOffset); positions.add(z0)
-                // SE corner
                 positions.add(x1); positions.add(h10 + yOffset); positions.add(z0)
-                // NW corner
                 positions.add(x0); positions.add(h01 + yOffset); positions.add(z1)
-                // NE corner
                 positions.add(x1); positions.add(h11 + yOffset); positions.add(z1)
 
-                // RGBA color for all 4 vertices
                 for (v in 0 until 4) {
                     colors.add(brushColor[0])
                     colors.add(brushColor[1])
@@ -2039,7 +1444,6 @@ class MapViewer(
                     colors.add(brushColor[3])
                 }
 
-                // Two triangles: SW-SE-NW and SE-NE-NW
                 indices.add(vertexIndex)
                 indices.add(vertexIndex + 1)
                 indices.add(vertexIndex + 2)
@@ -2063,11 +1467,6 @@ class MapViewer(
         }
     }
 
-    /**
-     * Render the brush preview overlay.
-     * Uses alpha blending with depth test on but depth write off so the preview
-     * sits on top of terrain without occluding objects.
-     */
     private fun renderBrushPreview() {
         val mesh = brushPreviewMesh ?: return
 
@@ -2076,29 +1475,16 @@ class MapViewer(
         brushPreviewShader.setUniform("view", scene.camera.getViewMatrix())
         brushPreviewShader.setUniform("projection", scene.camera.getProjectionMatrix(getAspectRatio()))
 
-        // Enable blending, keep depth test, disable depth write
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glDepthMask(false)
 
         mesh.render()
 
-        // Restore state
         glDepthMask(true)
         glDisable(GL_BLEND)
     }
 
-    /**
-     * Rebuilding the merged terrain re-concatenates and re-uploads every covered region's
-     * geometry, which measures around 150 ms of GL-thread work at render distance 3. Doing
-     * it as each region lands would spend most of a load wave inside that rebuild.
-     *
-     * A region that is not merged yet still draws through its own per-texture meshes, so
-     * waiting costs nothing but draw calls on frames nobody is measuring. The rebuild that
-     * matters is the one at the end of the wave, which is taken unconditionally; this
-     * interval only governs the intermediate ones, and is deliberately long enough that a
-     * normal wave takes one or two of them rather than a dozen.
-     */
     private var lastMergedTerrainRebuildNanos = 0L
 
     private val mergedTerrainRebuildIntervalNanos = 3_000_000_000L
@@ -2109,14 +1495,10 @@ class MapViewer(
         val currentProgress = asyncRegionManager.getLoadProgress()
         RenderMetrics.gpuUploadDrainTimeMs = RenderMetrics.endTiming(drainStart)
 
-        // Check if initial loading is complete
         if (isInitialLoading && currentProgress.isComplete) {
             isInitialLoading = false
         }
 
-        // Fold newly arrived regions into the merged terrain. Always rebuild immediately
-        // once the wave has finished so the steady state is never left short of coverage;
-        // rate-limit the intermediate rebuilds that happen while regions are still landing.
         if (terrainAtlas != null && asyncRegionManager.mergedTerrainNeedsRebuild()) {
             val now = System.nanoTime()
             if (currentProgress.isComplete || now - lastMergedTerrainRebuildNanos >= mergedTerrainRebuildIntervalNanos) {
@@ -2127,17 +1509,14 @@ class MapViewer(
     }
 
     override fun onRenderLoadingScreen() {
-        // Still render the scene if we have any data (center region loads synchronously)
         RenderMetrics.resetFrame()
         glClearColor(clearColor.x, clearColor.y, clearColor.z, 1.0f)
         glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
 
-        // Render whatever is loaded so far
         val renderStart = RenderMetrics.startTiming()
         renderScene()
         RenderMetrics.renderTimeMs = RenderMetrics.endTiming(renderStart)
 
-        // Render loading overlay on top
         imGui.beginFrame()
         loadingScreen.render(asyncRegionManager.getLoadProgress(), window.width, window.height)
         debugPanel.fps = fps
@@ -2150,9 +1529,6 @@ class MapViewer(
     }
 
     override fun onUpdate(deltaTime: Float) {
-        // Process any pending terrain edits (dirty chunk rebuilds) in every region that has
-        // an edit manager. A stroke only ever dirties the one region it landed in, so all but
-        // one of these return EditResult.NONE without doing any work.
         var anyChanges = false
         var anyHeightsChanged = false
         for (manager in editManagers.values) {
@@ -2161,43 +1537,21 @@ class MapViewer(
             if (result.heightsChanged) anyHeightsChanged = true
         }
 
-        // When terrain edits occur, the merged atlas terrain becomes stale.
         if (anyChanges && asyncRegionManager.mergedOpaqueTerrain != null) {
             asyncRegionManager.invalidateMergedTerrain()
         }
 
-        // Reposition objects when terrain heights change
         if (anyHeightsChanged) {
             updateObjectHeights()
         }
 
-        // Update brush preview every frame for terrain paint / height edit tools
         updateBrushPreview()
 
         runEditProbe()
     }
 
-    /**
-     * Run one scripted probe step per frame. No-op unless -Ddarkan.editProbe is set.
-     *
-     * Steps:
-     *  - `scan[@cols,rows]`      report which region each viewport sample point resolves to
-     *  - `mark@px,py`            pin the tile there and report its height on every later step
-     *  - `height[:mode]@px,py`   height brush at that screen point; mode is
-     *                            `raise` (default), `lower` or `smooth`
-     *  - `paint[:<id>]@px,py`    overlay brush at that screen point
-     *  - `flags@px,py`           set flag 0x1 at that screen point
-     *  - `place:<id>@px,py`      place object `id` at that screen point
-     *  - `summary`               print the unsaved-edit summary the guard would show
-     *  - `navigate`              request the next region east, raising the guard's modal
-     *  - `discard`               run the modal's discard path
-     */
     private fun runEditProbe() {
         if (editProbeStep >= editProbeScript.size) return
-        // Let the scene settle so the context regions are loaded and pickable; a ray fired
-        // before they arrive resolves to nothing and the step would report a miss it did not
-        // really have. onUpdate runs during loading too, so the frame count only starts once
-        // the load wave is finished.
         if (isInitialLoading) return
         if (editProbeSettle < EDIT_PROBE_SETTLE_FRAMES) {
             editProbeSettle++
@@ -2224,9 +1578,6 @@ class MapViewer(
                     return
                 }
                 head == "navigate" -> {
-                    // Goes through the guard, so with edits outstanding this parks the action
-                    // and raises the modal instead of loading - which is the thing to look at
-                    // in the capture.
                     jumpToRegion(currentRegionX + 1, currentRegionY)
                     println(
                         "[EDITPROBE] navigate: modalOpen=${pendingRegionChange != null} " +
@@ -2306,14 +1657,12 @@ class MapViewer(
         }
     }
 
-    /** Height of the `mark`ed tile, in stored units and world units, or blank if unmarked. */
     private fun editProbeAnchorReport(): String {
         val a = editProbeAnchor ?: return ""
         val units = tileHeightUnits(a.regionX, a.regionY, currentPlane, a.localX, a.localY)
         return "anchor=%d/%.4f".format(units, units * TerrainLoader.getHeightScale())
     }
 
-    /** Cheap content fingerprint per live edit manager, for spotting which grids moved. */
     private fun editProbeFingerprints(): Map<Pair<Int, Int>, Int> =
         editManagers.mapValues { (_, manager) ->
             var hash = 1
@@ -2330,12 +1679,6 @@ class MapViewer(
             hash
         }
 
-    /**
-     * Report which region each of a grid of viewport points resolves to.
-     *
-     * This is the measurement the whole feature exists for: before it, every sample outside
-     * the centre region was ground the editor refused to touch.
-     */
     private fun editProbeScan(cols: Int, rows: Int) {
         val counts = mutableMapOf<String, Int>()
         var misses = 0
@@ -2364,7 +1707,6 @@ class MapViewer(
         )
     }
 
-    // Frame counter for debug logging (only logs first few frames to avoid spam)
     private var frameNumber = 0
 
     override fun onRender() {
@@ -2374,14 +1716,10 @@ class MapViewer(
             System.out.flush()
         }
 
-        // Reset per-frame performance counters
         RenderMetrics.resetFrame()
 
-        // Reclaim the timer slot this frame will reuse, picking up the readings it took
-        // GpuTimerPool.DEPTH frames ago. Nothing here waits on the GPU.
         gpuTimers.beginFrame()
 
-        // Clear
         glClearColor(clearColor.x, clearColor.y, clearColor.z, 1.0f)
         glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
 
@@ -2401,7 +1739,6 @@ class MapViewer(
             System.out.flush()
         }
 
-        // Render UI
         gpuTimers.begin(RenderMetrics.GPU_PASS_UI)
         renderUI()
         gpuTimers.end()
@@ -2417,7 +1754,6 @@ class MapViewer(
         }
         frameNumber++
 
-        // Periodic metrics dump for measurement runs, see RenderMetrics.summary.
         if (metricsEveryFrames > 0 && frameNumber % metricsEveryFrames == 0) {
             print(RenderMetrics.summary(fps))
             System.out.flush()
@@ -2427,41 +1763,13 @@ class MapViewer(
         if (pickProbeEnabled) stepPickProbe()
     }
 
-    // ========================================================================
-    // Scripted pick probe
-    // ========================================================================
 
-    /**
-     * `-Ddarkan.pickProbe=<x>,<y>[;<x>,<y>...]`: run named viewport points through the real
-     * pick path and report how far the tile they landed on is from the point asked for.
-     *
-     * Picking is the one editor behaviour a screenshot cannot check: a highlight that is
-     * one tile out looks exactly like a highlight that is right. The measurement that does
-     * work is a round trip - unproject the screen point to a tile, project that tile's
-     * centre back - because the two only agree if the ray, the height interpolation and the
-     * tile addressing all agree. The residual is bounded by half a tile on screen (the
-     * click can legitimately land anywhere within the tile it hit), so what matters is that
-     * it stays inside that bound and does not grow toward the screen edges, which is the
-     * signature of a projection or region-offset error rather than honest quantisation.
-     *
-     * `-Ddarkan.pickProbeSweep=<step>` additionally sweeps the whole viewport on a grid of
-     * that pixel pitch and reports coverage - how many sampled points get any answer at
-     * all, split by which region answered. That is the number this exists to move: with
-     * picking confined to the centre region, most of the lower viewport had no answer,
-     * because the camera sits outside the region it is editing.
-     *
-     * Neither runs until `-Ddarkan.pickProbeAfter` seconds have passed, since a region that
-     * has not finished loading legitimately answers nothing.
-     */
     private val pickProbePoints: List<FloatArray> = parsePickProbePoints()
 
-    /** Grid pitch in pixels for the coverage sweep. 0 disables it. */
     private val pickProbeSweepStep: Int = System.getProperty("darkan.pickProbeSweep")?.toIntOrNull() ?: 0
 
-    /** Seconds to let regions finish loading before probing. */
     private val pickProbeAfterSeconds: Float = System.getProperty("darkan.pickProbeAfter", "30").toFloat()
 
-    /** `-Ddarkan.pickProbeShot=<path>`: PNG written once the probe has run. */
     private val pickProbeShot: String? = System.getProperty("darkan.pickProbeShot")
 
     private val pickProbeEnabled: Boolean = pickProbePoints.isNotEmpty() || pickProbeSweepStep > 0
@@ -2504,14 +1812,12 @@ class MapViewer(
 
         val shot = pickProbeShot
         if (shot != null) {
-            // The last probed point stays selected, so the shot shows its highlight.
             updateTileHighlight()
             captureBackBuffer(shot)
         }
         System.out.flush()
     }
 
-    /** Sweep the viewport on a grid and report which region answered each sample. */
     private fun reportPickCoverage() {
         var total = 0
         var centre = 0
@@ -2542,7 +1848,6 @@ class MapViewer(
         }
     }
 
-    /** Probe one viewport point and report the round-trip error in pixels. */
     private fun reportPickPoint(screenX: Float, screenY: Float) {
         val hit = probePick(screenX, screenY)
         if (hit == null) {
@@ -2565,7 +1870,6 @@ class MapViewer(
         )
     }
 
-    /** Run one screen point through the same raycast a click uses. */
     private fun probePick(screenX: Float, screenY: Float): TilePicker.SelectedTile? {
         tilePicker.screenToWorldRay(
             screenX, screenY, window.width, window.height, scene.camera, getAspectRatio()
@@ -2573,7 +1877,6 @@ class MapViewer(
         return tilePicker.pickTile(pickTerrainProvider, currentPlane)
     }
 
-    /** World-space centre of a picked tile, averaging its four corner heights. */
     private fun tileCentreWorld(tile: TilePicker.SelectedTile): Vector3f? {
         val tiles = pickTerrainProvider.tiles(tile.regionX, tile.regionY) ?: return null
         if (tile.plane >= tiles.size) return null
@@ -2593,7 +1896,6 @@ class MapViewer(
         )
     }
 
-    /** Project a world position to viewport pixels, or null if it is behind the camera. */
     private fun projectToScreen(world: Vector3f): FloatArray? {
         val camera = scene.camera
         camera.getProjectionMatrix(getAspectRatio()).mul(camera.getViewMatrix(), probeViewProjection)
@@ -2608,40 +1910,19 @@ class MapViewer(
         )
     }
 
-    // ========================================================================
-    // Scripted camera sweep
-    // ========================================================================
 
-    /**
-     * `-Ddarkan.sweep=<yaw>:<pitch>[,...]`: visit a fixed list of camera angles in one run,
-     * reporting a median over several frames at each.
-     *
-     * Every measurement this pass needs — how the visible fraction moves with viewing
-     * angle, whether a change holds across angles, whether two builds draw the same
-     * pixels — is a question about several viewpoints, and the honest way to answer it is
-     * from one process. Restarting the viewer per angle pays the region load again, spreads
-     * the samples across different driver states, and means the only thing a comparison can
-     * be sure of is that something differed.
-     *
-     * Medians, not means: the culling compute pass occasionally spikes on a stats-readback
-     * barrier, and one such frame drags a mean far enough to invent a result.
-     */
     private class SweepAngle(val yaw: Float, val pitch: Float) {
         val label: String get() = "yaw%+.0f_pitch%+.0f".format(yaw, pitch)
     }
 
     private val sweepAngles: List<SweepAngle> = parseSweepAngles()
 
-    /** Seconds to let regions finish loading before the first angle is sampled. */
     private val sweepAfterSeconds: Float = System.getProperty("darkan.sweepAfter", "45").toFloat()
 
-    /** Frames discarded after each angle change, covering the GPU timer read-back lag. */
     private val sweepWarmupFrames: Int = System.getProperty("darkan.sweepWarmup", "24").toIntOrNull() ?: 24
 
-    /** Frames sampled per angle once warmed up. */
     private val sweepSampleFrames: Int = System.getProperty("darkan.sweepFrames", "60").toIntOrNull() ?: 60
 
-    /** `-Ddarkan.sweepShots=<dir>`: write one PNG per angle into this directory. */
     private val sweepShotDirectory: String? = System.getProperty("darkan.sweepShots")
 
     private var sweepElapsedSeconds = 0f
@@ -2844,48 +2125,22 @@ class MapViewer(
     private fun medianOfLongs(values: List<Long>): Long =
         if (values.isEmpty()) 0L else values.sorted()[values.size / 2]
 
-    /** `-Ddarkan.metricsEvery=<frames>`; 0 disables the periodic metrics dump. */
     private val metricsEveryFrames = System.getProperty("darkan.metricsEvery", "0").toIntOrNull() ?: 0
 
-    /**
-     * `-Ddarkan.gpuSync=true` blocks the render thread on [glFinish] immediately after the
-     * frame's clear, before any of the frame's work is submitted.
-     *
-     * Off by default because it serialises CPU and GPU and costs throughput. It exists
-     * because the numbers in [RenderMetrics] are otherwise easy to misread: with V-Sync on,
-     * the driver does not necessarily park the wait for the previous frame's present inside
-     * `glfwSwapBuffers`. It parks it inside whichever GL call next needs the pipeline, which
-     * in this viewer is the merged terrain multi-draw — the first substantial draw of the
-     * frame. That makes `cpuRender` report several milliseconds of *waiting* as though it
-     * were several milliseconds of CPU *work*, and the figure barely moves when the work
-     * changes because it is really just the frame period minus everything else.
-     *
-     * Draining the pipeline up front moves the wait here, where it is labelled, and leaves
-     * `cpuRender` and the phase breakdown measuring nothing but submission cost. Any
-     * before/after comparison of CPU render cost should be made with this flag on.
-     */
     private val gpuSyncProbe: Boolean = System.getProperty("darkan.gpuSync", "false").toBoolean()
 
-    /** `-Ddarkan.cullProbe=true`; runs [runCullProbe] each frame. Measurement only. */
     private val cullProbe: Boolean = System.getProperty("darkan.cullProbe", "false").toBoolean()
 
-    /**
-     * `-Ddarkan.rangeFuseGap=<indices>`: how much culled geometry may be drawn anyway to
-     * avoid splitting a batch into another draw command. See [submitBatch].
-     */
     private val rangeFuseGapIndices: Int =
         System.getProperty("darkan.rangeFuseGap")?.toIntOrNull() ?: DEFAULT_RANGE_FUSE_GAP
 
-    /** World units per map tile, so probe distances can be reported in tiles. */
     private val TILE_WORLD_SIZE = 512f * CoordinateUtil.DEFAULT_SCALE
 
-    /** Milliseconds the [gpuSyncProbe] blocked for, i.e. the present/pipeline wait. */
     private var gpuSyncWaitMs = 0.0
 
     private fun renderScene() {
         val logFrame = frameNumber < 5
 
-        // Update UBOs for lighting
         val uniformStart = RenderMetrics.startTiming()
         val viewMatrix = scene.camera.getViewMatrix()
         val projectionMatrix = scene.camera.getProjectionMatrix(getAspectRatio())
@@ -2894,9 +2149,6 @@ class MapViewer(
         uniformBuffers.updateEnvironment(environment)
         RenderMetrics.endPhase(RenderMetrics.CPU_PHASE_UNIFORMS, uniformStart)
 
-        // Frustum built from exactly the matrices the shaders are about to use, composed
-        // the same way UniformBuffers composes its viewProjection. Anything else risks the
-        // culler and the rasteriser disagreeing about where the screen edge is.
         val cullStart = RenderMetrics.startTiming()
         frustumViewProjection.set(projectionMatrix).mul(viewMatrix)
         frustum.update(frustumViewProjection)
@@ -2906,8 +2158,6 @@ class MapViewer(
         RenderMetrics.cullCpuTimeMs = RenderMetrics.endTiming(cullStart)
         RenderMetrics.endPhase(RenderMetrics.CPU_PHASE_CULL, cullStart)
 
-        // Rebuild the static instance buffers if the object set changed, then let the GPU
-        // decide what is visible. Both must happen before any object draw is issued.
         val objectSceneStart = RenderMetrics.startTiming()
         updateObjectScene()
         val ir = indirectRenderer
@@ -2923,16 +2173,6 @@ class MapViewer(
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
         }
 
-        // Render terrain - use atlas path (2 draw calls) when available,
-        // fall back to legacy multi-pass path otherwise.
-        //
-        // `showTerrain` had a key binding and a checkbox but nothing in this function ever
-        // read it, so the toggle silently did nothing. Being able to hide the ground is what
-        // lets a screenshot answer "is this the ground mesh or a placed model?" -- which is
-        // exactly the question a terraced hillside raises. Starving the atlas branch of
-        // geometry is only half of it: doing so also fails its guard and routes the frame
-        // into the legacy branch, which draws the centre region from the edit manager, so
-        // that branch reads `showTerrain` for itself too.
         val atlas = terrainAtlas
         val opaqueAtlasMesh = if (showTerrain) asyncRegionManager.mergedOpaqueTerrain else null
         val alphaAtlasMesh = if (showTerrain) asyncRegionManager.mergedAlphaTerrain else null
@@ -2941,17 +2181,6 @@ class MapViewer(
         val atlasAlphaShader = terrainAtlasAlphaShader
 
         if (atlas != null && atlasShader != null && atlasAlphaShader != null && (opaqueAtlasMesh != null || alphaAtlasMesh != null)) {
-            // ===== Atlas rendering path: one draw call per pass for every merged region ====
-            //
-            // The merged meshes hold the centre region and every context region that has
-            // finished loading, already offset into world space and already carrying atlas
-            // UV transforms, as one contiguous index range per region. Frustum culling picks
-            // the ranges and glMultiDrawElements submits them together, so the terrain draw
-            // count does not move when render distance does.
-            //
-            // Anything the merge does not cover still renders the old way: regions that
-            // arrived since the last rebuild, and individual batches whose texture the atlas
-            // could not serve. Those are the only per-region terrain draws left.
             var mergedStart = RenderMetrics.startTiming()
             renderSystem.disableCullFace()
             val identityModel = Matrix4f().identity()
@@ -2960,10 +2189,8 @@ class MapViewer(
 
             gpuTimers.begin(RenderMetrics.GPU_PASS_TERRAIN_OPAQUE)
 
-            // Bind atlas texture to GL_TEXTURE0
             atlas.bindPage(0, 0)
 
-            // Draw 1: Opaque terrain (color + textured, merged with atlas)
             if (opaqueAtlasMesh != null) {
                 val rangeCount = if (mergeContextTerrain) gatherMergedTerrainRanges(alpha = false) else 0
                 if (!mergeContextTerrain) {
@@ -2985,16 +2212,12 @@ class MapViewer(
                 }
             }
 
-            // Unbind atlas texture
             glActiveTexture(GL_TEXTURE0)
             glBindTexture(GL_TEXTURE_2D, 0)
             RenderMetrics.endPhase(RenderMetrics.CPU_PHASE_TERRAIN_MERGED, mergedStart)
 
             val regionTerrainStart = RenderMetrics.startTiming()
 
-            // Per-region terrain meshes for whatever the merge does not cover yet, opaque
-            // half. Regions outside the frustum were already dropped by
-            // updateVisibleContextRegions().
             for (ctxRegion in terrainRegions) {
                 val terrainMeshes = ctxRegion.terrainMeshes ?: continue
                 val merged = ctxRegion.key in mergedRegions
@@ -3033,12 +2256,6 @@ class MapViewer(
 
             mergedStart = RenderMetrics.startTiming()
 
-            // Draw 2: Alpha terrain, merged first then anything left over, under one blend
-            // state. Depth func is already GL_LEQUAL globally, no need to switch.
-            //
-            // Merging does not disturb blend order: each region's alpha layers stay in their
-            // original sequence inside its own index range, and two regions never overlap in
-            // plan view, so the order between ranges cannot affect a pixel.
             val hasContextAlpha = terrainRegions.any { region ->
                 val batches = region.terrainMeshes?.alphaBatches ?: return@any false
                 if (region.key in mergedRegions) batches.any { !it.inAtlas } else batches.isNotEmpty()
@@ -3112,43 +2329,12 @@ class MapViewer(
 
             renderSystem.enableCullFace()
         } else {
-            // ===== Legacy rendering path: multi-pass per-texture draws =====
-            //
-            // The centre region comes from the edit manager here, not from the merged
-            // atlas meshes, and only the edit manager knows whether it is drawing its
-            // merged region meshes or its 64 per-chunk meshes. Each pass therefore
-            // reports what it submitted and the counts are charged to the frame below;
-            // counting a flat 1 for the centre made this path report `terrainAlpha=0`
-            // and look like it was skipping the alpha pass when it was not.
-            //
-            // `showTerrain` is honoured here as well as in the atlas branch. Starving the
-            // atlas branch of geometry is what routes an unwanted frame down here in the
-            // first place, so leaving this side ungated meant `-Ddarkan.terrain=false`
-            // drew the centre region's ground anyway.
-            // A context region that has been edited is drawn from its own edit manager, in
-            // place of the meshes the loader built for it. This is the whole of the render
-            // side of multi-region editing: an edit manager already renders at a supplied
-            // model matrix, and this branch already draws every region individually, so a
-            // neighbour swaps onto the edit path by handing it its own region matrix instead
-            // of the centre's. Nothing has to move off the batch path, because terrain never
-            // used it — `ctxRegion.batches` is object geometry.
-            //
-            // Reaching this branch at all is guaranteed for an edited neighbour:
-            // editManagerFor() suppresses the merged atlas terrain the moment it builds a
-            // manager for a non-centre region, which starves the atlas branch above and
-            // routes the frame down here until the next region load.
-            //
-            // The centre's own draws are individually conditional on its manager rather than
-            // gating the whole branch on it. A centre region whose terrain failed to load
-            // used to take every context region's ground down with it; now the neighbours
-            // still draw, which matters more when one of them is the region being edited.
             val em = if (showTerrain) centerEditManager else null
             val editedRegions = if (showTerrain) editManagers else emptyMap()
             if (showTerrain) {
                 renderSystem.disableCullFace()
                 gpuTimers.begin(RenderMetrics.GPU_PASS_TERRAIN_OPAQUE)
 
-                // Pass 1: Color mesh (untextured tiles) with RGB colors
                 uboColorShader.bind()
                 if (em != null) {
                     val centerColor = em.renderColor(uboColorShader, asyncRegionManager.centerModelMatrix)
@@ -3173,7 +2359,6 @@ class MapViewer(
                     }
                 }
 
-                // Pass 2: Textured terrain (single texture per triangle)
                 uboTexturedShader.bind()
                 uboTexturedShader.setUniform("textureSampler", 0)
                 if (em != null) {
@@ -3203,8 +2388,6 @@ class MapViewer(
                 TextureLoader.unbindTexture()
                 gpuTimers.end()
 
-                // Pass 3: Alpha terrain (multi-pass alpha blending)
-                // Depth func is already GL_LEQUAL globally, no need to switch.
                 gpuTimers.begin(RenderMetrics.GPU_PASS_TERRAIN_ALPHA)
                 glDepthMask(false)
                 glEnable(GL_BLEND)
@@ -3246,11 +2429,9 @@ class MapViewer(
             }
         }
 
-        // Render tile highlight (if any selected tile)
         val overlayStart = RenderMetrics.startTiming()
         renderTileHighlight()
 
-        // Render brush preview overlay (terrain paint / height edit tools)
         renderBrushPreview()
         RenderMetrics.endPhase(RenderMetrics.CPU_PHASE_OVERLAYS, overlayStart)
 
@@ -3259,12 +2440,9 @@ class MapViewer(
             System.out.flush()
         }
 
-        // Render objects
         val objectsStart = RenderMetrics.startTiming()
         renderObjects()
         RenderMetrics.endPhase(RenderMetrics.CPU_PHASE_OBJECTS, objectsStart)
-        // renderObjects() runs the static batch pass inside itself; report the two side by
-        // side rather than nested, so the phase columns sum to the frame.
         RenderMetrics.cpuPhaseMs[RenderMetrics.CPU_PHASE_OBJECTS] -=
             RenderMetrics.cpuPhaseMs[RenderMetrics.CPU_PHASE_STATIC_BATCH]
 
@@ -3273,9 +2451,6 @@ class MapViewer(
             System.out.flush()
         }
 
-        // Sky last: the full-screen triangle sits on the far plane with depth writes off,
-        // so every pixel the scene already covered is rejected by the depth test. One draw
-        // call regardless of what the region references.
         val skyRenderer = sky
         if (skyRenderer != null && !renderSystem.wireframeMode) {
             val skyStart = RenderMetrics.startTiming()
@@ -3295,87 +2470,51 @@ class MapViewer(
         }
     }
 
-    /**
-     * Render the tile highlight outline for the selected tile,
-     * and the move-origin marker if an object is being dragged.
-     */
     private fun renderTileHighlight() {
         val highlightMesh = tileHighlightMesh
         val originMesh = moveOriginMesh
 
         if (highlightMesh == null && originMesh == null) return
 
-        // Use simple shader for the highlight (no lighting)
         simpleShader.bind()
         simpleShader.setUniform("model", Matrix4f().identity())
         simpleShader.setUniform("view", scene.camera.getViewMatrix())
         simpleShader.setUniform("projection", scene.camera.getProjectionMatrix(getAspectRatio()))
 
-        // Disable depth test to always show highlight, or enable with slight offset
         glDisable(GL_DEPTH_TEST)
 
-        // Set line width (if supported)
         glLineWidth(3f)
 
-        // Render tile selection highlight
         highlightMesh?.renderLines()
 
-        // Render move origin marker (orange outline showing where the object was)
         originMesh?.renderLines()
 
-        // Restore state
         glLineWidth(1f)
         glEnable(GL_DEPTH_TEST)
     }
 
-    /**
-     * Pre-computed instance entry from the parallel transform phase.
-     * Contains the model ID and the raw 16-float column-major matrix data
-     * ready for direct upload to the GPU via [InstanceManager.addInstanceRaw].
-     */
     private data class InstanceEntry(val modelId: Int, val matrixData: FloatArray)
 
-    /** Chunk size for parallel transform computation. */
     private val PARALLEL_CHUNK_SIZE = 512
 
-    /** Missing models named individually by [reportDroppedInstances] before it stops. */
     private val DROPPED_MODEL_REPORT_LIMIT = 16
 
-    /**
-     * Compute the transform for every centre-region and user-placed object.
-     *
-     * Pure math, no GL calls, so the work fans out across [Dispatchers.Default]. Each
-     * coroutine keeps its own [Matrix4f] to stay off the allocator on the hot path.
-     */
     private fun computeInstanceEntries(): List<InstanceEntry> {
         val allObjects = asyncRegionManager.centerObjects + placedObjects
         if (allObjects.size <= PARALLEL_CHUNK_SIZE) {
-            // Small object count: compute sequentially to avoid coroutine overhead
             val tempMatrix = Matrix4f()
             return allObjects.map { obj -> computeInstanceEntry(obj, tempMatrix) }
         }
         return runBlocking(Dispatchers.Default) {
             allObjects.chunked(PARALLEL_CHUNK_SIZE).map { chunk ->
                 async {
-                    val tempMatrix = Matrix4f()  // Thread-local: one per coroutine
+                    val tempMatrix = Matrix4f()
                     chunk.map { obj -> computeInstanceEntry(obj, tempMatrix) }
                 }
             }.awaitAll().flatten()
         }
     }
 
-    /**
-     * Rebuild the static object scene when the object set has changed.
-     *
-     * Map objects do not move: their transforms are the same every frame, and so are the
-     * world bounds derived from them. Uploading both once per scene rather than once per
-     * frame is what makes GPU culling worth having — the per-frame CPU cost of the object
-     * pass drops to nothing, and the only thing left to do each frame is dispatch the
-     * compute shader.
-     *
-     * [objectSceneDirty] is set by every path that can move, add or re-seat an object:
-     * region load, terrain height edits, object placement and object dragging.
-     */
     private fun updateObjectScene() {
         val ir = indirectRenderer ?: return
         if (!useStaticInstances || !ir.isReady()) return
@@ -3385,9 +2524,6 @@ class MapViewer(
         if (objectSceneDirty) {
             val start = RenderMetrics.startTiming()
             val entries = computeInstanceEntries()
-            // Before anything is submitted: a model the renderer has never been given
-            // geometry for drops every instance of itself, which is a hole in the scene
-            // exactly where the user placed something.
             ingestUnregisteredModels(ir, entries)
             ir.beginStaticScene()
             for (entry in entries) ir.addStaticInstance(entry.modelId, entry.matrixData)
@@ -3410,15 +2546,6 @@ class MapViewer(
         RenderMetrics.cullStatsAgeFrames = ir.statsAgeFrames
     }
 
-    /**
-     * Say, loudly, that objects were left out of the scene, and say what is known about
-     * each missing model.
-     *
-     * The indirect renderer is fed from [AsyncRegionManager.centerModelMeshData]; the ids
-     * it is asked to draw come from [AsyncRegionManager.getModelIdForInstance]. When those
-     * two disagree the scene comes up with holes in it, so the report names which side of
-     * that pairing is missing the model rather than only that it went missing.
-     */
     private fun reportDroppedInstances(ir: IndirectRenderer, submitted: Int) {
         val dropped = ir.droppedInstanceCount
         if (dropped == 0) return
@@ -3439,9 +2566,6 @@ class MapViewer(
         for (modelId in droppedIds.take(DROPPED_MODEL_REPORT_LIMIT)) {
             val meshes = meshData[modelId]
             val where = when {
-                // Not "missing from the cache": every model archive in rev727 is present and
-                // decompresses. These decode to zero vertices and zero faces, so there is
-                // nothing to draw and nothing for us to fix. See ModelUnavailableReason.
                 modelId in unavailable -> "the cache holds no geometry under this id — " +
                         "run 'tools faces $modelId' for the reason; nothing can draw it"
                 meshes == null -> "absent from centerModelMeshData: never registered"
@@ -3459,9 +2583,6 @@ class MapViewer(
 
         val ir = indirectRenderer
         val useIndirect = ir != null && ir.isReady()
-        // Static mode has already uploaded this frame's instance data (and had the GPU cull
-        // it) in updateObjectScene(); only the streaming and legacy paths still have
-        // per-frame transform and upload work to do here.
         val staticMode = useIndirect && ir.staticSceneBuilt
 
         if (!staticMode) {
@@ -3477,7 +2598,6 @@ class MapViewer(
             val uploadStart = RenderMetrics.startTiming()
             var addedCount = 0
             if (useIndirect) {
-                // Multi-Draw Indirect path: stream instances into IndirectRenderer
                 ingestUnregisteredModels(ir, entries)
                 ir.prepareFrame()
                 for (entry in entries) {
@@ -3490,7 +2610,6 @@ class MapViewer(
                     reportDroppedInstances(ir, entries.size)
                 }
             } else {
-                // Legacy instanced path: feed instances into InstanceManager
                 im.prepareFrame()
                 for (entry in entries) {
                     if (im.addInstanceRaw(entry.modelId, entry.matrixData)) addedCount++
@@ -3506,34 +2625,20 @@ class MapViewer(
             }
         }
 
-        // RS models are single-sided: the game client back-face culls them and never
-        // turns culling off for the scene. Drawing them two-sided exposes interior and
-        // underside faces the client discards -- e.g. the Canifis signpost's three
-        // full-footprint horizontal quads show up as flat green bars through the model.
         renderSystem.enableModelCullFace()
 
-        // Enable polygon offset to prevent z-fighting between objects and terrain.
-        // Many scenery objects (ground decorations, walls, floor decals) have geometry
-        // that sits exactly coplanar with terrain surfaces. The small depth bias nudges
-        // object fragments slightly closer to the camera so they consistently win the
-        // depth test against terrain fragments at the same depth.
         renderSystem.enablePolygonOffset(-1.0f, -1.0f)
 
         if (useIndirect) {
-            // === Multi-Draw Indirect rendering: 1-2 draw calls for ALL center objects ===
             val indColorShader = indirectColorShader!!
             val indTexShader = indirectTexturedShader!!
 
             gpuTimers.begin(RenderMetrics.GPU_PASS_OBJECTS)
 
-            // Only now make the culling results visible to the draws. Everything drawn
-            // between the dispatch and here overlapped with the compute pass.
             ir.cullBarrier()
 
-            // Render untextured objects (1 MDI call)
             ir.renderUntextured(indColorShader)
 
-            // Render textured objects (1 MDI call) with proper GL state
             renderSystem.enableBlending()
 
             indTexShader.bind()
@@ -3542,24 +2647,16 @@ class MapViewer(
             renderSystem.disableBlending()
             gpuTimers.end()
 
-            // Fence the streaming ring only now that every draw reading it has been issued.
-            // The static path owns immutable buffers and has no ring to fence.
             if (!staticMode) ir.endFrame()
 
             RenderMetrics.indirectDrawCalls = ir.getDrawCallCount()
             RenderMetrics.indirectCommands = ir.getCommandCount()
             RenderMetrics.trianglesSubmitted += ir.getTotalTrianglesSubmitted()
         } else {
-            // === Legacy instanced rendering: per-mesh draw calls ===
             gpuTimers.begin(RenderMetrics.GPU_PASS_OBJECTS)
 
-            // Render instanced center region objects (untextured)
             im.renderUntextured(instancedColorShader)
 
-            // Render instanced center region objects (textured) with proper GL state.
-            // Only use standard alpha blending (no alpha-to-coverage) to match the RS client.
-            // Alpha-to-coverage + blending double-applies transparency, making semi-transparent
-            // textures far too transparent (e.g., alpha=0.5 → ~25% effective opacity).
             renderSystem.enableBlending()
 
             instancedTexturedShader.bind()
@@ -3581,7 +2678,6 @@ class MapViewer(
             renderSystem.disableBlending()
             gpuTimers.end()
 
-            // Capture instanced draw call count from InstanceManager
             val instanceStats = im.getStats()
             RenderMetrics.instancedDrawCalls = instanceStats.drawCalls
             RenderMetrics.trianglesSubmitted += countInstancedTriangles(im)
@@ -3592,7 +2688,6 @@ class MapViewer(
             System.out.flush()
         }
 
-        // Render static batched context region objects
         val staticBatchStart = RenderMetrics.startTiming()
         gpuTimers.begin(RenderMetrics.GPU_PASS_STATIC_BATCH)
         renderStaticBatchedObjects()
@@ -3601,7 +2696,6 @@ class MapViewer(
 
         if (cullProbe) runCullProbe()
 
-        // Disable polygon offset after all object rendering is complete
         renderSystem.disablePolygonOffset()
 
         if (logFrame) {
@@ -3613,64 +2707,10 @@ class MapViewer(
         renderSystem.enableCullFace()
     }
 
-    /**
-     * The batches that survived this frame's cull, in the order they will be drawn.
-     *
-     * Kept as a field and cleared rather than rebuilt so the gather allocates nothing, and
-     * so the submit loop walks a dense list of survivors instead of re-testing every batch
-     * in the world a second time.
-     */
     private val visibleBatchDraws = ArrayList<BatchDraw>(2048)
 
-    /** Model matrix for static batches, which are already baked into world space. */
     private val staticBatchModel = Matrix4f().identity()
 
-    /**
-     * Render context region objects from static batched meshes.
-     * Each async context region has its own set of batch meshes, keyed by [BatchKey].
-     * Geometry is pre-transformed to world space, so renders with an identity model matrix.
-     *
-     * Batches are keyed by [BatchKey]:
-     * - UNTEXTURED: vertex colors only, drawn with [staticColorShader]
-     * - Atlas page (atlasPageIndex >= 0): drawn with [staticTexturedShader], atlas page bound
-     * - Fallback texture (textureId >= 0, atlasPageIndex == -1): drawn with [staticTexturedShader],
-     *   individual texture bound via TextureLoader
-     *
-     * Runs as gather-then-submit. The gather decides what is drawn, the submit loop only
-     * draws, which keeps the frustum tests in one tight pass over the bounds and lets the
-     * GL state be tracked across the whole pass instead of being re-established per region.
-     *
-     * ## This pass is primitive-bound, not draw-call bound
-     * It is the most expensive GPU pass in the frame and it issues by far the most draw
-     * calls, which makes collapsing those draws onto an indirect or multi-draw path look
-     * like the obvious next optimisation. It is not: the draw calls are almost free and the
-     * triangles are not.
-     *
-     * Measured by re-issuing every surviving batch's draw with an index count of 3 — same
-     * draw calls, same VAO binds, same texture binds, no geometry — at render distance 3,
-     * medians of six post-load samples:
-     *
-     * ```
-     * region            draws   triangles   pass ms   issue ms   geometry ms   tri/s
-     * Lumbridge 50,50    1596   7,323,989     1.857      0.119         1.738   4.2 G
-     * Sophanem  52,50    1240   6,445,325     1.916      0.062         1.854   3.5 G
-     * Canifis   54,54     363   2,865,784     0.642      0.026         0.616   4.7 G
-     * ```
-     *
-     * Issuing is 3-6% of the pass, about 70 ns per draw. The other 94-97% is geometry
-     * running at 3.5-4.7 G triangles/s, which is the primitive setup rate of the GPU this
-     * was measured on — so it is a hardware ceiling, and no way of packaging the same
-     * triangles into fewer commands moves it. Collapsing all 1596 Lumbridge draws into one
-     * would save 0.119 ms, less than the run-to-run spread of the pass itself
-     * (1.605-2.376 ms across six samples of an unchanged build).
-     *
-     * The cost is [RenderMetrics.staticBatchTriangles], and the reason it is so large is
-     * granularity: a batch is one (region, texture) pair, so it spans a whole 64x64 region
-     * and the frustum test either keeps all of its objects or none. The centre region's
-     * per-object GPU cull, by contrast, takes 876,835 triangles down to 297,962 and costs
-     * 0.097 ms. Anything that wants this pass cheaper has to submit fewer triangles —
-     * finer culling granularity or distance LOD — not fewer commands.
-     */
     private fun renderStaticBatchedObjects() {
         val atlas = objectAtlas
         var totalMeshes = 0
@@ -3679,16 +2719,6 @@ class MapViewer(
 
         val cullStart = RenderMetrics.startTiming()
 
-        // Gather. Every ready region is considered, not just the terrain-visible ones: a
-        // region's objects are not confined to its terrain footprint -- an overhanging roof
-        // or a tall tree at the border reaches past it -- so the region's terrain box is not
-        // a safe gate for its batches.
-        //
-        // What is safe is the union of the batches' own world-space bounds, which the
-        // region maintains as it uploads them. One test against that rejects every batch the
-        // region owns, so the per-batch tests are only paid for regions that are actually on
-        // screen. At render distance 5 that turns ~5800 box tests into ~120 plus the couple
-        // of thousand belonging to regions in view.
         val visible = visibleBatchDraws
         visible.clear()
         val cullBatches = useCpuBatchCulling
@@ -3702,8 +2732,6 @@ class MapViewer(
             regionsConsidered++
 
             if (cullBatches) {
-                // Null means the union could not be trusted (see RegionBatches.union), in
-                // which case the region falls through to per-batch testing as before.
                 val regionBounds = batches.union
                 if (regionBounds != null && !frustum.isAABBVisible(regionBounds)) {
                     considered += draws.size
@@ -3713,9 +2741,6 @@ class MapViewer(
                 }
             }
 
-            // Batch geometry is already in world space, so one AABB test per merged mesh
-            // is the whole cost of culling it -- far cheaper than the per-object test the
-            // centre region needs, and it removes a whole draw call when it hits.
             val boundsData = batches.bounds
             val cullable = batches.cullable
             for (i in draws.indices) {
@@ -3737,12 +2762,6 @@ class MapViewer(
 
         if (visible.isEmpty()) return
 
-        // Submit. The draw order is exactly the gather order, which is exactly the order the
-        // old per-region loop used, so nothing about the resulting image depends on this
-        // being a separate pass. What changes is that the shader binds, the blend toggle and
-        // the texture binds are now tracked across the whole pass: the old loop re-bound
-        // staticColorShader and re-uploaded its model uniform for every untextured batch,
-        // and toggled blending and unbound the texture once per region.
         val identityModel = staticBatchModel
         var colorShaderBound = false
         var texturedShaderBound = false
@@ -3798,21 +2817,6 @@ class MapViewer(
         if (blending) renderSystem.disableBlending()
     }
 
-    /**
-     * Draw one batch, leaving out the spatial cells the frustum rejects.
-     *
-     * A batch spans a whole region, which is far coarser than anything on screen: at
-     * render distance 3 roughly a third of the triangles it submits are off screen, and
-     * the pass is primitive-bound, so those triangles are the cost. The merge records the
-     * batch's geometry as contiguous per-cell index ranges *in buffer order*, so dropping
-     * a cell is nothing more than leaving its range out of the multi-draw — the triangles
-     * that remain are the same triangles, in the same order, with the same state.
-     *
-     * Falls back to the whole-mesh draw whenever the ranges cannot help: a single-range
-     * batch, a batch whose range boxes are untrustworthy, or the common case of every
-     * range being visible, where one `glDrawElements` beats a multi-draw of the same
-     * contiguous span.
-     */
     private fun submitBatch(draw: BatchDraw) {
         val mesh = draw.mesh
         if (!useCpuBatchCulling || !draw.rangesCullable) {
@@ -3834,13 +2838,6 @@ class MapViewer(
         for (i in first.indices) {
             RenderMetrics.batchRangesConsidered++
             if (!frustum.isAABBVisible(bounds, i * 6)) continue
-            // Fuse this range into the previous one when the gap between them is small.
-            //
-            // A draw command costs the order of a microsecond of CPU; a triangle costs a
-            // quarter of a nanosecond of GPU. Splitting a batch to skip a few hundred
-            // triangles is therefore a straight loss, and only a gap worth thousands of
-            // triangles pays for the command it saves. [rangeFuseGapIndices] is that
-            // break-even point; zero fuses only touching ranges.
             val previousEnd = if (kept > 0) outFirst[kept - 1] + outCount[kept - 1] else -1
             val gap = if (kept > 0) first[i] - previousEnd else Int.MAX_VALUE
             if (kept > 0 && gap <= rangeFuseGapIndices) {
@@ -3869,8 +2866,6 @@ class MapViewer(
         RenderMetrics.trianglesSubmitted += indices / 3
     }
 
-    // Scratch for [submitBatch]: the ranges of one batch that survived, grown to fit and
-    // reused so submission allocates nothing.
     private var rangeSubmitFirst = IntArray(64)
     private var rangeSubmitCount = IntArray(64)
 
@@ -3880,28 +2875,12 @@ class MapViewer(
         rangeSubmitCount = IntArray(size)
     }
 
-    /**
-     * `-Ddarkan.cullProbe=true`: price a per-object cull of the context regions without
-     * building one.
-     *
-     * The static batch pass is primitive-bound (see [renderStaticBatchedObjects]), so the
-     * only lever left is submitting fewer triangles, and the two candidate levers — finer
-     * culling and distance LOD — cannot be told apart from a triangle total. This walks the
-     * per-object boxes the batch merge flattened away and answers both questions from the
-     * same pass: how many of the submitted triangles a per-object frustum test would keep,
-     * and how those survivors are spread over distance and object size.
-     *
-     * Measurement only. Nothing here changes what is drawn, and the cost is reported
-     * separately as [RenderMetrics.probeCpuMs] so it cannot be mistaken for frame time.
-     */
     private fun runCullProbe() {
         val probeStart = RenderMetrics.startTiming()
         val camera = scene.camera.position
         val distanceEdges = RenderMetrics.PROBE_DISTANCE_EDGES_TILES
         val sizeEdges = RenderMetrics.PROBE_SIZE_EDGES
         val pixelEdges = RenderMetrics.PROBE_PIXEL_EDGES
-        // Viewport height over the vertical field of view, i.e. pixels per unit of
-        // (size / distance). Matches the projection the frame is about to be drawn with.
         val pixelsPerRadian = window.height /
             tan(Math.toRadians(scene.camera.fov.toDouble() * 0.5).toFloat())
 
@@ -3925,16 +2904,11 @@ class MapViewer(
                 objectsVisible++
                 trianglesVisible += triangleCount
 
-                // Distance to the box centre, in tiles, so the buckets read in the same
-                // units as render distance rather than in world units.
                 val dx = (bounds[offset] + bounds[offset + 3]) * 0.5f - camera.x
                 val dy = (bounds[offset + 1] + bounds[offset + 4]) * 0.5f - camera.y
                 val dz = (bounds[offset + 2] + bounds[offset + 5]) * 0.5f - camera.z
                 val distance = sqrt(dx * dx + dy * dy + dz * dz)
 
-                // Projected height of the box, in pixels: a sphere of radius r at distance
-                // d covers 2r / (2 d tan(fov/2)) of the viewport height. Conservative, since
-                // the box's half-diagonal bounds it in every orientation.
                 val radius = 0.5f * sqrt(
                     (bounds[offset + 3] - bounds[offset]) * (bounds[offset + 3] - bounds[offset]) +
                         (bounds[offset + 4] - bounds[offset + 1]) * (bounds[offset + 4] - bounds[offset + 1]) +
@@ -3964,9 +2938,6 @@ class MapViewer(
         RenderMetrics.probeTrianglesTotal = trianglesTotal
         RenderMetrics.probeTrianglesVisible = trianglesVisible
 
-        // Price the intermediate granularities: batches keyed by (cell, material) rather
-        // than (region, material). Same frustum, same test, so the draw and triangle
-        // counts here are what that grouping would really submit this frame.
         probeGridDraws.fill(0)
         probeGridTriangles.fill(0L)
         probeGridBatches.fill(0)
@@ -3988,23 +2959,10 @@ class MapViewer(
         RenderMetrics.probeCpuMs = RenderMetrics.endTiming(probeStart)
     }
 
-    /** Per grid size, in [AsyncRegionManager] simulation order: batches that survived. */
     private val probeGridDraws = IntArray(8)
     private val probeGridTriangles = LongArray(8)
     private val probeGridBatches = IntArray(8)
 
-    /**
-     * Recompute, once per frame, which context regions have terrain inside the frustum.
-     *
-     * The test is the region's 64x64 tile terrain box, which is exact horizontally, so
-     * rejecting a region here drops all of its terrain draws. It is deliberately *not*
-     * used to gate the region's static batches: object geometry reaches past the terrain
-     * footprint, so batches are culled individually against their own bounds.
-     *
-     * Both lists are cached because several passes walk them, and the old code re-derived
-     * the ready-region list from scratch -- allocating a fresh filtered list -- three
-     * times per frame.
-     */
     private fun updateVisibleContextRegions() {
         readyContextRegions.clear()
         visibleContextRegions.clear()
@@ -4025,27 +2983,11 @@ class MapViewer(
         RenderMetrics.contextRegionsCulled = readyContextRegions.size - visibleContextRegions.size
     }
 
-    // Per-frame working set for the merged terrain multi-draws: which of the merged
-    // regions the frustum kept, and the index ranges handed to GL. Grown to fit and
-    // reused, so a frame allocates nothing for terrain submission.
-    //
-    // [terrainRangeSnapshot] is the list the three arrays were sized and filled for.
-    // AsyncRegionManager replaces mergedTerrainRanges wholesale when it rebuilds, so
-    // re-reading it in the gather step could hand back a longer list than the arrays
-    // were sized for; pinning the list once per frame makes the indices provably in
-    // range instead of relying on when the rebuild happens to run.
     private var terrainRangeSnapshot: List<MergedTerrainRange> = emptyList()
     private var terrainRangeVisible = BooleanArray(0)
     private var terrainRangeFirst = IntArray(0)
     private var terrainRangeCounts = IntArray(0)
 
-    /**
-     * Pin this frame's merged terrain ranges and frustum-test every region in them.
-     *
-     * Done once per frame rather than once per pass so the opaque and alpha halves of a
-     * region can never disagree about whether it is on screen, which would show up as a
-     * region's alpha layers blending against terrain that was not drawn.
-     */
     private fun updateMergedTerrainVisibility() {
         val ranges = asyncRegionManager.mergedTerrainRanges
         terrainRangeSnapshot = ranges
@@ -4064,16 +3006,6 @@ class MapViewer(
         RenderMetrics.terrainMergedRegionsDrawn = visible
     }
 
-    /**
-     * Pack the visible merged-terrain ranges of one pass into [terrainRangeFirst] and
-     * [terrainRangeCounts].
-     *
-     * Walks [terrainRangeSnapshot], not the manager's live list, so it can only ever see
-     * the ranges [updateMergedTerrainVisibility] sized the arrays for.
-     *
-     * @param alpha true for the alpha buffer's ranges, false for the opaque buffer's
-     * @return the number of leading entries of the two arrays that are valid
-     */
     private fun gatherMergedTerrainRanges(alpha: Boolean): Int {
         val ranges = terrainRangeSnapshot
         var count = 0
@@ -4089,68 +3021,36 @@ class MapViewer(
         return count
     }
 
-    /**
-     * Count the total triangles rendered by the InstanceManager this frame.
-     * Delegates to [InstanceManager.getTotalTrianglesSubmitted] which sums
-     * (vertexCount/3 * instanceCount) for each active instanced mesh.
-     */
     private fun countInstancedTriangles(im: InstanceManager): Int {
         return im.getTotalTrianglesSubmitted()
     }
 
-    /**
-     * Compute an [InstanceEntry] for a single object instance.
-     * This is a pure math function with no GL calls, safe for use from any thread.
-     *
-     * @param obj The object instance to compute the transform for
-     * @param tempMatrix Thread-local Matrix4f reused across calls to avoid allocation
-     * @return An InstanceEntry with the model ID and pre-computed raw matrix data
-     */
     private fun computeInstanceEntry(
         obj: ObjectInstance,
         tempMatrix: Matrix4f
     ): InstanceEntry {
-        // For contourType 1 objects with displacement, use the displaced model ID
-        // so the rendering path picks up the displaced geometry.
-        // Fall back to the cached combined model ID for all other objects.
         val combinedModelId = asyncRegionManager.getModelIdForInstance(obj)
 
-        // Build transform matrix matching client order:
-        // RS client applies to model vertices: Rotate Y -> Terrain Tilt -> Scale -> Offset
-        // Then model is placed at world position with height adjustment
-        // Matrix operations are right-to-left, so we specify them in reverse order
-        //
-        // For terrain alignment (groundContourType=3), the client's hillChange applies:
-        // 1. X-axis rotation (pitch tilt based on N/S slope)
-        // 2. Z-axis rotation (roll tilt based on E/W slope)
-        // 3. Y translation (height adjustment to sit on lowest corner)
         tempMatrix.identity()
-            .translate(obj.worldPosition)        // 6. Move to world position
+            .translate(obj.worldPosition)
 
-        // Apply terrain alignment (height adjustment + tilt rotations)
         if (obj.terrainAlignment.needsAlignment()) {
-            // Height adjustment from terrain alignment (after world position)
             tempMatrix.translate(0f, obj.terrainAlignment.heightAdjustment, 0f)
         }
 
         tempMatrix
-            .translate(obj.offset)               // 5. Apply definition offset
-            .scale(obj.scale)                    // 4. Scale
+            .translate(obj.offset)
+            .scale(obj.scale)
 
-        // Apply terrain tilt rotations (after Y rotation in application order)
-        // RS applies: RotateY -> TiltX -> TiltZ (in that order on vertices)
-        // Matrix equivalent (right-to-left): TiltZ * TiltX * RotateY
         if (obj.terrainAlignment.needsAlignment()) {
-            tempMatrix.rotateZ(obj.terrainAlignment.tiltZ)  // 3. Roll tilt (last in app order)
-            tempMatrix.rotateX(obj.terrainAlignment.tiltX)  // 2. Pitch tilt
+            tempMatrix.rotateZ(obj.terrainAlignment.tiltZ)
+            tempMatrix.rotateX(obj.terrainAlignment.tiltX)
         }
 
-        tempMatrix.rotateY(obj.rotation)   // 1. Object Y rotation (first in app order)
+        tempMatrix.rotateY(obj.rotation)
 
-        // Apply mirroring if needed (negates Z coordinates)
-        // This is applied last in the matrix chain = first on vertices
         if (obj.mirrored) {
-            tempMatrix.scale(1f, 1f, -1f)  // 0. Mirror across XY plane
+            tempMatrix.scale(1f, 1f, -1f)
         }
 
         val matrixData = FloatArray(16)
@@ -4158,14 +3058,10 @@ class MapViewer(
         return InstanceEntry(combinedModelId, matrixData)
     }
 
-    // ========================================================================
-    // UI Rendering
-    // ========================================================================
 
     private fun renderUI() {
         imGui.beginFrame()
 
-        // Debug panel
         debugPanel.fps = fps
         debugPanel.deltaTime = deltaTime
         debugPanel.wireframeMode = renderSystem.wireframeMode
@@ -4173,29 +3069,19 @@ class MapViewer(
             renderSystem.toggleWireframe()
         }
 
-        // Map editor panel (sole control surface)
         if (showEditorPanel) {
             renderMapEditorPanel()
         }
 
-        // Drawn outside the editor panel so it still appears when the panel is hidden (F5)
-        // and the region change came from an arrow key or a plane hotkey.
         renderUnsavedEditsModal()
 
         imGui.endFrame()
     }
 
-    /**
-     * Render the unified Map Editor panel.
-     * Contains navigation, view toggles, tool palette, tool content,
-     * rendering settings, and controls help.
-     */
     private fun renderMapEditorPanel() {
-        // Size constraints: 320-400 width, 200 to 80% screen height
         val maxHeight = window.height * 0.8f
         ImGui.setNextWindowSizeConstraints(320f, 200f, 400f, maxHeight)
 
-        // Set initial position on first frame (right side)
         if (editorPanelFirstFrame) {
             ImGui.setNextWindowPos(window.width - 340f, 10f)
             ImGui.setNextWindowSize(340f, 600f)
@@ -4207,61 +3093,39 @@ class MapViewer(
         if (ImGui.begin("Map Editor (F5)", flags)) {
             clampWindowToScreen()
 
-            // --- Unsaved edit warning (only when there is something to lose) ---
             renderUnsavedEditsBanner()
 
-            // --- Which region the next edit would land in ---
             renderEditScopeNotice()
 
-            // --- Navigation Section ---
             renderNavigationSection()
 
             ImGui.separator()
 
-            // --- View Toggles Section ---
             renderViewTogglesSection()
 
             ImGui.separator()
 
-            // --- Tool Palette ---
             renderToolPalette()
 
             ImGui.spacing()
 
-            // --- Tool-specific content ---
             renderCurrentToolContent()
 
             ImGui.separator()
 
-            // --- Environment (collapsible) ---
             renderEnvironmentSection()
 
             ImGui.separator()
 
-            // --- Rendering Settings (collapsible) ---
             renderRenderingSettingsSection()
 
             ImGui.separator()
 
-            // Controls help
             ImGuiText.wrapped("WASD move, Space/Shift up/down, Right-click look, Arrows navigate, Ctrl fast, R roofs")
         }
         ImGui.end()
     }
 
-    /**
-     * Says which region the next stroke would land in.
-     *
-     * Editing follows the cursor across every loaded region, so the interesting fact is no
-     * longer "this click will do nothing" but "this click will edit a region other than the
-     * one named in the navigation box". A brush over a neighbour is a normal, working state,
-     * and the line is worded as information rather than as a refusal - but it is still worth
-     * showing, because the edit is unsaveable and the user should know where it went.
-     *
-     * Two strengths. Something that genuinely could not be done gets the loud timed line,
-     * because the user just tried to do it. A brush merely hovering off-centre gets the quiet
-     * standing line.
-     */
     private fun renderEditScopeNotice() {
         val notice = editRejectNotice
         if (notice != null) {
@@ -4283,22 +3147,10 @@ class MapViewer(
         ImGui.separator()
     }
 
-    /**
-     * Standing notice at the top of the editor panel whenever unsaved edits exist.
-     *
-     * The modal only fires at the moment of loss; this is the part that keeps the editor
-     * honest the rest of the time, so nobody sculpts for ten minutes believing there is a
-     * save button somewhere.
-     */
     private fun renderUnsavedEditsBanner() {
         if (!hasUnsavedEdits()) return
 
         ImGuiText.coloured(1f, 0.45f, 0.2f, 1f, "UNSAVED EDITS - CANNOT BE SAVED")
-        // Wrapped, not plain: the summary grows a clause per edit kind, and all three
-        // together ("terrain edits (heights / paint / flags), 1 placed object(s), 1 moved
-        // object(s)") run well past the panel's 320-400px width. Unwrapped it was clipped
-        // mid-word at "1 pl", hiding the object counts from the one line whose whole job is
-        // naming what is about to be lost. The modal already wraps its copy of this string.
         ImGuiText.colouredWrapped(0.9f, 0.9f, 0.9f, 1f, unsavedEditSummary())
         ImGuiText.disabledWrapped(
             "The editor has no cache write-back for terrain or objects yet. " +
@@ -4307,13 +3159,6 @@ class MapViewer(
         ImGui.separator()
     }
 
-    /**
-     * Confirmation shown when a region change would destroy unsaved edits.
-     *
-     * Held open by [pendingRegionChange] alone: as long as an action is parked there the
-     * popup is re-opened every frame, and the three exits (confirm, cancel, dismissal)
-     * all clear it.
-     */
     private fun renderUnsavedEditsModal() {
         val pending = pendingRegionChange ?: return
 
@@ -4327,8 +3172,6 @@ class MapViewer(
         )
 
         if (!ImGui.beginPopupModal(UNSAVED_EDITS_POPUP, ImGuiWindowFlags.AlwaysAutoResize)) {
-            // Dismissed with Escape. Treated as a cancel rather than left parked, which
-            // would re-open the popup on the very next frame and trap the user in it.
             cancelPendingRegionChange()
             return
         }
@@ -4368,22 +3211,15 @@ class MapViewer(
         ImGui.endPopup()
     }
 
-    /** Abandon a parked region change and put the go-to inputs back on the current region. */
     private fun cancelPendingRegionChange() {
         pendingRegionChange = null
         pendingRegionChangeLabel = ""
         unsavedEditsPopupOpen = false
-        // Quick-location buttons write the target into these before asking, so without this
-        // a cancelled jump leaves the inputs pointing somewhere the viewer is not.
         regionXInput.set(currentRegionX)
         regionYInput.set(currentRegionY)
     }
 
-    /**
-     * Navigation section: region coordinates, plane radio buttons, go-to input, quick locations.
-     */
     private fun renderNavigationSection() {
-        // Current position
         ImGui.text("Region: (%d, %d)".format(currentRegionX, currentRegionY))
         ImGui.sameLine()
         ImGui.text("  Plane:")
@@ -4394,7 +3230,6 @@ class MapViewer(
             }
         }
 
-        // Go-to region input
         ImGui.setNextItemWidth(80f)
         ImGui.inputInt("X##region", regionXInput)
         ImGui.sameLine()
@@ -4405,7 +3240,6 @@ class MapViewer(
             jumpToRegion(regionXInput.get().coerceIn(0, 255), regionYInput.get().coerceIn(0, 255))
         }
 
-        // Quick locations (collapsible)
         if (ImGui.collapsingHeader("Quick Locations")) {
             var col = 0
             for ((name, coords) in knownRegions) {
@@ -4420,18 +3254,13 @@ class MapViewer(
         }
     }
 
-    /**
-     * View toggles section: terrain, roofs, ground decorations in a row.
-     */
     private fun renderViewTogglesSection() {
-        // Terrain toggle
         if (ImGui.checkbox("Terrain (T)", showTerrain)) {
             showTerrain = !showTerrain
         }
 
         ImGui.sameLine()
 
-        // Roof visibility toggle
         val roofsEnabled = ImBoolean(showRoofs)
         if (ImGui.checkbox("Roofs (R)", roofsEnabled)) {
             setShowRoofs(roofsEnabled.get())
@@ -4440,7 +3269,6 @@ class MapViewer(
             ImGuiText.tooltip("Toggle visibility of roof shapes (12-21)\nHide roofs to see inside buildings")
         }
 
-        // Ground decoration toggle
         val groundDecEnabled = ImBoolean(ObjectRenderer.groundDecorationEnabled)
         if (ImGui.checkbox("Ground Decorations", groundDecEnabled)) {
             val enabled = groundDecEnabled.get()
@@ -4452,11 +3280,9 @@ class MapViewer(
             ImGuiText.tooltip("Toggle ground decoration rendering\nWhen off, only interactive/blocking ground decorations render")
         }
 
-        // Render distance slider
         ImGui.spacing()
         ImGui.setNextItemWidth(120f)
         if (ImGui.sliderInt("Render Distance", renderDistanceInput, 0, RegionManager.MAX_RENDER_DISTANCE)) {
-            // Will take effect on next loadRegion call
         }
         ImGui.sameLine()
         if (ImGui.button("Apply##renderDist")) {
@@ -4470,9 +3296,6 @@ class MapViewer(
         }
     }
 
-    /**
-     * Tool palette: buttons for each editor tool.
-     */
     private fun renderToolPalette() {
         ImGui.text("Tool")
 
@@ -4501,9 +3324,6 @@ class MapViewer(
         }
     }
 
-    /**
-     * Dispatch to the current tool's content renderer.
-     */
     private fun renderCurrentToolContent() {
         when (currentEditorTool) {
             EditorTool.SELECT -> renderEditorSelectTool()
@@ -4515,14 +3335,6 @@ class MapViewer(
         }
     }
 
-    /**
-     * Environment section: the decoded sun/fog/skybox record for the current region,
-     * live-editable.
-     *
-     * Every widget writes straight back into [environment], which the UBO picks up on the
-     * next frame - that is the whole point of moving the sun out of the baked vertex
-     * colours. Nothing here is written back to the cache.
-     */
     private fun renderEnvironmentSection() {
         if (!ImGui.collapsingHeader("Environment")) return
 
@@ -4534,14 +3346,11 @@ class MapViewer(
             }
         )
 
-        // --- Sun ---
         ImGui.text("Sun")
 
         val dynamic = ImBoolean(environment.dynamicSunLighting)
         if (ImGui.checkbox("Dynamic sun lighting", dynamic)) {
             val enabled = dynamic.get()
-            // The terrain vertex colours are built either lit or unlit, so the meshes have
-            // to be rebuilt. Object colours are unlit in both modes and need no rebuild.
             requestTerrainSettingChange("Toggle dynamic sun lighting") {
                 environment.dynamicSunLighting = enabled
                 TerrainLoader.bakeSunLighting = !enabled
@@ -4608,14 +3417,11 @@ class MapViewer(
 
         ImGui.spacing()
 
-        // --- Fog ---
         ImGui.text("Fog")
 
         val fog = ImBoolean(environment.fogEnabled)
         if (ImGui.checkbox("Fog enabled", fog)) {
             environment.fogEnabled = fog.get()
-            // Fog also decides whether the flat background paints the cache fog colour or the
-            // editor's neutral sky, and that is only pushed to the sky pass from here.
             applyEnvironmentToRenderers()
         }
         if (ImGui.isItemHovered()) {
@@ -4667,7 +3473,6 @@ class MapViewer(
 
         ImGui.spacing()
 
-        // --- Skybox ---
         ImGui.text("Skybox")
         envSkyboxInput.set(environment.skyboxId)
         ImGui.setNextItemWidth(100f)
@@ -4697,20 +3502,11 @@ class MapViewer(
         renderEnvironmentSaveSection()
     }
 
-    /**
-     * Write-back controls for the Environment section.
-     *
-     * Saving mutates the user's real cache, so it is deliberately awkward: a preview has to
-     * be taken first, the region it targets is spelled out, and a confirmation has to be
-     * ticked before the button does anything. The preview is invalidated whenever the camera
-     * moves into a different region, so the button can never end up pointed somewhere else.
-     */
     private fun renderEnvironmentSaveSection() {
         ImGui.text("Save to cache")
 
         val regionKey = (currentRegionX shl 8) or currentRegionY
         if (envWritePlanRegion != regionKey) {
-            // Region changed under the panel - drop the stale plan rather than let it be applied.
             envWritePlan = null
             envWriteLog = emptyList()
             envWriteError = null
@@ -4756,9 +3552,6 @@ class MapViewer(
         if (saveable) {
             ImGui.checkbox("Overwrite m${currentRegionX}_$currentRegionY in the cache", envWriteConfirm)
         }
-        // Latch the disabled state: the button's own handler clears the confirmation, and
-        // re-evaluating the condition afterwards would skip endDisabled and unbalance the
-        // style stack for the rest of the frame.
         val disabled = !saveable || !envWriteConfirm.get()
         if (disabled) ImGui.beginDisabled()
         if (ImGui.button("Save environment to cache", 220f, 0f) && !disabled) {
@@ -4786,7 +3579,6 @@ class MapViewer(
         for (line in envWriteLog) ImGuiText.disabledWrapped("  $line")
     }
 
-    /** The panel's current environment values, in the units the cache encoder expects. */
     private fun currentEnvironmentEdit() = EnvironmentEdit(
         sunColour = environment.sunColour,
         sunPositionX = environment.sunPositionX,
@@ -4801,14 +3593,9 @@ class MapViewer(
         skyboxRotation = environment.skyboxRotation,
     )
 
-    /**
-     * Rendering settings section: blending, overlays, noise, lighting parameters,
-     * terrain alignment, and tilt debug.
-     */
     private fun renderRenderingSettingsSection() {
         if (!ImGui.collapsingHeader("Rendering Settings")) return
 
-        // Terrain blending toggle
         val blendingEnabled = ImBoolean(TerrainLoader.enableBlending)
         if (ImGui.checkbox("Terrain Blending", blendingEnabled)) {
             val enabled = blendingEnabled.get()
@@ -4817,7 +3604,6 @@ class MapViewer(
             }
         }
 
-        // Overlay toggle (for debugging underlay-only terrain)
         val overlaysEnabled = ImBoolean(TerrainLoader.enableOverlays)
         if (ImGui.checkbox("Show Overlays", overlaysEnabled)) {
             val enabled = overlaysEnabled.get()
@@ -4826,7 +3612,6 @@ class MapViewer(
             }
         }
 
-        // Color noise toggle - adds subtle per-vertex brightness variation like RS client
         val colorNoiseEnabled = ImBoolean(TerrainLoader.enableColorNoise)
         if (ImGui.checkbox("Color Noise", colorNoiseEnabled)) {
             val enabled = colorNoiseEnabled.get()
@@ -4838,7 +3623,6 @@ class MapViewer(
             ImGuiText.tooltip("Adds subtle per-vertex brightness variation\nlike the RS client (+-1.5% noise)")
         }
 
-        // Terrain lighting toggle
         val lightingEnabled = ImBoolean(TerrainLoader.enableLighting)
         if (ImGui.checkbox("Terrain Lighting", lightingEnabled)) {
             val enabled = lightingEnabled.get()
@@ -4850,8 +3634,6 @@ class MapViewer(
             ImGuiText.tooltip("Applies RS-style per-vertex lighting based on\nterrain normals and sun direction")
         }
 
-        // Lighting parameters section (collapsible). These drive the *baked* terrain path
-        // only; with dynamic sun lighting on, the sun lives in the Environment section.
         if (TerrainLoader.enableLighting && ImGui.collapsingHeader("Lighting Parameters")) {
             ImGui.indent()
             if (environment.dynamicSunLighting) {
@@ -4862,15 +3644,11 @@ class MapViewer(
                 ImGui.spacing()
             }
 
-            // Sun direction sliders
             ImGui.text("Light Direction")
             val lightDirX = floatArrayOf(TerrainLoader.LIGHT_DIRECTION_X)
             val lightDirY = floatArrayOf(TerrainLoader.LIGHT_DIRECTION_Y)
             val lightDirZ = floatArrayOf(TerrainLoader.LIGHT_DIRECTION_Z)
 
-            // Held rather than applied: these all rebuild the terrain, so the write has to
-            // wait behind the unsaved-edit guard like every other setting here. Only one
-            // widget can change per frame, so a single slot is enough.
             var lightingChange: (() -> Unit)? = null
             ImGui.setNextItemWidth(100f)
             if (ImGui.sliderFloat("Dir X", lightDirX, -1f, 1f)) {
@@ -4890,7 +3668,6 @@ class MapViewer(
 
             ImGui.spacing()
 
-            // RS lighting parameters
             ImGui.text("RS Lighting Formula:")
             ImGuiText.wrapped("factor = sunBrightness + dot * (dot>0 ? bright : dark)")
 
@@ -4925,7 +3702,6 @@ class MapViewer(
                 ImGuiText.tooltip("Factor for shadowed surfaces (default: 0.814)")
             }
 
-            // Reset to defaults button
             if (ImGui.button("Reset to Defaults")) {
                 lightingChange = {
                     TerrainLoader.LIGHT_DIRECTION_X = 0.163f
@@ -4937,7 +3713,6 @@ class MapViewer(
                 }
             }
 
-            // Apply and rebuild if parameters changed
             lightingChange?.let { change ->
                 requestTerrainSettingChange("Change lighting parameters", change)
             }
@@ -4947,7 +3722,6 @@ class MapViewer(
 
         ImGui.spacing()
 
-        // Terrain alignment toggle (for objects with groundContourType=3)
         val terrainAlignEnabled = ImBoolean(TerrainAligner.enabled)
         if (ImGui.checkbox("Terrain Alignment", terrainAlignEnabled)) {
             val enabled = terrainAlignEnabled.get()
@@ -4959,11 +3733,9 @@ class MapViewer(
             ImGuiText.tooltip("Tilt objects to match terrain slopes\n(RS groundContourType=3 / hillChange)")
         }
 
-        // Tilt negation toggles (for coordinate system debugging)
         if (TerrainAligner.enabled && ImGui.collapsingHeader("Tilt Debug")) {
             ImGui.indent()
 
-            // Show debug stats
             ImGui.text("Stats: ${TerrainAligner.getDebugStats()}")
 
             val negateXTilt = ImBoolean(TerrainAligner.negateXTilt)
@@ -4988,7 +3760,6 @@ class MapViewer(
                 ImGuiText.tooltip("Negate Z-axis tilt (roll) for coordinate system fix")
             }
 
-            // Button to enable debug logging
             if (ImGui.button("Enable Debug Logging")) {
                 requestSettingChange("Enable tilt debug logging") {
                     TerrainAligner.enableDebug(true)
@@ -5000,13 +3771,7 @@ class MapViewer(
 
     }
 
-    // ========================================================================
-    // Editor Tool Content
-    // ========================================================================
 
-    /**
-     * SELECT tool content: Object Inspector, Tile Inspector, and Tile Details (Debug).
-     */
     private fun renderEditorSelectTool() {
         val details = tilePicker.selectedTileDetails
         val tile = tilePicker.selectedTile
@@ -5016,10 +3781,6 @@ class MapViewer(
             return
         }
 
-        // Selecting in a neighbouring region is normal - the camera sits outside its own
-        // region, so much of the viewport is other regions' ground - and the tools now follow
-        // the selection there. Name the region anyway: an edit made outside the centre region
-        // is just as unsaveable, and the user should be able to see where it is going.
         if (tile.regionX != currentRegionX || tile.regionY != currentRegionY) {
             ImGuiText.colouredWrapped(
                 1f, 0.7f, 0.3f, 1f,
@@ -5028,7 +3789,6 @@ class MapViewer(
             )
         }
 
-        // --- Object Inspector ---
         if (ImGui.collapsingHeader("Object Inspector")) {
             if (details == null || details.objects.isEmpty()) {
                 ImGuiText.coloured(0.7f, 0.7f, 0.7f, 1f, "No objects on selected tile")
@@ -5040,18 +3800,15 @@ class MapViewer(
                     val objName = def.name.ifEmpty { "<unnamed>" }
                     if (ImGuiText.treeNode("editor_obj_$index", "#%d: %s".format(obj.id, objName))) {
 
-                        // Shape name lookup
                         val shapeName = ObjectShape.entries.find { it.id == obj.shape }?.name ?: "Unknown"
                         ImGui.text("Shape:    %s (%d)".format(shapeName, obj.shape))
                         ImGui.text("Rotation: %d".format(obj.rotation))
 
-                        // Model IDs
                         ImGui.text("Models:   %s".format(
                             if (tileObj.modelIds.isEmpty()) "(none)"
                             else tileObj.modelIds.joinToString(", ")
                         ))
 
-                        // Interactive flag
                         val interactiveLabel = when (def.interactive) {
                             -1 -> "Default (-1)"
                             0 -> "No (0)"
@@ -5072,7 +3829,6 @@ class MapViewer(
 
                         ImGui.spacing()
 
-                        // Placeholder action buttons (disabled)
                         ImGui.beginDisabled()
                         ImGui.button("Edit##edit_$index")
                         ImGui.sameLine()
@@ -5088,7 +3844,6 @@ class MapViewer(
             }
         }
 
-        // --- Tile Inspector ---
         if (ImGui.collapsingHeader("Tile Inspector")) {
             if (details == null || details.tileData == null) {
                 ImGuiText.coloured(0.7f, 0.7f, 0.7f, 1f, "No tile data available")
@@ -5116,7 +3871,6 @@ class MapViewer(
                 ImGui.text("Flags (0x%02X)".format(tileData.flags))
                 ImGui.indent()
 
-                // Read-only flag checkboxes
                 ImGui.beginDisabled()
                 val blocksWalk = ImBoolean(tileData.flags and 0x1 != 0)
                 ImGui.checkbox("Blocks Walk (0x1)", blocksWalk)
@@ -5132,15 +3886,12 @@ class MapViewer(
             }
         }
 
-        // --- Tile Details (Debug) ---
-        // Detailed overlay/underlay definitions, UV coords, corner heights, and per-object info.
         if (ImGui.collapsingHeader("Tile Details (Debug)")) {
             if (details == null || details.tileData == null) {
                 ImGuiText.coloured(0.7f, 0.7f, 0.7f, 1f, "No tile data available")
             } else {
                 val tileData = details.tileData
 
-                // Tile coordinates
                 ImGui.text("Tile Coordinates")
                 ImGui.separator()
                 ImGui.text("  Region: (%d, %d)".format(tile.regionX, tile.regionY))
@@ -5163,7 +3914,6 @@ class MapViewer(
                     ImGui.text("  BlendCol: 0x%04X (%d)".format(overlayDef.blendColour, overlayDef.blendColour))
                     ImGui.text("  Underlay Override: %s".format(overlayDef.underlayOverrides))
 
-                    // UV coordinates for overlay
                     val uvs = details.cornerUVsOverlay
                     if (uvs != null) {
                         ImGui.text("  UV Scale: %.4f (1/%d)".format(1f / overlayDef.scale.toFloat(), overlayDef.scale))
@@ -5191,7 +3941,6 @@ class MapViewer(
                     ImGui.text("  Light:    %d".format(underlayDef.lightness))
                     ImGui.text("  Chroma:   %d".format(underlayDef.chroma))
 
-                    // UV coordinates for underlay
                     val uvs = details.cornerUVsUnderlay
                     if (uvs != null) {
                         ImGui.text("  UV Scale: %.4f (1/%d)".format(1f / underlayDef.scale.toFloat(), underlayDef.scale))
@@ -5204,14 +3953,12 @@ class MapViewer(
                     ImGuiText.coloured(1f, 0.5f, 0.5f, 1f, "  (Definition not found)")
                 }
 
-                // Corner heights
                 ImGui.spacing()
                 ImGui.text("Corner Heights (scaled)")
                 ImGui.separator()
                 ImGui.text("  SW: %.2f  SE: %.2f".format(details.cornerHeights[0], details.cornerHeights[1]))
                 ImGui.text("  NW: %.2f  NE: %.2f".format(details.cornerHeights[2], details.cornerHeights[3]))
 
-                // Objects on tile (detailed view with model/texture/retexture info)
                 ImGui.spacing()
                 ImGui.text("Objects on Tile (%d)".format(details.objects.size))
                 ImGui.separator()
@@ -5226,19 +3973,16 @@ class MapViewer(
                             ImGui.text("  World Pos: (%d, %d)".format(obj.x, obj.y))
                             ImGui.text("  Size: %dx%d".format(def.sizeX, def.sizeY))
 
-                            // Model IDs
                             ImGui.text("  Model IDs: %s".format(
                                 if (tileObj.modelIds.isEmpty()) "(none)"
                                 else tileObj.modelIds.joinToString(", ")
                             ))
 
-                            // Texture IDs
                             ImGui.text("  Texture IDs: %s".format(
                                 if (tileObj.textureIds.isEmpty()) "(none)"
                                 else tileObj.textureIds.sorted().joinToString(", ")
                             ))
 
-                            // Object retexturing/recoloring if present
                             if (def.originalTextureColours != null && def.modifiedTextureColours != null) {
                                 ImGuiText.coloured(0.5f, 1f, 0.5f, 1f, "  Has Retexturing")
                                 for (i in def.originalTextureColours!!.indices) {
@@ -5269,11 +4013,7 @@ class MapViewer(
         }
     }
 
-    /**
-     * OBJECT_PLACE tool content: Object browser for searching and placing objects.
-     */
     private fun renderEditorObjectPlaceTool() {
-        // Show selected object prominently at the top
         if (selectedObjectId >= 0) {
             val selDef = ObjectRenderer.getDefinition(selectedObjectId)
             if (selDef != null) {
@@ -5299,7 +4039,6 @@ class MapViewer(
 
             ImGui.spacing()
 
-            // Scrollable results list
             val listHeight = ImGui.getContentRegionAvailY().coerceAtLeast(100f).coerceAtMost(300f)
             if (ImGui.beginChild("obj_search_results", 0f, listHeight, ImGuiChildFlags.Borders)) {
                 val query = editorObjectSearchQuery.get().trim()
@@ -5322,7 +4061,6 @@ class MapViewer(
             }
             ImGui.endChild()
 
-            // Shape and rotation controls
             if (selectedObjectId >= 0) {
                 ImGui.spacing()
                 ImGui.separator()
@@ -5332,7 +4070,6 @@ class MapViewer(
                 ImGui.setNextItemWidth(120f)
                 ImGui.sliderInt("Rotation##obj", editorObjectRotation, 0, 3)
 
-                // Show count of placed objects
                 if (placedObjects.isNotEmpty()) {
                     ImGui.spacing()
                     ImGuiText.coloured(0.7f, 0.7f, 0.7f, 1f, "Placed objects: %d".format(placedObjects.size))
@@ -5341,9 +4078,6 @@ class MapViewer(
         }
     }
 
-    /**
-     * OBJECT_MOVE tool content: click an object to grab it, drag to reposition, release to place.
-     */
     private fun renderEditorObjectMoveTool() {
         val moving = movingObject
         if (moving != null) {
@@ -5357,7 +4091,6 @@ class MapViewer(
             ))
             ImGui.spacing()
             if (ImGui.button("Cancel Move")) {
-                // Restore original position
                 val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
                 val origWorldX = moving.originRegionX * 64 + moving.originalX
                 val origWorldY = moving.originRegionY * 64 + moving.originalY
@@ -5377,7 +4110,6 @@ class MapViewer(
                 moving.instance.worldPosition.z = basePosZ + -sizeY * tileSize * 0.5f
                 objectSceneDirty = true
                 recalcObjectHeight(moving.instance, force = true)
-                // The object is back where it was loaded, so the cancelled drag is not an edit.
                 movingObjectMoved = false
                 movingObject = null
                 moveOriginMesh?.cleanup()
@@ -5389,15 +4121,11 @@ class MapViewer(
         }
     }
 
-    /**
-     * TERRAIN_PAINT tool content: overlay/underlay painting controls.
-     */
     private fun renderEditorTerrainPaintTool() {
         if (ImGui.collapsingHeader("Terrain Painter", ImGuiTreeNodeFlags.DefaultOpen)) {
             ImGuiText.coloured(0.7f, 0.7f, 0.7f, 1f, "Click or drag to paint terrain")
             ImGui.spacing()
 
-            // Paint mode: Overlay / Underlay
             ImGui.text("Paint Mode")
             if (ImGui.radioButton("Overlay", editorPaintMode == 0)) {
                 editorPaintMode = 0
@@ -5409,12 +4137,10 @@ class MapViewer(
 
             ImGui.spacing()
 
-            // ID input
             val idLabel = if (editorPaintMode == 0) "Overlay ID" else "Underlay ID"
             ImGui.setNextItemWidth(120f)
             ImGui.inputInt(idLabel, editorOverlayUnderlayId)
 
-            // Overlay-specific: shape and rotation
             if (editorPaintMode == 0) {
                 ImGui.setNextItemWidth(120f)
                 ImGui.sliderInt("Shape", editorOverlayShape, 0, 11)
@@ -5424,7 +4150,6 @@ class MapViewer(
 
             ImGui.spacing()
 
-            // Brush size slider
             ImGui.setNextItemWidth(120f)
             ImGui.sliderInt("Brush Size", editorBrushSize, 1, 5)
 
@@ -5433,25 +4158,19 @@ class MapViewer(
         }
     }
 
-    /**
-     * HEIGHT_EDIT tool content: height brush controls.
-     */
     private fun renderEditorHeightEditTool() {
         if (ImGui.collapsingHeader("Height Editor", ImGuiTreeNodeFlags.DefaultOpen)) {
             ImGuiText.coloured(0.7f, 0.7f, 0.7f, 1f, "Click and drag to edit height")
             ImGui.spacing()
 
-            // Brush radius slider
             ImGui.setNextItemWidth(120f)
             ImGui.sliderInt("Brush Radius", editorHeightBrushRadius, 1, 3)
 
-            // Strength slider
             ImGui.setNextItemWidth(120f)
             ImGui.sliderInt("Strength", editorHeightStrength, 1, 10)
 
             ImGui.spacing()
 
-            // Mode radio buttons
             ImGui.text("Mode")
             if (ImGui.radioButton("Raise", editorHeightMode == 0)) {
                 editorHeightMode = 0
@@ -5470,20 +4189,12 @@ class MapViewer(
         }
     }
 
-    /**
-     * FLAG_EDIT tool content: tile flag toggle checkboxes.
-     */
     private fun renderEditorFlagEditTool() {
         if (ImGui.collapsingHeader("Flag Editor", ImGuiTreeNodeFlags.DefaultOpen)) {
             ImGuiText.coloured(0.7f, 0.7f, 0.7f, 1f, "Click tile to select, toggle flags below")
             ImGui.spacing()
 
             val tile = tilePicker.selectedTile
-            // Flags are *read* through the region-aware accessor rather than through an edit
-            // manager, so that merely selecting a tile in a neighbouring region does not
-            // build one - and with it drop that region out of the merged terrain - for a
-            // panel the user may only be looking at. The manager is resolved below, at the
-            // moment a checkbox actually changes something.
             val flags = if (tile == null) null else tileFlags(tile.regionX, tile.regionY, currentPlane, tile.localX, tile.localY)
 
             if (tile == null || flags == null) {
@@ -5499,7 +4210,6 @@ class MapViewer(
                 ImGui.text("Tile (%d, %d) - Flags: 0x%02X".format(x, y, currentFlags))
                 ImGui.spacing()
 
-                // Flag checkboxes -- each toggles a single bit
                 var newFlags = currentFlags
 
                 val blocksWalk = ImBoolean(currentFlags and 0x1 != 0)
@@ -5519,7 +4229,6 @@ class MapViewer(
                     newFlags = if (forcePlane0.get()) newFlags or 0x8 else newFlags and 0x8.inv()
                 }
 
-                // Apply changes if flags were modified
                 if (newFlags != currentFlags) {
                     applyTileFlags(tile.regionX, tile.regionY, x, y, newFlags)
                 }
@@ -5527,32 +4236,9 @@ class MapViewer(
         }
     }
 
-    // ========================================================================
-    // Region Loading and Navigation
-    // ========================================================================
-
-    // ---- Unsaved edit guard ----
-    //
-    // Every route that discards edits funnels through loadRegionAsync(), but the guard sits
-    // one level up, on the four callers, because those callers commit state (currentPlane,
-    // currentRegionX/Y, the terrain cache) before the load and that state must not move if
-    // the user cancels.
-    //
-    // The initial load in onInit() deliberately bypasses this: there is nothing to lose yet.
-
-    /** True while edits exist that a region change would destroy and nothing can save. */
     private fun hasUnsavedEdits(): Boolean =
         terrainEditedRegions.isNotEmpty() || placedObjects.isNotEmpty() || movedObjectCount > 0
 
-    /**
-     * Human-readable list of what is currently at risk, for the banner, the modal and the
-     * message printed on the way out.
-     *
-     * Terrain edits are named region by region. Editing follows the cursor now, so a session
-     * routinely leaves work in more than one region, and a region change destroys all of it
-     * at once - a summary that said only "terrain edits" would understate the loss precisely
-     * when it matters most. Placed objects are counted per region for the same reason.
-     */
     private fun unsavedEditSummary(): String {
         val parts = mutableListOf<String>()
         if (terrainEditedRegions.isNotEmpty()) {
@@ -5573,16 +4259,7 @@ class MapViewer(
         return parts.joinToString(", ")
     }
 
-    /**
-     * Run [action] now if nothing would be lost, otherwise hold it until the user confirms.
-     *
-     * [label] names the action in the modal so the prompt says what the user just asked for
-     * rather than a generic "are you sure".
-     */
     private fun requestRegionChange(label: String, action: () -> Unit) {
-        // A confirmation is already up. Ignore further requests rather than swapping the
-        // parked action out from under the prompt the user is currently reading - an arrow
-        // key reaching through the modal must not change what "continue" ends up doing.
         if (pendingRegionChange != null) return
 
         if (!hasUnsavedEdits()) {
@@ -5593,22 +4270,8 @@ class MapViewer(
         pendingRegionChange = action
     }
 
-    /**
-     * Drop every tracked edit. Called only from the modal's confirm button.
-     *
-     * Every live edit manager is destroyed here, not just the centre one. The centre's would
-     * be rebuilt from the cache by the loadRegionAsync() that follows anyway, but a
-     * neighbour's would not: that call only ever creates a manager for the region it is
-     * loading, so a neighbour's sculpted terrain would otherwise survive a discard the user
-     * was told had thrown it away, and go on being drawn in place of the region's own meshes.
-     */
     private fun discardUnsavedEdits() {
         cleanupEditManagers()
-        // Put the centre region back on the edit path immediately rather than relying on the
-        // region load that currently always follows. Every caller does load afterwards, so
-        // this is belt and braces - but the state it avoids is a bad one to leave reachable:
-        // with no centre manager and the merge still suppressed by whichever neighbour was
-        // being edited, the legacy render path has nothing to draw and the ground disappears.
         editManagerFor(currentRegionX, currentRegionY)
         placedObjects.clear()
         editorModelMeshData.clear()
@@ -5620,12 +4283,6 @@ class MapViewer(
         objectSceneDirty = true
     }
 
-    /**
-     * Release every live edit manager and forget the terrain edits they held.
-     *
-     * The GL resources are real - 64 chunk meshes plus a set of merged meshes per region - so
-     * this is the only correct way to stop editing a region.
-     */
     private fun cleanupEditManagers() {
         for (manager in editManagers.values) manager.cleanup()
         editManagers.clear()
@@ -5634,31 +4291,18 @@ class MapViewer(
         lastBrushCenter = null
     }
 
-    /**
-     * Apply a view or render setting that only takes effect on a region rebuild.
-     *
-     * [apply] runs *inside* the parked action, never at the call site. A setting written
-     * before the confirmation would survive a "Keep editing" that cancelled the rebuild,
-     * leaving the control advertising a state the scene does not show - and, because the
-     * flag has already moved, toggling it back would request yet another blocked reload.
-     * Deferring is enough on its own to keep the widget honest: every control on this path
-     * is rebuilt from its backing state each frame, so an unapplied change simply snaps
-     * back to what is on screen.
-     */
     private fun requestSettingChange(label: String, apply: () -> Unit) =
         requestRegionChange(label) {
             apply()
             reloadRegionNow()
         }
 
-    /** As [requestSettingChange], for settings baked into the terrain meshes themselves. */
     private fun requestTerrainSettingChange(label: String, apply: () -> Unit) =
         requestRegionChange(label) {
             apply()
             reloadTerrainNow()
         }
 
-    /** Roof visibility is baked into the region's object meshes, so it needs a rebuild. */
     private fun setShowRoofs(enabled: Boolean) = requestSettingChange("Toggle roofs") {
         showRoofs = enabled
         asyncRegionManager.showRoofs = enabled
@@ -5688,41 +4332,25 @@ class MapViewer(
         }
     }
 
-    /**
-     * Reload the current region without the unsaved-edit check.
-     *
-     * Only for callers that have already passed the guard - going through
-     * [requestRegionChange] again from inside a confirmed action would re-enter it.
-     */
     private fun reloadRegionNow() = loadRegion(currentRegionX, currentRegionY, currentPlane)
 
-    /** As [reloadRegionNow], additionally dropping the cached terrain meshes. */
     private fun reloadTerrainNow() {
         TerrainLoader.clearCache()
         reloadRegionNow()
     }
 
 
-    /** Redirect old loadRegion calls to the async version. */
     private fun loadRegion(regionX: Int, regionY: Int, plane: Int) = loadRegionAsync(regionX, regionY, plane)
 
     private fun loadRegionAsync(regionX: Int, regionY: Int, plane: Int) {
-        // Environment first: the sun/fog/skybox of the region we are moving into, plus the
-        // clear colour, are all read from the same map archive as the terrain.
         loadEnvironment(regionX, regionY)
 
-        // Clear tile picker selection when loading new region
         tilePicker.clearSelection()
         tileHighlightMesh?.cleanup()
         tileHighlightMesh = null
 
         val regionLoadStart = RenderMetrics.startTiming()
 
-        // Initialize chunked terrain via edit manager. Every manager goes, including any
-        // neighbour the user had been editing: the region set around the new centre is
-        // different, those regions' meshes are about to be rebuilt from the cache, and
-        // keeping a manager alive across the change would draw stale edited ground over a
-        // region that is no longer where it was. The guard has already warned about this.
         cleanupEditManagers()
         try {
             editManagers[Pair(regionX, regionY)] =
@@ -5731,13 +4359,10 @@ class MapViewer(
             println("[MapViewer] TerrainEditManager init failed for ($regionX, $regionY): ${e.message}")
         }
 
-        // Navigate to the new region (reuses existing context regions when possible)
         asyncRegionManager.renderDistance = renderDistanceInput[0]
         asyncRegionManager.showRoofs = showRoofs
         asyncRegionManager.navigateToRegion(regionX, regionY, plane)
 
-        // Build the multi-draw-indirect renderer for the center region. Any failure here just
-        // leaves indirectRenderer null, which sends renderObjects() down the InstanceManager path.
         val im = asyncRegionManager.instanceManager
         indirectRenderer?.cleanup()
         indirectRenderer = null
@@ -5751,18 +4376,12 @@ class MapViewer(
             )
             try {
                 ir.init()
-                // The region loader already decoded these meshes to register them with the
-                // InstanceManager, so reuse them rather than paying for a second full decode
-                // of every model in the region (~1.4s at Canifis).
                 for ((modelId, meshDataList) in centerMeshData) {
                     if (meshDataList.isNotEmpty()) ir.registerModel(modelId, meshDataList)
                 }
                 ir.buildSharedGeometry()
                 if (!ir.isReady()) throw IllegalStateException("no geometry registered")
 
-                // Culling has to be set up before the first buildStaticScene(): with it on
-                // the commands are left at zero instances for the compute pass to fill in,
-                // with it off the full counts are baked in instead.
                 val cullSrc = cullShaderSource
                 val resetSrc = cullResetShaderSource
                 if (useGpuCulling && useStaticInstances && cullSrc != null && resetSrc != null) {
@@ -5783,34 +4402,16 @@ class MapViewer(
             }
         }
 
-        // Record total region load time
         RenderMetrics.terrainLoadTimeMs = RenderMetrics.endTiming(regionLoadStart)
 
         updateAtlasStats()
 
-        // Center camera on the world-space center of this region.
-        //
-        // Framing note. yaw 0 points the camera along +X, so the back-off that decides what
-        // is in shot is the X offset; the Z offset only slides the view sideways. At eye
-        // height 50 and pitch -35 the ground is in frame from 50/tan(35+22.5) = 71 units
-        // ahead to 50/tan(35-22.5) = 225 units ahead, so the camera can only be pulled back
-        // about 225 units before the subject climbs out of the top of the frame - measured
-        // at Lumbridge, where -250 already loses the castle and -300 and -400 show bare
-        // grass. -200 is the far end of that band: it puts the region centre high in the
-        // frame with ~130 units of foreground under it, which is the low oblique look with
-        // depth and silhouette. Pulling back further and keeping the subject framed would
-        // mean raising the eye to distance * tan(35) - at 400 that is y = 280, which is the
-        // raised overview camera this default deliberately is not.
         val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
         val worldCenterX = (regionX * 64 + 32) * tileSize
         val worldCenterZ = -(regionY * 64 + 32) * tileSize
         scene.camera.setPosition(worldCenterX - 200f, 50f, worldCenterZ + 80f)
         scene.camera.pitch = -35f
         scene.camera.yaw = 0f
-        // Assigning yaw/pitch only stores the angles; front/right/up are derived and stay
-        // at whatever they were until something rotates the camera. Without this the view
-        // starts on the identity basis (front = -Z, horizontal) while the debug panel and
-        // every log line report the -35 degree pitch that is not actually being applied.
         scene.camera.rotate(0f, 0f)
         scene.camera.nearPlane = 1.0f
         scene.camera.farPlane = 4000f
@@ -5818,14 +4419,6 @@ class MapViewer(
         applyCameraOverride(worldCenterX, worldCenterZ)
     }
 
-    /**
-     * Apply `-Ddarkan.camera=<dx>,<y>,<dz>,<yaw>,<pitch>`, placing the camera relative to
-     * the region centre.
-     *
-     * A/B comparisons of culled against unculled frames are only meaningful from an
-     * identical viewpoint, and pixel-diffing two captures needs that viewpoint to be
-     * reproducible without touching the mouse.
-     */
     private fun applyCameraOverride(worldCenterX: Float, worldCenterZ: Float) {
         val parts = System.getProperty("darkan.camera")?.split(',') ?: return
         if (parts.size < 5) {
@@ -5840,18 +4433,10 @@ class MapViewer(
         scene.camera.setPosition(worldCenterX + values[0]!!, values[1]!!, worldCenterZ + values[2]!!)
         scene.camera.yaw = values[3]!!
         scene.camera.pitch = values[4]!!
-        scene.camera.rotate(0f, 0f)  // recompute the basis vectors from the new angles
+        scene.camera.rotate(0f, 0f)
         println("[MapViewer] camera override: pos=(${scene.camera.position.x}, ${scene.camera.position.y}, ${scene.camera.position.z}) yaw=${scene.camera.yaw} pitch=${scene.camera.pitch}")
     }
 
-    /**
-     * Seed [environment] from the centre region's map archive and push the result into the
-     * sky renderer and the clear colour.
-     *
-     * There is one environment block per 64x64 region, so the centre chunk's copy is the
-     * whole region's. Regions with no block fall back to the client's `Environment.reset()`
-     * defaults rather than keeping the previous region's sun.
-     */
     private fun loadEnvironment(regionX: Int, regionY: Int) {
         val decoded = try {
             MapEnvironmentLoader.load(cache, regionX, regionY)?.environment(4, 4)
@@ -5863,11 +4448,6 @@ class MapViewer(
         applyEnvironmentToRenderers()
     }
 
-    /**
-     * Push the current [environment] into the sky renderer and the clear colour.
-     * Called on region change and after every edit in the Environment panel, so edits show
-     * up on the next frame without a reload.
-     */
     private fun applyEnvironmentToRenderers() {
         var materialId = -1
         var backgroundMode = SkyBackgroundMode.SINGLE_COLOR
@@ -5892,8 +4472,6 @@ class MapViewer(
             backgroundColor = environment.backgroundColour
         )
 
-        // With no skybox the sky pass is a flat fill in the background colour, so the clear
-        // colour matching it keeps the one pre-sky frame from flashing a different background.
         clearColor.set(
             EnvironmentSettings.red(environment.backgroundColour),
             EnvironmentSettings.green(environment.backgroundColour),
@@ -5901,9 +4479,6 @@ class MapViewer(
         )
     }
 
-    /**
-     * Populate [RenderMetrics] atlas stats from current terrain and object atlases.
-     */
     private fun updateAtlasStats() {
         val tAtlas = terrainAtlas
         if (tAtlas != null) {
@@ -5957,10 +4532,6 @@ class MapViewer(
 
 
 
-    /**
-     * Clamp the current ImGui window position to stay within screen bounds.
-     * Call this inside ImGui.begin() block.
-     */
     private fun clampWindowToScreen() {
         val pos = ImGui.getWindowPos()
         val size = ImGui.getWindowSize()
@@ -5970,11 +4541,9 @@ class MapViewer(
         var newX = pos.x
         var newY = pos.y
 
-        // Clamp X: keep at least 50px visible on screen
         if (newX + size.x < 50f) newX = 50f - size.x
         if (newX > screenWidth - 50f) newX = screenWidth - 50f
 
-        // Clamp Y: keep title bar on screen (at least 20px from top)
         if (newY < 0f) newY = 0f
         if (newY > screenHeight - 50f) newY = screenHeight - 50f
 
@@ -5983,10 +4552,6 @@ class MapViewer(
         }
     }
 
-    /**
-     * Dump the numbers a headless capture would otherwise hide, so a screenshot can be checked
-     * against its draw-call and mesh-variant cost in the same log.
-     */
     override fun onCapture() {
         val merge = NormalMerger.stats()
         println(
@@ -6012,11 +4577,6 @@ class MapViewer(
                 "signatures=${merge.distinctSignatures} " +
                 "cost=%.1fms".format(merge.totalMillis)
         )
-        // Two captures are only comparable from the same viewpoint, and the yaw/pitch fields
-        // are not by themselves the viewpoint: the basis vectors are recomputed on rotation,
-        // so a frame can be drawn along a `front` that no longer matches the angles. Both are
-        // recorded so a mismatch between them is visible in the log rather than as an
-        // unexplained difference between two screenshots.
         val cam = scene.camera
         println(
             "[CAPTURE-STATS] camera pos=(%.1f, %.1f, %.1f) yaw=%.1f pitch=%.1f front=(%.3f, %.3f, %.3f) fov=%.1f"
@@ -6029,9 +4589,6 @@ class MapViewer(
     }
 
     override fun onCleanup() {
-        // Closing the window is the one loss route that is not interposed - GLFW has already
-        // decided to shut down by the time this runs, and the edits have nowhere to go even
-        // if it were - so at minimum say out loud what is being dropped.
         if (hasUnsavedEdits()) {
             System.err.println(
                 "[MapEditor] Discarding unsaved edits on exit: ${unsavedEditSummary()}. " +
@@ -6040,7 +4597,7 @@ class MapViewer(
         }
         gpuTimers.cleanup()
         cleanupRegion()
-        asyncRegionManager.destroy()  // Cancel coroutine scope
+        asyncRegionManager.destroy()
         uniformBuffers.cleanup()
         uboColorShader.cleanup()
         uboTexturedShader.cleanup()
@@ -6064,18 +4621,12 @@ class MapViewer(
         terrainAtlas = null
         objectAtlas?.cleanup()
         objectAtlas = null
-        // Clear atlas lookup so TerrainLoader reverts to legacy mode
         TerrainLoader.atlasLookup = null
         TerrainLoader.clearCache()
         RegionLoader.clearCache()
         imGui.cleanup()
     }
 
-    /**
-     * Available editing tools for the Map Editor panel.
-     * SELECT is the default mode (existing tile-pick behavior).
-     * Other tools are placeholders for future editing functionality.
-     */
     private enum class EditorTool(val label: String, val wip: Boolean = true) {
         SELECT("Select", wip = false),
         OBJECT_PLACE("Place Object", wip = false),
@@ -6086,28 +4637,10 @@ class MapViewer(
     }
 }
 
-/**
- * Default for `-Ddarkan.rangeFuseGap`, in indices.
- *
- * Set from the two measured rates it balances: a static batch draw command costs about a
- * microsecond of CPU in this pass, and the GPU retires triangles at roughly 4 G/s, so a
- * command is worth about four thousand triangles — twelve thousand indices. Splitting a
- * batch to skip less than that spends more than it saves.
- */
 private const val DEFAULT_RANGE_FUSE_GAP = 12000
 
-/**
- * Frames the scripted edit probe waits before its first step.
- *
- * Long enough for the context regions to finish loading and reach READY, since a region that
- * is not drawn yet deliberately refuses to answer the picker.
- */
 private const val EDIT_PROBE_SETTLE_FRAMES = 90
 
-/**
- * Region to open the map editor on, from -Ddarkan.region=<x>,<y>.
- * Lets a specific area be brought up for inspection without driving the UI.
- */
 private fun regionProperty(): Pair<Int, Int>? {
     val parts = System.getProperty("darkan.region")?.split(',') ?: return null
     if (parts.size < 2) return null

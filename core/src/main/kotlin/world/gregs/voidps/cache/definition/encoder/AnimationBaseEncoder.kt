@@ -4,9 +4,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.DefinitionEncoder
 import world.gregs.voidps.cache.definition.data.AnimationBaseDefinition
 
-/**
- * Index 1's skeleton files, byte for byte: the five columns in order, then whatever followed them.
- */
 class AnimationBaseEncoder : DefinitionEncoder<AnimationBaseDefinition> {
 
     override fun Writer.encode(definition: AnimationBaseDefinition) {

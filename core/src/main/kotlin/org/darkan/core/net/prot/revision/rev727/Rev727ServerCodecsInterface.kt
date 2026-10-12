@@ -15,9 +15,6 @@ internal fun Codec.registerRev727IfPackets() {
         IfSetPlayerHead(interfaceId, componentId)
     }
 
-    // Wire order is kit1, kit3, kit2: the client packs fields 1 and 3 into
-    // primaryMediaId (primary/secondary head) and field 2 into secondaryMediaId
-    // (tertiary head).
     serverProt<IfSetPlayerHeadIgnoreWorn>(opcode = 130, size = 10) { out ->
         out.writeShortLittle(identiKit1)
         out.writeShortAdd(identiKit3)
@@ -127,7 +124,6 @@ internal fun Codec.registerRev727IfPackets() {
         out.writeIntMiddle(xteas[3])
         out.writeShortAdd(interfaceId)
         out.writeByteSubtract(type)
-        // The client reads these two with big-endian readInt(), not readUIntLittle().
         out.writeInt(xteas[1])
         out.writeInt(xteas[0])
     }.decoder {
@@ -298,8 +294,6 @@ internal fun Codec.registerRev727IfPackets() {
         IfSetText(interfaceId, componentId, text)
     }
 
-    // The client reads the destination texture first (little endian) and the
-    // source texture second (big endian) - the opposite order to IF_SETRECOL.
     serverProt<IfSetReTex>(opcode = 132, size = 9) { out ->
         out.writeShortLittle(toTextureId)
         out.writeShort(fromTextureId)
@@ -380,7 +374,6 @@ internal fun Codec.registerRev727IfPackets() {
         IfOpenSubActiveGroundItem(interfaceId, componentId, subInterfaceId, overlay, tile, itemId, intArrayOf(xtea0, xtea1, xtea2, xtea3))
     }
 
-    // OUTDATED_SET_THEORA_STRING_SOMETHING: queues a T17 pulse event on a component.
     serverProt<OutdatedSetTheoraString>(opcode = 20, size = 6) { out ->
         out.writeShortAdd(value)
         out.writeIntLittle(toInterfaceHash(interfaceId, componentId))
@@ -390,8 +383,6 @@ internal fun Codec.registerRev727IfPackets() {
         OutdatedSetTheoraString(interfaceId, componentId, value)
     }
 
-    // OUTDATED_INTERFACE_PULSE_EVENT: queues a T13 pulse event on a component.
-    // The client rebuilds the payload as `low + (high shl 16)`.
     serverProt<OutdatedInterfacePulseEvent>(opcode = 96, size = 8) { out ->
         out.writeShortAdd(value and 0xFFFF)
         out.writeIntInverseMiddle(toInterfaceHash(interfaceId, componentId))

@@ -63,7 +63,6 @@ public class MonksFriend extends QuestOutline {
 		return lines;
 	}
 
-	//It is a circle around a null ladder. A varbit makes it visible.
 	private static final Tile[] ladderTilesInACircle = new Tile[]{
 			Tile.of(2561, 3220, 0),
 			Tile.of(2560, 3220, 0),

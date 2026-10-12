@@ -20,7 +20,6 @@ class ItemDecoder : DefinitionDecoder<ItemDefinition>(ITEMS) {
 
     override fun ItemDefinition.read(opcode: Int, buffer: Reader) {
         when (opcode) {
-            // Opcode 1: model ID (bigSmart for rev 727)
             1 -> modelId = buffer.readBigSmart()
             2 -> name = buffer.readString()
             4 -> graphicScale = buffer.readUnsignedShort()
@@ -44,7 +43,6 @@ class ItemDecoder : DefinitionDecoder<ItemDefinition>(ITEMS) {
             14 -> wearPos2 = buffer.readUnsignedByte()
             16 -> members = true
             18 -> multiStackSize = buffer.readUnsignedShort()
-            // Opcodes 23-26: equipment model IDs (bigSmart for rev 727)
             23 -> primaryMaleModel = buffer.readBigSmart()
             24 -> secondaryMaleModel = buffer.readBigSmart()
             25 -> primaryFemaleModel = buffer.readBigSmart()
@@ -55,13 +53,10 @@ class ItemDecoder : DefinitionDecoder<ItemDefinition>(ITEMS) {
             40 -> readColours(buffer)
             41 -> readTextures(buffer)
             42 -> readColourPalette(buffer)
-            // Opcode 43: tooltip color (int + boolean flag) - skip data
             43 -> buffer.readInt()
             65 -> exchangeable = true
-            // Opcodes 78-79: tertiary equipment model IDs (bigSmart for rev 727)
             78 -> tertiaryMaleModel = buffer.readBigSmart()
             79 -> tertiaryFemaleModel = buffer.readBigSmart()
-            // Opcodes 90-93: dialogue head model IDs (bigSmart for rev 727)
             90 -> primaryMaleDialogueHead = buffer.readBigSmart()
             91 -> primaryFemaleDialogueHead = buffer.readBigSmart()
             92 -> secondaryMaleDialogueHead = buffer.readBigSmart()

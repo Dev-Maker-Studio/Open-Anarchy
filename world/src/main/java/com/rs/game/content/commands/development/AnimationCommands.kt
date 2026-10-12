@@ -194,19 +194,6 @@ fun loadAnimationCommands() {
 }
 
 
-/**
- * Every animation id that shares a skeleton with the given BAS's stand animation, ascending.
- *
- * Ported from legacy `NPCDefinitions#getCompatibleAnimations` (core
- * src/main/java/com/rs/cache/loaders/NPCDefinitions.java:255-276), which `companim` printed. It
- * had been reduced to printing the raw render emote id because the animation table scan needs
- * `Utils.getAnimationDefinitionsSize()`, which used to return 0.
- *
- * Legacy read the skeleton out of a separate `frameSetIds` array; the modern decoder packs the
- * same value into the high half of each entry of [AnimationDefinition.frames]
- * (`frames[i] = (frameSetId shl 16) + frameId`), so `frames[0] ushr 16` is legacy's
- * `frameSetIds[0]`, and 0xFFFF is its "unset" -1.
- */
 private fun compatibleAnimations(basId: Int): List<Int> {
     if (basId == -1)
         return emptyList()

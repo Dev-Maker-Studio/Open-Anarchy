@@ -5,15 +5,6 @@ import world.gregs.voidps.cache.audio.JagexMidi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/**
- * The measurement `docs/cache-source.md` reports, and the reason indices 6 and 11 are stored as
- * `.mid` files at all: the compact encoding of every one of the 1,662 files in the 727 cache is
- * rebuilt, byte for byte, from the standard MIDI file it expands into.
- *
- * Two conventions were measured rather than deduced - a column's delta is written as the
- * non-negative byte congruent to the difference, and a delta time as the shortest variable-length
- * int - and this is what holds them.
- */
 class JagexMidiTest {
 
     @Test

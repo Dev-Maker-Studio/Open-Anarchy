@@ -14,20 +14,8 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 
-/**
- * The whole-cache measurement every audio and native asset index's parity test makes.
- *
- * One index at a time: unpack every archive with the index's own codec into a scratch directory,
- * pack it straight back out of that directory and compare the group with the one the cache holds.
- * That is exactly what [world.gregs.voidps.cache.source.Unpacker] does, minus the reference table,
- * so a codec that passes here passes a real unpack, and the counts are the ones
- * `docs/cache-source.md` publishes.
- *
- * Shared rather than repeated per index because the six codecs differ only in what they write.
- */
 object AudioParity {
 
-    /** What one index cost: archives, files written, how many packed back identically, and sidecars. */
     class Report(
         val index: Int,
         val archives: Int,
@@ -36,7 +24,6 @@ object AudioParity {
         val pristine: Int,
         val bytes: Long,
         val millis: Long,
-        /** The first few archives whose group did not come back, for a failure message. */
         val different: List<Int>
     ) {
         override fun toString(): String =
@@ -46,7 +33,6 @@ object AudioParity {
             )
     }
 
-    /** The packed cache, or null when there is none to test against. */
     fun cache(): Cache? {
         val directory = File(EnvVars.cachePath)
         if (!File(directory, "${FileStore.CACHE_FILE_NAME}.dat2").exists()) {
@@ -56,20 +42,12 @@ object AudioParity {
         return FileCache.load(directory.absolutePath)
     }
 
-    /** A scratch directory under the build folder; a few hundred megabytes do not belong in a tmpfs. */
     fun scratch(name: String): Path {
         val directory = File("core/build/tmp").absoluteFile
         directory.mkdirs()
         return Files.createTempDirectory(directory.toPath(), name)
     }
 
-    /**
-     * Round trip every archive of [index] through [codec] under [directory].
-     *
-     * The archive's metadata is filled in the way the unpacker fills it - file ids where the codec
-     * cannot see them, name hashes, the pristine hashes the codec asked for - so `pack` is handed
-     * exactly what it would be handed by a real build.
-     */
     fun roundTrip(cache: Cache, index: Int, codec: SourceCodec, directory: Path): Report {
         val start = System.nanoTime()
         val table = cache.referenceTable(index) ?: error("Index $index has no reference table.")
@@ -114,7 +92,6 @@ object AudioParity {
         )
     }
 
-    /** The archive's decompressed group, which for a single file archive is that file. */
     private fun wholeGroup(cache: Cache, index: Int, archive: Int, fileIds: IntArray): ByteArray? {
         if (fileIds.size == 1) {
             return cache.data(index, archive, fileIds[0])
@@ -126,6 +103,5 @@ object AudioParity {
         return ArchiveGroup.join(files)
     }
 
-    /** How many differing archives a report names. */
     private const val LIMIT = 8
 }

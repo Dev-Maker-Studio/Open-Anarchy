@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.model.entity.npc;
 
 import org.darkan.core.EnvVars;
@@ -114,11 +98,9 @@ public class NPC extends Entity {
 	private boolean canAggroNPCs;
 	private transient int attackRange;
 
-	// npc masks
 	private transient Transformation nextTransformation;
 	private transient NPCBodyMeshModifier bodyMeshModifier;
 	protected transient ConcurrentHashMap<Object, Object> temporaryAttributes;
-	// name changing masks
 	private String name;
 	private transient boolean changedName;
 	private transient boolean permName;
@@ -169,11 +151,9 @@ public class NPC extends Entity {
 		combat = new NPCCombat(this);
 		capDamage = -1;
 		lureDelay = 12000;
-		// npc is inited on creating instance
 		initEntity();
 		World.addNPC(this);
 		ChunkManager.updateChunks(this);
-		// npc is started on creating instance
 		loadMapRegions();
 		checkMultiArea();
 	}
@@ -300,7 +280,6 @@ public class NPC extends Entity {
 	public void processNPC() {
 		if (isDead() || isLocked())
 			return;
-		//Restore combat stats
 		if (getTickCounter() % 100 == 0)
 			restoreTick();
 		if (!combat.process() && routeEvent == null) {
@@ -322,7 +301,6 @@ public class NPC extends Entity {
 							RouteFinderKt.walkRoute(this, route, true);
 					}
 				} else
-					// walked till forcewalk place
 					forceWalk = null;
 	}
 
@@ -441,7 +419,7 @@ public class NPC extends Entity {
 		getInteractionManager().forceStop();
 		setFaceAngle(getRespawnDirection());
 		combat.reset();
-		combatLevels = getCombatDefinitions().getLevels(); // back to real bonuses
+		combatLevels = getCombatDefinitions().getLevels();
 		forceWalk = null;
 	}
 
@@ -459,10 +437,6 @@ public class NPC extends Entity {
 		setRespawnTask(-1);
 	}
 
-	/**
-	 * For quests
-	 * @param ticks
-	 */
 	public void finishAfterTicks(final int ticks) {
 		WorldTasks.scheduleTimer(tick -> {
 			if (tick >= ticks) {
@@ -907,7 +881,7 @@ public class NPC extends Entity {
 	}
 
 	public void setCombatTarget(Entity entity) {
-		if (isForceWalking()) // if force walk not gonna get target
+		if (isForceWalking())
 			return;
 		combat.setTarget(entity);
 		if (entity instanceof Player player)
@@ -940,11 +914,6 @@ public class NPC extends Entity {
 
 	public CombatStyle getCombatStyle() {
 		return getCombatDefinitions().getAttackStyle();
-		//		if (bonuses[2] > 0)
-		//			return NPCCombatDefinitions.MAGE;
-		//		if (bonuses[1] > 0)
-		//			return NPCCombatDefinitions.RANGE;
-		//		return NPCCombatDefinitions.MELEE;
 	}
 
 	public List<Entity> getPossibleTargets() {
@@ -1007,7 +976,6 @@ public class NPC extends Entity {
 			Entity target = possibleTarget.get(Utils.random(possibleTarget.size()));
 			setCombatTarget(target);
 			target.setAttackedBy(target);
-			//target.setFindTargetDelay(System.currentTimeMillis() + 10000); //TODO makes everything possible aggro to you
 			return true;
 		}
 		return false;

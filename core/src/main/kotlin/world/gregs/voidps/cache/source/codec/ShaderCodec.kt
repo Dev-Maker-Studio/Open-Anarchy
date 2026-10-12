@@ -12,43 +12,17 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.name
 
-/**
- * Index 31 as two directories of real files: `shaders/gl/basic.vertex.glsl`,
- * `shaders/dx/basic.vertex.vs_2_0.1`, and each program definition as
- * `shaders/gl/basic.json`.
- *
- * **Where the names come from.** The index's reference table names both archives and all 112 files,
- * but a hash is one way, so the names have to be recovered - and index 31 is the one index that
- * describes itself. Each archive holds a dozen *program definitions*
- * ([ShaderProgramDefinition]) which spell out a program's name and the source files its techniques
- * compile; the table hashes the **lower case** form of exactly those strings, so reading the
- * definitions of an archive recovers the names of every file in it. Nothing is stored for it: the
- * recovery runs while the archive is unpacked, from the archive's own bytes.
- *
- * The hash stays the truth. `index.json` keeps `fileNames` as the numbers, packing hashes a file's
- * path back and looks the hash up there, and a file whose hash no definition accounts for is written
- * as `<file>.dat` rather than guessed at. So a renamed file is a file the pack does not recognise,
- * never a silently re-hashed one.
- *
- * **What is stored as what.** A GLSL source is text and a Direct3D source is compiled `vs_2_0` /
- * `ps_2_0` bytecode; both are the payload verbatim under their own name, because there is nothing
- * to decode. A program definition is a small binary structure and is stored as JSON, re-encoded on
- * the way out and guarded by a `.pristine` sidecar for any file that does not come back byte for
- * byte - the same contract [DefinitionJsonCodec] makes.
- */
 object ShaderCodec : SourceCodec {
 
     private val decoder = ShaderProgramDecoder()
     private val encoder = ShaderProgramEncoder()
     private val json by lazy { DefinitionJson.of(ShaderProgramDefinition::class.java) }
 
-    /** The two archive names the client asks index 31 for, by hash. */
     private val archives = listOf("gl", "dx").associateBy { it.hashCode() }
 
     override val id: String
         get() = "shaders"
 
-    /** JSON is not the shipped bytes, so the unpacker packs the archive back and proves it. */
     override fun exact(archive: Int): Boolean = false
 
     override fun unpack(directory: Path, archive: SourceArchive): UnpackedArchive {
@@ -121,10 +95,6 @@ object ShaderCodec : SourceCodec {
         return list(directory.resolve(folder(hash, archive)))
     }
 
-    /**
-     * Every name the archive's own program definitions spell out, by the hash of its lower case
-     * form - a program's name, its techniques' names, and each technique's two source file names.
-     */
     private fun recover(files: List<ByteArray>): Map<Int, String> {
         val names = HashMap<Int, String>()
         for (data in files) {
@@ -135,7 +105,6 @@ object ShaderCodec : SourceCodec {
             try {
                 decoder.read(definition, data)
             } catch (e: IllegalStateException) {
-                // A source file whose first two bytes happen to read as 4; it names nothing.
                 continue
             }
             add(names, definition.name)
@@ -156,7 +125,6 @@ object ShaderCodec : SourceCodec {
         names[lower.hashCode()] = lower
     }
 
-    /** One program definition's bytes: its pristine copy while the guard holds, its JSON otherwise. */
     private fun bytes(path: Path, file: Int, metadata: ArchiveMetadata): ByteArray {
         val text = Files.readAllBytes(path)
         val sidecar = SourceFiles.pristine(path)
@@ -170,7 +138,6 @@ object ShaderCodec : SourceCodec {
         return compile(text)
     }
 
-    /** [text] read back into a fresh definition and re-encoded, which is what a pack emits. */
     private fun compile(text: ByteArray): ByteArray {
         val definition = ShaderProgramDefinition()
         json.read(text, definition)
@@ -179,10 +146,8 @@ object ShaderCodec : SourceCodec {
         return writer.toArray()
     }
 
-    /** The archive's directory: its name where one is known, its id otherwise. */
     private fun folder(hash: Int, archive: Int): String = archives[hash] ?: archive.toString()
 
-    /** The file a `<file>.dat` fallback path names, or null when the path is a real name. */
     private fun fallback(name: String): Int? {
         if (!name.endsWith(RawArchiveCodec.EXTENSION)) {
             return null
@@ -199,6 +164,5 @@ object ShaderCodec : SourceCodec {
         }
     }
 
-    /** The largest program definition in 727 is 5 KB; the writer grows nothing, so leave room. */
     private const val CAPACITY = 64 * 1024
 }

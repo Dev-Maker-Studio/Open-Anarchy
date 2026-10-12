@@ -112,11 +112,8 @@ fun GroundItem.shouldLootbeam(player: Player) =
     yellDrop(id)
 
 fun yellDrop(itemId: Int): Boolean {
-    //Revenants
     if ((itemId >= 20125 && itemId <= 20174) || (itemId >= 13845 && itemId <= 13990)) return true
-    //Barrows
     if (itemId >= 4708 && itemId <= 4759 && itemId != 4740) return true
-    //New GWD Items
     if (itemId >= 24974 && itemId <= 25039) return true
     return when (itemId) {
         25312, 25314, 25316, 25318, 11286, 11732, 15486, 11235, 4151, 21369, 6731, 6733, 6735, 6737, 6739, 21777, 21787, 21790, 21793, 3140, 14484, 11702, 11704, 11706, 11708, 11718, 11722, 11720, 11724, 11726, 11728, 11716, 11730 -> true

@@ -3,7 +3,6 @@ package org.darkan.world.social
 import com.rs.game.model.entity.player.Player
 import org.darkan.core.social.SocialEvent
 
-/** Keeps the world's copy of a player's social settings in step with what the lobby says they are. */
 object SocialSync {
     fun apply(player: Player, event: SocialEvent) {
         val social = player.account.social

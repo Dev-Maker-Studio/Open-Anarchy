@@ -18,8 +18,6 @@ sourceSets {
 
 dependencies {
     implementation(project(":core"))
-    // The cache source tree stores index 12 as TypeScript; :cs2 carries the codec that
-    // compiles it back (docs/cache-source.md). Headless - no LWJGL, GLFW or ImGui.
     implementation(project(":cs2"))
     implementation("com.google.code.gson:gson:2.14.0")
     implementation("com.google.guava:guava:33.7.1-jre")
@@ -42,7 +40,6 @@ tasks.shadowJar {
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     }
     archiveBaseName.set("world-server")
-    // Published and downloaded as <name>-<version>.jar; no "-all" classifier.
     archiveClassifier.set("")
 }
 
@@ -58,8 +55,6 @@ publishing {
     }
 
     publications.create<MavenPublication>("library") {
-        // A tag is a release and is published under its own name; a branch push is
-        // <version>-<branch>-<pipeline>, where the branch is the channel beta servers follow.
         version = ciTag ?: "${project.version}-${ciBranch}-${ciPipelineId}"
         artifactId = "world-server"
         artifact(tasks.shadowJar)

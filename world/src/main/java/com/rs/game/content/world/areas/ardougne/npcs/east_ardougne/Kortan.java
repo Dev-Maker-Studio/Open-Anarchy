@@ -12,7 +12,6 @@ import com.rs.utils.shop.ShopsHandler;
 @PluginEventHandler
 public class Kortan extends Conversation {
 
-    //Identify NPC by ID
     private static final int npcId = 591;
 
     public static NPCClickHandler Aemad = new NPCClickHandler(new Object[]{npcId}, e -> {
@@ -44,6 +43,3 @@ public class Kortan extends Conversation {
     };
 
 }
-/*
-This fixes Hank and restores default store conversation
- */

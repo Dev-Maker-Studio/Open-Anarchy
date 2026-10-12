@@ -4,14 +4,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.config.data.HitSplatDefinition
 
-/**
- * Writes a hit mark (`hitmark`, index 2 archive 46) file.
- *
- * The font and the four graphics are big smarts, not shorts; see
- * [world.gregs.voidps.cache.config.decoder.HitSplatDecoder]. Fade is written either as the bare
- * opcode 11 (fade from cycle 0) or as opcode 14 with a cycle, which the recorded opcode order
- * disambiguates.
- */
 class HitSplatEncoder : OpcodeEncoder<HitSplatDefinition>() {
 
     override fun opcodes(definition: HitSplatDefinition): IntArray {

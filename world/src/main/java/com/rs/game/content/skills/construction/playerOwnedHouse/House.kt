@@ -37,13 +37,9 @@ import org.darkan.core.gameval.gen.Varbit
 
 @PluginEventHandler
 class House {
-    // ========================================================================
-    //                         PROPERTY DECLARATIONS
-    // ========================================================================
     private var roomsR: MutableList<RoomReference> = mutableListOf()
     var location: EntranceLocations
 
-    // House properties
     private var look: Byte = 0
     private var buildMode = true
     private var arriveInPortal = false
@@ -51,7 +47,6 @@ class House {
         private set
     private var paymentStage: Byte = 0
 
-    // Transient references
     @Transient
     private var player: Player? = null
     @Transient
@@ -71,24 +66,18 @@ class House {
     var servantInstance: ServantNPC? = null
         private set
 
-    // Additional references
     @JvmField
     var petHouse: PetHouse? = null
     private var build: Byte = 0
     @Transient
     var playerManager: HousePlayerManager? = null
 
-    // ========================================================================
-    //                           HOUSE INITIALIZATION
-    // ========================================================================
     init {
-        // Initialize managers
         playerManager = HousePlayerManager(this)
         houseNPCs = HouseNPCs(this)
         petHouse = PetHouse()
         roomsR = ArrayList()
         location = EntranceLocations.TAVERLY
-        // Add a default GARDEN room (3,3,0) with an arrival portal.
         addRoom(HouseRooms.GARDEN, 3, 3, 0, 0)
         getRoom(3, 3, 0)?.addObject(HouseBuilds.CENTREPIECE, 0)
     }
@@ -103,17 +92,10 @@ class House {
         refreshNumberOfRooms()
     }
 
-    /****
-     * Updates the client (VarC 944) with the current number of rooms.
-     * This helps the interface or counters track how many rooms the player’s house has.
-     ****/
     private fun refreshNumberOfRooms() {
         player?.packets?.sendVarc(944, roomsR.size)
     }
 
-    /**
-     * Resets the house to a default state (GARDEN room).
-     */
     fun reset() {
         build = 1
         buildMode = true
@@ -122,36 +104,21 @@ class House {
         getRoom(3, 3, 1)!!.addObject(HouseBuilds.CENTREPIECE, 0)
     }
 
-    // ========================================================================
-    //                               ROOM MANAGEMENT
-    // ========================================================================
 
-    /****
-     * Retrieves the room at the given x, y coordinates and plane.
-     ****/
     fun getRoom(x: Int, y: Int, plane: Int): RoomReference? {
         return roomsR.find { it.x.toInt() == x && it.y.toInt() == y && it.plane.toInt() == plane }
     }
 
-    /****
-     * Finds the room associated with the specified GameObject.
-     ****/
     fun getRoomFromObject(`object`: GameObject): RoomReference? {
         val roomX = `object`.tile.chunkX - instance!!.baseChunkX
         val roomY = `object`.tile.chunkY - instance!!.baseChunkY
         return getRoom(roomX, roomY, `object`.level)
     }
 
-    /**
-     * Retrieves the first [RoomReference] matching the given [HouseRooms].
-     */
     fun getRoom(room: HouseRooms): RoomReference? {
         return roomsR.find { it.room == room }
     }
 
-    /**
-     * Creates a new room
-     */
     private fun createRoom(room: RoomReference) {
         if (!player?.inventory!!.hasCoins(room.room.price)) {
             player?.sendMessage("You don't have enough coins to build this room.")
@@ -166,10 +133,6 @@ class House {
         player?.setCloseInterfacesEvent(null)
     }
 
-    /****
-     * Initiates the creation of a new house room based on the selected slot.
-     * Validates room type, player level, and available resources before adding the room.
-     ****/
     fun createRoom(slot: Int) {
         val rooms: Array<HouseRooms> = HouseRooms.entries.toTypedArray()
         if (slot >= rooms.size) return
@@ -222,9 +185,6 @@ class House {
         roomDialogue(player!!, roomRef)
     }
 
-    /****
-     * Initiates a dialogue for the player to rotate the room clockwise or anticlockwise, build the room, or cancel the action.
-     ****/
     private fun roomDialogue(player: Player, roomRef: RoomReference) {
         player.startConversation {
             label("start")
@@ -256,9 +216,6 @@ class House {
         }
     }
 
-    /****
-     * Previews the specified room by spawning or removing its objects based on the 'remove' flag.
-     ****/
     fun previewRoom(reference: RoomReference, remove: Boolean) {
         if (!isLoaded)
             return
@@ -309,7 +266,6 @@ class House {
                         )
                         objectR.tile = Tile.of(boundX + coords[0], boundY + coords[1], reference.plane.toInt())
                         objectR.rotation = (`object`.rotation + reference.rotation) and 0x3
-                        // just a preview. they're not really there.
                         if (remove) World.removeObject(objectR)
                         else World.spawnObject(objectR)
                     }
@@ -318,18 +274,12 @@ class House {
         }
     }
 
-    /**
-     * Adds a new room to the house at the specified coordinates.
-     */
     private fun addRoom(room: HouseRooms, x: Int, y: Int, plane: Int, rotation: Int): Boolean {
         val roomRef = RoomReference(room, x, y, plane, rotation)
         roomsR.add(roomRef)
         return true
     }
 
-    /**
-     * Removes a room from the house, refreshing the layout afterward.
-     */
     private fun removeRoom(room: RoomReference) {
         if (roomsR.remove(room)) {
             refreshNumberOfRooms()
@@ -337,9 +287,6 @@ class House {
         }
     }
 
-    /****
-     * Removes the current room after verifying it doesn't support other rooms and navigates to the connected staircase room.
-     ****/
     fun removeRoom() {
         val roomX = player?.chunkX?.minus(instance?.baseChunkX ?: return) ?: return
         val roomY = player?.chunkY?.minus(instance?.baseChunkY ?: return) ?: return
@@ -362,16 +309,10 @@ class House {
         openRoomCreationMenu(roomTo.x.toInt(), roomTo.y.toInt(), roomTo.z())
     }
 
-    /**
-     * Checks if the house already has a particular room type.
-     */
     private fun hasRoom(room: HouseRooms): Boolean {
         return roomsR.any { it.room == room }
     }
 
-    /**
-     * Returns the maximum number of rooms the player can have based on Construction level.
-     */
     private val maxQuantityRooms: Int
         get() {
             val consLvl = player?.skills?.getLevelForXp(Constants.CONSTRUCTION) ?: 1
@@ -383,19 +324,10 @@ class House {
             return maxRoom
         }
 
-    /****
-     * Gets the current list of RoomReferences in the house.
-     ****/
     val rooms: List<RoomReference>
         get() = roomsR
 
-    // ========================================================================
-    //                               BUILD MODE
-    // ========================================================================
 
-    /****
-     * Enables or disables build mode, rebuilding the house to update build hotspots if it's loaded.
-     ****/
     fun setBuildMode(buildMode: Boolean) {
         if (this.buildMode == buildMode) return
         this.buildMode = buildMode
@@ -406,16 +338,10 @@ class House {
         refreshBuildMode()
     }
 
-    /**
-     * Updates the build mode varbit so the client can reflect the new state.
-     */
     private fun refreshBuildMode() {
         player?.vars?.setVarBit(Varbit.poh_building_mode, if (buildMode) 1 else 0)
     }
 
-    /****
-     * Opens the build interface for the specified GameObject and build type, setting up required items and conditions.
-     ****/
     fun openBuildInterface(`object`: GameObject, build: HouseBuilds) {
         if (!buildMode) {
             player?.simpleDialogue("You can only do that in building mode.")
@@ -463,9 +389,6 @@ class House {
         player?.startConversation(dialogue)
     }
 
-    /****
-     * Checks if the player has the required construction level and materials to build the specified house object.
-     ****/
     private fun hasRequirementsToBuild (warn: Boolean, build: HouseBuilds, piece: HouseObjects): Boolean {
         var level = player?.skills?.getLevel(Constants.CONSTRUCTION)
         if (level != null) {
@@ -497,10 +420,6 @@ class House {
         return true
     }
 
-    /****
-     * Builds the selected house piece by validating requirements, adding the object to the room,
-     * deducting necessary materials, awarding experience, and updating the room state.
-     ****/
     fun build(slot: Int) {
         val build: HouseBuilds = player?.tempAttribs?.getO<HouseBuilds>("OpenedBuild") ?: return
         val `object`: GameObject = player?.tempAttribs?.getO<GameObject>("OpenedBuildObject") ?: return
@@ -533,9 +452,6 @@ class House {
         }, 0)
     }
 
-    /****
-     * Refreshes the specified object in the room, updating or removing it based on the 'remove' flag.
-     ****/
     private fun refreshObject(rref: RoomReference, oref: ObjectReference, remove: Boolean) {
         val chunk = ChunkManager.getChunk(instance!!.getChunkId(rref.x.toInt(), rref.y.toInt(), rref.plane.toInt()))
         for (x in 0..7) {
@@ -574,12 +490,9 @@ class House {
         }
     }
 
-    /****
-     * Opens the room creation menu based on the provided door GameObject.
-     ****/
     fun openRoomCreationMenu(door: GameObject) {
-        var roomX = player?.chunkX?.minus(instance!!.baseChunkX) // current room
-        var roomY = player?.chunkY?.minus(instance!!.baseChunkY) // current room
+        var roomX = player?.chunkX?.minus(instance!!.baseChunkX)
+        var roomY = player?.chunkY?.minus(instance!!.baseChunkY)
         val xInChunk = player?.getXInChunk()
         val yInChunk = player?.getYInChunk()
         if (roomX != null) {
@@ -597,9 +510,6 @@ class House {
         }
     }
 
-    /****
-     * Opens the room creation menu at the specified coordinates and plane.
-     ****/
     private fun openRoomCreationMenu(roomX: Int, roomY: Int, plane: Int) {
         if (!buildMode) {
             player?.simpleDialogue("You can only do that in building mode.")
@@ -669,9 +579,6 @@ class House {
         }
     }
 
-    /****
-     * Initiates the process to remove a build from the specified GameObject.
-     ****/
     fun openRemoveBuild(`object`: GameObject) {
         if (!buildMode) {
             player?.sendMessage("Building mode is not active.")
@@ -718,9 +625,6 @@ class House {
     }
 
 
-    /****
-     * Removes the specified build from the GameObject.
-     ****/
     private fun removeBuild(`object`: GameObject) {
         if (!buildMode) {
             player?.simpleDialogue("You can only do that in building mode.")
@@ -746,9 +650,6 @@ class House {
         })
     }
 
-    /****
-     * Handles interactions when a player uses a lever.
-     ****/
     fun handleLever(player: Player, `object`: GameObject?) {
         if (buildMode || player.isLocked) return
         val room = `object`?.let { getLocalRoomReference(it) } ?: return
@@ -786,9 +687,6 @@ class House {
         }
     }
 
-    /****
-     * Allows the player to climb a staircase either upwards or downwards and allows for room creation on other levels.
-     ****/
     fun climbStaircase(player: Player, `object`: GameObject?, up: Boolean) {
         if (`object` == null || instance == null) return
         val room = getLocalRoomReference(`object`) ?: return
@@ -874,9 +772,6 @@ class House {
         player.useStairs(-1, Tile.of(player.x, player.y, player.plane + (if (up) 1 else -1)), 0, 1)
     }
 
-    /****
-     * Allows the player to climb a ladder either upwards or downwards and allows for room creation on other levels.
-     ****/
     fun climbLadder(player: Player, `object`: GameObject?, up: Boolean) {
         if (`object` == null)
             return
@@ -959,13 +854,7 @@ class House {
         player.ladder(destTile)
     }
 
-    // ========================================================================
-    //                               HOUSE REFRESH
-    // ========================================================================
 
-    /****
-     * Refreshes the house state by destroying and recreating it.
-     ****/
     private fun refreshHouse() {
         destroyHouse()
         isLoaded = false
@@ -973,16 +862,10 @@ class House {
         createHouse()
     }
 
-    /****
-     * Finalizes house operations, typically called when a player leaves.
-     ****/
     fun finish() {
         kickGuests()
     }
 
-    /****
-     * Destroys the current house instance, clearing all NPCs and servants.
-     ****/
     fun destroyHouse() {
         isLoaded = false
         houseNPCs?.pets?.forEach { it.finish() }
@@ -993,9 +876,6 @@ class House {
         instance?.destroy()
     }
 
-    /****
-     * Sends the initial interface to the player when entering the house.
-     ****/
     fun sendStartInterface(player: Player?) {
         player?.lock()
         player?.interfaceManager?.setTopInterface(399, false)
@@ -1003,13 +883,7 @@ class House {
         player?.jingle(22)
     }
 
-    // ========================================================================
-    //                    CREATING / INITIALIZING HOUSE INSTANCE
-    // ========================================================================
 
-    /****
-     * Creates the house by preparing chunk data, adding roofs, initializing the instance, and copying chunks.
-     ****/
     fun createHouse() {
         val data = prepareChunkData()
         addRoofsIfNeeded(data)
@@ -1017,9 +891,6 @@ class House {
         copyHouseChunksAndBuild(data)
     }
 
-    /**
-     * Prepares an array describing the house layout based on [roomsR].
-     */
     private fun prepareChunkData(): Array<Array<Array<Array<Any>?>>> {
         val data = Array(4) { Array(8) { arrayOfNulls<Array<Any>?>(8) } }
         for (reference in roomsR) {
@@ -1033,9 +904,6 @@ class House {
         return data
     }
 
-    /**
-     * Optionally adds roofs to upper floors if `!buildMode`.
-     */
     private fun addRoofsIfNeeded(data: Array<Array<Array<Array<Any>?>>>) {
         if (!buildMode) {
             for (x in 1..6) {
@@ -1061,9 +929,6 @@ class House {
         }
     }
 
-    /**
-     * Creates a new [Instance] for this house.
-     */
     private fun initializeInstance() {
         if (instance != null && !instance!!.isDestroyed) {
             instance!!.destroy()
@@ -1071,9 +936,6 @@ class House {
         instance = Instance.of(location.tile, 8, 8)
     }
 
-    /**
-     * Copies chunks for each [RoomReference] and spawns the house objects.
-     */
     private fun copyHouseChunksAndBuild(data: Array<Array<Array<Array<Any>?>>>) {
         instance!!.requestChunkBound().thenAccept { _ ->
             val regionBuilding = mutableListOf<CompletableFuture<Boolean>>()
@@ -1143,9 +1005,6 @@ class House {
         }
     }
 
-    /****
-     * Removes any leftover objects from the house instance.
-     ****/
     private fun removeLeftoverObjects() {
         val regionBuilding: MutableList<CompletableFuture<Boolean>> = ObjectArrayList()
         CompletableFuture.allOf(*regionBuilding.toTypedArray<CompletableFuture<*>>()).thenRun {
@@ -1167,9 +1026,6 @@ class House {
         }
     }
 
-    /****
-     * Spawns all build-related objects within the house.
-     ****/
     private fun spawnBuildObjects() {
         for (reference in roomsR) {
             spawnObjectsInRoom(reference)
@@ -1177,9 +1033,6 @@ class House {
         houseNPCs?.spawnPets()
     }
 
-    /****
-     * Spawns objects within a specific room reference.
-     ****/
     private fun spawnObjectsInRoom(reference: RoomReference) {
         for (x in 0..7) {
             for (y in 0..7) {
@@ -1202,9 +1055,6 @@ class House {
         }
     }
 
-    /****
-     * Handles individual objects within a room, managing doors and build slots.
-     ****/
     private fun handleIndividualObjects(reference: RoomReference, obj: GameObject) {
         if (obj.definitions.hasOption(5, "Build") ||
             (reference.room == HouseRooms.MENAGERIE && obj.definitions.name.contains("space"))
@@ -1228,9 +1078,6 @@ class House {
         }
     }
 
-    /****
-     * Processes door objects, replacing them with wall objects if necessary.
-     ****/
     private fun handleDoorObject(obj: GameObject) {
         if (!buildMode && obj.level == 2) {
             val room = getRoomFromObject(obj) ?: return
@@ -1243,9 +1090,6 @@ class House {
         }
     }
 
-    /****
-     * Manages build slots by updating or spawning dynamic objects.
-     ****/
     private fun handleBuildSlots(reference: RoomReference, obj: GameObject) {
         for (o in reference.objects) {
             val slot: Int = o.build.getIdSlot(obj.id)
@@ -1269,13 +1113,7 @@ class House {
         }
     }
 
-    // ========================================================================
-    //                 FINALIZE LOADING & PLAYER TELEPORT
-    // ========================================================================
 
-    /****
-     * Teleports players and finalizes the house loading process.
-     ****/
     private fun teleportPlayersAndFinalize() {
         teleportPlayer(player)
         player?.isForceNextMapLoadRefresh = true
@@ -1294,31 +1132,19 @@ class House {
         isLoaded = true
     }
 
-    // ========================================================================
-    //                         MODE SWITCHING / TELEPORTS
-    // ========================================================================
 
-    /****
-     * Delegates to teleportEntity
-     ****/
     @JvmOverloads
     fun teleportPlayer(player: Player?, room: RoomReference? = portalRoom) {
         if(player == null) return
         teleportEntity(player, room)
     }
 
-    /****
-     * Delegates to teleportEntity
-     ****/
     @JvmOverloads
     fun teleportServant(room: RoomReference? = portalRoom) {
         if (servantInstance == null) return
         teleportEntity(servantInstance!!, room)
     }
 
-    /**
-     * Teleports an [Entity] to the specified [RoomReference] plus offsets for positioning.
-     */
     fun teleportEntity(entity: Entity, room: RoomReference?) {
         if (room == null) {
             if (entity is Player) {
@@ -1339,14 +1165,6 @@ class House {
         }
     }
 
-
-    // ========================================================================
-    //                          SPAWN/REMOVE LOGIC
-    // ========================================================================
-
-    /****
-     * Checks if the house contains any objects with the specified IDs.
-     ****/
     fun containsAnyObject(vararg ids: Int): Boolean {
         instance?.chunkIds?.forEach { chunkId ->
             val chunk = ChunkManager.getChunk(chunkId, true)
@@ -1357,25 +1175,13 @@ class House {
         return false
     }
 
-    /****
-     * Determines if the given ID corresponds to a window object.
-     ****/
     fun isWindow(id: Int): Boolean {
         return id == 13830
     }
 
-    // ========================================================================
-    //                        GETTERS & SETTERS
-    // ========================================================================
 
-    /****
-     * Returns whether the house is currently in build mode.
-     ****/
     fun isBuildMode(): Boolean = buildMode
 
-    /****
-     * Sets the player associated with the house, initializing pets and NPCs if necessary.
-     ****/
     fun setPlayer(player: Player?) {
         this.player = player
         if (petHouse == null) petHouse = PetHouse()
@@ -1389,7 +1195,6 @@ class House {
         this.look = look.toByte()
     }
     fun getPlayer(): Player? = player
-    // Payment stage logic
     fun getPaymentStage(): Int = paymentStage.toInt()
     fun resetPaymentStage() { paymentStage = 0 }
     fun incrementPaymentStage() { paymentStage++ }
@@ -1398,9 +1203,6 @@ class House {
         return instance!!.getLocalTile(rRef.x * 8 + 3, rRef.y * 8 + 3)
     }
 
-    /****
-     * Gets the local room reference based on the provided GameObject.
-     ****/
     private fun getLocalRoomReference(`object`: GameObject): RoomReference? {
         val localX = `object`.tile.chunkX - (instance?.baseChunkX ?: return null)
         val localY = `object`.tile.chunkY - (instance?.baseChunkY ?: return null)
@@ -1431,9 +1233,6 @@ class House {
         return `object`?.definitions?.name?.equals("Door space", ignoreCase = true) ?: false
     }
 
-    /****
-     * Retrieves the GameObject for building within a specific room reference and build type.
-     ****/
     fun getWorldObjectForBuild(reference: RoomReference, build: HouseBuilds): GameObject? {
         val boundX = instance!!.getLocalX(reference.x.toInt(), 0)
         val boundY = instance!!.getLocalY(reference.y.toInt(), 0)
@@ -1445,9 +1244,6 @@ class House {
         return null
     }
 
-    /****
-     * Retrieves a specific GameObject within a room based on its ID.
-     ****/
     fun getWorldObject(reference: RoomReference, id: Int): GameObject? {
         val boundX = instance!!.getLocalX(reference.x.toInt(), 0)
         val boundY = instance!!.getLocalY(reference.y.toInt(), 0)
@@ -1471,9 +1267,6 @@ class House {
         }
     }
 
-    // ========================================================================
-    //                           ARRIVE & LOCK LOGIC
-    // ========================================================================
     fun setArriveInPortal(arriveInPortal: Boolean) {
         this.arriveInPortal = arriveInPortal
         refreshArriveInPortal()
@@ -1484,9 +1277,6 @@ class House {
         player?.vars?.setVarBit(6450, if (arriveInPortal) 1 else 0)
     }
 
-    // ========================================================================
-    //                        CHALLENGE MODE LOGIC
-    // ========================================================================
     fun isChallengeMode(): Boolean = challengeMode
     fun toggleChallengeMode(player: Player) {
         if (isOwner(player)) {
@@ -1505,9 +1295,6 @@ class House {
         }
     }
 
-    // ========================================================================
-    //                           HOUSE-SERVANT LOGIC
-    // ========================================================================
     fun hasServant(): Boolean = houseServants != null
     fun setServantOrdinal(ordinal: Byte) {
         if (ordinal == (-1).toByte()) {
@@ -1538,9 +1325,6 @@ class House {
         player?.vars?.setVarBit(Varbit.poh_servant_type, bit)
     }
 
-    // ========================================================================
-    //                           PORTALS & MENAGERIE
-    // ========================================================================
     private val portalRoom: RoomReference?
         get() = roomsR.firstOrNull { room ->
             (room.room == HouseRooms.GARDEN || room.room == HouseRooms.FORMAL_GARDEN) &&
@@ -1572,9 +1356,6 @@ class House {
             }
         }
 
-    // ========================================================================
-    //                               HOUSE NPC LOGIC
-    // ========================================================================
     fun callServant(bellPull: Boolean) {
         if (bellPull) {
             player?.anim(Animation(3668))
@@ -1597,9 +1378,6 @@ class House {
         houseNPCs?.addPet(item, update)
     }
 
-    // ========================================================================
-    //                           PLAYER MANAGER
-    // ========================================================================
     fun expelGuests() {
         playerManager?.expelGuests()
     }
@@ -1784,15 +1562,11 @@ class House {
         for (p in getTrappedPlayers(x, y)) p.resetWalkSteps()
     }
 
-    // ========================================================================
-    //                            ENTER & LEAVE
-    // ========================================================================
     fun enterMyHouse() {
         joinHouse(player)
     }
 
     companion object {
-        // House removal types
         @JvmField var LOGGED_OUT: Int = 0
         @JvmField var KICKED: Int = 1
         @JvmField var TELEPORTED: Int = 2
@@ -1825,7 +1599,6 @@ class House {
             controller.house?.leaveHouse(player, KICKED)
         }
 
-        // Offsets for door directions
         val DOOR_DIR_X = intArrayOf(-1, 0, 1, 1)
         val DOOR_DIR_Y = intArrayOf(0, 1, 0, -1)
     }

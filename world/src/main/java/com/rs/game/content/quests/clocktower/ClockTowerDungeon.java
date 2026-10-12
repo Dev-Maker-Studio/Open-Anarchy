@@ -48,9 +48,9 @@ public class ClockTowerDungeon {
 	});
 
 	public static PickupItemHandler handleBlackCogPickup = new PickupItemHandler(new Object[] { 21 }, Tile.of(2613, 9639, 0), e -> {
-		if(e.getPlayer().getEquipment().getGlovesId() == 1580)//ice gloves
+		if(e.getPlayer().getEquipment().getGlovesId() == 1580)
 			return;
-		if(e.getPlayer().getInventory().containsItem(1929, 1)) {//water bucket
+		if(e.getPlayer().getInventory().containsItem(1929, 1)) {
 			e.getPlayer().sendMessage("You cool the cog down in a bucket of water and the water evaporates...");
 			e.getPlayer().getInventory().replaceItem(1925, 1, e.getPlayer().getInventory().getItems().lookupSlot(1929));
 			return;
@@ -79,10 +79,10 @@ public class ClockTowerDungeon {
 
 	public static ItemOnObjectHandler handleUsedSpindles = new ItemOnObjectHandler(new Object[] { 29, 30, 31, 32 }, new Object[] { 20, 21, 22, 23 }, e -> {
 		if(e.getItem().getId() >= 20 && e.getItem().getId() <= 23) {
-			if(e.getItem().getId() == 23 && e.getObjectId() == 29//red
-			|| e.getItem().getId() == 22 && e.getObjectId() == 32//blue
-			|| e.getItem().getId() == 21 && e.getObjectId() == 30//black
-			|| e.getItem().getId() == 20 && e.getObjectId() == 31) {//white
+			if(e.getItem().getId() == 23 && e.getObjectId() == 29
+			|| e.getItem().getId() == 22 && e.getObjectId() == 32
+			|| e.getItem().getId() == 21 && e.getObjectId() == 30
+			|| e.getItem().getId() == 20 && e.getObjectId() == 31) {
 				e.getPlayer().getInventory().removeItems(e.getItem());
 				e.getPlayer().getQuestManager().getAttribs(Quest.CLOCK_TOWER).setB(e.getItem().getName() + "Done", true);
 				e.getPlayer().sendMessage("The cog fits neatly into the spindle...");

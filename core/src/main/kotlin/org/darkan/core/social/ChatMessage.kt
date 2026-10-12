@@ -3,10 +3,6 @@ package org.darkan.core.social
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * A line a player said. On the social gateway wire it travels polymorphically: the
- * implementations are registered on `SocialGatewayWireJson` under the serial names below.
- */
 interface ChatMessage {
     val effects: Int
     val message: String

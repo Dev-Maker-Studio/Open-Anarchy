@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.runecrafting;
 
 import com.rs.engine.miniquest.Miniquest;
@@ -325,64 +309,6 @@ public class RunecraftingAltar {
 			return true;
 		return false;
 	}
-
-	//	public static ItemOnObjectHandler craft = new ItemOnObjectHandler(new Object[] { AIR_ALTAR, WATER_ALTAR, EARTH_ALTAR, FIRE_ALTAR }, null, e -> {
-//		Player player = e.getPlayer();
-//		for (CombinationRunes cr : CombinationRunes.values()) {
-//			for (int i = 0; i < cr.altars.length; i++) {
-//				if (e.getObject().getId() == cr.altars[i] || (e.getItem().getId() != cr.getTalismans()[i] && e.getItem().getId() != cr.getRunes()[i])) {
-//					continue;
-//				}
-//				if (player.getSkills().getLevel(Constants.RUNECRAFTING) < cr.getLevel() || player.getInventory().getItems().getNumberOf(cr.getTalismans()[i]) <= 0) {
-//					continue;
-//				}
-//
-//				int pureEss = player.getInventory().getItems().getNumberOf(Runecrafting.PURE_ESS);
-//				int inputRune = player.getInventory().getItems().getNumberOf(cr.getRunes()[i]);
-//				if (pureEss == 0) {
-//					player.simpleDialogue("You don't have enough pure essence.");
-//					return;
-//				}
-//				if (inputRune == 0) {
-//					player.simpleDialogue("You don't have enough " + ItemDefinitions.getDefs(cr.getRunes()[i]).getName() + "s.");
-//					return;
-//				}
-//
-//				if (!player.isCastMagicImbue())
-//					player.getInventory().deleteItem(cr.getTalismans()[i], 1);
-//
-//				int maxCraftable = Math.min(inputRune, pureEss);
-//				player.getInventory().deleteItem(Runecrafting.PURE_ESS, maxCraftable);
-//				player.getInventory().deleteItem(cr.getRunes()[i], maxCraftable);
-//				player.setNextSpotAnim(new SpotAnim(186));
-//				player.setNextAnimation(new Animation(791));
-//				player.lock(5);
-//
-//				double xp = cr.getXP()[i];
-//				if (Runecrafting.hasRcingSuit(player))
-//					xp *= 1.025;
-//
-//				String runeName = ItemDefinitions.getDefs(cr.getCombinationRune()).getName();
-//				if (player.getEquipment().getAmuletId() == BINDING_NECKLACE) {
-//					player.sendMessage("You bind the temple's power into " + runeName + "s.");
-//					player.bindingNecklaceCharges--;
-//					if (player.bindingNecklaceCharges <= 0) {
-//						player.getEquipment().deleteSlot(Equipment.NECK);
-//						player.sendMessage("Your binding necklace disintegrates.");
-//						player.bindingNecklaceCharges = 15;
-//					}
-//					return;
-//				} else {
-//					player.sendMessage("You attempt to bind " + runeName + "s.");
-//					maxCraftable /= 2;
-//				}
-//				player.getInventory().addItem(cr.getCombinationRune(), maxCraftable);
-//				player.getSkills().addXp(Constants.RUNECRAFTING, xp * maxCraftable);
-//			}
-//		}
-//	});
-
-
 
  	public static ItemOnObjectHandler handleAtlarUse = new ItemOnObjectHandler(new Object[] { 2478, 2479, 2480, 2481, 2482, 2483, 2484, 2485, 2486, 2487, 2488, 30624, 7936 }, null, e -> {
 		Player player = e.getPlayer();

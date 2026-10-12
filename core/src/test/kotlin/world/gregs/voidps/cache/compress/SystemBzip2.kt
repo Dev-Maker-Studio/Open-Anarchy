@@ -2,7 +2,6 @@ package world.gregs.voidps.cache.compress
 
 import java.io.File
 
-/** The system `bzip2 -1 -c` over a pipe, the reference [BZip2Encoder] is held byte-identical to. */
 object SystemBzip2 {
     const val BINARY = "/usr/bin/bzip2"
 

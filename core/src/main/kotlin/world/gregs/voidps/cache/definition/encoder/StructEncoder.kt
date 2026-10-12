@@ -4,13 +4,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.StructDefinition
 
-/**
- * Writes a struct (`struct`, index 2 archive 26) file: nothing but the param opcode.
- *
- * The params keep the order they were read in, which is what makes the file byte exact -
- * [world.gregs.voidps.cache.definition.Parameterized.readParameters] decodes into an insertion
- * ordered map for exactly this reason, and the 37 structs that list a key twice keep their records.
- */
 class StructEncoder : OpcodeEncoder<StructDefinition>() {
 
     override fun opcodes(definition: StructDefinition): IntArray {

@@ -11,9 +11,6 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
-/**
- * Round trips every copy of the RS string primitives through [Cp1252].
- */
 class JagStringTest {
 
     @Test

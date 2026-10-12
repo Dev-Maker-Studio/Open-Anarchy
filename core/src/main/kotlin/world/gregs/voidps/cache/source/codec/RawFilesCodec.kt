@@ -6,21 +6,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.name
 
-/**
- * One file per file, `<archive>/<file>.dat`, or `<file>.dat` when the directory *is* the archive.
- *
- * The default for the indices that hold several files per archive - interfaces, the definition
- * indices, the world map - until a typed codec replaces it. The file ids are the file names, so
- * nothing about the archive's shape has to be recorded: adding a definition is adding a file, and
- * removing one is removing a file.
- *
- * The group is always written back as a single chunk, which every reader accepts and which is
- * what every multi-file archive outside index 0 already uses; index 0 keeps its three chunk
- * layout by never coming through here at all - see [AnimationFrameCodec].
- *
- * [flat] drops the per-archive directory, for a codec that is already inside one - the config
- * index gives each of its archives a directory of its own and lays the files out inside it.
- */
 class RawFilesCodec(private val flat: Boolean = false) : SourceCodec {
 
     override val id: String
@@ -44,7 +29,6 @@ class RawFilesCodec(private val flat: Boolean = false) : SourceCodec {
 
     override fun archiveOf(path: String): Int? {
         if (flat) {
-            // The directory names the archive, and only whatever owns it knows which.
             return null
         }
         if (!path.endsWith(EXTENSION)) {
@@ -71,7 +55,6 @@ class RawFilesCodec(private val flat: Boolean = false) : SourceCodec {
         }
     }
 
-    /** The file ids on disk, ascending, which is the order a group stores them in. */
     fun fileIds(directory: Path, archive: Int): IntArray {
         val ids = files(directory, archive).mapNotNull { it.name.dropLast(EXTENSION.length).toIntOrNull() }
         return ids.sorted().toIntArray()
@@ -85,10 +68,8 @@ class RawFilesCodec(private val flat: Boolean = false) : SourceCodec {
     companion object {
         const val EXTENSION = ".dat"
 
-        /** `<archive>/<file>.dat` under an index directory. */
         val NESTED = RawFilesCodec(flat = false)
 
-        /** `<file>.dat`, for a directory that is one archive. */
         val FLAT = RawFilesCodec(flat = true)
     }
 }

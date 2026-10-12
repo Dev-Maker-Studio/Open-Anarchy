@@ -1,12 +1,5 @@
 package org.darkan.tools.rsinterface
 
-/**
- * Interface component type ids, matching the client's `ComponentType` enum.
- *
- * Only [CONTAINER], [FIGURE], [TEXT], [GRAPHIC], [MODEL] and [LINE] carry draw
- * behaviour; the remaining ids are layout-only. [TYPE_2] is special-cased by the
- * layout: it never narrows the clip rectangle for its own children.
- */
 object ComponentType {
     const val CONTAINER = 0
     const val TYPE_1 = 1
@@ -34,13 +27,6 @@ object ComponentType {
     }
 }
 
-/**
- * Model source kinds, matching the client's `MediaType` enum. The component's
- * media type selects which id in [ComponentState.mediaId] means what.
- *
- * Only [RAW_MODEL] and [ITEM] can be resolved from the cache alone; the entity
- * kinds need live player/NPC state and are rendered as an empty viewport.
- */
 object MediaType {
     const val UNDEFINED = 0
     const val RAW_MODEL = 1

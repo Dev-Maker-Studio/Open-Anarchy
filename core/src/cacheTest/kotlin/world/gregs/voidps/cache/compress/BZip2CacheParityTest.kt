@@ -12,16 +12,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.fail
 
-/**
- * Every bzip2 container in the packed cache, recompressed from what it decompresses to and held
- * byte-identical to the shipped bytes. Skipped when there is no cache to read.
- *
- * Two of the 3,796 bzip2 containers in the shipped 727 cache - reference tables 2 and 9 - are not
- * libbzip2 output at all but Apache commons-compress output, byte for byte, from whatever tool
- * last rewrote those two tables. The system `bzip2` disagrees with them at every level too,
- * while agreeing with this encoder byte for byte. They are counted apart rather than excused,
- * and the test reconfirms the classification whenever the `bzip2` binary is there to ask.
- */
 class BZip2CacheParityTest {
 
     @Test
@@ -98,7 +88,6 @@ class BZip2CacheParityTest {
             pool.awaitTermination(1, TimeUnit.MINUTES)
         }
 
-        // Sort out the containers that are not libbzip2 output from real encoder failures.
         val haveBinary = SystemBzip2.available
         val foreign = mutableListOf<Result>()
         val failures = mutableListOf<String>()
@@ -171,17 +160,8 @@ class BZip2CacheParityTest {
     private companion object {
         private const val BZIP2 = 1
 
-        /**
-         * Every container in the shipped 727 cache whose compression byte is 1: 3,783 archives
-         * across the indexes plus 13 of the 37 reference tables.
-         */
         private const val EXPECTED_BZIP2_CONTAINERS = 3796
 
-        /**
-         * Reference tables 2 and 9, the two bzip2 containers in the shipped cache that libbzip2
-         * cannot reproduce at any level; they are byte-identical to what Apache commons-compress
-         * produces instead. Used only when there is no `bzip2` binary to confirm it.
-         */
         private val KNOWN_FOREIGN = setOf(Container(255, 2), Container(255, 9))
         private const val EXAMPLE_LIMIT = 10
 }

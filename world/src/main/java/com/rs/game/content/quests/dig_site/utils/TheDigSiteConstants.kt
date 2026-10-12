@@ -2,7 +2,6 @@ package com.rs.game.content.quests.dig_site.utils
 
 import world.gregs.voidps.type.Tile
 
-// Quest Stages
 const val STAGE_UNSTARTED = 0
 const val STAGE_GET_LETTER_STAMPED = 1
 const val STAGE_RECEIVED_SEALED_LETTER = 2
@@ -17,7 +16,6 @@ const val STAGE_COVERED_IN_COMPOUND = 10
 const val STAGE_BLOWN_UP_BRICKS = 11
 const val STAGE_COMPLETE = 100
 
-// NPCs
 const val DOUG_DEEPING = 614
 const val GREEN_STUDENT = 615
 const val BROWN_STUDENT = 616
@@ -28,7 +26,6 @@ val EXAMINER = intArrayOf(618, 4566, 4567)
 val DIGSITE_WORKMEN = intArrayOf(613, 4564, 4565)
 const val MUSEUM_GUARD = 5942
 
-// Items
 const val VIAL = 229
 const val OYSTER = 407
 const val GOLD_ORE = 444
@@ -94,7 +91,6 @@ const val FRUIT_BLAST = 2084
 const val HAMMER = 2347
 const val GOLD_BAR = 2357
 
-// Objects
 const val ALTAR_WINCH = 2350
 const val DOUG_WINCH = 2351
 const val DOUG_ROPE = 2352
@@ -121,7 +117,6 @@ const val STONE_TABLET_OBJ = 17369
 val ROCK_PICK_CUPBOARD = intArrayOf(35222, 35223)
 val BOOKCASES = intArrayOf(35224, 35226, 35227, 17320, 17321, 17382)
 
-// Animations
 const val NPC_STUN_ANIM = 422
 const val PLAYER_STUN_ANIM = 424
 const val SEARCH_ANIM = 536
@@ -132,14 +127,11 @@ const val DIGGING_ANIM = 2272
 const val ROCK_PICK_ANIM = 4592
 const val PANNING_ANIM = 4593
 
-// SpotAnims
 const val STUN_BIRDS_SPOTANIM = 80
 
-// Varbits
 const val BARREL_VB = 2547
 const val TABLET_VB = 2548
 
-// Var Keys
 const val GREEN_STUDENT_TALKED_TO = "greenStudentTalkedTo"
 const val GREEN_STUDENT_EXAM_1_OBTAINED_ANSWER = "greenStudentExam1ObtainedAnswer"
 const val GREEN_STUDENT_EXAM_2_OBTAINED_ANSWER = "greenStudentExam2ObtainedAnswer"
@@ -163,14 +155,12 @@ const val ATTACHED_ROPE_DOUG_WINCH = "attachedRopeDougWinch"
 
 const val UNLOCKED_CHEST = "unlockedChest"
 
-// Map of certificates to interfaces
 val certToInterfaceMap = mapOf(
     EXAM_1_CERT to 440,
     EXAM_2_CERT to 441,
     EXAM_3_CERT to 444
 )
 
-// Dig Site Tile Checks
 val TRAINING_DIG: Array<IntArray> = arrayOf(
     intArrayOf(3351, 3358, 3395, 3401),
     intArrayOf(3366, 3373, 3396, 3401))

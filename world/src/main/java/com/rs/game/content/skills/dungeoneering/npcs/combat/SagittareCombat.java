@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.npcs.combat;
 
 import com.rs.game.World;
@@ -51,7 +35,6 @@ public class SagittareCombat extends CombatScript {
 		}
 		int attack = Utils.random(5);
 		switch (attack) {
-			// Normal range, Normal magic, Multi magic
 			case 0, 1, 2 -> {
 				npc.setNextAnimation(new Animation(13271));
 				npc.setNextSpotAnim(new SpotAnim(attack == 0 ? 2532 : 2534, 0, 96));
@@ -65,7 +48,6 @@ public class SagittareCombat extends CombatScript {
 						delayHit(npc, 1, t, Hit.magic(npc, getMaxHitFromAttackStyleLevel(npc, CombatStyle.MAGIC, t)));
 				}
 			}
-			// Bind attacks
 			case 3, 4 -> {
 				boolean isMagicAttack = attack == 3;
 				npc.setNextAnimation(new Animation(13271));
@@ -81,7 +63,7 @@ public class SagittareCombat extends CombatScript {
 							bindTarget = true;
 						delayHit(npc, 1, t, Hit.magic(npc, getMaxHitFromAttackStyleLevel(npc, CombatStyle.MAGIC, t)));
 					} else {
-						bindTarget = Utils.random(2) == 0;// 50/50
+						bindTarget = Utils.random(2) == 0;
 						delayHit(npc, 1, t, Hit.magic(npc, getMaxHitFromAttackStyleLevel(npc, CombatStyle.MAGIC, t)));
 					}
 					if (bindTarget) {
@@ -121,14 +103,13 @@ public class SagittareCombat extends CombatScript {
 
 				if (stage != 1 && stage != -1) {
 					int corner = Utils.random(4);
-					if (corner == 0)// this is good
-						teleport = manager.getTile(rRef, 1, Utils.random(14) + 1);// 1,1 14, 1, 14, 14, 2, 14
-					else if (corner == 1)// this is good
+					if (corner == 0)
+						teleport = manager.getTile(rRef, 1, Utils.random(14) + 1);
+					else if (corner == 1)
 						teleport = manager.getTile(rRef, 14 - Utils.random(14), 1);
-					else if (corner == 2)// this is good
+					else if (corner == 2)
 						teleport = manager.getTile(rRef, 14, 14 - Utils.random(14));
 					else
-						// this is good
 						teleport = manager.getTile(rRef, Utils.random(14) + 1, 14);
 				}
 

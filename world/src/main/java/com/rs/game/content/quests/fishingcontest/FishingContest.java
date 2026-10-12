@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.quests.fishingcontest;
 
 import com.rs.engine.dialogue.Conversation;
@@ -114,9 +98,9 @@ public class FishingContest extends QuestOutline {
 	public static ObjectClickHandler Redvine = new ObjectClickHandler(true, new Object[] { "Vine" }, e -> {
 		Player p = e.getPlayer();
 		GameObject obj = e.getObj();
-		if(obj.getTile().getRegionId() == 10550) //mcgrubbers wood
+		if(obj.getTile().getRegionId() == 10550)
 			if(p.getInventory().hasFreeSlots()) {
-				p.setNextAnimation(new Animation(2282));//herb picking anim
+				p.setNextAnimation(new Animation(2282));
 				p.getInventory().addItem(RED_WORM, 1);
 				p.sendMessage("You get a worm from the vine...");
 			}
@@ -133,7 +117,7 @@ public class FishingContest extends QuestOutline {
 			e.getNPC().resetDirection();
 			if(p.getQuestManager().getAttribs(Quest.FISHING_CONTEST).getB(PIPE_HAS_GARLIC))
 				p.startConversation(new Conversation(p) {
-					{//Sinister stranger
+					{
 						addNPC(3677, HeadE.CALM_TALK, "I think you will find that is my spot.");
 						addPlayer(HeadE.HAPPY_TALKING, "Can't you go to another spot?");
 						addNPC(3677, HeadE.CALM_TALK, "I can't stand the smell of those pipes...");
@@ -145,16 +129,13 @@ public class FishingContest extends QuestOutline {
 			else
 				p.startConversation(new Conversation(p) {
 					{
-						addNPC(225, HeadE.CALM_TALK, "Hey, you need to pay to enter the competition first! Only 5 coins for the entrance fee!");//Bonzo
+						addNPC(225, HeadE.CALM_TALK, "Hey, you need to pay to enter the competition first! Only 5 coins for the entrance fee!");
 						create();
 					}
 				});
 		}
 	});
 
-	/**
-	 * There is a clipflag on the garlic pipe and requires a distance or clip handling function.
-	 */
 	public static ItemOnObjectHandler handlePipeGarlic = new ItemOnObjectHandler(false, new Object[] { 41 }, new Object[] { 1550 }, e -> {
 		Player p = e.getPlayer();
 		int stage = p.getQuestManager().getStage(Quest.FISHING_CONTEST);
@@ -176,7 +157,7 @@ public class FishingContest extends QuestOutline {
 				public void run() {
 					if (tick == 0)
 						for (NPC npc : World.getNPCsInChunkRange(p.getChunkId(), 2))
-							if (npc.getId() == 3677)//vampyre stranger
+							if (npc.getId() == 3677)
 								stranger = npc;
 					if (tick == 1) {
 						if (stranger == null)

@@ -6,9 +6,6 @@ import org.darkan.tools.engine.terrain.ChunkedTerrain
 import org.joml.Matrix4f
 import org.joml.Vector3f
 
-/**
- * A scene object with spatial data for culling.
- */
 data class SpatialObject(
     val id: Int,
     override val modelId: Int,
@@ -23,9 +20,6 @@ data class SpatialObject(
     override val objectId: Int get() = id
 }
 
-/**
- * Result of a scene query or update.
- */
 data class SceneUpdateResult(
     val visibleObjects: Int,
     val totalObjects: Int,
@@ -35,56 +29,30 @@ data class SceneUpdateResult(
     val lodTimeMs: Float
 )
 
-/**
- * Scene with integrated spatial organization for efficient rendering.
- *
- * Combines:
- * - Frustum culling via spatial trees
- * - LOD selection
- * - Instanced rendering
- * - Static batching for terrain
- */
 class SpatialScene(
     worldBounds: Rect = Rect(-10000f, -10000f, 10000f, 10000f)
 ) {
-    // Spatial systems
     val cullingSystem = CullingSystem(worldBounds)
     val lodSystem = LODSystem()
     val instanceManager = InstanceManager()
 
-    // Terrain
     val terrain = ChunkedTerrain()
 
-    // Static geometry batcher
     val staticBatcher = StaticBatcher()
 
-    // All objects by ID
     private val objects = mutableMapOf<Int, SpatialObject>()
     private var nextObjectId = 1
 
-    // Visible objects from last cull
     private val visibleObjects = mutableListOf<SpatialObject>()
 
-    // Identity matrix for static objects
     private val identityMatrix = Matrix4f()
 
-    // Camera data
     private var lastCameraPos = Vector3f()
     private var lastAspectRatio = 1f
 
-    // Statistics
     private var lastCullTimeNanos = 0L
     private var lastLodTimeNanos = 0L
 
-    /**
-     * Add a static object to the scene.
-     *
-     * @param modelId The model ID for instancing
-     * @param transform The world transform matrix
-     * @param bounds The world-space AABB
-     * @param regionId Optional region ID for spatial partitioning
-     * @return The assigned object ID
-     */
     fun addObject(
         modelId: Int,
         transform: Matrix4f,
@@ -110,24 +78,16 @@ class SpatialScene(
         return id
     }
 
-    /**
-     * Remove an object from the scene.
-     */
     fun removeObject(id: Int) {
         val obj = objects.remove(id) ?: return
         cullingSystem.unregisterObject(obj)
     }
 
-    /**
-     * Update an object's transform.
-     */
     fun updateObjectTransform(id: Int, newTransform: Matrix4f) {
         val obj = objects[id] ?: return
 
-        // Update position
         newTransform.getTranslation(obj.position)
 
-        // Need to update culling system - remove and re-add
         cullingSystem.unregisterObject(obj)
 
         val newBounds = obj.bounds.transform(newTransform)
@@ -139,9 +99,6 @@ class SpatialScene(
         cullingSystem.registerObject(updated)
     }
 
-    /**
-     * Register a terrain region.
-     */
     fun registerTerrainRegion(regionId: Int, regionX: Int, regionY: Int, bounds: Rect) {
         val chunk = RegionChunk(
             regionId = regionId,
@@ -152,27 +109,19 @@ class SpatialScene(
         cullingSystem.registerRegion(chunk)
     }
 
-    /**
-     * Register a model for instanced rendering.
-     */
     fun registerInstancedModel(modelId: Int, meshDataList: List<MeshData>) {
         instanceManager.registerModel(modelId, meshDataList)
     }
 
-    /**
-     * Update visibility and LOD based on camera.
-     */
     fun update(camera: Camera, aspectRatio: Float): SceneUpdateResult {
         lastCameraPos.set(camera.position)
         lastAspectRatio = aspectRatio
 
-        // Frustum culling
         val cullStart = System.nanoTime()
         val frustum = camera.getFrustum(aspectRatio)
         val cullResult = cullingSystem.cull(frustum)
         lastCullTimeNanos = System.nanoTime() - cullStart
 
-        // Update visible objects list
         visibleObjects.clear()
         for (cullable in cullResult.visibleObjects) {
             if (cullable is SpatialObject) {
@@ -181,17 +130,14 @@ class SpatialScene(
             }
         }
 
-        // Mark non-visible objects
         for (obj in objects.values) {
             if (obj !in visibleObjects) {
                 obj.visible = false
             }
         }
 
-        // Update terrain visibility
         terrain.updateVisibility(frustum)
 
-        // LOD selection
         val lodStart = System.nanoTime()
         terrain.updateLOD(camera.position, lodSystem.lodDistances)
 
@@ -221,9 +167,6 @@ class SpatialScene(
         return distances.size
     }
 
-    /**
-     * Prepare instanced rendering for visible objects.
-     */
     fun prepareInstancedRendering() {
         instanceManager.prepareFrame()
 
@@ -236,24 +179,14 @@ class SpatialScene(
         instanceManager.uploadAll()
     }
 
-    /**
-     * Render the scene.
-     *
-     * @param colorShader Shader for untextured geometry
-     * @param texturedShader Shader for textured geometry
-     * @param uniformBuffers Optional UBOs for camera/lighting
-     * @param bindTexture Texture binding callback
-     */
     fun render(
         colorShader: ShaderProgram,
         texturedShader: ShaderProgram,
         uniformBuffers: UniformBuffers? = null,
         bindTexture: (Int) -> Unit
     ) {
-        // Render terrain
         terrain.render(colorShader, texturedShader, bindTexture)
 
-        // Render static batched geometry
         val batches = staticBatcher.getAllMeshes()
         for ((key, mesh) in batches) {
             if (key.textureId == -1) {
@@ -268,39 +201,23 @@ class SpatialScene(
             }
         }
 
-        // Render instanced objects
         instanceManager.renderAll(colorShader, texturedShader, bindTexture)
 
-        // Render non-instanced visible objects
         for (obj in visibleObjects) {
             if (!instanceManager.isModelRegistered(obj.modelId)) {
-                // Would need to look up mesh from a mesh registry
-                // For now, skip - the instance manager handles most cases
             }
         }
     }
 
-    /**
-     * Get visible objects for custom rendering.
-     */
     fun getVisibleObjects(): List<SpatialObject> = visibleObjects.toList()
 
-    /**
-     * Get all objects.
-     */
     fun getAllObjects(): Collection<SpatialObject> = objects.values
 
-    /**
-     * Query objects in a region of space.
-     */
     fun queryAABB(aabb: AABB): List<SpatialObject> {
         val cullables = cullingSystem.queryAABB(aabb)
         return cullables.filterIsInstance<SpatialObject>()
     }
 
-    /**
-     * Get scene statistics.
-     */
     fun getStats(): SpatialSceneStats {
         val cullStats = cullingSystem.getStats()
         val terrainStats = terrain.getStats()
@@ -322,9 +239,6 @@ class SpatialScene(
         )
     }
 
-    /**
-     * Clear all objects and geometry.
-     */
     fun clear() {
         objects.clear()
         visibleObjects.clear()
@@ -335,9 +249,6 @@ class SpatialScene(
         nextObjectId = 1
     }
 
-    /**
-     * Clean up all GPU resources.
-     */
     fun cleanup() {
         terrain.cleanup()
         staticBatcher.cleanup()

@@ -37,13 +37,6 @@ object Logger {
     private fun formatMessage(className: String, methodName: String, msg: Any): String = "[$className.$methodName] $msg"
 
     private fun logToDB(className: String, methodName: String, message: String, throwable: Throwable? = null) {
-        //TODO
-//        DBConnection.getErrors()?.docs?.let {
-//            when (throwable) {
-//                null -> DBConnection.getErrors().logError("$className.$methodName", message)
-//                else -> DBConnection.getErrors().logError("$className.$methodName", message, throwable)
-//            }
-//        }
     }
 
     fun Any.logErrorToDatabase(message: String, throwable: Throwable? = null) {
@@ -86,7 +79,6 @@ object Logger {
         DARKAN_ROOT_LOGGER.log(Level.FINER, formatMessage(className, methodName, msg))
     }
 
-    // --- Java-compatible @JvmStatic methods matching legacy Logger API ---
 
     @JvmStatic
     fun setLevel(level: Level) = setLogLevel(level)

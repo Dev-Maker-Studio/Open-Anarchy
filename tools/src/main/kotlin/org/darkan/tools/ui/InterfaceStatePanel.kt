@@ -9,10 +9,6 @@ import imgui.type.ImString
 import org.darkan.cs2.ir.VarSpace
 import org.darkan.tools.rsinterface.InterfaceState
 
-/**
- * Sets the game state an interface is previewed against: vars by gameval name, stat levels, and
- * the scripts to run once the load scripts have built the interface.
- */
 class InterfaceStatePanel(
     private val state: InterfaceState,
     private val reloadScripts: () -> Unit,

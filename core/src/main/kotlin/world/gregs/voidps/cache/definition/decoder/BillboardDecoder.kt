@@ -7,14 +7,6 @@ import world.gregs.voidps.cache.Index
 import world.gregs.voidps.cache.definition.data.BillboardType
 import world.gregs.voidps.cache.definition.encoder.BillboardEncoder
 
-/**
- * Index 29 archive 0: the billboard configs a model footer's attachments name.
- *
- * One archive, 360 files in the 727 cache, one opcode keyed record list each. Two of the records
- * are read as something other than what the file holds and the encoder inverts both: opcode 1's
- * `0xffff` is the "no material" sentinel and reaches [BillboardType.materialId] as -1, and opcode
- * 2's two shorts are one less than the sizes they set.
- */
 class BillboardDecoder : DefinitionDecoder<BillboardType>(Index.BILLBOARDS) {
 
     private val encoder = BillboardEncoder()
@@ -51,10 +43,8 @@ class BillboardDecoder : DefinitionDecoder<BillboardType>(Index.BILLBOARDS) {
     }
 
     companion object {
-        /** Index 29's one archive. */
         const val ARCHIVE = 0
 
-        /** Opcode 1's "this billboard has no material" sentinel. */
         const val NO_MATERIAL = 65535
     }
 }

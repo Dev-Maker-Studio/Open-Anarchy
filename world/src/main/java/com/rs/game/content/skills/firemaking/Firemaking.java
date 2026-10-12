@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.firemaking;
 
 import org.darkan.core.model.ObjectShape;
@@ -169,7 +153,7 @@ public class Firemaking extends Action {
 			player.sendMessage("You do not have the required level to light this.");
 			return false;
 		}
-		if (canLightFire(entity, player)) { // contains
+		if (canLightFire(entity, player)) {
 			if (player != null)
 				player.sendMessage("You can't light a fire here.");
 			return false;
@@ -183,8 +167,6 @@ public class Firemaking extends Action {
 	}
 
 	public static double increasedExperience(Player player, double totalXp, boolean usingBonfire) {
-		// Lighting a new fire with Pyrelord summoned
-		// Does not apply to bonfires.
 		if (!usingBonfire && player.hasFamiliar() && player.getFamiliar().getId() == 7377)
 			totalXp += 10.0;
 		if (player.getEquipment().getGlovesId() == 13660)

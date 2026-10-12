@@ -13,9 +13,6 @@ import static com.rs.game.content.quests.dragonslayer.DragonSlayer.*;
 
 @PluginEventHandler
 public class CaptainNedDragonSlayerD extends Conversation {
-	/**
-	 * Only called in PREPARE_FOR_CRANDOR stage.
-	 */
 	public CaptainNedDragonSlayerD(Player player) {
 		super(player);
 		switch(player.getQuestManager().getStage(Quest.DRAGON_SLAYER)) {

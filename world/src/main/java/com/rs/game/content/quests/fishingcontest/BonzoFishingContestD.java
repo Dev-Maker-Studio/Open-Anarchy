@@ -66,7 +66,7 @@ public class BonzoFishingContestD extends Conversation {
 
 		}
 		case DO_ROUNDS -> {
-			if(player.getInventory().containsItem(new Item(338, 1))) {//trophy
+			if(player.getInventory().containsItem(new Item(338, 1))) {
 				addNPC(NPC, HeadE.CALM_TALK, "Okay folks, time's up! Let's see who caught the biggest fish!");
 				addPlayer(HeadE.HAPPY_TALKING, "I caught some fish! Here...");
 				addSimple("You show your catch");
@@ -84,7 +84,7 @@ public class BonzoFishingContestD extends Conversation {
 			}
 		}
 		case GIVE_TROPHY -> {
-			if(player.getInventory().containsItem(new Item(FISHING_TROPHY, 1))) {//trophy
+			if(player.getInventory().containsItem(new Item(FISHING_TROPHY, 1))) {
 				addNPC(NPC, HeadE.CALM_TALK, "Hello champ! So any hints on how to fish?");
 				addPlayer(HeadE.HAPPY_TALKING, "I think I'll keep them to myself.");
 			} else {

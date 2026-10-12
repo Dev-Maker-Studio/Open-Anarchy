@@ -50,14 +50,13 @@ public class CelebrationItems {
     public static ItemClickHandler SpinningPlate = new ItemClickHandler(new Object[] { 4613 }, new String[] { "Spin" }, e -> {
         e.getPlayer().setNextAnimation(new Animation(1902));
 
-        // Inside your method or class
         Timer timer = new Timer();
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
                 e.getPlayer().setNextAnimation(new Animation(1904));
             }
-        }, 1200); // 4000 milliseconds = 5 seconds
+        }, 1200);
     });
 
     public static ItemClickHandler handle = new ItemClickHandler(new Object[] { 12844 }, new String[] { "Fly" }, e -> {

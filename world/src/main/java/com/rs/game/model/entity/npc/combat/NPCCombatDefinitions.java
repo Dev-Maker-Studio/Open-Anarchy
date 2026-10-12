@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.model.entity.npc.combat;
 
 import org.darkan.core.model.Bonus;
@@ -83,13 +67,13 @@ public class NPCCombatDefinitions {
 	private Bonus attackBonus;
 	private Map<Skill, Integer> combatLevels;
 	private Map<Bonus, Integer> bonuses;
-	private int attackRange = -1; //10 by default for range
+	private int attackRange = -1;
 	private int attackGfx;
 	private int attackProjectile;
 	private AggressiveType agressivenessType;
-	public int aggroDistance = -1; //4 for melee, 8 for range default
-	private int deAggroDistance = -1; //16 by default
-	private int maxDistFromSpawn = -1; //16 by default 64 for special/special2
+	public int aggroDistance = -1;
+	private int deAggroDistance = -1;
+	private int maxDistFromSpawn = -1;
 
 	public NPCCombatDefinitions() {
 		hitpoints = 1;

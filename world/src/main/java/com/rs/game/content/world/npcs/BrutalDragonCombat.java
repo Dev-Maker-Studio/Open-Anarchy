@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.world.npcs;
 
 import com.rs.game.World;
@@ -42,7 +26,7 @@ public class BrutalDragonCombat extends CombatScript {
 		final NPCCombatDefinitions defs = npc.getCombatDefinitions();
 		int damage;
 		switch (Utils.getRandomInclusive(3)) {
-		case 0: // Melee
+		case 0:
 			if (npc.withinDistance(target.getTile(), 3)) {
 				damage = getMaxHit(npc, defs.getMaxHit(), CombatStyle.MELEE, target);
 				npc.setNextAnimation(new Animation(defs.getAttackEmote()));
@@ -59,7 +43,7 @@ public class BrutalDragonCombat extends CombatScript {
 				delayHit(npc, p.getTaskDelay(), target, Hit.flat(npc, damage));
 			}
 			break;
-		case 1: // Dragon breath
+		case 1:
 			if (npc.withinDistance(target.getTile(), 3)) {
 				damage = Utils.getRandomInclusive(650);
 				int protection = PlayerCombatKt.getAntifireLevel(target, true);

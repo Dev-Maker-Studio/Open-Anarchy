@@ -28,20 +28,19 @@ public class MelzarsMaze {
 			return;
 
 
-		//Exits
-		if(obj.getTile().matches(Tile.of(2924, 9650, 0)))//Melzar Mad basement exit ladder to first floor
+		if(obj.getTile().matches(Tile.of(2924, 9650, 0)))
 			e.getPlayer().useLadder(Tile.of(2923, 3250, 0));
-		if(obj.getTile().matches(Tile.of(2924, 3250, 0)))//1st floor to Melzar mad exit
+		if(obj.getTile().matches(Tile.of(2924, 3250, 0)))
 			e.getPlayer().useLadder(Tile.of(2924, 9649, 0));
-		if(obj.getTile().matches(Tile.of(2939, 3257, 0)))//Front exit to Lesser demon exit ladder
+		if(obj.getTile().matches(Tile.of(2939, 3257, 0)))
 			e.getPlayer().useLadder(Tile.of(2939, 9656, 0));
-		if(obj.getTile().matches(Tile.of(2939, 9657, 0)))//Lesser demon exit to front exit
+		if(obj.getTile().matches(Tile.of(2939, 9657, 0)))
 			e.getPlayer().useLadder(Tile.of(2938, 3257, 0));
-		if(obj.getTile().matches(Tile.of(2928, 9658, 0)))//Basement exit out
+		if(obj.getTile().matches(Tile.of(2928, 9658, 0)))
 			e.getPlayer().useLadder(Tile.of(2928, 3259, 0));
-		if(obj.getTile().matches(Tile.of(2928, 9658, 0)))//Basement exit out
+		if(obj.getTile().matches(Tile.of(2928, 9658, 0)))
 			e.getPlayer().useLadder(Tile.of(2928, 3259, 0));
-		if(obj.getTile().matches(Tile.of(2932, 3240, 0)))//Basement exit out
+		if(obj.getTile().matches(Tile.of(2932, 3240, 0)))
 			e.getPlayer().useLadder(Tile.of(2932, 9641, 0));
 	});
 

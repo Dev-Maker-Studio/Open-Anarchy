@@ -22,24 +22,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/**
- * Every frame set of index 0 out through its `.glb` and back, with nothing on disk.
- *
- * [world.gregs.voidps.cache.definition.MiscEncoderParityTest] proves `encode(decode(bytes)) ==
- * bytes` frame by frame and [MiscCodecTest] proves the whole trip through a real directory; this is
- * the one that proves the *file format* - `encode(read(write(decode(group)))) == group` for every
- * archive, chunk table and all - and it is where the numbers `docs/cache-source.md`'s *anims*
- * section quotes are measured: what a `.glb` costs against the group it replaces, and what the two
- * directions cost in time.
- *
- * Two checks per archive, both on every one of them:
- *
- * - **the group comes back byte for byte**, which is the parity bar (zero pristine sidecars), and
- * - **every frame comes back field for field**, so a value the extras dropped or reordered is named
- *   as a frame rather than as a byte offset.
- *
- * Skipped when there is no cache to test against, like the other whole-cache tests.
- */
 class AnimationGltfParityTest {
 
     @Test
@@ -142,15 +124,6 @@ class AnimationGltfParityTest {
         }
     }
 
-    /**
-     * One frame set's `.glb`, reported: its size, its chunks and its whole glTF JSON.
-     *
-     * A worked example belongs in a test rather than only in a document, because a test is what
-     * prints it again when the spelling changes: `docs/cache-source.md`'s *anims* excerpt is this
-     * output. Archive 99 is two frames over a six transform skeleton of origins and rotations, which
-     * is small enough to read whole and still shows a channel, a shared keyframe time accessor and
-     * the extras.
-     */
     @Test
     fun `a frame set reads as a whole file`() {
         val cache = open() ?: return
@@ -162,7 +135,6 @@ class AnimationGltfParityTest {
             println("  glTF JSON chunk ${asset.length} bytes before padding")
             println("  $asset")
             assertTrue(asset.startsWith("{\"asset\":"), "the JSON chunk must be a glTF asset")
-            // The nodes are the base's label groups, and the animation is the frames.
             assertTrue(asset.contains("\"animations\":[{\"name\":\"frameset_$EXAMPLE\""), asset)
             assertTrue(asset.contains("\"path\":\"rotation\""), asset)
             val set = AnimationGltf.read(glb, EXAMPLE)
@@ -178,7 +150,6 @@ class AnimationGltfParityTest {
         }
     }
 
-    /** Re-unpacking an unchanged cache must rewrite nothing, which means the same bytes twice. */
     @Test
     fun `a frame set glb is deterministic`() {
         val cache = open() ?: return
@@ -194,12 +165,6 @@ class AnimationGltfParityTest {
         }
     }
 
-    /**
-     * The unpack itself: one file per archive, no sidecar, and the name the layout says.
-     *
-     * The round trip above is what proves no archive *needs* a sidecar; this is the check that the
-     * codec writes what it says it writes.
-     */
     @Test
     fun `an unpacked frame set is one file with no sidecar`() {
         val cache = open() ?: return
@@ -219,7 +184,6 @@ class AnimationGltfParityTest {
         }
     }
 
-    /** One archive exactly as the unpacker hands it to a codec. */
     private fun source(cache: Cache, archive: Int): SourceArchive? {
         val container = cache.container(Index.ANIMATION_FRAMES, archive) ?: return null
         val ids = cache.files(Index.ANIMATION_FRAMES, archive)
@@ -238,12 +202,6 @@ class AnimationGltfParityTest {
         )
     }
 
-    /**
-     * The cache, with the codec pointed at it.
-     *
-     * Index 0's codec reads index 1 to lay a file's nodes out, and it would otherwise open a second
-     * cache of its own through `Cache.get`.
-     */
     private fun open(): Cache? {
         val directory = File(EnvVars.cachePath)
         if (!File(directory, "${FileStore.CACHE_FILE_NAME}.dat2").exists()) {
@@ -262,18 +220,11 @@ class AnimationGltfParityTest {
     }
 
     private companion object {
-        /** What vanilla 727 shipped; index 0 only ever grows, so these are floors. */
         private const val VANILLA_ARCHIVES = 4_085
         private const val VANILLA_FRAMES = 490_049
 
-        /** The frame set `docs/cache-source.md`'s *anims* excerpt quotes. */
         private const val EXAMPLE = 99
 
-        /**
-         * A handful of frame sets to check the cheap properties on: index 0's first archive, one
-         * with sparse file ids (1), the example, the archive whose frames declare 0 transforms and
-         * carry 256 flag bytes (162), and one whose skeleton has a transform of every kind (381).
-         */
         private val DETERMINISTIC = intArrayOf(0, 1, 99, 162, 381)
     }
 }

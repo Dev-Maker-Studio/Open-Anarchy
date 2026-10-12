@@ -26,7 +26,6 @@ public class UpdateZone {
     public UpdateZone(int baseChunkId, RegionSize size) {
         this.baseChunkId = baseChunkId;
         this.size = size;
-        // Exactly the scene Entity.loadMapRegions builds: a chunk past it encodes an offset the client has no slot for.
         for (int planeOff = 0;planeOff < 4 * Chunk.PLANE_INC;planeOff += Chunk.PLANE_INC) {
             for (int chunkXOff = 0; chunkXOff < (size.getSize() / 8) * Chunk.X_INC; chunkXOff += Chunk.X_INC) {
                 for (int chunkYOff = 0; chunkYOff < (size.getSize() / 8); chunkYOff++) {
@@ -38,7 +37,6 @@ public class UpdateZone {
         }
     }
 
-    /** A key, not a hash: two scene bases colliding here would hand a player another base's zone. */
     public static long getId(int baseChunkId, RegionSize size) {
         return ((long) baseChunkId << 8) | size.ordinal();
     }

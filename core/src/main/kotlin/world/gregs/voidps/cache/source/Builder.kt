@@ -11,25 +11,16 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
-/** What one [Builder.build] did. */
 class BuildResult(
-    /** Whether the whole cache was packed rather than patched. */
     val full: Boolean,
-    /** Why it was a full pack, or `incremental`. */
     val reason: String,
-    /** Reference tables rewritten. */
     val indices: Int,
-    /** Archives repacked. */
     val archives: Int,
-    /** Archives dropped because the tree no longer holds them. */
     val removed: Int,
-    /** Tree files that are new or whose contents changed. */
     val changedFiles: Int,
-    /** Tree files that had to be hashed because their size or mtime moved. */
     val hashedFiles: Int,
     val millis: Long
 ) {
-    /** Whether the tree was already what the output was built from. */
     val unchanged: Boolean
         get() = !full && archives == 0 && removed == 0 && indices == 0
 
@@ -41,22 +32,6 @@ class BuildResult(
     }
 }
 
-/**
- * Rebuilds a packed cache from a source tree, repacking only what changed.
- *
- * This is what the server runs on startup, so its cost when nothing changed is the number that
- * matters: a stat of every file in the tree, a parse of the manifest, and nothing else - the
- * output files are not opened, let alone written. When something did change, the changed paths
- * are mapped back through the indices' codecs onto the archive each belongs to
- * ([world.gregs.voidps.cache.source.codec.SourceCodec.owner]), `index.json` is diffed archive by
- * archive against the digests the manifest kept, and only the affected archives and their
- * reference tables are rewritten - into the existing store, reusing each archive's sector chain
- * where the new container still fits. A changed file the codec owns at index level rather than per
- * archive repacks nothing and is handed to its `packIndex` instead.
- *
- * A missing or stale manifest, a manifest from a different tree, or a missing cache means there
- * is nothing to patch, and the build falls back to [Packer].
- */
 object Builder {
 
     fun build(tree: SourceTree, output: File, report: (String) -> Unit = {}): BuildResult {
@@ -129,8 +104,6 @@ object Builder {
             val indices = (affected.keys + metadataChanged + indexFiles.keys).sorted()
             if (indices.isEmpty()) {
                 if (scan.hashed > 0) {
-                    // Nothing changed, but files were touched; recording that saves the next
-                    // build the same hashing.
                     manifest.files.clear()
                     manifest.files.putAll(scan.files)
                     manifest.write(output)
@@ -170,17 +143,6 @@ object Builder {
         }
     }
 
-    /**
-     * Map a tree relative path onto what its change forces a rebuild of.
-     *
-     * Three answers, which is what [Owner] is: an archive, which is repacked; the index itself, for
-     * a file that is a property of the whole index rather than of any archive (index 12's project
-     * files), which repacks nothing on its own but is handed to
-     * [SourceCodec.packIndex][world.gregs.voidps.cache.source.codec.SourceCodec.packIndex] so the
-     * codec can decide; or nothing here, which is reported and ignored. Every one of them is in the
-     * manifest either way - the scan hashes every file in the tree - so a claimed index level file
-     * stops being reported as changed the moment the build records it.
-     */
     private fun claim(
         tree: SourceTree,
         path: String,
@@ -195,7 +157,6 @@ object Builder {
         }
         val index = IndexNames.index(path.substring(0, separator))
         if (index < 0) {
-            // gamevals and anything else beside the indices; part of the tree, not of the cache.
             return
         }
         val relative = path.substring(separator + 1)
@@ -204,8 +165,6 @@ object Builder {
             return
         }
         if (relative.endsWith(SourceTree.OPAQUE_EXTENSION) && !relative.contains('/')) {
-            // An opaque archive belongs to no codec: its container never opened, so the framework
-            // owns the file and the codec has never seen it.
             val archive = relative.dropLast(SourceTree.OPAQUE_EXTENSION.length).toIntOrNull()
             if (archive == null) {
                 unclaimed.add(path)
@@ -221,10 +180,8 @@ object Builder {
         }
     }
 
-    /** What one index's rebuild came to. */
     private class IndexBuild(val archives: Int, val removed: Int, val table: Boolean)
 
-    /** Repack one index's affected archives and rewrite its reference table if that changed it. */
     private fun buildIndex(
         tree: SourceTree,
         index: Int,
@@ -253,8 +210,6 @@ object Builder {
         val directory = tree.indexDirectory(index)
         val codec = SourceCodecs.codec(index)
 
-        // An archive whose metadata line moved has to be repacked even when none of its files did:
-        // a version bump, a new key or a changed name hash all change the bytes served.
         val digests = HashMap<Int, String>(metadata.archives.size * 2)
         for ((archive, archiveMetadata) in metadata.archives) {
             val digest = SourceFiles.digest(archiveMetadata.write())
@@ -269,8 +224,6 @@ object Builder {
         val stored = store.read(FileStore.REFERENCE_INDEX, index)
         var table = if (stored == null) null else ReferenceTable.decode(Container.decode(stored).data())
         if (table == null || table.named != metadata.named || table.whirlpool != metadata.whirlpool) {
-            // The flags decide which per-archive fields the table carries, and the ones it would
-            // gain cannot be recovered without reading every container, so repack the lot.
             table = ReferenceTable(metadata.format, metadata.revision, metadata.named, metadata.whirlpool)
             changed.addAll(metadata.archives.keys)
         }
@@ -279,8 +232,6 @@ object Builder {
 
         val ids = changed.filter { metadata.archives.containsKey(it) }.sorted()
         if (ids.isNotEmpty() || indexFiles.isNotEmpty()) {
-            // Only when there is something to pack, which is what keeps a build that touches no
-            // clientscript from paying for the corpus analysis.
             codec.packIndex(directory, index, ids.toIntArray(), indexFiles)
         }
         val window = threads * PIPELINE
@@ -309,9 +260,6 @@ object Builder {
             states.remove(archive)
         }
 
-        // The table is always rebuilt and only written when it comes out different, which is what
-        // makes a bumped revision or a changed table compression land without a special case, and
-        // a reformatted index.json land as nothing at all.
         val encoded = SourcePack.tableContainer(metadata, table)
         val rewritten = stored == null || !stored.contentEquals(encoded)
         if (rewritten) {
@@ -330,6 +278,5 @@ object Builder {
 
     private const val UNCLAIMED = 5
 
-    /** How many archives per thread may be compressed ahead of the store writer. */
     private const val PIPELINE = 8
 }

@@ -11,21 +11,13 @@ import org.darkan.core.net.prot.packet.RunScript
 import org.darkan.lobby.web.model.LobbyPlayer
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * The clan interfaces a player can use from the lobby screen. The lobby opens the same clan
- * interfaces the world server does, so the component ids are the ones the in-world clan plugin
- * uses; each button becomes the [ClanAction] a world would send, handed to [ClanService.handle]
- * so the lobby screen and the worlds share one rule set (`docs/clans.md`).
- */
 object LobbyClanScreen {
 
-    /** Chatbox "enter a name" prompt; `sendInputNameScript` in the legacy world server. */
     private const val INPUT_NAME_SCRIPT = 109
 
     const val CLAN_CHAT_INTERFACE = 1110
     const val CLAN_SETTINGS_INTERFACE = 1096
 
-    /** Which outstanding prompt a player's next name entry answers. */
     private enum class NameInput { CREATE_CLAN, JOIN_GUEST_CC, BAN, UNBAN }
 
     private val pendingNameInput = ConcurrentHashMap<String, NameInput>()
@@ -53,7 +45,6 @@ object LobbyClanScreen {
         }
     }
 
-    /** The answer to the last [prompt]; ignored when nothing was asked. */
     suspend fun nameInput(player: LobbyPlayer, input: String) {
         val name = input.formatPlayerNameForDisplay()
         when (pendingNameInput.remove(player.account.username) ?: return) {
@@ -66,7 +57,6 @@ object LobbyClanScreen {
         }
     }
 
-    /** The forum quick-find code dialogue: a base-36 code stored as the `FORUM_QFC` setting. */
     suspend fun forumQfc(player: LobbyPlayer, qfc: String) {
         val code = qfc.toLongOrNull(36)
         if (code == null) {
@@ -80,7 +70,6 @@ object LobbyClanScreen {
         pendingNameInput.remove(username)
     }
 
-    /** Clan chat toggle. With no clan yet this starts the create-a-clan flow, as in-world does. */
     private suspend fun toggleClanChannel(player: LobbyPlayer) {
         val account = Accounts.find(player.account.username) ?: return
         if (ClanService.clanOf(account.username) == null) {
@@ -116,14 +105,12 @@ object LobbyClanScreen {
         player.session.send(RunScript(INPUT_NAME_SCRIPT, arrayOf(question)))
     }
 
-    /** The protocol username behind a typed display name, messaging the player when there is none. */
     private suspend fun resolve(player: LobbyPlayer, displayName: String): String? {
         val target = Accounts.findByDisplayName(displayName)
         if (target == null) player.message("Player not found.")
         return target?.username
     }
 
-    /** Runs [action] for the player and shows them the reason when it is refused. */
     private suspend fun run(player: LobbyPlayer, action: ClanAction): Boolean {
         val result = ClanService.handle(player.account.username, action)
         if (!result.ok) player.message(result.message ?: "Unable to do that right now.")

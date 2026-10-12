@@ -38,10 +38,6 @@ import org.darkan.core.gameval.gen.Varp;
 @PluginEventHandler
 public class FishingTrawler {
 
-	/*
-		TODO: Proper contribution meter based on wiki info
-		TODO: Full contribution meter provides additional 50% fish
-	 */
 
 	private static FishingTrawler instance;
 
@@ -136,8 +132,6 @@ public class FishingTrawler {
 		if (World.SYSTEM_UPDATE_DELAY > 0 && !shutdown) {
 			shutdown = true;
 			end();
-			//force those on boat off
-			//stop people getting back on
 		}
 		if (time == 0) {
 			if (running) {

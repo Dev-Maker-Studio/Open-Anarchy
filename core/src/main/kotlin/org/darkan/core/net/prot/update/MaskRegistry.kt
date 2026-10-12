@@ -3,16 +3,6 @@ package org.darkan.core.net.prot.update
 import world.gregs.voidps.buffer.read.Reader
 import world.gregs.voidps.buffer.write.BufferWriter
 
-/**
- * Revision-agnostic mask registry for entity update blocks.
- *
- * A revision defines:
- * - The mask bit ids (scrambled per revision)
- * - The on-wire block encoding (byte/short transforms, ordering)
- * - The header encoding rules (how many header bytes, extension-bit rules)
- *
- * Then the revision encoder can build a mask data integer and a block buffer in one pass.
- */
 
 fun interface MaskHeaderWriter {
     fun withExtensions(maskData: Int): Int
@@ -37,11 +27,6 @@ class MaskRegistry<C, K : Enum<K>>(
     private val header: MaskHeader,
     private val defs: List<MaskDef<C, K>>,
 ) {
-    /**
-     * Encodes header + block.
-     *
-     * @param present A boolean array indexed by [K.ordinal] marking which semantic masks are present.
-     */
     fun encode(ctx: C, present: BooleanArray, out: BufferWriter, block: BufferWriter) {
         var maskData = 0
         for (def in defs) {

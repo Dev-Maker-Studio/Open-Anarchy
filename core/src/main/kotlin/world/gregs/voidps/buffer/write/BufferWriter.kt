@@ -2,9 +2,6 @@ package world.gregs.voidps.buffer.write
 
 import java.nio.ByteBuffer
 
-/**
- * All functions relative to writing directly to a packet are done by this class
- */
 class BufferWriter(
     capacity: Int = 64,
     private val buffer: ByteBuffer = ByteBuffer.allocate(capacity)

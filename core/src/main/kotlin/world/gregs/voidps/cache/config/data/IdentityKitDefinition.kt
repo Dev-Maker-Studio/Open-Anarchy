@@ -7,10 +7,6 @@ import world.gregs.voidps.cache.definition.Recolourable
 data class IdentityKitDefinition(
     override var id: Int = -1,
     var bodyPartId: Int = 0,
-    /**
-     * Opcode 3's two bytes. The client's `IdkType` has no opcode 3 at all, so what it means is
-     * unknown; 13 of the 652 shipped files carry it and it is kept so they can be written back.
-     */
     var unknown3: Int = -1,
     var modelIds: IntArray? = null,
     override var originalColours: ShortArray? = null,
@@ -20,14 +16,8 @@ data class IdentityKitDefinition(
     val headModels: IntArray = intArrayOf(-1, -1, -1, -1, -1)
 ) : Definition, Recolourable, OpcodeOrdered {
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var opcodeOrder: IntArray? = null
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var shadowedPayloads: Array<ByteArray?>? = null
 
     override fun equals(other: Any?): Boolean {

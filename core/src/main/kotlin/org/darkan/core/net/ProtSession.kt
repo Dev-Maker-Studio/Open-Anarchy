@@ -71,8 +71,6 @@ abstract class ProtSession<I : Any, O : Any>(
     fun close() {
         disconnected = true
         state = State.DISCONNECTED
-        // Close the queue rather than killing the writer so anything already queued (the logout
-        // packet, typically) still reaches the other end before the writer coroutine exits.
         outbound.close()
         disconnect?.invoke()
     }
@@ -88,7 +86,6 @@ abstract class ProtSession<I : Any, O : Any>(
     suspend fun disconnect(reason: Int) {
         if (disconnected) return
         disconnected = true
-        // The response code bypasses the packet queue, so the writer has to be off the socket first.
         if (stopWriter())
             write.writeByte(reason)
         finishDisconnect()
@@ -191,8 +188,6 @@ abstract class ProtSession<I : Any, O : Any>(
             return true
         }
         if (result.isClosed) return false
-        // Dropping individual packets would desync the peer and an unbounded queue is a memory/DoS
-        // hazard, so the session goes instead - explicitly and loudly.
         logWarn("Outbound queue overflow ($outboundCapacity packets) for $ip, dropping session")
         dropSlowPeer()
         return false

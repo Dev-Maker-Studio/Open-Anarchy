@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.summoning;
 
 import com.google.common.collect.Streams;
@@ -34,10 +18,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public enum Pouch {
-	/**
-	 * Hello leecher. Nice to see you here. You're welcome for doing all the hard work for you.
-	 * I hope you'll notice the license above :)
-	 */
 	SPIRIT_WOLF(0, 6829, 6830, XPType.ACCURATE, 8298, 8532, Scroll.HOWL, 12047, 1, 0.1, 4.8, Ticks.fromMinutes(16), 1),
 	DREADFOWL(2, 6825, 6826, XPType.MAGIC, 7807, 8555, Scroll.DREADFOWL_STRIKE, 12043, 4, 0.1, 9.3, Ticks.fromMinutes(16), 1),
 	SPIRIT_SPIDER(0, 6841, 6842, XPType.CONTROLLED, 8163, 8544, Scroll.EGG_SPAWN, 12059, 10, 0.2, 12.6, Ticks.fromMinutes(16), 2, "forage_spirit_spider"),

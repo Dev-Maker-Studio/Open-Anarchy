@@ -1,10 +1,5 @@
 package org.darkan.core.model
 
-/**
- * The clan permissions the settings interface displays, keyed by the varc the client shows each one
- * in. Which ranks hold a permission comes from the per-rank `<RANK>_PERMISSION_<ACTION>` clan
- * settings; the chat permissions come from the clan's cc talk/kick ranks instead.
- */
 enum class ClanPermission(val varc: Int) {
     KICK_FROM_CC(1570) {
         override fun hasPermission(clan: Clan, rank: ClanRank) = rank.chatPermission(clan.ccKickRank)
@@ -43,7 +38,6 @@ enum class ClanPermission(val varc: Int) {
             else -> ordinal >= required.ordinal
         }
 
-        /** The rank's own `<RANK>_PERMISSION_<action>` setting; owners always have everything. */
         private fun ClanRank.setting(clan: Clan, action: String): Boolean = when (this) {
             ClanRank.NONE -> false
             ClanRank.OWNER, ClanRank.JMOD -> true
@@ -53,7 +47,6 @@ enum class ClanPermission(val varc: Int) {
             }
         }
 
-        /** Permissions the client only offers to admin ranks and above. */
         private fun ClanRank.adminSetting(clan: Clan, action: String): Boolean =
             if (ordinal < ClanRank.ADMIN.ordinal) false else setting(clan, action)
     }

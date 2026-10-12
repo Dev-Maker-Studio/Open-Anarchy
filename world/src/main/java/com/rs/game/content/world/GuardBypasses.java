@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright © 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.world;
 
 import org.darkan.core.model.ObjectShape;
@@ -36,28 +20,28 @@ public class GuardBypasses {
 
 	static {
 		PlayerStepEvent.registerMethod(PlayerStepEvent.class, createDoubleGuardBypass(Tile.of(3146, 3336, 0),
-		Tile.of(3145, 3336, 0), Tile.of(3147, 3336, 0), 85, 24)); //Draynor Manor East
+		Tile.of(3145, 3336, 0), Tile.of(3147, 3336, 0), 85, 24));
 
 		PlayerStepEvent.registerMethod(PlayerStepEvent.class, createDoubleGuardBypass(Tile.of(3069, 3276, 0),
-		Tile.of(3070, 3275, 0), Tile.of(3070, 3277, 0), 85, 24)); //Draynor West
+		Tile.of(3070, 3275, 0), Tile.of(3070, 3277, 0), 85, 24));
 
 		PlayerStepEvent.registerMethod(PlayerStepEvent.class, createDoubleGuardBypass(Tile.of(3077, 3333, 0),
-		Tile.of(3076, 3333, 0), Tile.of(3078, 3333, 0), 85, 24)); //Draynor Manor West
+		Tile.of(3076, 3333, 0), Tile.of(3078, 3333, 0), 85, 24));
 
 		PlayerStepEvent.registerMethod(PlayerStepEvent.class, createDoubleGuardBypass(Tile.of(3108, 3420, 0),
-		Tile.of(3109, 3419, 0), Tile.of(3109, 3421, 0), 88, 87)); //Varrock to Barb Village
+		Tile.of(3109, 3419, 0), Tile.of(3109, 3421, 0), 88, 87));
 
 		PlayerStepEvent.registerMethod(PlayerStepEvent.class, createDoubleGuardBypass(Tile.of(3138, 3467, 0),
-		Tile.of(3137, 3467, 0), Tile.of(3139, 3467, 0), 85, 24)); //GE to Edgeville
+		Tile.of(3137, 3467, 0), Tile.of(3139, 3467, 0), 85, 24));
 
 		PlayerStepEvent.registerMethod(PlayerStepEvent.class, createDoubleGuardBypass(Tile.of(3260, 3173, 0),
-		Tile.of(3261, 3172, 0), Tile.of(3261, 3174, 0), 88, 87)); //Lumbridge swamp to Al Kharid
+		Tile.of(3261, 3172, 0), Tile.of(3261, 3174, 0), 88, 87));
 
 		PlayerStepEvent.registerMethod(PlayerStepEvent.class, createDoubleGuardBypass(Tile.of(3283, 3329, 0),
-		Tile.of(3282, 3330, 0), Tile.of(3284, 3330, 0), 88, 87)); //Al Kharid to Varrock
+		Tile.of(3282, 3330, 0), Tile.of(3284, 3330, 0), 88, 87));
 
 		PlayerStepEvent.registerMethod(PlayerStepEvent.class, createDoubleGuardBypass(Tile.of(3292, 3385, 0),
-		Tile.of(3291, 3385, 0), Tile.of(3293, 3385, 0), 4640, 4636)); //Varrock East to Wall
+		Tile.of(3291, 3385, 0), Tile.of(3293, 3385, 0), 4640, 4636));
 	}
 
 	public static PlayerStepHandler createDoubleGuardBypass(Tile bottomLeftTile, Tile guard1, Tile guard2, int openAnim, int closeAnim) {
@@ -149,9 +133,9 @@ public class GuardBypasses {
 			World.spawnObjectTemporary(new GameObject(gate2.getId(), gate2.getType(), gate2.getRotation(1), gate2.getTile().transform(1, 0, 0)), 3, true);
 		}
 		e.getPlayer().lock(2);
-		if(e.getObj().getRotation() == 2) //East
+		if(e.getObj().getRotation() == 2)
 			e.getPlayer().addWalkSteps(e.getPlayer().getX() > e.getObj().getX() ? e.getObj().getTile().transform(-1, 0) : e.getObj().getTile().transform(1, 0), 3, false);
-		if(e.getObj().getRotation() == 1) //North
+		if(e.getObj().getRotation() == 1)
 			e.getPlayer().addWalkSteps(e.getPlayer().getY() > e.getObj().getY() ? e.getObj().getTile().transform(0, -1) : e.getObj().getTile().transform(0, 1), 3, false);
 	});
 

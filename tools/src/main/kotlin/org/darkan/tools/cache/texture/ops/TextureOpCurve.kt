@@ -4,10 +4,6 @@ import org.darkan.tools.cache.texture.TextureOperation
 import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 
-/**
- * Type 8: Applies curve interpolation/tone mapping.
- * Maps input values through a configurable curve defined by control points.
- */
 class TextureOpCurve : TextureOperation(1, true) {
     private var curvePoints: Array<IntArray>? = null
     private var startExtension: IntArray? = null

@@ -56,11 +56,9 @@ class DarrenLightfingerGeneric(p: Player, npc: NPC) {
                 }
                 op("How's the guild coming along these days?") {
                     if (p.isMiniquestComplete(Miniquest.A_GUILD_OF_OUR_OWN, false)) {
-                        //AGuildOfOurOwnTXT
                         goto("options")
                     }
                     if (p.isMiniquestComplete(Miniquest.LOST_HER_MARBLES)) {
-                        //LostHerMarblesOptionsTXT
                         goto("options")
                     }
                     if (p.isMiniquestComplete(Miniquest.FROM_TINY_ACORNS)) {
@@ -84,7 +82,6 @@ class DarrenLightfingerGeneric(p: Player, npc: NPC) {
                         exec { DarrenLostHerMarbles(p, npc) }
                     }
                     if (thievingLevel >= 62 && agilityLevel >= 40 && herbloreLevel >= 46 && !p.isMiniquestComplete(Miniquest.A_GUILD_OF_OUR_OWN)) {
-                        //AGuildOfOurOwnOptions(player);
                     }
                     npc(npc, HAPPY_TALKING, "I don't have any capers for you at the moment, come back and see me in a little while.")
                 }

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.npcs.combat;
 
 import com.rs.game.World;
@@ -63,7 +47,7 @@ public class RuneboundBehemothCombat extends CombatScript {
 			return 5;
 		}
 
-		if (Utils.random(15) == 0) {// Special attack
+		if (Utils.random(15) == 0) {
 			final List<Tile> explosions = new LinkedList<>();
 			boss.setNextForceTalk(new ForceTalk("Raaaaaaaaaaaaaaaaaaaaaaaaaawr!"));
 			WorldTasks.scheduleTimer((ticks) -> {
@@ -110,20 +94,16 @@ public class RuneboundBehemothCombat extends CombatScript {
 		if (attack == 0 && distanced)
 			attack = possibleAttacks[1];
 		switch (attack) {
-			//melee
 			case 0 -> {
 				boss.setNextAnimation(new Animation(14423));
 				delayHit(npc, 0, target, Hit.melee(npc, getMaxHitFromAttackStyleLevel(npc, CombatStyle.MELEE, target)));
 			}
-			//green exploding blob attack (magic)
 			case 1 -> {
 				boss.setNextAnimation(new Animation(14427));
-				//boss.setNextGraphics(new Graphics(2413));
 				World.sendProjectile(npc, target, 2414, new Pair<>(41, 16), 50, 4, 0);
 				delayHit(npc, 1, target, Hit.magic(npc, getMaxHitFromAttackStyleLevel(npc, CombatStyle.MAGIC, target)));
 				target.setNextSpotAnim(new SpotAnim(2417, 80, 0));
 			}
-			//green blob attack (range)
 			case 2 -> {
 				boss.setNextAnimation(new Animation(14424));
 				boss.setNextSpotAnim(new SpotAnim(2394));

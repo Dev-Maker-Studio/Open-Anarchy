@@ -22,10 +22,9 @@ public class DragonSlayer_BoatScene extends Controller {
 	NPC captainNed;
 	NPC cabinboyJenkins;
 
-	//constants
 	int TRAVEL_INTERFACE = 299;
 	int BOAT_TO_CRANDOR = 544;
-	int HAPPY_TRAVEL_JINGLE = 350; //Custom for this cutscene
+	int HAPPY_TRAVEL_JINGLE = 350;
 	int CAPTAIN_NED = 6084;
 	int CABIN_BOY_JENKINS = 6085;
 	int ANIM_JENKINS_SHAKE = 2105;
@@ -81,8 +80,8 @@ public class DragonSlayer_BoatScene extends Controller {
 
 				@Override
 				public void run() {
-					if (tick == 0) {  //setup p1
-						player.getInterfaceManager().setFadingInterface(115); //for interfaces over interfaces do this
+					if (tick == 0) {
+						player.getInterfaceManager().setFadingInterface(115);
 						player.musicTrack(HAPPY_TRAVEL_JINGLE, 5);
 					}
 					if (tick == 3) {
@@ -144,7 +143,7 @@ public class DragonSlayer_BoatScene extends Controller {
 						});
 
 					if(tick == 17) {
-						player.musicTrack(360, 10); //Elvarg's theme
+						player.musicTrack(360, 10);
 						player.startConversation(new Conversation(player) {
 							{
 								addSimple("Clouds surround the ship.");
@@ -512,11 +511,11 @@ public class DragonSlayer_BoatScene extends Controller {
 						player.getInterfaceManager().setFadingInterface(115);
 					if(tick == 51) {
 						player.getInterfaceManager().setFadingInterface(516);
-						player.tele(crandor);//crandor
+						player.tele(crandor);
 					}
 
 					if(tick == PAUSE_FOR_PLAYER5) {
-						player.setNextFaceTile(Tile.of(player.getX(), player.getY()+1, player.getPlane()));//face north
+						player.setNextFaceTile(Tile.of(player.getX(), player.getY()+1, player.getPlane()));
 						player.getPackets().sendStopCameraShake();
 						player.getPackets().sendResetCamera();
 						player.startConversation(new Conversation(player) {
@@ -528,7 +527,7 @@ public class DragonSlayer_BoatScene extends Controller {
 						});
 					}
 					if(tick == 53) {
-                        player.musicTrack(170, 5);//crandor music
+                        player.musicTrack(170, 5);
 						player.setNextAnimation(new Animation(ANIM_PLAYER_GET_UP));
 						player.getInterfaceManager().setFadingInterface(170);
 					}

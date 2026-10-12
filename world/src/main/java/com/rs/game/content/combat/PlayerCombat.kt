@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.combat
 
 import org.darkan.core.model.Bonus
@@ -242,7 +226,7 @@ class PlayerCombat(@JvmField val target: Entity) : PlayerAction() {
                 } else return 0
             }
 
-            RangedWeapon.CHINCHOMPA, RangedWeapon.RED_CHINCHOMPA -> { //TODO validate the logic here
+            RangedWeapon.CHINCHOMPA, RangedWeapon.RED_CHINCHOMPA -> {
                 attackTarget(getMultiAttackTargets(player, target)) { nextTarget ->
                     val hit = calculateHit(player, nextTarget, attackStyle, CombatStyle.RANGE, true, 1.0, if (weaponId == 10034) 1.2 else 1.0)
                     player.anim(2779)
@@ -517,7 +501,7 @@ fun attackTarget(targets: Set<Entity>, perform: (Entity) -> Boolean) {
 
 fun addAttackedByDelay(player: Entity, target: Entity) {
     target.attackedBy = player
-    target.setAttackedByDelay(System.currentTimeMillis() + 8000) // 8seconds
+    target.setAttackedByDelay(System.currentTimeMillis() + 8000)
 }
 
 fun getRangeCombatDelay(weaponId: Int, attackStyle: AttackStyle): Int {
@@ -591,7 +575,7 @@ fun dropAmmo(player: Player, target: Entity, slot: Int = Equipment.AMMO, quantit
     }
     when (ammoId) {
         15243, 25202, 10033, 10034, 19152, 19157, 19162, 10142, 10143, 10144, 10145 -> {
-            player.equipment.removeAmmo(slot, quantity) //delete 100% of the time
+            player.equipment.removeAmmo(slot, quantity)
             return
         }
     }
@@ -605,7 +589,7 @@ fun dropAmmo(player: Player, target: Entity, slot: Int = Equipment.AMMO, quantit
         }
     }
     player.equipment.removeAmmo(slot, quantity)
-    if (Utils.random(5) == 0) //1/5 chance to just break the ammo entirely
+    if (Utils.random(5) == 0)
         return
     World.addGroundItem(Item(ammoId, quantity), Tile.of(target.getCoordFaceX(target.size), target.getCoordFaceY(target.size), target.plane), player)
 }
@@ -652,9 +636,6 @@ fun delayHit(target: Entity, delay: Int, weaponId: Int, attackStyle: AttackStyle
     } else hitFail?.run()
     (source as? Player)?.let { addXp(source, target, attackStyle?.xpType, hit) }
 
-    // A weapon fed from the quiver poisons with its ammo; a thrown weapon and anything that is not a
-    // ranged weapon at all poison with themselves, so poisoned ammo in the quiver cannot leak onto a
-    // melee hit.
     var ammoId = -1
     if (weaponId != -1) {
         (source as? Player)?.let {
@@ -675,9 +656,7 @@ private const val ROAD_MESSAGE = "Nothing can fight on the road."
 private val VINE_WHIPS = Obj.jaro_vine_whip_abyssal..Obj.jaro_vine_whip_abyssal_green
 
 fun calculatePoisonStartDamage(weaponId: Int, hit: Hit, poisonLevel: Int): Int {
-    // note that dungeoneering poison differences only matter for ammo and not melee weapons
     return when (poisonLevel) {
-        // (p) or weak weapon poison (dung)
         0 -> {
             when (hit.look) {
                 HitLook.RANGE_DAMAGE -> if (AmmoType.isDungAmmo(weaponId)) 48 else 28
@@ -685,7 +664,6 @@ fun calculatePoisonStartDamage(weaponId: Int, hit: Hit, poisonLevel: Int): Int {
                 else -> 0
             }
         }
-        // (p+) or weapon poison (dung)
         1 -> {
             when (hit.look) {
                 HitLook.RANGE_DAMAGE -> if (AmmoType.isDungAmmo(weaponId)) 58 else 38
@@ -693,7 +671,6 @@ fun calculatePoisonStartDamage(weaponId: Int, hit: Hit, poisonLevel: Int): Int {
                 else -> 0
             }
         }
-        // (p++) or strong weapon poison (dung)
         2 -> {
             when (hit.look) {
                 HitLook.RANGE_DAMAGE -> if (AmmoType.isDungAmmo(weaponId)) 68 else 58

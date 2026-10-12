@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.world.areas.tirannwn;
 
 import com.rs.engine.dialogue.Conversation;
@@ -36,16 +20,8 @@ import com.rs.plugin.handlers.ObjectClickHandler;
 @PluginEventHandler
 public class Tirannwn {
 
-	// public static void unlockPrisonerOfGlouphrieEntrance(LoginEvent e) {
-	// e.getPlayer().getVars().setVarBit(5332, 1); //remove boulder
-	// e.getPlayer().getVars().setVarBit(8749, 2); //expose vent and tie rope
-	// return false;
-	// }
 
 	public static ObjectClickHandler handleStickTraps = new ObjectClickHandler(new Object[] { 3922 }, e -> {
-		/*
-		 * 3 = S -> N 2 = W -> E 1 = N- > S 0 = E -> W
-		 */
 		Player p = e.getPlayer();
 		Tile objTile = Tile.of(e.getObj().getX(), e.getObj().getY(), e.getObj().getPlane());
 		if (p.withinDistance(objTile, 3) && (e.getObj().getRotation() == 3 || e.getObj().getRotation() == 1))
@@ -61,9 +37,6 @@ public class Tirannwn {
 	});
 
 	public static ObjectClickHandler handleTripWire = new ObjectClickHandler(new Object[] { 3921 }, e -> {
-		/*
-		 * 2 = S -> N 3 = W -> E 0 = N- > S 1 = E -> W
-		 */
 		Player p = e.getPlayer();
 		Tile objTile = Tile.of(e.getObj().getX(), e.getObj().getY(), e.getObj().getPlane());
 		if (p.withinDistance(objTile, 3) && (e.getObj().getRotation() == 0 || e.getObj().getRotation() == 2))
@@ -186,7 +159,7 @@ public class Tirannwn {
 		Player p = e.getPlayer();
 		WorldObject obj = e.getObj();
 
-		if (obj.getId() == 9296) {// above
+		if (obj.getId() == 9296) {
 			if (obj.getTile().matches(Tile.of(2333, 3252, 0))) {
 				if (!Agility.hasLevel(p, 85)) {
 					p.getPackets().sendGameMessage("You need level 85 agility to use this shortcut.");
@@ -210,7 +183,7 @@ public class Tirannwn {
 			}
 		}
 
-		if (obj.getId() == 9297) {// below
+		if (obj.getId() == 9297) {
 			if (obj.getTile().matches(Tile.of(2337, 3253, 0))) {
 				if (!Agility.hasLevel(p, 85)) {
 					p.getPackets().sendGameMessage("You need level 85 agility to use this shortcut.");

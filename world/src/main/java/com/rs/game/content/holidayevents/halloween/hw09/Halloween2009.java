@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.holidayevents.halloween.hw09;
 
 import org.darkan.core.cache.ObjectDefinitions;
@@ -66,42 +50,34 @@ public class Halloween2009 {
 	};
 
 	static {
-		//South line
 		WEBS.put(46711, new HashSet<>(Arrays.asList(46708, 46709, 46710)));
 		WEBS.put(46710, new HashSet<>(Arrays.asList(46711, 46705, 46706, 46707)));
 		WEBS.put(46706, new HashSet<>(Arrays.asList(46710, 46703, 46712, 46704)));
 		WEBS.put(46712, new HashSet<>(List.of(46706)));
-		//Southeast line
 		WEBS.put(46709, new HashSet<>(Arrays.asList(46702, 46707, 46711)));
 		WEBS.put(46707, new HashSet<>(Arrays.asList(46701, 46704, 46709, 46710)));
 		WEBS.put(46704, new HashSet<>(Arrays.asList(46700, 46706, 46707, 46719)));
 		WEBS.put(46719, new HashSet<>(List.of(46704)));
-		//East line
 		WEBS.put(46702, new HashSet<>(Arrays.asList(46701, 46709, 46691)));
 		WEBS.put(46701, new HashSet<>(Arrays.asList(46702, 46707, 46700, 46694)));
 		WEBS.put(46700, new HashSet<>(Arrays.asList(46701, 46704, 46718, 46696)));
 		WEBS.put(46718, new HashSet<>(List.of(46700)));
-		//Northeast line
 		WEBS.put(46691, new HashSet<>(Arrays.asList(46702, 46694, 46688)));
 		WEBS.put(46694, new HashSet<>(Arrays.asList(46691, 46701, 46696, 46689)));
 		WEBS.put(46696, new HashSet<>(Arrays.asList(46694, 46700, 46717, 46693)));
 		WEBS.put(46717, new HashSet<>(List.of(46696)));
-		//North line
 		WEBS.put(46688, new HashSet<>(Arrays.asList(46691, 46689, 46690)));
 		WEBS.put(46689, new HashSet<>(Arrays.asList(46688, 46694, 46693, 46692)));
 		WEBS.put(46693, new HashSet<>(Arrays.asList(46689, 46696, 46716, 46695)));
 		WEBS.put(46716, new HashSet<>(List.of(46693)));
-		//Northwest line
 		WEBS.put(46690, new HashSet<>(Arrays.asList(46688, 46692, 46697)));
 		WEBS.put(46692, new HashSet<>(Arrays.asList(46689, 46695, 46698, 46690)));
 		WEBS.put(46695, new HashSet<>(Arrays.asList(46693, 46715, 46699, 46692)));
 		WEBS.put(46715, new HashSet<>(List.of(46695)));
-		//West line
 		WEBS.put(46697, new HashSet<>(Arrays.asList(46690, 46698, 46708)));
 		WEBS.put(46698, new HashSet<>(Arrays.asList(46697, 46692, 46699, 46705)));
 		WEBS.put(46699, new HashSet<>(Arrays.asList(46698, 46695, 46714, 46703)));
 		WEBS.put(46714, new HashSet<>(List.of(46699)));
-		//Southwest airline
 		WEBS.put(46708, new HashSet<>(Arrays.asList(46697, 46705, 46711)));
 		WEBS.put(46705, new HashSet<>(Arrays.asList(46708, 46698, 46703, 46710)));
 		WEBS.put(46703, new HashSet<>(Arrays.asList(46705, 46699, 46713, 46706)));
@@ -207,7 +183,7 @@ public class Halloween2009 {
 					WorldTasks.delay(1, () -> {
 						e.getPlayer().setNextAnimation(new Animation(12777));
 						e.getPlayer().tele(Tile.of(3936, 5125, 2));
-						e.getPlayer().getPackets().sendRunScript(2582, 837, 0, 0); //turn off scenery shadows so people can see the floor...
+						e.getPlayer().getPackets().sendRunScript(2582, 837, 0, 0);
 					});
 				});
 				ops.add("Go to spider court.", () -> {
@@ -215,7 +191,7 @@ public class Halloween2009 {
 					WorldTasks.delay(1, () -> {
 						e.getPlayer().setNextAnimation(new Animation(12777));
 						e.getPlayer().tele(Tile.of(3744, 5287, 0));
-						e.getPlayer().getPackets().sendRunScript(2582, 837, 0, 0); //turn off scenery shadows so people can see the floor...
+						e.getPlayer().getPackets().sendRunScript(2582, 837, 0, 0);
 					});
 				});
 			});
@@ -224,7 +200,7 @@ public class Halloween2009 {
 			WorldTasks.delay(1, () -> {
 				e.getPlayer().setNextAnimation(new Animation(12777));
 				e.getPlayer().tele(Tile.of(3936, 5125, 2));
-				e.getPlayer().getPackets().sendRunScript(2582, 837, 0, 0); //turn off scenery shadows so people can see the floor...
+				e.getPlayer().getPackets().sendRunScript(2582, 837, 0, 0);
 			});
 		}
 	});
@@ -241,19 +217,19 @@ public class Halloween2009 {
 		if (e.getObj().getTile().isAt(3744, 5288)) {
 			if (e.getPlayer().getI(Halloween2009.STAGE_KEY) >= 6) {
 				e.getPlayer().sendOptionDialogue("Select an Option", ops -> {
-					ops.add("Go down the ladder.", () -> e.getPlayer().useLadder(/*Tile.of(3936, 5372, 2)*/Tile.of(3936, 5150, 2)));
+					ops.add("Go down the ladder.", () -> e.getPlayer().useLadder( Tile.of(3936, 5150, 2)));
 					ops.add("Return to the Grim Reaper's House.", () -> e.getPlayer().useLadder(Tile.of(3805, 5149, 0)));
 				});
 				return;
 			}
-			e.getPlayer().useLadder(/*Tile.of(3936, 5372, 2)*/Tile.of(3936, 5150, 2));
+			e.getPlayer().useLadder( Tile.of(3936, 5150, 2));
 		} else
 			e.getPlayer().useLadder(Tile.of(3744, 5276, 0));
 	});
 
 	public static ObjectClickHandler agilCourseLadderDown = new ObjectClickHandler(new Object[] { 46939 }, e -> e.getPlayer().useLadder(Tile.of(3936, 5150, 2)));
 
-	public static ObjectClickHandler agilCourseLadderUp = new ObjectClickHandler(new Object[] { 46731 }, e -> e.getPlayer().useLadder(/*e.getObject().isAt(3936, 5151) ? Tile.of(3936, 5315, 2) : */Tile.of(3744, 5287, 0)));
+	public static ObjectClickHandler agilCourseLadderUp = new ObjectClickHandler(new Object[] { 46731 }, e -> e.getPlayer().useLadder( Tile.of(3744, 5287, 0)));
 
 	public static ObjectClickHandler webLaddersUp = new ObjectClickHandler(new Object[] { 46938 }, e -> {
 		if (e.getPlayer().getI(Halloween2009.STAGE_KEY) < 4) {

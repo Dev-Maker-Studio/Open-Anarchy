@@ -25,13 +25,6 @@ class Window(private val config: WindowConfig = WindowConfig()) {
     private var scrollCallback: ((Double, Double) -> Unit)? = null
     private var focusCallback: ((Boolean) -> Unit)? = null
 
-    /**
-     * Standard cursors, created lazily and kept for the window's lifetime.
-     *
-     * GLFW hands out a new native cursor per call, so a tool that switches shape
-     * while the pointer moves over a resize handle would leak one per frame
-     * without this cache.
-     */
     private val cursors = HashMap<Int, Long>()
     private var activeCursor = 0
 
@@ -68,9 +61,6 @@ class Window(private val config: WindowConfig = WindowConfig()) {
             keyCallback?.invoke(key, scancode, action, mods)
         }
 
-        // Character input is a separate GLFW callback from key input: the key
-        // callback reports physical keys, this one reports the text the keyboard
-        // layout actually produced, which is what a text field has to insert.
         glfwSetCharCallback(handle) { _, codepoint ->
             charCallback?.invoke(codepoint)
         }
@@ -87,8 +77,6 @@ class Window(private val config: WindowConfig = WindowConfig()) {
             scrollCallback?.invoke(xoffset, yoffset)
         }
 
-        // Focus and cursor-enter both mean the pointer's last known position is stale, and
-        // the next cursor event would otherwise be reported as one enormous movement.
         glfwSetWindowFocusCallback(handle) { _, focused ->
             focusCallback?.invoke(focused)
         }
@@ -119,15 +107,7 @@ class Window(private val config: WindowConfig = WindowConfig()) {
         GL.createCapabilities()
 
         glEnable(GL_DEPTH_TEST)
-        // Use GL_LEQUAL to reduce z-fighting between coplanar geometry.
-        // GL_LEQUAL allows fragments at equal depth to pass, which is needed for
-        // scenery objects that sit exactly on terrain surfaces (ground decorations,
-        // walls on floors). With GL_LESS, these fragments fight because floating
-        // point imprecision causes near-equal depths to alternate winning.
         glDepthFunc(GL_LEQUAL)
-        // Culling disabled - RS models have inconsistent winding
-        // glEnable(GL_CULL_FACE)
-        // glCullFace(GL_BACK)
         if (config.samples > 0) {
             glEnable(GL_MULTISAMPLE)
         }
@@ -155,7 +135,6 @@ class Window(private val config: WindowConfig = WindowConfig()) {
         scrollCallback = callback
     }
 
-    /** Called with true when the window takes focus or the cursor enters it. */
     fun setFocusCallback(callback: (focused: Boolean) -> Unit) {
         focusCallback = callback
     }
@@ -168,11 +147,6 @@ class Window(private val config: WindowConfig = WindowConfig()) {
         glfwSetWindowTitle(handle, title)
     }
 
-    /**
-     * Shows one of GLFW's standard cursor shapes, or the default arrow when
-     * [shape] is 0. Repeated calls with the same shape are free, so this can be
-     * driven straight from a per-frame hover test.
-     */
     fun setCursorShape(shape: Int) {
         if (shape == activeCursor) {
             return
@@ -183,14 +157,11 @@ class Window(private val config: WindowConfig = WindowConfig()) {
             return
         }
         val cursor = cursors.getOrPut(shape) { glfwCreateStandardCursor(shape) }
-        // A shape the platform does not provide comes back as NULL, which GLFW
-        // reads as "use the default arrow" - the right fallback anyway.
         glfwSetCursor(handle, cursor)
     }
 
     fun shouldClose(): Boolean = glfwWindowShouldClose(handle)
 
-    /** Ask the render loop to exit after the current frame. */
     fun requestClose() {
         glfwSetWindowShouldClose(handle, true)
     }

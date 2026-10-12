@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.bosses.kalphitequeen
 
 import com.rs.game.World.sendProjectile
@@ -74,7 +58,6 @@ fun mapKalphiteQueen() {
             return@npcCombat getDefaultCombat().apply(npc, target)
         npc.anim(if (npc.id == 1158) 6240 else 6234)
         if (random(2) == 0) {
-            //range
             sendProjectile(npc, target, 288, delay = 30, speed = 5, angle = 15) {
                 delayHit(npc, 0, target, Hit.range(npc, getMaxHit(npc, npc.combatDefinitions.maxHit, CombatStyle.RANGE, target, 10000.0)))
                 if (target is Player)
@@ -82,7 +65,6 @@ fun mapKalphiteQueen() {
             }
             return@npcCombat npc.attackSpeed
         }
-        //mage
         npc.spotAnim(if (npc.id == 1158) 278 else 279)
         projectileBounce(npc, target, mutableSetOf(target), 280, 281, 5) { nextTarget ->
             delayHit(npc, 0, nextTarget, Hit.magic(npc, getMaxHit(npc, npc.maxHit, CombatStyle.MAGIC, nextTarget, 10000.0)))

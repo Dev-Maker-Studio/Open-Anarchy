@@ -28,10 +28,8 @@ enum class Penguins(val points: Int, val npcId: Int, val locationHint: String, v
     BUSH_15(2, 8105, "located where monkeys rule.", Tile(2802, 2806, 0), "Ape Atoll - Inside the walls of Marim. North-east of the temple", 5..55),
     BUSH_16(2, 8105, "located near some ogres in South Feldip Hills.", Tile(2578, 2909, 0), "Feldip Hills - West of the hut north of the Oo'glog red sandstone mine", 5..20),
     BUSH_17(2, 8105, "located near a town of werewolves.", Tile(3600, 3486, 0), "Haunted Woods - South-east of Fairy Ring code ALQ", 5..25),
-    //BUSH_18(2, 8105, "located on islands where brothers quarrel.", Tile(2355, 3848, 0), "Jatizso - On the second island north of Neitiznot", 5..20),
     BUSH_19(2, 8105, "located on an island, etc.", Tile(2534, 3871, 0), "Miscellania - East from the north-east corner of the Miscellanian castle", 5..60),
     BUSH_20(2, 8105, "located where bloodsuckers rule.", Tile(3472, 3392, 0), "Mort Myre - South-east of the triangular lake, south of Fairy Ring code BKR", 5..25),
-    //BUSH_21(2, 8105, "located on islands where brothers quarrel.", Tile(2353, 3834, 0), "Neitiznot - On the grassy island, north of the town of Neitiznot", 5..20),
 
     ROCK_1(1, 8109, "located where the Imperial Guard train.", Tile(2867, 3606, 0), "Death Plateau - On the path to Death Plateau", 5..35),
     ROCK_2(1, 8109, "located in the north of the kingdom of Misthalin.", Tile(3356, 3416, 0), "Digsite - Near west side winch", 10..30),
@@ -42,7 +40,6 @@ enum class Penguins(val points: Int, val npcId: Int, val locationHint: String, v
     ROCK_7(1, 8109, "located near a mountain of wolves.", Tile(2869, 3515, 0), "White Wolf Mountain - East of White Wolf Mountain", 5..15),
     ROCK_8(1, 8109, "located near the coast, east of Ardougne.", Tile(2733, 3283, 0), "Witchaven - East of Witchaven church", 5..20),
     ROCK_9(2, 8109, "located around Feldip Hills, near Gu'Tanoth.", Tile(2340, 3064, 0), "Castle Wars - South-west of Castle Wars, between the 2 lakes, north of the rare tree icon", 5..25),
-    //ROCK_10(2, 8109, "located on islands where brothers quarrel.", Tile(2413, 3846, 0), "Jatizso - West from the bridge north of Jatizso", 5..20),
     ROCK_11(2, 8109, "located around Feldip Hills, near Gu'Tanoth.", Tile(2438, 3050, 0), "Jiggig - South-west of quest start icon at Jiggig", 5..15),
     ROCK_12(2, 8109, "located where dwarves dig deep.", Tile(2909, 10210, 0), "Keldagrim - North-west of Blasidar the sculptor's house", 5..45),
     ROCK_13(2, 8109, "located on a large crescent island.", Tile(2117, 3942, 0), "Lunar Isle - South-east corner of Livid Farm", 5..45),

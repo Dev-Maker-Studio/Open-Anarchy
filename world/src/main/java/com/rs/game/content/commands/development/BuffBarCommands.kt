@@ -22,8 +22,6 @@ fun loadBuffBarCommands() {
                 p.sendMessage("Applied ${barEffects().size} effects plus poison for ${seconds}s.")
             }
             "clear" -> {
-                // clearEffects keeps anything flagged isRemoveOnDeath = false, which is the death
-                // semantic rather than the reset a test wants.
                 Effect.entries.filter { p.hasEffect(it) }.forEach { p.removeEffect(it) }
                 p.poison.reset()
                 p.sendMessage("Cleared every effect.")

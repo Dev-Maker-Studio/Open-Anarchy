@@ -6,12 +6,6 @@ import world.gregs.voidps.cache.definition.data.ShaderProgramDefinition
 import world.gregs.voidps.cache.definition.data.ShaderProgramMapping
 import world.gregs.voidps.cache.definition.data.ShaderProgramVariable
 
-/**
- * The exact inverse of [world.gregs.voidps.cache.definition.decoder.ShaderProgramDecoder].
- *
- * The only conditional field in the format is an array variable's element type and size, and the
- * condition is the variable's own type, so nothing about the file's shape has to be remembered.
- */
 class ShaderProgramEncoder {
 
     fun Writer.encode(definition: ShaderProgramDefinition) {
@@ -72,7 +66,6 @@ class ShaderProgramEncoder {
         string(define.value)
     }
 
-    /** A length prefixed string, or the -1 length that stands for null. */
     private fun Writer.string(value: String?) {
         if (value == null) {
             writeShortLittle(NULL)

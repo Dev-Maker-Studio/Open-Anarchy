@@ -15,9 +15,6 @@ import org.darkan.core.map.pathfinder.flag.CollisionFlag.BLOCK_SOUTH_EAST_AND_WE
 import org.darkan.core.map.pathfinder.flag.CollisionFlag.BLOCK_SOUTH_WEST
 import org.darkan.core.map.pathfinder.flag.CollisionFlag.BLOCK_WEST
 
-/**
- * @author Kris | 16/03/2022
- */
 public class StepValidator(private val flags: Array<IntArray?>) {
 
     public fun canTravel(
@@ -46,7 +43,6 @@ public class StepValidator(private val flags: Array<IntArray?>) {
 
     @Suppress("NOTHING_TO_INLINE")
     private inline operator fun Array<IntArray?>.get(x: Int, y: Int, level: Int): Int {
-        // Coordinates off the map (x or y below 0) pack to a negative zone index; treat them as fully blocked.
         val zoneIndex = getZoneIndex(x, y, level)
         if (zoneIndex < 0 || zoneIndex >= size) return -1
         val zone = this[zoneIndex] ?: return -1

@@ -24,17 +24,8 @@ public object CollisionFlag {
     public const val OBJECT_PROJECTILE_BLOCKER: Int = 0x20000
     public const val FLOOR_DECORATION: Int = 0x40000
 
-    /**
-     * Custom flag dedicated to blocking NPCs.
-     */
     public const val BLOCK_NPCS: Int = 0x80000
 
-    /**
-     * Custom flag dedicated to blocking players, projectiles as well as NPCs.
-     * An example of a monster to set this flag is Brawler. Note that it is unclear if this flag
-     * prevents NPCs, as there is a separate flag option for it.
-     * This flag is similar to the one above, except it's strictly for NPCs.
-     */
     public const val BLOCK_PLAYERS: Int = 0x100000
 
     public const val FLOOR: Int = 0x200000
@@ -48,15 +39,10 @@ public object CollisionFlag {
     public const val WALL_WEST_ROUTE_BLOCKER: Int = 0x20000000
     public const val OBJECT_ROUTE_BLOCKER: Int = 0x40000000
 
-    /**
-     * Roof flag, used to bind NPCs to not leave the buildings they spawn in. This is a custom flag.
-     */
     public const val ROOF: Int = 0x80000000.toInt()
 
-    /* A shorthand combination of both the floor flags. */
     private const val FLOOR_BLOCKED = FLOOR or FLOOR_DECORATION
 
-    /* Mixed masks of the above flags */
     public const val BLOCK_WEST: Int = WALL_EAST or
         OBJECT or
         FLOOR_BLOCKED
@@ -129,7 +115,6 @@ public object CollisionFlag {
         OBJECT or
         FLOOR_BLOCKED
 
-    /* Route blocker flags. These are used in ~550+ clients to generate paths through bankers and such. */
     public const val BLOCK_WEST_ROUTE_BLOCKER: Int = WALL_EAST_ROUTE_BLOCKER or
         OBJECT_ROUTE_BLOCKER or
         FLOOR_BLOCKED

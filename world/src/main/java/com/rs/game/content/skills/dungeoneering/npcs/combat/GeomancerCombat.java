@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.npcs.combat;
 
 import com.rs.game.World;
@@ -61,7 +45,6 @@ public class GeomancerCombat extends CombatScript {
 
 		int attackType = Utils.random(6);
 		switch (attackType) {
-			// MELEE
 			case 0 -> {
 				if (atDistance) {
 					sendEarthBlast(npc, target, true);
@@ -70,11 +53,8 @@ public class GeomancerCombat extends CombatScript {
 					delayHit(npc, 0, target, Hit.melee(npc, getMaxHitFromAttackStyleLevel(npc, CombatStyle.MELEE, target)));
 				}
 			}
-			// EARTH BLAST
 			case 1, 2 -> sendEarthBlast(npc, target, attackType == 2);
-			// WEAKEN
 			case 3 -> sendWeaken(npc, target);
-			// SNARE
 			case 4 -> sendEntangle(npc, target);
 			case 5 -> sendPrayerSpell(npc);
 		}
@@ -105,10 +85,7 @@ public class GeomancerCombat extends CombatScript {
 
 		if (damage > 0) {
 			target.setNextSpotAnim(new SpotAnim(180, 75, 100));
-			// if (!target.isBoundImmune()) {
-			// target.setBoundDelay(20, false, 7);
 			target.freeze(20);
-			// }
 			if (target instanceof Player player)
 				player.getActionManager().setActionDelay(4);
 		}

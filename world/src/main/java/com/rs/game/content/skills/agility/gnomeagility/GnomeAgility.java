@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.agility.gnomeagility;
 
 import com.rs.engine.pathfinder.RouteEvent;
@@ -34,7 +18,6 @@ public class GnomeAgility {
 	private static void initAdvancedCourse(final Player player) {
 		boolean[] previousStages = Agility.getStages(player, Agility.GNOME_COURSE);
 		Agility.initStages(player, Agility.GNOME_COURSE, AdvancedObstacle.getEntries().size());
-		// the log balance, obstacle net and tree branch carry over from the normal course to the advanced course
 		if (previousStages != null) {
 			Agility.setStageProgress(player, Agility.GNOME_COURSE, AdvancedObstacle.LOG_BALANCE.ordinal(), previousStages[NormalObstacle.LOG_BALANCE.ordinal()]);
 			Agility.setStageProgress(player, Agility.GNOME_COURSE, AdvancedObstacle.OBSTACLE_NET.ordinal(), previousStages[NormalObstacle.OBSTACLE_NET.ordinal()]);

@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# PreToolUse hook (Edit|Write|MultiEdit|NotebookEdit): injects the project code standards into
-# Claude's context before every file edit, for every developer who clones the repo. Edits under
-# the cache source tree's clientscripts, interfaces or graphics also get the cs2-engineer skill;
-# world content and cache definitions get the content-development skill, and world sources also
-# get the kotlin-plugins skill.
 set -euo pipefail
 input="$(cat)"
 skills="$(cd "$(dirname "$0")/.." && pwd)/skills"

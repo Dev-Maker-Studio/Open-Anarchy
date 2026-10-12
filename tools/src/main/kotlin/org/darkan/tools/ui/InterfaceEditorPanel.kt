@@ -18,56 +18,19 @@ import org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT
 import org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT
 import org.lwjgl.glfw.GLFW.GLFW_KEY_UP
 
-/**
- * The component tree.
- *
- * ### Why the tree is flattened before it is drawn
- *
- * ImGui's `TreeNode` recursion lays out every node it is asked for, visible or
- * not, and cache interfaces run to several hundred components - 1477 alone is
- * over four hundred. Recursing costs a widget per component per frame and the
- * panel visibly slows down. So the hierarchy is flattened into a row list once
- * per frame, respecting the collapse state, and [ImGuiListClipper] emits only the
- * rows inside the scroll region. Indentation is then drawn by hand, which is the
- * price of the clipper and is why the expander is a real button rather than a
- * tree node's arrow.
- *
- * ### Why the drag is hand rolled
- *
- * ImGui's drag-and-drop payload API would do the gesture, but not the part that
- * matters: a reparent and a reorder are the same gesture distinguished only by
- * *where in the row* the pointer is, and the drop indicator has to say which one
- * is about to happen. Tracking the press, the hovered row and the third of the
- * row the pointer is in gives all three - drop above, drop inside, drop below -
- * from one piece of state.
- *
- * ### What the rows say
- *
- * A row is a diagnostic, not a label. The status letters after the name are the
- * four things that make a component invisible or inert, and they are exactly the
- * questions asked while debugging an interface that draws nothing: is it hidden,
- * does it have a hook, is it zero sized, is it outside the stage.
- */
 class InterfaceEditorPanel(private val context: InterfaceEditContext) {
 
     var visible: Boolean = true
 
-    /** Stage size, so a row can say when a component landed outside it. */
     var stageWidth: Int = 0
     var stageHeight: Int = 0
 
-    /**
-     * This frame's key presses, handed over by the viewer because ImGui's own
-     * key enum does not line up with GLFW's in this binding version. Consumed
-     * only while the tree has focus.
-     */
     var keys: List<Pair<Int, Int>> = emptyList()
 
     private val search = ImString(64)
     private var showHooksOnly = false
     private var showHiddenOnly = false
 
-    /** Collapsed component indices; everything else is open. */
     private val collapsed = HashSet<Int>()
 
     private var rows: List<Row> = emptyList()
@@ -79,7 +42,6 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
     private var dropTarget = -1
     private var dropMode = DROP_NONE
 
-    /** Row the clipper should scroll into view, set when something reveals a component. */
     private var scrollTo = -1
 
     private class Row(val index: Int, val depth: Int, val hasChildren: Boolean, val open: Boolean)
@@ -113,7 +75,6 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
         ImGui.end()
     }
 
-    // ---------------------------------------------------------------- toolbar
 
     private fun drawToolbar(document: InterfaceDocument) {
         ImGui.setNextItemWidth(-1f)
@@ -145,12 +106,7 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
         ImGuiText.disabled("${document.componentCount}")
     }
 
-    // ------------------------------------------------------------------ rows
 
-    /**
-     * Rebuilds the flat row list, which only changes when the document, the
-     * collapse state or the filter does.
-     */
     private fun rebuildRows(document: InterfaceDocument) {
         val query = search.get().trim()
         val filters = (if (showHooksOnly) 1 else 0) or (if (showHiddenOnly) 2 else 0)
@@ -165,9 +121,6 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
         if (query.isEmpty() && filters == 0) {
             appendLevel(document, InterfaceDocument.ROOT, 0, built)
         } else {
-            // A filtered tree is a flat list: hiding the parents of a match while
-            // keeping the indentation reads as a broken hierarchy, and a developer
-            // filtering wants the hits, not their ancestry.
             val lower = query.lowercase()
             for (index in 0 until document.componentCount) {
                 if (matches(document, index, lower)) {
@@ -206,7 +159,6 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
             ComponentType.name(definition.type).contains(query, ignoreCase = true)
     }
 
-    /** Opens every ancestor of a revealed component and queues a scroll to it. */
     private fun honourReveal() {
         val target = context.revealed
         if (target < 0) {
@@ -230,8 +182,6 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
             ImGuiText.disabled("Nothing matches.")
             return
         }
-        // The clipper needs the row list captured outside the callback; it is
-        // invoked synchronously but Kotlin cannot see that through the interface.
         val visibleRows = rows
         dropTarget = -1
         dropMode = DROP_NONE
@@ -242,9 +192,6 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
             }
         })
         if (scrollTo >= 0) {
-            // The clipper only lays out the visible span, so a scroll target that
-            // is outside it has to be reached arithmetically rather than by
-            // setScrollHereY on a row that was never emitted.
             val position = visibleRows.indexOfFirst { it.index == scrollTo }
             if (position >= 0) {
                 ImGui.setScrollY(position * ImGui.getTextLineHeightWithSpacing() - ImGui.getWindowSizeY() / 2f)
@@ -306,8 +253,6 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
         }
         contextMenu(document, index, definition)
 
-        // Press then move is a drag; the press alone is a click, which is what
-        // makes selecting and dragging the same gesture up to the first pixel.
         if (dragIndex < 0 && ImGui.isItemActive() && ImGui.isMouseDragging(ImGuiMouseButton.Left, DRAG_THRESHOLD)) {
             dragIndex = index
         }
@@ -334,11 +279,6 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
         }
     }
 
-    /**
-     * Applies a finished drag. Dropping inside reparents; dropping on an edge
-     * reorders within the target's parent, which is the only way to change draw
-     * order - and draw order is what decides which component is on top.
-     */
     private fun finishDrag(document: InterfaceDocument) {
         if (dragIndex < 0) {
             return
@@ -387,7 +327,6 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
         }
     }
 
-    /** Shift-click selects everything between the two rows as they are displayed. */
     private fun selectRange(from: Int, to: Int) {
         val start = rows.indexOfFirst { it.index == from }
         val end = rows.indexOfFirst { it.index == to }
@@ -399,7 +338,6 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
         context.setSelection(span.map { rows[it].index }, to)
     }
 
-    // ------------------------------------------------------------ row labels
 
     private fun label(
         document: InterfaceDocument,
@@ -438,8 +376,6 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
         if (flags.isNotEmpty()) {
             builder.append("   ").append(flags)
         }
-        // Depth is already drawn as indentation in the unfiltered tree; in the flat
-        // filtered list the parent is the only thing that locates a component.
         if (depth == 0 && definition.parent >= 0) {
             builder.append("   in ").append(definition.parent)
         }
@@ -457,7 +393,6 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
 
     private fun strip(text: String): String = text.replace(TAG, "").trim()
 
-    // --------------------------------------------------------- context menu
 
     @Suppress("LongMethod")
     private fun contextMenu(
@@ -558,7 +493,6 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
         }
     }
 
-    /** Hides everything outside a subtree, which is how a busy interface is read. */
     private fun isolate(document: InterfaceDocument, index: Int) {
         val keep = HashSet(document.subtree(index))
         var parent = document.component(index)?.parent ?: InterfaceDocument.ROOT
@@ -575,13 +509,7 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
         context.touched()
     }
 
-    // -------------------------------------------------------------- keyboard
 
-    /**
-     * Arrow-key navigation over the displayed rows. The viewer hands the frame's
-     * presses over; they are only acted on while the tree has focus, so the same
-     * keys still reach the interface when the stage does.
-     */
     private fun handleKeys() {
         if (keys.isEmpty() || !ImGui.isWindowFocused()) {
             return
@@ -641,7 +569,6 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
         private const val DROP_INSIDE = 2
         private const val DROP_AFTER = 3
 
-        /** ImGui packs colours as ABGR. */
         private const val DROP_COLOUR = 0xff2fd0ffL.toInt()
 
         private val TAG = Regex("<[^>]*>")
@@ -657,7 +584,6 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
             else -> "T$type"
         }
 
-        /** Type colour coding, so the shape of an interface is readable at a glance. */
         private fun typeColour(type: Int): FloatArray = when (type) {
             ComponentType.CONTAINER -> floatArrayOf(0.62f, 0.70f, 0.80f)
             ComponentType.TYPE_2 -> floatArrayOf(0.55f, 0.62f, 0.72f)

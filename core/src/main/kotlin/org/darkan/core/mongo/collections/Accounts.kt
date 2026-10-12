@@ -20,11 +20,6 @@ import org.darkan.core.mongo.dropIndexIfPresent
 import org.darkan.core.net.web.AccountCreateRequest
 import org.darkan.core.net.web.ConflictException
 
-/**
- * The account reads and writes the social layer performs, behind an interface so a test can put an
- * in-memory store in front of [Accounts] instead of a Mongo connection. Production code always goes
- * through [Accounts]; only the store underneath it is swappable.
- */
 interface AccountStore {
     suspend fun find(usernameOrEmail: String): Account?
     suspend fun findByDisplayName(displayName: String): Account?
@@ -45,7 +40,6 @@ private val collection by lazy {
     col
 }
 
-/** The real store: the Mongo `accounts` collection. */
 private object MongoAccounts : AccountStore {
     override suspend fun find(usernameOrEmail: String): Account? {
         val formatted = usernameOrEmail.formatPlayerNameForProtocol()
@@ -88,7 +82,6 @@ private object MongoAccounts : AccountStore {
 
 object Accounts : AccountStore {
 
-    /** Swapped by tests for an in-memory store; never reassigned by production code. */
     @Volatile
     var store: AccountStore = MongoAccounts
 

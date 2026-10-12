@@ -7,10 +7,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * Index 5 archive names are built, not catalogued, so the formula itself is what needs a test:
- * the letter runs straight into the first coordinate and only the two coordinates are separated.
- */
 class MapSquareTest {
 
     @Test
@@ -31,11 +27,6 @@ class MapSquareTest {
         assertEquals("ul1_30", MapSquare.underwaterLocations(Region(1, 30)))
     }
 
-    /**
-     * The formula has to be exhaustive both ways: every one of the five shapes really occurs, and
-     * between them they name every archive index 5 has - nothing is reachable only by a spelling
-     * this helper cannot produce.
-     */
     @Test
     fun `the five formulas name every map archive and nothing else`() {
         val cache = cache() ?: return
@@ -66,7 +57,6 @@ class MapSquareTest {
             .eachCount()
         assertEquals(mapOf("m" to 2407, "l" to 2407, "um" to 1208, "ul" to 1208, "n" to 38), counts)
 
-        // And a built name resolves to the archive that carries it.
         assertEquals(1585, cache.archiveId(Index.MAPS, MapSquare.terrain(50, 50)))
         assertEquals(1586, cache.archiveId(Index.MAPS, MapSquare.locations(50, 50)))
     }

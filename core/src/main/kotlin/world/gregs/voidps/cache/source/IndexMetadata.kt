@@ -11,47 +11,21 @@ import world.gregs.voidps.cache.store.BZip2Variant
 import world.gregs.voidps.cache.store.Compression
 import world.gregs.voidps.cache.store.ReferenceTable
 
-/**
- * Everything about one archive that its files do not say.
- *
- * The defaults are what the overwhelming majority of the 727 cache's archives are, and a field
- * at its default is left out of `index.json` entirely, so a typical entry is two fields wide.
- */
 class ArchiveMetadata(
-    /** The reference table's version. The container's two byte trailer is its low 16 bits. */
     var version: Int = 0,
-    /** The container's compression. Always written; there is no sensible default to imply. */
     var compression: Compression = Compression.GZIP,
-    /** The gzip header's OS byte when it is not zero - two archives in index 19 carry 0xff. */
     var gzipOs: Int = 0,
-    /** Which bzip2 encoder reproduces the payload; only ever written as `commons`. */
     var bzip2: BZip2Variant = BZip2Variant.LIBBZIP2,
-    /** The archive's name hash, in the indices whose reference table carries names. */
     var nameHash: Int = 0,
-    /** The single file's id, when the archive has one file whose id is not 0. */
     var file: Int = 0,
-    /** The number of files, when the codec cannot see them and the ids run 0 until the count. */
     var fileCount: Int = 1,
-    /** The explicit file id list, when the codec cannot see them and they are not 0 until n. */
     var files: IntArray? = null,
-    /** File id to name hash, for the two indices whose tables name files (23 and 31). */
     var fileNames: Map<Int, Int> = emptyMap(),
-    /** The archive's XTEA key, for the encrypted `l`/`n` map archives. */
     var xtea: IntArray? = null,
-    /** File id to the SHA-256 of the editable file the original bytes were kept alongside. */
     var pristine: Map<Int, String> = emptyMap(),
-    /**
-     * The container could not be opened - an encrypted map archive whose key nobody has - so the
-     * container bytes themselves are the source, kept in `<archive>.container` and packed back
-     * verbatim. Eight index 5 archives in the 727 cache are like this.
-     */
     var opaque: Boolean = false
 ) {
 
-    /**
-     * The archive's file ids as the metadata records them, for codecs whose layout does not
-     * spell them out. [files], then [fileCount], then [file], then the single file 0.
-     */
     fun fileIds(): IntArray {
         files?.let { return it }
         if (fileCount > 1) {
@@ -60,7 +34,6 @@ class ArchiveMetadata(
         return intArrayOf(file)
     }
 
-    /** Record [ids] in the most compact shape that reproduces them. */
     fun fileIds(ids: IntArray) {
         require(ids.isNotEmpty()) { "An archive has at least one file." }
         val dense = ids.withIndex().all { (position, id) -> id == position }
@@ -79,7 +52,6 @@ class ArchiveMetadata(
         }
     }
 
-    /** The entry as `index.json` writes it, braces included and all on one line. */
     fun write(): String {
         val fields = ArrayList<String>(6)
         if (version != 0) {
@@ -161,32 +133,17 @@ class ArchiveMetadata(
     }
 }
 
-/**
- * `<index>/index.json` - an index's reference table with everything derivable taken out.
- *
- * What is left is what the data files cannot say: the table's own format, revision, flags and
- * compression, and per archive its version, compression, name hash and keys. CRCs, whirlpools,
- * sizes and the file id list of an archive whose codec lays its files out by id are all computed
- * at pack time from the files themselves, so nothing here can go stale against them.
- *
- * [write] is deterministic to the byte - fields in a fixed order, defaults omitted, one line per
- * archive, archives ascending - because re-unpacking an unchanged cache must not rewrite the
- * file, and the builder tells a changed archive from an untouched one by comparing these lines.
- */
 class IndexMetadata(
     val index: Int,
     var format: Int = ReferenceTable.MAX_FORMAT,
     var revision: Int = 0,
     var named: Boolean = false,
     var whirlpool: Boolean = false,
-    /** The reference table container's own compression. */
     var compression: Compression = Compression.GZIP,
-    /** Which bzip2 encoder reproduces the reference table; index 2 and index 9 need `commons`. */
     var bzip2: BZip2Variant = BZip2Variant.LIBBZIP2,
     val archives: MutableMap<Int, ArchiveMetadata> = HashMap()
 ) {
 
-    /** The archive ids, ascending. */
     fun archiveIds(): IntArray = archives.keys.sorted().toIntArray()
 
     fun archive(id: Int): ArchiveMetadata? = archives[id]
@@ -202,7 +159,6 @@ class IndexMetadata(
         return flags
     }
 
-    /** The exact text of `index.json`, trailing newline included. */
     fun write(): String {
         val out = StringBuilder(archives.size * 48 + 128)
         out.append("{\n")
@@ -236,10 +192,6 @@ class IndexMetadata(
 
         private val json = Json { ignoreUnknownKeys = true }
 
-        /**
-         * Parse `index.json`. Tolerant of field order, extra fields and missing optional ones;
-         * [fallbackIndex] names the index when the file itself does not.
-         */
         fun read(text: String, fallbackIndex: Int = -1): IndexMetadata {
             val root = json.parseToJsonElement(text).jsonObject
             val index = root["index"]?.jsonPrimitive?.int ?: fallbackIndex

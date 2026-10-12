@@ -6,30 +6,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * Index 2, whose archives are 45 unrelated definition types rather than 45 more of the same
- * thing, so each of them gets a directory of its own and a codec of its own.
- *
- * The directory is the archive's canonical name - `struct`, `inv`, `varp` - in the gameval
- * vocabulary where the type has one, because those are the names everything else in the server
- * already calls them by, and the lower cased [Config] constant otherwise. An archive nothing has
- * a name for is `archive_<id>`, which keeps the tree complete without inventing a name; naming
- * one later is a directory rename and a line here.
- *
- * Sub-codecs are registered by archive id the same way index codecs are registered by index id -
- * see [SourceCodecs] - and are called with their own directory, so they lay files out inside it
- * without repeating the archive id ([RawFilesCodec.FLAT], [DefinitionLayout.Flat]). Fourteen of the
- * forty-five archives have a byte exact encoder and are editable JSON ([DefinitionCodecs]); the rest
- * have no decoder at all and stay raw bytes.
- */
 object ConfigCodec : SourceCodec {
 
-    /**
-     * The canonical directory name of each config archive the 727 cache has a name for.
-     *
-     * Twenty-six of the forty-five archives in index 2 are named; the rest hold types nothing
-     * has identified yet and are `archive_<id>`.
-     */
     private val names = mapOf(
         Config.FLOOR_UNDERLAY to "underlay",
         Config.IDENTITY_KIT to "idk",
@@ -71,10 +49,8 @@ object ConfigCodec : SourceCodec {
     override val id: String
         get() = "config"
 
-    /** [archive]'s directory name under `config/`. */
     fun name(archive: Int): String = names[archive] ?: "$UNNAMED_PREFIX$archive"
 
-    /** The archive [name] is the directory of, or -1. */
     fun archive(name: String): Int {
         archives[name]?.let { return it }
         if (!name.startsWith(UNNAMED_PREFIX)) {
@@ -83,12 +59,10 @@ object ConfigCodec : SourceCodec {
         return name.substring(UNNAMED_PREFIX.length).toIntOrNull() ?: -1
     }
 
-    /** Give [archive] its own codec. Call before a tree is read or written; see [SourceCodecs]. */
     fun register(archive: Int, codec: SourceCodec) {
         codecs[archive] = codec
     }
 
-    /** [archive]'s codec, raw files by default. */
     fun codec(archive: Int): SourceCodec = codecs[archive] ?: RawFilesCodec.FLAT
 
     override fun exact(archive: Int): Boolean = codec(archive).exact(archive)
@@ -121,6 +95,5 @@ object ConfigCodec : SourceCodec {
         return codec(archive).files(folder, archive)
     }
 
-    /** The prefix a config archive nobody has named yet gets its directory from. */
     const val UNNAMED_PREFIX = "archive_"
 }

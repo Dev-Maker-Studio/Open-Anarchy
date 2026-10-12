@@ -1,20 +1,9 @@
 package org.darkan.core.net
 
-/**
- * An implementation of an ISAAC cipher. See
- * [http://en.wikipedia.org/wiki/ISAAC_(cipher)](http://en.wikipedia.org/wiki/ISAAC_(cipher)) for more information.
- *
- * This implementation is based on the one written by Bob Jenkins, which is
- * available at [http://www.burtleburtle.net/bob/java/rand/Rand.java](http://www.burtleburtle.net/bob/java/rand/Rand.java).
- * @author Graham
- */
 class Isaac(seed : IntArray) {
     private var resultCount = 0
     private val results = IntArray(SIZE)
 
-    /**
-     * The internal memory state.
-     */
     private val memory = IntArray(SIZE)
 
     private var accumulator = 0
@@ -38,9 +27,6 @@ class Isaac(seed : IntArray) {
         return results[resultCount]
     }
 
-    /**
-     * Generates 256 results.
-     */
     private fun isaac() {
         var x : Int
         var y : Int
@@ -110,10 +96,6 @@ class Isaac(seed : IntArray) {
         }
     }
 
-    /**
-     * Initialises the ISAAC.
-     * @param flag Flag indicating if we should perform a second pass.
-     */
     fun init(flag : Boolean) {
         var i : Int
         var a : Int
@@ -259,19 +241,10 @@ class Isaac(seed : IntArray) {
     companion object {
         const val GOLDEN_RATIO = -0x61c88647
 
-        /**
-         * The log of the size of the results and memory arrays.
-         */
         const val SIZE_LOG = 8
 
-        /**
-         * The size of the results and memory arrays.
-         */
         const val SIZE = 1 shl SIZE_LOG
 
-        /**
-         * For pseudorandom lookup.
-         */
         const val MASK = SIZE - 1 shl 2
     }
 }

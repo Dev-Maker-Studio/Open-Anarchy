@@ -34,15 +34,13 @@ import java.util.List;
 )
 @PluginEventHandler
 public class DragonSlayer extends QuestOutline {
-    //	public final static int
     public final static int NOT_STARTED = 0;
     public final static int TALK_TO_OZIACH = 1;
-    public final static int TALK_TO_GUILDMASTER = 2;//ask all dialogue, get key
-    public final static int PREPARE_FOR_CRANDOR = 3;//Melzars maze, chest, wormbrain, then get a boat, then ned.
+    public final static int TALK_TO_GUILDMASTER = 2;
+    public final static int PREPARE_FOR_CRANDOR = 3;
     public final static int REPORT_TO_OZIACH = 4;
     public final static int QUEST_COMPLETE = 5;
 
-    //Items
     public final static int MAP_PART1 = 1535;
     public final static int MAP_PART2 = 1536;
     public final static int MAP_PART3 = 1537;
@@ -53,7 +51,7 @@ public class DragonSlayer extends QuestOutline {
     public final static int ANTI_DRAGON_SHIELD = 1540;
     public final static int STEEL_NAILS = 1539;
     public final static int PLANKS = 960;
-    public final static int RED_KEY = 1543;//keys
+    public final static int RED_KEY = 1543;
     public final static int ORANGE_KEY = 1544;
     public final static int YELLOW_KEY = 1545;
     public final static int BLUE_KEY = 1546;
@@ -62,37 +60,27 @@ public class DragonSlayer extends QuestOutline {
     public final static int ELVARG_HEAD = 11279;
     public final static int MELZAR_MAZE_KEY = 1542;
 
-    //Game Objects
     public final static int MAP_CHEST2 = 2587;
 
-    //NPCs
     public final static int WORM_BRAIN = 745;
     public final static int NED = 918;
-    public final static int CAPTAIN_NED = 6082;//Ned on Lady Lumbridge boat
+    public final static int CAPTAIN_NED = 6082;
     public final static int GUILD_MASTER = 198;
     public final static int OZIACH = 747;
     public final static int KLARENSE = 744;
     public final static int JENKINS = 748;
     public final static int ORACLE = 746;
 
-    //Magenta Room
     public final static int MELZAR_THE_MAD_MEGENTA_KEY = 753;
-    //Green Room
     public final static int LESSER_DEMON_GREEN_KEY = 4694;
-    //Blue Room
     public final static int ZOMBIE_BLUE_KEY = 75;
-    //Orange Room
     public final static int GHOST_ORANGE_KEY = 6094;
-    //Red Room
     public final static int RAT_RED_KEY = 6088;
-    //Yellow Room
     public final static int SKELETON_YELLOW_KEY = 6091;
 
-    //Vars & attribs
     public final static String NED_IS_CAPTAIN_ATTR = "NED_IS_CAPTAIN";
-    public final static int NED_BOAT_VISIBILITY_VAR = 176;//7 for visible
-    public final static int BOAT_HULL_FIXED_VAR = 1837;//1 for fix, 0 for broken
-    //GuildMaster dialogue attributes
+    public final static int NED_BOAT_VISIBILITY_VAR = 176;
+    public final static int BOAT_HULL_FIXED_VAR = 1837;
     public final static String STARTED_DIALOGUE_GUILDMASTER_ATTR = "STARTED_BRIEFING_FROM_GUILDMASTER";
     public final static String FINISHED_DIALOGUE_GUILDMASTER_ATTR = "FINISHED_BRIEFING_FROM_GUILDMASTER";
     public final static String KNOWS_MAP_EXISTS_ATTR = "KNOWS_MAP_EXISTS";
@@ -102,7 +90,6 @@ public class DragonSlayer extends QuestOutline {
     public final static String KNOWS_ABOUT_SHIP_ATTR = "KNOWS_ABOUT_SHIP";
     public final static String KNOWS_ABOUT_DRAGON_BREATH_ATTR = "KNOWS_ABOUT_DRAGON_BREATH";
 
-    //Other attributes
     public final static String OWNS_BOAT_ATTR = "PLAYER_OWNS_BOAT";
     public final static String IS_BOAT_FIXED_ATTR = "IS_BOAT_FIXED";
     public final static String BOAT_FIX_NUM_ATTR = "BOAT_FIX_STAGE";
@@ -114,7 +101,6 @@ public class DragonSlayer extends QuestOutline {
     public final static String FINISHED_BOAT_SCENE_ATTR = "FINISHED_BOAT_SCENE";
     public final static String INTRODUCED_ELVARG_ATTR = "INTRODUCED_ELVARG";
 
-    //Other
     public final static Tile MELZAR_BASEMENT = Tile.of(2933, 9641, 0);
     public final static Tile MELZAR_MAZE = Tile.of(2931, 3250, 0);
     private final static int HAMMER_HITTING_REPAIR_ANIM = 3676;
@@ -403,20 +389,20 @@ public class DragonSlayer extends QuestOutline {
 
             @Override
             public void run() {
-                if (tick == 0) { // setup p1
+                if (tick == 0) {
                     p.lock();
                     p.getInterfaceManager().setFadingInterface(115);
                     p.getPackets().setBlockMinimapState(2);
                 }
-                if (tick == 3) {// setup p2, move p
+                if (tick == 3) {
                     p.getAppearance().setHidden(true);
                     p.tele(Tile.of(2845, 9636, 0));
                 }
-                if (tick == 5) {// setup p3, camera
+                if (tick == 5) {
                     p.getPackets().sendCameraPos(p.getXInScene(p.getSceneBaseChunkId()), p.getYInScene(p.getSceneBaseChunkId()), 1300);
                     p.getPackets().sendCameraLook(p.getXInScene(p.getSceneBaseChunkId()) + 4, p.getYInScene(p.getSceneBaseChunkId()) - 4, 50);
                 }
-                if (tick == 6) {// start scene
+                if (tick == 6) {
                     p.getInterfaceManager().setFadingInterface(170);
                     p.getPackets().sendCameraPos(p.getXInScene(p.getSceneBaseChunkId()) + 10, p.getYInScene(p.getSceneBaseChunkId()) + 7, 1400);
                     p.getPackets().sendCameraLook(p.getXInScene(p.getSceneBaseChunkId()) + 10, p.getYInScene(p.getSceneBaseChunkId()) + 12, 1300);
@@ -433,7 +419,7 @@ public class DragonSlayer extends QuestOutline {
                     p.tele(Tile.of(2834, 9657, 0));
                     p.getPackets().sendResetCamera();
                 }
-                if (tick == 21) {// closing p2
+                if (tick == 21) {
                     p.getAppearance().setHidden(false);
                     p.getInterfaceManager().setFadingInterface(170);
                     p.getPackets().setBlockMinimapState(0);

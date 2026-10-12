@@ -17,13 +17,10 @@ import static com.rs.game.content.quests.wolfwhistle.WolfWhistle.*;
 
 @PluginEventHandler
 public class QuestPikkupstix extends Conversation {
-    // npcs
     final static int PIKKUPSTIX = 6988;
 
-    // animations
     static final int ANIMATION_ENCHANT = 15924;
 
-    // spot animations
     static final int SPOT_ANIM_ENCHANT = 2814;
 
 
@@ -46,7 +43,6 @@ public class QuestPikkupstix extends Conversation {
             case FIND_SCALECTRIX -> {
             }
             case PIKKUPSTIX_HELP ->
-                // pikkupstix is supposed to offer looping quest dialogue from WOLPERTINGER_MATERIALS here
                 addPlayer(HeadE.MORTIFIED, "Bowloftrix has been kidnapped by trolls!")
                     .addNPC(PIKKUPSTIX, HeadE.MORTIFIED, "Oh no, this is terrible! Is Scalectrix all right?")
                     .addPlayer(HeadE.CALM_TALK, "Yes, she is keeping an eye on the trolls by the well. She says there are too many trolls to attack directly.")
@@ -77,7 +73,6 @@ public class QuestPikkupstix extends Conversation {
                         .addNext(() -> {
                             pikkupstix.setNextAnimation(new Animation(ANIMATION_ENCHANT));
                             pikkupstix.setNextSpotAnim(new SpotAnim(SPOT_ANIM_ENCHANT));
-                            //pikkupstix.playSound(123, 1); supposed to play a sound
                             player.lock(3);
                         })
                         .addPlayer(HeadE.CONFUSED, "What was that about?")
@@ -240,7 +235,6 @@ public class QuestPikkupstix extends Conversation {
                         .addOptions(new Options() {
                             @Override
                             public void create() {
-                                // TODO: missing dialogue?
                             }
                         });
                 }

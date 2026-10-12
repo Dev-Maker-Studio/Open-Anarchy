@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.world.areas.port_phasmatys
 
 import com.rs.engine.dialogue.HeadE
@@ -43,7 +27,6 @@ val northBarrier: Tile = Tile.of(3659, 3508, 0)
 fun mapPortPhasmatys() {
     val DISCIPLE = 1686
     val BONEKEY = 4272
-    //Handle Bill Teach
     onNpcClick(3157) { e ->
         if (!e.player.isQuestComplete(Quest.CABIN_FEVER, "to travel to Mos' Le Harmless.")) return@onNpcClick
         e.player.sendOptionDialogue { ops ->
@@ -59,14 +42,12 @@ fun mapPortPhasmatys() {
             ops.add("Nevermind.")
         }
     }
-    //handle Inn Trap Door
     onObjectClick(7433, 7434) { e ->
         when (e.objectId) {
             7433 -> e.player.useStairs(828, Tile.of(3681, 3497, 0), 1, 2)
             7434 -> e.player.useStairs(828, Tile.of(3682, 9961, 0), 1, 2)
         }
     }
-    //handle Town Doors
     onObjectClick(5244) { e ->
         if (e.obj.tile != Tile.of(3656, 3514, 1)) {
             Doors.handleDoor(e.player, e.obj)
@@ -97,7 +78,6 @@ fun mapPortPhasmatys() {
             }
         }
     }
-    //Handle key on Coffin Door
     onItemOnObject(arrayOf(5244), arrayOf(BONEKEY)) { e ->
         if (e.`object`.tile != Tile.of(3656, 3514, 1)) {
             return@onItemOnObject
@@ -117,7 +97,6 @@ fun mapPortPhasmatys() {
             }
         }
     }
-    //Handle Energy Barriers
     onObjectClick(5259) { e ->
         val BEDSHEET = 4284
         val ECTOBEDSHEET = 4285
@@ -139,7 +118,6 @@ fun mapPortPhasmatys() {
             handleOutsideTownMovement(p)
         }
     }
-    //Handle Gangplanks
     onObjectClick(11209, 11210, 17392, 17393) { e ->
         val entering = e.player.x < e.obj.x
         e.player.useStairs(
