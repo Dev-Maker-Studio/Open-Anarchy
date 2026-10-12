@@ -71,7 +71,7 @@ object SocialPackets {
                 FriendsChatPlayer(
                     displayName = it.displayName,
                     username = it.username,
-                    worldId = if (it.worldId == 0 || it.username.startsWith("official:")) DISPLAY_WORLD_ID else it.worldId,
+                    worldId = if (it.worldId == 0 || it.username.startsWith("official_")) DISPLAY_WORLD_ID else it.worldId,
                     rank = it.rank.id,
                     worldName = if (it.worldId == 0) "Web" else it.worldName,
                 )
