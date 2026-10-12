@@ -8,7 +8,7 @@ description: How server content is developed and proven in Darkan - the world mo
 Content is a server half (the `world` module) and a cache half (`cache-source/`), and neither is
 done until the other agrees with it. Code standards
 (`darkan-code-standards`) apply unchanged; clientscript, interface and graphic work follows
-`cs2-engineer`. The RS3 urn port (`docs/rs3-port.md`, `docs/reference/rs3-urns.json`) is the
+`cs2-engineer`. The RS3 urn port (`src/engine/rs3-port.md`, `assets/server-docs/reference/rs3-urns.json`) is the
 worked example of everything below.
 
 ## 1. The loop
@@ -19,7 +19,7 @@ worked example of everything below.
    the source may be a hard-coded script, not a definition). Assume nothing about ids or byte
    layouts; read them.
 2. Allocate every new id next-free at the end of its index, in a deterministic order written
-   down first (a spec under `docs/reference/`), and give every id its real name in the catalog.
+   down first (a spec under `assets/server-docs/reference/`), and give every id its real name in the catalog.
 3. Cache side: write the files, register them, pack, **read back** with the decoders (`jshell`
    against the tools install, `tools cs2 decompile <id>`), and `cache verify` against the
    baseline signature (§5).
@@ -97,7 +97,7 @@ worked example of everything below.
 
 ## 4. Importing assets from another revision
 
-`tools rs3port` (`docs/rs3-port.md`) is the pattern: a read-only source tree, a spec that maps
+`tools rs3port` (`src/engine/rs3-port.md`) is the pattern: a read-only source tree, a spec that maps
 source ids to allocated 727 ids, a converter proven by **calibration** on assets both revisions
 share (convert them, diff against the shipped files, gate on 100% where the data allows), a
 learned crosswalk for anything that is not a copy (material ids, texture projections), and an

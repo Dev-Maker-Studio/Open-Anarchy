@@ -20,7 +20,7 @@ it alongside the legacy servers on other ports.
 
 ### Migrating a legacy database
 
-See `docs/migration.md` (`migration/` module: `inspect`, `migrate --dry-run`, `migrate`, `verify`).
+See `src/engine/migration.md` (`migration/` module: `inspect`, `migrate --dry-run`, `migrate`, `verify`).
 
 ## SocialGateway (world <-> lobby)
 
@@ -30,7 +30,7 @@ The lobby HTTP server exposes a persistent WebSocket endpoint for world-servers:
 
 World-servers connect and authenticate with `SOCIAL_GATEWAY_TOKEN`, then send presence + social events.
 With no configuration a world joins the dev lobby at `dev.darkan.org` as a community world; see
-`docs/community-worlds.md` to run your own.
+`src/engine/community-worlds.md` to run your own.
 
 ### Environment variables
 
@@ -53,4 +53,4 @@ WORLD_ID=100
 - Auth: `Authorization: Bearer <API_KEY>` or `X-API-Key: <API_KEY>`
 - Body: JSON `AnnouncementBroadcast` (`type` discriminator required)
 
-See `docs/social-gateway.md` for routing behavior and rollout steps.
+See `src/engine/social-gateway.md` for routing behavior and rollout steps.

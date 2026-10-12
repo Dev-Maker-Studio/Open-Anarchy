@@ -14,7 +14,7 @@ path="$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.noteb
 case "$path" in
   *cache-source/clientscripts/*|*cache-source/interfaces/*|*cache-source/graphics/*)
     [ -f "$skills/cs2-engineer/SKILL.md" ] && body="$body"$'\n\n'"$(strip "$skills/cs2-engineer/SKILL.md")" ;;
-  *world/src/main/*|*world/src/test/*|*cache-source/config*|*cache-source/models/*|*cache-source/gamevals/*|*docs/reference/*)
+  *world/src/main/*|*world/src/test/*|*cache-source/config*|*cache-source/models/*|*cache-source/gamevals/*|*assets/server-docs/reference/*)
     [ -f "$skills/content-development/SKILL.md" ] && body="$body"$'\n\n'"$(strip "$skills/content-development/SKILL.md")"
     case "$path" in
       *world/src/main/*) [ -f "$skills/kotlin-plugins/SKILL.md" ] && body="$body"$'\n\n'"$(strip "$skills/kotlin-plugins/SKILL.md")" ;;
