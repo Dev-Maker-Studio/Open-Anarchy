@@ -243,7 +243,7 @@ enum class Quest(val id: Int, private val slotId: Int) {
 
     fun meetsReqs(player: Player, actionStr: String?): Boolean {
         var meetsRequirements = true
-        val info = defs.extraInfo
+        val info = defs.extraInfo ?: return true
         for (quest in info.preReqs) {
             if (!player.isQuestComplete(quest)) {
                 if (actionStr != null && quest.isImplemented)
