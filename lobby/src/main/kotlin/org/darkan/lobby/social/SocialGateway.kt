@@ -340,7 +340,7 @@ object SocialGateway {
 
     private fun officialMembersOf(local: Collection<String>): List<FriendsChatMember> = OfficialBridge.members().filter { it.displayName.lowercase() !in local }.take(FRIENDS_CHAT_CAPACITY - local.size).map {
         FriendsChatMember(
-            username = "official:" + it.username,
+            username = "official_" + it.username,
             displayName = it.displayName,
             worldId = it.worldId,
             worldName = "Darkan " + it.worldName,
@@ -355,7 +355,7 @@ object SocialGateway {
 
     suspend fun officialLine(username: String, displayName: String, text: String) {
         val room = fcRoomsByOwner[HELP_OWNER] ?: return
-        emit(room.members.toList(), SocialEvent.FriendsChatLine(HELP_NAME, Speaker("official:$username", displayName, 0), PublicChatMessage(text)))
+        emit(room.members.toList(), SocialEvent.FriendsChatLine(HELP_NAME, Speaker("official_$username", displayName, 0), PublicChatMessage(text)))
     }
 
     private suspend fun stateOf(owner: Account, room: FcRoom): FriendsChatState {
