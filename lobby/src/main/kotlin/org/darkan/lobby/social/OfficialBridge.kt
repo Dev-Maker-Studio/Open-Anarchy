@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicReference
 object OfficialBridge {
     const val RELAY_PREFIX = "[make]"
     private const val KEEP_ALIVE_MS = 5000L
-    private const val RECONNECT_MAX_MS = 60_000L
+    private const val RECONNECT_MAX_MS = 300_000L
 
     private val client = HttpClient(CIO) { install(WebSockets) }
     private val outbound = Channel<String>(Channel.UNLIMITED)
@@ -71,7 +71,7 @@ object OfficialBridge {
             }
             members.set(emptyList())
             SocialGateway.officialMembersChanged()
-            delay(minOf(1000L * (1L shl minOf(attempt++, 6)), RECONNECT_MAX_MS))
+            delay(minOf(5000L * (1L shl minOf(attempt++, 6)), RECONNECT_MAX_MS))
         }
     }
 
@@ -84,9 +84,11 @@ object OfficialBridge {
             contentType(ContentType.Application.Json)
             setBody(body)
         }
-        val root = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+        val text = response.bodyAsText()
+        val root = runCatching { Json.parseToJsonElement(text).jsonObject }.getOrNull() ?: error("login failed: status ${response.status.value}")
         val data = (root["data"] as? JsonObject) ?: root
-        return data["access_token"]?.jsonPrimitive?.content ?: error("login failed")
+        return data["access_token"]?.jsonPrimitive?.content
+            ?: error("login failed: status ${response.status.value} ${(root["message"] ?: root["error"])?.toString().orEmpty().take(120)}")
     }
 
     private suspend fun run(token: String) {
