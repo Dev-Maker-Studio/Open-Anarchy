@@ -37,11 +37,14 @@ private class Rejected : Exception()
 
 object OfficialBridge {
     private const val KEEP_ALIVE_MS = 5000L
+    private const val MAX_REJOINS = 5
+    private const val REJOIN_DELAY_MS = 2000L
     private const val RECONNECT_MAX_MS = 300_000L
 
     private val client = HttpClient(CIO) { install(WebSockets) }
     private val outbound = Channel<String>(Channel.UNLIMITED)
 
+    @Volatile private var rejoins = 0
     private val members = AtomicReference<List<FriendsChatMember>>(emptyList())
 
     val enabled: Boolean get() = EnvVars.officialUsername.isNotBlank() && EnvVars.officialPassword.isNotBlank()
@@ -66,6 +69,7 @@ object OfficialBridge {
         while (true) {
             try {
                 val token = login()
+                rejoins = 0
                 attempt = 0
                 run(token)
             } catch (e: Rejected) {
@@ -126,7 +130,13 @@ object OfficialBridge {
                 }
                 updateMembers(event.friendsChat?.members)
             }
-            is SocialEvent.FriendsChatChanged -> updateMembers(event.channel?.members)
+            is SocialEvent.FriendsChatChanged -> {
+                if (event.channel == null && rejoins++ < MAX_REJOINS) {
+                    delay(REJOIN_DELAY_MS)
+                    outbound.trySend(SocialJson.json.encodeToString(SocialAction.serializer(), SocialAction.JoinFriendsChat(EnvVars.officialChat)))
+                }
+                updateMembers(event.channel?.members)
+            }
             is SocialEvent.FriendsChatLine -> {
                 val line = event.message.message
                 if (event.speaker.username == EnvVars.officialUsername.lowercase()) return
