@@ -52,6 +52,7 @@ import org.darkan.core.social.gateway.SocialNotification
 import org.darkan.world.clan.ClanRegistry
 import org.darkan.world.social.SocialClient
 import org.darkan.world.social.SocialSync
+import com.rs.game.content.HelpChat
 import world.gregs.voidps.buffer.*
 import world.gregs.voidps.cache.Cache
 import org.darkan.core.net.js5.DiscoveredMapFileProvider
@@ -373,6 +374,7 @@ object WorldServer {
     private fun deliverEvent(username: String, event: SocialEvent) {
         onWorldThread(username) { player ->
             SocialSync.apply(player, event)
+            HelpChat.sync(player, event)
             for (packet in SocialPackets.render(username, event)) player.session.queuePacket(packet)
         }
     }
