@@ -21,7 +21,7 @@ import org.darkan.lobby.social.SocialSubscribers
 import org.darkan.lobby.web.apiKeyPresented
 
 @Serializable
-data class FriendsChatSay(val username: String, val chatOwner: String, val message: String)
+data class FriendsChatSay(val username: String, val chatOwner: String = "", val message: String)
 
 @Serializable
 data class BroadcastSay(val username: String? = null, val message: String)
@@ -47,11 +47,9 @@ object SocialController {
             post("/friends-chat") {
                 if (!call.apiKeyPresented()) return@post call.respond(HttpStatusCode.Unauthorized)
                 val say = call.receive<FriendsChatSay>()
-                val owner = Accounts.findByDisplayName(say.chatOwner) ?: Accounts.find(say.chatOwner)
-                    ?: return@post call.respond(HttpStatusCode.NotFound, buildJsonObject { put("error", "No such friends chat") })
                 val from = Accounts.find(say.username)
                     ?: return@post call.respond(HttpStatusCode.NotFound, buildJsonObject { put("error", "No such account") })
-                SocialGateway.sayInFriendsChat(from.username, owner.username, say.message)
+                SocialGateway.sayInFriendsChat(from.username, SocialGateway.HELP_OWNER, say.message)
                 call.respond(buildJsonObject { put("ok", true) })
             }
 

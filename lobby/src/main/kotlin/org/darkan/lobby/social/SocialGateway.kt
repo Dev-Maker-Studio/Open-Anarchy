@@ -73,6 +73,8 @@ interface SocialSink {
 object SocialGateway {
     const val LOBBY_WORLD_ID = 1115
     private const val LISTENER_WORLD_NAME = "Web"
+    const val HELP_OWNER = "help"
+    const val HELP_NAME = "Help"
     private const val FRIENDS_CHAT_CAPACITY = 100
     private const val KICK_BAN_MS = 3_600_000L
 
@@ -163,7 +165,7 @@ object SocialGateway {
         attachmentsByUsername.remove(username)
         notifyWatchers(username, account)
         if (account != null) deregisterFriendWatcher(username, account.social.friends)
-        leaveFriendsChat(username, forget = false)
+        leaveFriendsChat(username)
         ClanService.onLogout(username)
     }
 
@@ -373,10 +375,21 @@ object SocialGateway {
         broadcastRoom(owner, room)
     }
 
-    private suspend fun rejoinFriendsChat(account: Account) {
-        val saved = account.social.currentFriendsChat?.takeIf { it.isNotBlank() } ?: return
-        joinFriendsChat(account.username, saved)
+    private suspend fun helpOwner(): Account {
+        val account = Accounts.find(HELP_OWNER) ?: Accounts.createBot(HELP_OWNER)!!
+        val settings = account.social.friendsChat
+        if (settings.name != HELP_NAME || settings.rankToKick != FriendsChatRank.JMOD) {
+            account.displayName = HELP_NAME
+            settings.name = HELP_NAME
+            settings.rankToEnter = FriendsChatRank.UNRANKED
+            settings.rankToSpeak = FriendsChatRank.UNRANKED
+            settings.rankToKick = FriendsChatRank.JMOD
+            Accounts.save(account)
+        }
+        return account
     }
+
+    private suspend fun rejoinFriendsChat(account: Account) = joinFriendsChat(account.username, HELP_NAME)
 
     private suspend fun forgetCurrentFriendsChat(username: String) {
         val account = Accounts.find(username) ?: return
@@ -397,10 +410,11 @@ object SocialGateway {
             emit(username, SocialEvent.FriendsChatChanged(null))
             return
         }
-        val owner = Accounts.findByDisplayName(ownerName) ?: Accounts.find(ownerName)
-            ?: return refuseJoin(username, "Unable to find that friends chat.")
-        if (owner.social.friendsChat.name == null)
-            return refuseJoin(username, "The friends chat you are trying to join is not set up yet.")
+        if (!ownerName.equals(HELP_NAME, ignoreCase = true) && ownerName.formatPlayerNameForProtocol() != HELP_OWNER) {
+            notice(username, NoticeKind.FRIENDS_CHAT, "Help is the only friends chat.")
+            return joinFriendsChat(username, HELP_NAME)
+        }
+        val owner = helpOwner()
         if (owner.social.ignores.contains(username))
             return refuseJoin(username, "You are not allowed to join this user's friends chat channel.")
         if (!rankAllowed(fcRankOf(owner, from), owner.social.friendsChat.rankToEnter))
@@ -426,11 +440,9 @@ object SocialGateway {
         broadcastRoom(owner, room)
     }
 
-    private suspend fun leaveFriendsChat(username: String, forget: Boolean) {
-        if (forget) forgetCurrentFriendsChat(username)
+    private suspend fun leaveFriendsChat(username: String) {
         val ownerUsername = fcOwnerByMember.remove(username)
         if (ownerUsername != null) leaveRoom(username, ownerUsername)
-        if (forget) emit(username, SocialEvent.FriendsChatChanged(null))
     }
 
     private suspend fun leaveRoom(username: String, ownerUsername: String) {
@@ -469,40 +481,6 @@ object SocialGateway {
         leaveRoom(target.username, ownerUsername)
     }
 
-    private suspend fun setFriendsChatRank(username: String, name: String, rank: FriendsChatRank) {
-        val owner = Accounts.find(username) ?: return
-        val target = Accounts.findByDisplayName(name) ?: Accounts.find(name) ?: return
-        owner.social.friendsChat.setRank(target.username, rank.takeIf { it != FriendsChatRank.UNRANKED })
-        Accounts.save(owner)
-        fcRoomsByOwner[username]?.let { broadcastRoom(owner, it) }
-        if (target.username in owner.social.friends) emit(username, SocialEvent.FriendUpdated(friendEntryFor(owner, target)))
-    }
-
-    private suspend fun updateFriendsChatSettings(username: String, action: SocialAction.UpdateFriendsChatSettings) {
-        val account = Accounts.find(username) ?: return
-        with(account.social.friendsChat) {
-            name = action.name
-            rankToEnter = action.rankToEnter
-            rankToSpeak = action.rankToSpeak
-            rankToKick = action.rankToKick
-            rankToLS = action.rankToLootShare
-        }
-        Accounts.save(account)
-        val room = fcRoomsByOwner[username] ?: return
-        if (action.name == null) dissolveRoom(room) else broadcastRoom(account, room)
-    }
-
-    private suspend fun dissolveRoom(room: FcRoom) {
-        fcRoomsByOwner.remove(room.ownerUsername, room)
-        for (member in room.members.toList()) {
-            fcOwnerByMember.remove(member, room.ownerUsername)
-            forgetCurrentFriendsChat(member)
-            emit(member, SocialEvent.FriendsChatChanged(null))
-            notice(member, NoticeKind.FRIENDS_CHAT, "The channel has been disabled.")
-        }
-        room.members.clear()
-    }
-
     private suspend fun sayInOwnFriendsChat(username: String, message: ChatMessage) {
         val ownerUsername = fcOwnerByMember[username]
             ?: return notice(username, NoticeKind.FRIENDS_CHAT, "You are not currently connected to a friend's chat.")
@@ -512,7 +490,7 @@ object SocialGateway {
     suspend fun sayInFriendsChat(fromUsername: String, ownerUsername: String, message: String) =
         speakInFriendsChat(
             fromUsername.formatPlayerNameForProtocol(),
-            ownerUsername.formatPlayerNameForProtocol(),
+            HELP_OWNER,
             PublicChatMessage(message),
             requireMembership = false,
         )
@@ -556,10 +534,10 @@ object SocialGateway {
             is SocialAction.RemoveIgnore -> removeIgnore(username, action.name)
             is SocialAction.SetPrivateStatus -> setPrivateStatus(username, action.status)
             is SocialAction.JoinFriendsChat -> joinFriendsChat(username, action.owner)
-            is SocialAction.LeaveFriendsChat -> leaveFriendsChat(username, forget = true)
+            is SocialAction.LeaveFriendsChat -> Unit
             is SocialAction.KickFromFriendsChat -> kickFromFriendsChat(username, action.name)
-            is SocialAction.SetFriendsChatRank -> setFriendsChatRank(username, action.name, action.rank)
-            is SocialAction.UpdateFriendsChatSettings -> updateFriendsChatSettings(username, action)
+            is SocialAction.SetFriendsChatRank -> Unit
+            is SocialAction.UpdateFriendsChatSettings -> Unit
             is SocialAction.SayInFriendsChat -> sayInOwnFriendsChat(username, action.message)
             is SocialAction.SendPrivateMessage -> sendPrivateMessage(username, action.to, action.message)
         }
