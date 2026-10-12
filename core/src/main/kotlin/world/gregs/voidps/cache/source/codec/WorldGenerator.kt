@@ -30,8 +30,8 @@ class WorldGenerator(
         val sectorRegions = (WorldWindow.WINDOW_TILES + SIZE - 1) / SIZE
         if (regionX !in 0 until sectorRegions || regionY !in 0 until sectorRegions) return false
         if (areaTiles <= 0) return true
-        val lowX = ORIGIN_X / SIZE
-        val lowY = ORIGIN_Y / SIZE
+        val lowX = Math.floorDiv(ORIGIN_X - areaTiles / 2, SIZE)
+        val lowY = Math.floorDiv(ORIGIN_Y - areaTiles / 2, SIZE)
         val globalX = originX / SIZE + regionX
         val globalY = originY / SIZE + regionY
         return globalX in lowX until lowX + span && globalY in lowY until lowY + span
@@ -95,6 +95,15 @@ class WorldGenerator(
                 Scenery(Loc.rand_abnd_furn_religious_decor_short_lit, 1, 1), Scenery(Loc.ken_mine_vent_tinted, 1, 2),
                 Scenery(Loc.carcass_burnt, 2, 1)
             )
+        ),
+        RUNE_ESSENCE(
+            RUNE_ESSENCE_UNDERLAY, RUNE_ESSENCE_ODDS,
+            listOf(
+                Scenery(Loc.di2_snow_rock1, 2, 2), Scenery(Loc.di2_snow_rock2, 2, 2), Scenery(Loc.di2_snow_rock1_small, 1, 3),
+                Scenery(Loc.deadtree2_snowy, 1, 2), Scenery(Loc.di2_snow_rune_rocks_big1, 2, 1), Scenery(Loc.di2_snow_rune_rocks_big2, 2, 1),
+                Scenery(Loc.snow1, 1, 3, GROUND_DECOR_SHAPE), Scenery(Loc.snow2, 1, 3, GROUND_DECOR_SHAPE),
+                Scenery(Loc.dugupsmallrocks_lightgrey1, 1, 2, GROUND_DECOR_SHAPE)
+            )
         )
     }
 
@@ -113,7 +122,12 @@ class WorldGenerator(
 
     class FishingSite(val x: Int, val y: Int, val kind: FishingKind)
 
-    private class Site(val cellX: Int, val cellY: Int, val x: Double, val y: Double, val stretchX: Double, val stretchY: Double, val biome: Biome)
+    private inner class Site(val cellX: Int, val cellY: Int, val x: Double, val y: Double, val stretchX: Double, val stretchY: Double, val biome: Biome) {
+        val centreHeight: Double by lazy { land(x.toInt(), y.toInt()) }
+        val chambers: List<Pair<Int, Int>> by lazy {
+            listOf(-1, 1).flatMap { sx -> listOf(-1, 1).map { sy -> x.toInt() + sx * MINE_DX to y.toInt() + sy * MINE_DY } }
+        }
+    }
 
     private class Fixture(val id: Int, val x: Int, val y: Int, val width: Int, val depth: Int, val rotation: Int, val reach: Int = 0)
 
@@ -177,6 +191,8 @@ class WorldGenerator(
         val depths: Array<IntArray>?,
         val blocked: Array<BooleanArray>
     )
+
+    private val craterRim = VOLCANO_LIFT * smooth(1 - (CRATER_RADIUS + CRATER_BANK) / VOLCANO_RADIUS)
 
     private val dryRows: String by lazy { rows { _ -> row { _ -> VOID_TILE } } }
 
@@ -296,11 +312,14 @@ class WorldGenerator(
     private fun roadAt(x: Int, y: Int): Boolean = roadTouchesGlobal(x, y, x, y)
 
     private fun roadTouchesGlobal(minX: Int, minY: Int, maxX: Int, maxY: Int): Boolean {
-        val insideGrid = maxX >= 0 && minX < WorldWindow.GRID_TILES && maxY >= 0 && minY < WorldWindow.GRID_TILES
+        val insideSector = maxX >= originX && minX < originX + WorldWindow.WINDOW_TILES && maxY >= originY && minY < originY + WorldWindow.WINDOW_TILES
         val crossesColumn = maxX >= ORIGIN_X && minX < ORIGIN_X + ROAD_WIDTH
         val crossesRow = maxY >= ORIGIN_Y && minY < ORIGIN_Y + ROAD_WIDTH
-        return insideGrid && (crossesColumn || crossesRow)
+        return insideSector && (crossesColumn || crossesRow)
     }
+
+    private fun inSector(minX: Int, minY: Int, maxX: Int, maxY: Int): Boolean =
+        minX >= originX && minY >= originY && maxX < originX + WorldWindow.WINDOW_TILES && maxY < originY + WorldWindow.WINDOW_TILES
 
     private fun roadVerge(x: Int, y: Int): Boolean = roadTouchesGlobal(x - 1, y - 1, x, y)
 
@@ -312,7 +331,7 @@ class WorldGenerator(
         }
         val liquid = grid.liquids[localX][localY]
         if (liquid != null) {
-            return "o${liquid.overlay}/0/0,s1,u${liquid.underlay},h1"
+            return "o${liquid.overlay}/0/0,s1,u${liquid.underlay},h${if (liquid == Liquid.LAVA) grid.heights[localX][localY] else WATER_TILE_HEIGHT}"
         }
         val blocked = if (grid.blocked[localX][localY]) ",s1" else ""
         return "u${grid.underlays[localX][localY]},h${grid.heights[localX][localY]}$blocked"
@@ -333,9 +352,9 @@ class WorldGenerator(
         for (dx in 0 until SIZE) {
             for (dy in 0 until SIZE) {
                 val site = nearest[dx][dy]
-                if (site.biome != Biome.MOUNTAIN) continue
+                if (!ranged(site.biome)) continue
                 val range = rangeOf(site)
-                val fade = ramp(fieldOf(distances(baseX + dx, baseY + dy), Biome.MOUNTAIN), RANGE_BORDER_FADE)
+                val fade = ramp(fieldOf(distances(baseX + dx, baseY + dy), site.biome), RANGE_BORDER_FADE)
                 masses[dx][dy] = range.mass(baseX + dx, baseY + dy) * fade
                 gaps[dx][dy] = range.gap(baseX + dx + HALF_TILE, baseY + dy + HALF_TILE)
                 walkable[dx][dy] = range.walkable(baseX + dx, baseY + dy)
@@ -351,7 +370,7 @@ class WorldGenerator(
             IntArray(SIZE) { dy -> height(baseX + dx, baseY + dy, nearest[dx][dy], lake[dx][dy], pond[dx][dy], island[dx][dy], crater[dx][dy], masses[dx][dy], gaps[dx][dy]) }
         }
         val underlays = Array(SIZE) { dx ->
-            IntArray(SIZE) { dy -> underlay(baseX + dx, baseY + dy, nearest[dx][dy], heights[dx][dy], lake[dx][dy], crater[dx][dy], gaps[dx][dy]) }
+            IntArray(SIZE) { dy -> underlay(baseX + dx, baseY + dy, nearest[dx][dy], heights[dx][dy], crater[dx][dy], gaps[dx][dy]) }
         }
         val roads = Array(SIZE) { dx -> BooleanArray(SIZE) { dy -> roadAt(baseX + dx, baseY + dy) } }
         val depths = if (!withDepth) null else Array(SIZE) { dx ->
@@ -371,15 +390,20 @@ class WorldGenerator(
         val distances = distances(x, y)
         var terrain = land(x, y)
         if (mass > 0) {
-            terrain += RANGE_LIFT * smooth(mass.coerceAtMost(1.0)) +
-                mass * (noise(x / MOUNTAIN_PEAK_WAVELENGTH, y / MOUNTAIN_PEAK_WAVELENGTH, MOUNTAIN_SALT) * MOUNTAIN_PEAKS + cliffs(x, y, pathGap))
+            val lift = smooth(mass.coerceAtMost(1.0))
+            if (biome == Biome.VOLCANO) {
+                terrain = lerp(terrain, site.centreHeight, lift) + VOLCANO_LIFT * lift
+            } else {
+                terrain += RANGE_LIFT * lift + mass * (noise(x / MOUNTAIN_PEAK_WAVELENGTH, y / MOUNTAIN_PEAK_WAVELENGTH, MOUNTAIN_SALT) * MOUNTAIN_PEAKS + cliffs(x, y, pathGap))
+            }
         }
-        terrain += ramp(fieldOf(distances, Biome.VOLCANO), VOLCANO_RAMP) * VOLCANO_LIFT
         if (biome == Biome.VOLCANO) {
-            terrain += CONE_PEAK * (1 - smooth((hypot(x - site.x, y - site.y) / CONE_RADIUS).coerceIn(0.0, 1.0)))
-            terrain = lerp(terrain, WATER_HEIGHT.toDouble(), smooth(((crater + CRATER_BANK) / CRATER_BANK).coerceIn(0.0, 1.0)))
+            terrain = lerp(terrain, site.centreHeight + craterRim - CRATER_DEPTH, smooth(((crater + CRATER_BANK) / CRATER_BANK).coerceIn(0.0, 1.0)))
         }
-        val basin = if (verge || biome == Biome.OCEAN || biome == Biome.MOUNTAIN) 0.0 else maxOf(
+        if (biome == Biome.RUNE_ESSENCE) {
+            terrain = mineHeight(terrain, site, x, y)
+        }
+        val basin = if (verge || biome in DRY_BIOMES) 0.0 else maxOf(
             ((lake - BANK_START) / (lakeLevel(biome) - BANK_START)).coerceIn(0.0, 1.0),
             if (biome == Biome.DESERT) ((pond - POND_BANK_START) / (POND_LEVEL - POND_BANK_START)).coerceIn(0.0, 1.0) else 0.0
         )
@@ -388,7 +412,8 @@ class WorldGenerator(
             terrain = lerp(terrain, WATER_HEIGHT.toDouble(), ramp(fieldOf(distances, Biome.OCEAN) + SHORE_BLEND, SHORE_BLEND))
         }
         if (island > 0) {
-            terrain = lerp(WATER_HEIGHT.toDouble(), ISLAND_PEAK.toDouble(), smooth((island / ISLAND_SLOPE).coerceIn(0.0, 1.0)))
+            val peak = ISLAND_PEAK + (noise(x / ISLAND_BUMP_WAVELENGTH, y / ISLAND_BUMP_WAVELENGTH, HEIGHT_SALT) - 0.5) * 2 * ISLAND_BUMP
+            terrain = lerp(WATER_HEIGHT.toDouble(), peak, smooth((island / ISLAND_SLOPE).coerceIn(0.0, 1.0)))
         }
         return terrain.toInt().coerceIn(WATER_HEIGHT, MAX_HEIGHT)
     }
@@ -405,7 +430,19 @@ class WorldGenerator(
     private fun craterField(x: Int, y: Int, site: Site): Double =
         if (site.biome == Biome.VOLCANO) CRATER_RADIUS - hypot(x - site.x, y - site.y) else Double.NEGATIVE_INFINITY
 
-    private fun underlay(x: Int, y: Int, site: Site, height: Int, lake: Double, crater: Double, pathGap: Double): Int = when (site.biome) {
+    private fun mineField(site: Site, x: Int, y: Int): Double =
+        site.chambers.minOf { hypot((x + HALF_TILE - it.first) / MINE_A, (y + HALF_TILE - it.second) / MINE_B) }
+
+    private fun mineHeight(terrain: Double, site: Site, x: Int, y: Int): Double {
+        val field = mineField(site, x, y)
+        val flat = 1 - smooth(((field - 1) / MINE_FLAT_SPAN).coerceIn(0.0, 1.0))
+        val pit = 1 - smooth(((field - MINE_FLOOR) / (1 - MINE_FLOOR)).coerceIn(0.0, 1.0))
+        return lerp(terrain, site.centreHeight, flat) - MINE_DEPTH * pit
+    }
+
+    private fun ranged(biome: Biome) = biome == Biome.MOUNTAIN || biome == Biome.VOLCANO
+
+    private fun underlay(x: Int, y: Int, site: Site, height: Int, crater: Double, pathGap: Double): Int = when (site.biome) {
         Biome.MOUNTAIN -> when {
             pathGap <= PATH_HALF_WIDTH -> TRAIL_UNDERLAY
             height >= SNOW_LINE -> WINTER_UNDERLAY
@@ -413,11 +450,21 @@ class WorldGenerator(
             else -> MOUNTAIN_UNDERLAY
         }
         Biome.VOLCANO -> when {
-            crater > -EMBER_RING || lake > VOLCANO_LAKE_LEVEL - EMBER_LAKE_MARGIN -> EMBER_UNDERLAY
+            pathGap <= PATH_HALF_WIDTH -> TRAIL_UNDERLAY
+            crater > -EMBER_RING -> EMBER_UNDERLAY
             noise(x / ASH_WAVELENGTH, y / ASH_WAVELENGTH, ASH_SALT) < OBSIDIAN_SHARE -> OBSIDIAN_UNDERLAY
             else -> ASH_UNDERLAY
         }
         Biome.OCEAN -> if (height <= BEACH_HEIGHT) BEACH_UNDERLAY else site.biome.underlay
+        Biome.RUNE_ESSENCE -> mineField(site, x, y).let { field ->
+            when {
+                field < MINE_FLOOR -> MINE_FLOOR_UNDERLAY
+                field < MINE_RING -> MINE_RING_UNDERLAY
+                field < 1 -> WINTER_UNDERLAY
+                noise(x / RUNE_PATCH_WAVELENGTH, y / RUNE_PATCH_WAVELENGTH, RUNE_PATCH_SALT) < RUNE_PATCH_SHARE -> MINE_RING_UNDERLAY
+                else -> site.biome.underlay
+            }
+        }
         else -> site.biome.underlay
     }
 
@@ -425,7 +472,7 @@ class WorldGenerator(
 
     private fun pathNear(x: Int, y: Int, size: Int): Boolean {
         val site = nearestSite(x, y)
-        if (site.biome != Biome.MOUNTAIN) return false
+        if (!ranged(site.biome)) return false
         val range = rangeOf(site)
         for (dx in -1..size) {
             for (dy in -1..size) {
@@ -436,6 +483,7 @@ class WorldGenerator(
     }
 
     private fun depth(x: Int, y: Int, site: Site, lake: Double, pond: Double): Int {
+        val bed = 1 + (noise(x / BED_WAVELENGTH, y / BED_WAVELENGTH, BED_SALT) - 0.5) * BED_VARIATION
         val body = when {
             site.biome == Biome.OCEAN -> {
                 val slope = smooth((fieldOf(distances(x, y), Biome.OCEAN) / OCEAN_SLOPE).coerceIn(0.0, 1.0))
@@ -446,7 +494,7 @@ class WorldGenerator(
             else -> LAKE_DEPTH * smooth(((lake - lakeLevel(site.biome)) / LAKE_SPAN).coerceIn(0.0, 1.0))
         }
         val shelf = smooth(((roadGap(x, y) - ROAD_SHELF_START) / ROAD_SHELF).coerceIn(0.0, 1.0))
-        val bytes = (body * shelf).toInt()
+        val bytes = (body * shelf * bed).toInt()
         return if (bytes < MIN_DEPTH) 0 else minOf(bytes, MAX_DEPTH)
     }
 
@@ -469,10 +517,10 @@ class WorldGenerator(
 
     private fun liquid(biome: Biome, lake: Double, pond: Double, island: Boolean, crater: Double): Liquid? = when {
         biome == Biome.OCEAN -> if (island) null else Liquid.WATER
-        biome == Biome.MOUNTAIN -> null
-        biome == Biome.VOLCANO && crater > 0 -> Liquid.LAVA
+        biome == Biome.MOUNTAIN || biome == Biome.RUNE_ESSENCE -> null
+        biome == Biome.VOLCANO -> if (crater > 0) Liquid.LAVA else null
         biome == Biome.DESERT && pond >= POND_LEVEL -> Liquid.WATER
-        lake >= lakeLevel(biome) -> if (biome == Biome.WILDERNESS || biome == Biome.VOLCANO) Liquid.LAVA else Liquid.WATER
+        lake >= lakeLevel(biome) -> if (biome == Biome.WILDERNESS) Liquid.LAVA else Liquid.WATER
         else -> null
     }
 
@@ -488,7 +536,6 @@ class WorldGenerator(
 
     private fun lakeLevel(biome: Biome) = when (biome) {
         Biome.WILDERNESS -> WILDERNESS_LAKE_LEVEL
-        Biome.VOLCANO -> VOLCANO_LAKE_LEVEL
         else -> LAKE_LEVEL
     }
 
@@ -509,13 +556,13 @@ class WorldGenerator(
                 val localY = cellY * CELL + (hash / SCENERY_SPREAD / room % room).toInt()
                 val globalX = regionX * SIZE + localX
                 val globalY = regionY * SIZE + localY
-                if (nearLiquid(globalX, globalY, scenery.size)) {
+                if (!inSector(globalX, globalY, globalX + scenery.size, globalY + scenery.size) || nearLiquid(globalX, globalY, scenery.size)) {
                     continue
                 }
                 if (roadTouchesGlobal(globalX - 1, globalY - 1, globalX + scenery.size, globalY + scenery.size)) {
                     continue
                 }
-                if (biome == Biome.MOUNTAIN && pathNear(globalX, globalY, scenery.size)) {
+                if (ranged(biome) && pathNear(globalX, globalY, scenery.size)) {
                     continue
                 }
                 if (overlapsFixtures(globalX, globalY, scenery.size, true) || overlapsClusters(globalX, globalY, scenery.size)) {
@@ -588,7 +635,6 @@ class WorldGenerator(
     private fun layouts(site: Site): List<Layout> = when (site.biome) {
         Biome.DESERT -> DESERT_ORES.flatMap { ore -> List(CLUSTERS_PER_ORE) { oreLayout(ore) } }
         Biome.WILDERNESS -> wildernessOres(hypot(site.x - ORIGIN_X, site.y - ORIGIN_Y)).map { oreLayout(it) }
-        Biome.VOLCANO -> VOLCANO_ORES.map { oreLayout(it) }
         Biome.WINTER -> listOf(Layout(WINTER_ROCKS, WINTER_SIDE))
         else -> emptyList()
     }
@@ -635,7 +681,7 @@ class WorldGenerator(
     private fun clusterSpotClear(biome: Biome, centreX: Int, centreY: Int, side: Int): Boolean {
         val x0 = centreX - side / 2
         val y0 = centreY - side / 2
-        if (x0 - AREA_MARGIN < originX || y0 - AREA_MARGIN < originY) return false
+        if (!inSector(x0 - AREA_MARGIN, y0 - AREA_MARGIN, x0 + side + AREA_MARGIN, y0 + side + AREA_MARGIN)) return false
         for (x in x0 - AREA_MARGIN..x0 + side + AREA_MARGIN step AREA_STEP) {
             for (y in y0 - AREA_MARGIN..y0 + side + AREA_MARGIN step AREA_STEP) {
                 if (biomeAtGlobal(x, y) != biome || liquidAtGlobal(x, y) != null) return false
@@ -672,11 +718,13 @@ class WorldGenerator(
         return when (site.biome) {
             Biome.WILDERNESS -> {
                 val lodestone = findLodestone(site)
-                listOfNotNull(lodestone, findFurnace(site, cellX, cellY, listOfNotNull(lodestone)))
+                val placed = listOfNotNull(lodestone, findFurnace(site, cellX, cellY, listOfNotNull(lodestone)))
+                placed + listOfNotNull(findAltar(site, placed))
             }
-            Biome.PLAINS -> findOaks(site)
+            Biome.PLAINS -> findTrees(site, Loc.oaktree, PLAINS_OAKS, OAK_SIZE, OAK_SALT)
             Biome.DESERT -> findGemRocks(site)
-            Biome.MOUNTAIN -> mountainResources(site)
+            Biome.MOUNTAIN, Biome.VOLCANO -> rangeResources(site)
+            Biome.RUNE_ESSENCE -> findTrees(site, MAGIC_TREE, MAGIC_TREES, MAGIC_SIZE, MAGIC_SALT, findMine(site))
             else -> emptyList()
         }
     }
@@ -714,14 +762,42 @@ class WorldGenerator(
         return sites
     }
 
-    private fun findOaks(site: Site): List<Fixture> {
-        val found = mutableListOf<Fixture>()
-        for (number in 0 until PLAINS_OAKS) {
-            val hash = hash(site.cellX * FIXTURE_STRIDE + number, site.cellY, OAK_SALT)
-            val spot = findSpot(site, hash, OAK_START_RADIUS, OAK_SEARCH_RADIUS, 1) { x, y -> spotClear(site.biome, x, y, OAK_SIZE, OAK_SIZE, found) } ?: continue
-            found.add(Fixture(Loc.oaktree, spot.first, spot.second, OAK_SIZE, OAK_SIZE, (hash shr ROTATION_SHIFT and 3).toInt()))
+    private fun findTrees(site: Site, loc: Int, count: Int, size: Int, salt: Long, found: MutableList<Fixture> = mutableListOf()): List<Fixture> {
+        for (number in 0 until count) {
+            val hash = hash(site.cellX * FIXTURE_STRIDE + number, site.cellY, salt)
+            val spot = findSpot(site, hash, OAK_START_RADIUS, OAK_SEARCH_RADIUS, 1) { x, y -> spotClear(site.biome, x, y, size, size, found) } ?: continue
+            found.add(Fixture(loc, spot.first, spot.second, size, size, (hash shr ROTATION_SHIFT and 3).toInt()))
         }
         return found
+    }
+
+    private fun findAltar(site: Site, others: List<Fixture>): Fixture? {
+        val hash = hash(site.cellX, site.cellY, ALTAR_SALT)
+        val (loc, size) = when ((hash % PERCENT).toInt()) {
+            in 0 until CHAOS_PERCENT -> CHAOS_ALTAR to ALTAR_SIZE
+            in CHAOS_PERCENT until CHAOS_PERCENT + MIND_PERCENT -> MIND_ALTAR to ALTAR_SIZE
+            in CHAOS_PERCENT + MIND_PERCENT until CHAOS_PERCENT + MIND_PERCENT + BLOOD_PERCENT -> BLOOD_ALTAR to BLOOD_ALTAR_SIZE
+            else -> return null
+        }
+        val spot = findSpot(site, hash, ALTAR_START_RADIUS, ALTAR_SEARCH_RADIUS, 1) { x, y -> spotClear(site.biome, x, y, size, size, others) } ?: return null
+        return Fixture(loc, spot.first, spot.second, size, size, 0)
+    }
+
+    private fun findMine(site: Site): MutableList<Fixture> {
+        val hash = hash(site.cellX, site.cellY, MINE_SALT)
+        val fixtures = mutableListOf<Fixture>()
+        for ((number, chamber) in site.chambers.withIndex()) {
+            val (cx, cy) = chamber
+            fixtures.add(Fixture(ESSENCE_ROCK, cx - ESSENCE_SIZE / 2, cy - ESSENCE_SIZE / 2, ESSENCE_SIZE, ESSENCE_SIZE, 0, MINE_REACH))
+            val inward = Math.atan2(site.y - cy, site.x - cx)
+            for (step in 0 until MINE_RIM_ROCKS) {
+                val angle = inward + (step + 0.5) * 2 * Math.PI / MINE_RIM_ROCKS
+                val rock = MINE_RIM[((hash shr number + step) % MINE_RIM.size).toInt()]
+                fixtures.add(Fixture(rock, cx + (cos(angle) * MINE_A * MINE_RIM_FIELD).roundToInt() - 1, cy + (sin(angle) * MINE_B * MINE_RIM_FIELD).roundToInt() - 1, 2, 2, step and 3))
+            }
+            fixtures.add(Fixture(Loc.di2_torch_snow, cx + (cos(inward) * MINE_A).roundToInt(), cy + (sin(inward) * MINE_B).roundToInt(), 1, 1, 0))
+        }
+        return fixtures
     }
 
     private fun findGemRocks(site: Site): List<Fixture> {
@@ -779,7 +855,7 @@ class WorldGenerator(
     }
 
     private fun spotClear(biome: Biome, x: Int, y: Int, width: Int, depth: Int, others: List<Fixture>): Boolean {
-        if (x - SPOT_MARGIN < originX || y - SPOT_MARGIN < originY) {
+        if (!inSector(x - SPOT_MARGIN, y - SPOT_MARGIN, x + width + SPOT_MARGIN, y + depth + SPOT_MARGIN)) {
             return false
         }
         for (dx in -SPOT_MARGIN until width + SPOT_MARGIN) {
@@ -812,9 +888,11 @@ class WorldGenerator(
     }
 
     private fun buildRange(site: Site): Range {
+        if (site.biome == Biome.VOLCANO) return buildVolcano(site)
         val hash = hash(site.cellX, site.cellY, RANGE_SALT)
         val axis = fraction(hash, 0) * Math.PI
         val shift = ((hash shr RANGE_SHIFT) % PROFILES.size).toInt()
+        val altarPeak = if ((hash shr ALTAR_SHIFT) % 2 == 0L) ((hash shr ALTAR_PEAK_SHIFT) % RANGE_PEAKS).toInt() else -1
         val peaks = List(RANGE_PEAKS) { index ->
             val roll = hash(site.cellX * RANGE_STRIDE + index, site.cellY, RANGE_SALT + 1)
             val along = (index - RANGE_PEAKS / 2) * RANGE_SPACING + (fraction(roll, 0) - 0.5) * 2 * RANGE_JITTER
@@ -829,11 +907,7 @@ class WorldGenerator(
         val trails = mutableListOf<Trail>()
         val clearings = mutableListOf<Clearing>()
         for ((index, peak) in peaks.withIndex()) {
-            val roll = hash(site.cellX * RANGE_STRIDE + index, site.cellY, RANGE_SALT + 2)
-            val entrance = (roll and DIRECTION_MASK).toInt()
-            val exit = (entrance + 1 + ((roll shr EXIT_SHIFT) % (DIRECTION_ANGLES.size - 1)).toInt()) % DIRECTION_ANGLES.size
-            val ascent = trailOf(peak, DIRECTION_ANGLES[entrance], if (roll shr UP_SWIRL_SHIFT and 1L == 0L) PATH_SWIRL else -PATH_SWIRL, true)
-            val descent = trailOf(peak, DIRECTION_ANGLES[exit], if (roll shr DOWN_SWIRL_SHIFT and 1L == 0L) PATH_SWIRL else -PATH_SWIRL, false)
+            val (ascent, descent) = ways(peak, hash(site.cellX * RANGE_STRIDE + index, site.cellY, RANGE_SALT + 2), 0.0)
             trails.add(ascent)
             trails.add(descent)
             val profile = PROFILES[(index + shift) % PROFILES.size]
@@ -845,16 +919,41 @@ class WorldGenerator(
                 val at = pointAt(descent, YEW_ALONG)
                 clearings.add(Clearing(at.first, at.second, YEW_CLEARING_RADIUS, YEW_TREE, profile.yews, YEW_SIZE))
             }
+            if (index == altarPeak) clearings.add(altarClearing(descent, EARTH_ALTAR))
         }
         return Range(peaks, trails, clearings)
     }
 
-    private fun trailOf(peak: Peak, angle: Double, swirl: Double, inward: Boolean): Trail {
+    private fun buildVolcano(site: Site): Range {
+        val hash = hash(site.cellX, site.cellY, RANGE_SALT)
+        val peak = Peak(site.x, site.y, VOLCANO_RADIUS, 1.0)
+        val (ascent, descent) = ways(peak, hash, RIM_RADIUS)
+        val rim = Trail(
+            DoubleArray(RIM_STEPS + 1) { site.x + cos(2 * Math.PI * it / RIM_STEPS) * RIM_RADIUS },
+            DoubleArray(RIM_STEPS + 1) { site.y + sin(2 * Math.PI * it / RIM_STEPS) * RIM_RADIUS }
+        )
+        val altar = if ((hash shr ALTAR_SHIFT) % 2 == 0L) listOf(altarClearing(descent, FIRE_ALTAR)) else emptyList()
+        return Range(listOf(peak), listOf(ascent, rim, descent), altar)
+    }
+
+    private fun altarClearing(descent: Trail, loc: Int): Clearing {
+        val at = pointAt(descent, ALTAR_ALONG)
+        return Clearing(at.first, at.second, ALTAR_CLEARING_RADIUS, loc, 1, ALTAR_SIZE)
+    }
+
+    private fun ways(peak: Peak, roll: Long, top: Double): Pair<Trail, Trail> {
+        val entrance = (roll and DIRECTION_MASK).toInt()
+        val exit = (entrance + 1 + ((roll shr EXIT_SHIFT) % (DIRECTION_ANGLES.size - 1)).toInt()) % DIRECTION_ANGLES.size
+        return trailOf(peak, DIRECTION_ANGLES[entrance], if (roll shr UP_SWIRL_SHIFT and 1L == 0L) PATH_SWIRL else -PATH_SWIRL, true, top) to
+            trailOf(peak, DIRECTION_ANGLES[exit], if (roll shr DOWN_SWIRL_SHIFT and 1L == 0L) PATH_SWIRL else -PATH_SWIRL, false, top)
+    }
+
+    private fun trailOf(peak: Peak, angle: Double, swirl: Double, inward: Boolean, top: Double): Trail {
         val xs = DoubleArray(PATH_STEPS + 1)
         val ys = DoubleArray(PATH_STEPS + 1)
         for (step in 0..PATH_STEPS) {
             val along = step.toDouble() / PATH_STEPS
-            val reach = peak.radius * PATH_FOOT * if (inward) 1 - along else along
+            val reach = top + (peak.radius * PATH_FOOT - top) * if (inward) 1 - along else along
             val turn = if (inward) swirl * along else -swirl * (1 - along)
             xs[step] = peak.x + cos(angle + turn) * reach
             ys[step] = peak.y + sin(angle + turn) * reach
@@ -869,7 +968,7 @@ class WorldGenerator(
         return lerp(trail.xs[index], trail.xs[index + 1], fraction) to lerp(trail.ys[index], trail.ys[index + 1], fraction)
     }
 
-    private fun mountainResources(site: Site): List<Fixture> {
+    private fun rangeResources(site: Site): List<Fixture> {
         val range = rangeOf(site)
         val found = mutableListOf<Fixture>()
         for (clearing in range.clearings) {
@@ -879,7 +978,7 @@ class WorldGenerator(
             val candidates = mutableListOf<Pair<Int, Int>>()
             for (dx in -reach..reach) {
                 for (dy in -reach..reach) {
-                    if (resourceSpotClear(range, clearing, centreX + dx, centreY + dy)) candidates.add(centreX + dx to centreY + dy)
+                    if (resourceSpotClear(site.biome, range, clearing, centreX + dx, centreY + dy)) candidates.add(centreX + dx to centreY + dy)
                 }
             }
             var placed = 0
@@ -893,14 +992,14 @@ class WorldGenerator(
         return found
     }
 
-    private fun resourceSpotClear(range: Range, clearing: Clearing, x: Int, y: Int): Boolean {
-        if (x - SPOT_MARGIN < originX || y - SPOT_MARGIN < originY) return false
+    private fun resourceSpotClear(biome: Biome, range: Range, clearing: Clearing, x: Int, y: Int): Boolean {
+        if (!inSector(x - SPOT_MARGIN, y - SPOT_MARGIN, x + clearing.size + SPOT_MARGIN, y + clearing.size + SPOT_MARGIN)) return false
         for (dx in 0 until clearing.size) {
             for (dy in 0 until clearing.size) {
                 val centreX = x + dx + HALF_TILE
                 val centreY = y + dy + HALF_TILE
                 if (hypot(centreX - clearing.x, centreY - clearing.y) > clearing.radius - 1 || range.gap(centreX, centreY) < RESOURCE_PATH_GAP) return false
-                if (biomeAtGlobal(x + dx, y + dy) != Biome.MOUNTAIN) return false
+                if (biomeAtGlobal(x + dx, y + dy) != biome) return false
             }
         }
         return !roadTouchesGlobal(x - 1, y - 1, x + clearing.size, y + clearing.size)
@@ -1156,6 +1255,7 @@ class WorldGenerator(
             return emptyList()
         }
         val count = ISLAND_MIN + (hash(cellX, cellY, ISLAND_SALT) % (ISLAND_MAX - ISLAND_MIN + 1)).toInt()
+        val altar = hash(cellX, cellY, ALTAR_SALT)
         val found = mutableListOf<Island>()
         for (number in 0 until count) {
             for (attempt in 0 until ISLAND_ATTEMPTS) {
@@ -1170,12 +1270,17 @@ class WorldGenerator(
                 break
             }
         }
+        if (altar % 2 == 0L && found.isNotEmpty()) {
+            val index = ((altar shr ALTAR_PEAK_SHIFT) % found.size).toInt()
+            found[index] = found[index].let { Island(it.x, it.y, it.radius, it.fixtures + Fixture(WATER_ALTAR, it.x - 1, it.y - 1, ALTAR_SIZE, ALTAR_SIZE, 0)) }
+        }
         return found
     }
 
     private fun islandFits(site: Site, x: Int, y: Int, radius: Double, others: List<Island>): Boolean {
         if (nearestSite(x, y) !== site) return false
-        if (x - radius * ISLAND_REACH - ISLAND_CLEARANCE < originX || y - radius * ISLAND_REACH - ISLAND_CLEARANCE < originY) return false
+        val reach = (radius * ISLAND_REACH + ISLAND_CLEARANCE).toInt()
+        if (!inSector(x - reach, y - reach, x + reach, y + reach)) return false
         if (fieldOf(distances(x, y), Biome.OCEAN) < radius * ISLAND_REACH + ISLAND_CLEARANCE) return false
         if (roadTouchesGlobal(x - ISLAND_CLEARANCE, y - ISLAND_CLEARANCE, x + ISLAND_CLEARANCE, y + ISLAND_CLEARANCE)) return false
         return others.none { hypot((it.x - x).toDouble(), (it.y - y).toDouble()) < it.radius + radius + ISLAND_GAP }
@@ -1185,7 +1290,7 @@ class WorldGenerator(
         val rotation = (roll shr ROTATION_SHIFT and 3).toInt()
         val trees = mutableListOf(Fixture(MAPLE_TREE, x - 3, y - 3, MAPLE_SIZE, MAPLE_SIZE, rotation))
         if (roll shr ISLAND_TREE_SHIFT and 1L == 1L) {
-            trees.add(Fixture(MAPLE_TREE, x + 1, y + 1, MAPLE_SIZE, MAPLE_SIZE, rotation))
+            trees.add(Fixture(MAPLE_TREE, x + 2, y + 2, MAPLE_SIZE, MAPLE_SIZE, rotation))
         }
         trees.add(Fixture(Loc.boulder1, x - 3, y + 1, ISLAND_ROCK_SIZE, ISLAND_ROCK_SIZE, rotation))
         return trees
@@ -1323,11 +1428,6 @@ class WorldGenerator(
     }
 
     private fun biomeOf(cellX: Int, cellY: Int, hash: Long): Biome {
-        if (cellX < 0 || cellY < 0) {
-            val mirroredX = if (cellX < 0) -cellX - 1 else cellX
-            val mirroredY = if (cellY < 0) -cellY - 1 else cellY
-            return biomeOf(mirroredX, mirroredY, hash(mirroredX, mirroredY, BIOME_SALT))
-        }
         if (cellX == ORIGIN_CELL_X && cellY == ORIGIN_CELL_Y) return Biome.PLAINS
         if ((hash shr WINTER_PICK_SHIFT) % WINTER_SITE_ODDS == 0L) return Biome.WINTER
         val extra = hash(cellX, cellY, EXTRA_BIOME_SALT)
@@ -1336,6 +1436,7 @@ class WorldGenerator(
             !onRoadCell && extra % OCEAN_SITE_ODDS == 0L -> Biome.OCEAN
             (extra shr MOUNTAIN_PICK_SHIFT) % MOUNTAIN_SITE_ODDS == 0L -> Biome.MOUNTAIN
             !onRoadCell && (extra shr VOLCANO_PICK_SHIFT) % VOLCANO_SITE_ODDS == 0L -> Biome.VOLCANO
+            !onRoadCell && (extra shr RUNE_PICK_SHIFT) % RUNE_SITE_ODDS == 0L -> Biome.RUNE_ESSENCE
             else -> LAND_BIOMES[(hash shr BIOME_PICK_SHIFT).toInt().mod(LAND_BIOMES.size)]
         }
     }
@@ -1353,10 +1454,17 @@ class WorldGenerator(
     private fun land(x: Int, y: Int): Double {
         var total = BASE_HEIGHT.toDouble()
         for ((wavelength, amplitude) in OCTAVES) {
-            total += (noise(x.toDouble() / wavelength, y.toDouble() / wavelength, HEIGHT_SALT) - 0.5) * 2 * amplitude
+            total += wave(x, y, wavelength, amplitude)
+        }
+        val flat = smooth((roadGap(x, y) / ROAD_FLAT).coerceIn(0.0, 1.0))
+        for ((wavelength, amplitude) in BUMPS) {
+            total += wave(x, y, wavelength, amplitude) * flat
         }
         return total
     }
+
+    private fun wave(x: Int, y: Int, wavelength: Double, amplitude: Double): Double =
+        (noise(x.toDouble() / wavelength, y.toDouble() / wavelength, HEIGHT_SALT) - 0.5) * 2 * amplitude
 
     private fun noise(x: Double, y: Double, salt: Long): Double {
         val x0 = floor(x).toInt()
@@ -1409,6 +1517,9 @@ class WorldGenerator(
         private const val OBSIDIAN_UNDERLAY = Underlay.underlay_108
         private const val EMBER_UNDERLAY = Underlay.underlay_121
         private const val BEACH_UNDERLAY = Underlay.underlay_61
+        const val RUNE_ESSENCE_UNDERLAY = Underlay.underlay_58
+        private const val MINE_FLOOR_UNDERLAY = Underlay.underlay_55
+        private const val MINE_RING_UNDERLAY = Underlay.underlay_26
         private const val SAND_BED_UNDERLAY = Underlay.underlay_37
         private const val MUD_BED_UNDERLAY = Underlay.underlay_65
         private const val DEEP_BED_UNDERLAY = Underlay.underlay_55
@@ -1422,6 +1533,9 @@ class WorldGenerator(
         private const val VOLCANO_PICK_SHIFT = 40
         private const val EXTRA_BIOME_SALT = 0x42494F32L
         private val LAND_BIOMES = listOf(Biome.PLAINS, Biome.DESERT, Biome.FOREST, Biome.WILDERNESS)
+        private val DRY_BIOMES = setOf(Biome.OCEAN, Biome.MOUNTAIN, Biome.VOLCANO, Biome.RUNE_ESSENCE)
+        private const val RUNE_SITE_ODDS = 9L
+        private const val RUNE_PICK_SHIFT = 10
         private val BIOMES = Biome.entries.size
         const val ROAD_OVERLAY = Overlay.overlay_102
         const val ROAD_WIDTH = 2
@@ -1437,6 +1551,7 @@ class WorldGenerator(
         private const val WINTER_ODDS = 9L
         private const val MOUNTAIN_ODDS = 8L
         private const val VOLCANO_ODDS = 8L
+        private const val RUNE_ESSENCE_ODDS = 6L
         private const val CLUSTERS_STRIDE = 16
         private const val CLUSTER_SIDE = 20
         private const val ROCKS_PER_CLUSTER = 10
@@ -1462,8 +1577,16 @@ class WorldGenerator(
         private const val GEM_ROCK = Loc.loc_11194
         private const val ANVIL = Loc.loc_2783
         private const val MAPLE_TREE = Loc.loc_1307
+        private const val MAGIC_TREE = Loc.loc_1306
+        private const val ESSENCE_ROCK = Loc.loc_2491
+        private const val MIND_ALTAR = Loc.loc_2479
+        private const val WATER_ALTAR = Loc.loc_2480
+        private const val EARTH_ALTAR = Loc.loc_2481
+        private const val FIRE_ALTAR = Loc.loc_2482
+        private const val CHAOS_ALTAR = Loc.loc_2487
+        private const val BLOOD_ALTAR = Loc.loc_30624
+        private val MINE_RIM = intArrayOf(Loc.di2_snow_rune_rocks_big1, Loc.di2_snow_rune_rocks_big2, Loc.di2_snow_rune_rocks_big3, Loc.di2_snow_rune_rocks_big4)
         private val DESERT_ORES = listOf(CLAY_ROCK, IRON_ROCK, TIN_ROCK, COPPER_ROCK)
-        private val VOLCANO_ORES = listOf(COAL_ROCK, COAL_ROCK, MITHRIL_ROCK)
         private val WINTER_ROCKS = listOf(MITHRIL_ROCK, MITHRIL_ROCK, COAL_ROCK, COAL_ROCK)
         private const val FURNACE_WIDTH = 2
         private const val FURNACE_DEPTH = 3
@@ -1480,6 +1603,38 @@ class WorldGenerator(
         private const val SPOT_SPREAD = 7L
         private const val FIXTURE_STRIDE = 8
         private const val PLAINS_OAKS = 3
+        private const val MAGIC_TREES = 2
+        private const val MAGIC_SIZE = 2
+        private const val MAGIC_SALT = 0x4D4147L
+        private const val ESSENCE_SIZE = 5
+        private const val ALTAR_SIZE = 3
+        private const val BLOOD_ALTAR_SIZE = 4
+        private const val PERCENT = 100
+        private const val CHAOS_PERCENT = 20
+        private const val MIND_PERCENT = 20
+        private const val BLOOD_PERCENT = 5
+        private const val ALTAR_START_RADIUS = 90
+        private const val ALTAR_SEARCH_RADIUS = 80
+        private const val ALTAR_SALT = 0x414C54L
+        private const val ALTAR_SHIFT = 16
+        private const val ALTAR_PEAK_SHIFT = 24
+        private const val ALTAR_ALONG = 0.8
+        private const val ALTAR_CLEARING_RADIUS = 8.0
+        private const val MINE_SALT = 0x4D494EL
+        private const val MINE_DX = 16
+        private const val MINE_DY = 14
+        private const val MINE_A = 12.0
+        private const val MINE_B = 9.0
+        private const val MINE_FLOOR = 0.55
+        private const val MINE_RING = 0.8
+        private const val MINE_FLAT_SPAN = 0.8
+        private const val MINE_DEPTH = 8.0
+        private const val MINE_REACH = 8
+        private const val MINE_RIM_ROCKS = 8
+        private const val MINE_RIM_FIELD = 1.12
+        private const val RUNE_PATCH_WAVELENGTH = 26.0
+        private const val RUNE_PATCH_SALT = 0x525054L
+        private const val RUNE_PATCH_SHARE = 0.3
         private const val OAK_SIZE = 3
         private const val OAK_START_RADIUS = 90
         private const val OAK_SEARCH_RADIUS = 80
@@ -1617,7 +1772,6 @@ class WorldGenerator(
         private const val LAKE_MAIN = 0.75
         private const val LAKE_LEVEL = 0.69
         private const val WILDERNESS_LAKE_LEVEL = 0.71
-        private const val VOLCANO_LAKE_LEVEL = 0.76
         private const val BANK_START = 0.55
         private const val POND_WAVELENGTH = 40.0
         private const val POND_LEVEL = 0.86
@@ -1633,15 +1787,19 @@ class WorldGenerator(
         private const val CLIFF_STEP = 14.0
         private const val CLIFF_SALT = 0x434C4946L
         private val CLIFF_LEVELS = listOf(0.4, 0.55, 0.7)
-        private const val CONE_PEAK = 60.0
-        private const val CONE_RADIUS = 120.0
         private const val CRATER_RADIUS = 26.0
         private const val CRATER_BANK = 10.0
         private const val EMBER_RING = 14.0
-        private const val EMBER_LAKE_MARGIN = 0.04
         private const val ASH_WAVELENGTH = 18.0
         private const val ASH_SALT = 0x415348L
         private const val OBSIDIAN_SHARE = 0.3
+        private const val ROAD_FLAT = 12.0
+        private const val ISLAND_BUMP = 4.0
+        private const val ISLAND_BUMP_WAVELENGTH = 14.0
+        private const val BED_WAVELENGTH = 30.0
+        private const val BED_VARIATION = 0.3
+        private const val BED_SALT = 0x424544L
+        private const val WATER_TILE_HEIGHT = 1
         private const val BEACH_HEIGHT = 5
         private const val OCEAN_DEPTH = 240.0
         private const val OCEAN_SLOPE = 90.0
@@ -1658,9 +1816,13 @@ class WorldGenerator(
         private const val MUD_DEPTH = 34
         private const val GROUND_LEVEL = 0
         private const val MOUNTAIN_PEAK_WAVELENGTH = 50.0
-        private const val VOLCANO_RAMP = 60.0
-        private const val VOLCANO_LIFT = 20.0
+        private const val VOLCANO_RADIUS = 100.0
+        private const val VOLCANO_LIFT = 200.0
+        private const val CRATER_DEPTH = 50.0
+        private const val RIM_RADIUS = 38.0
+        private const val RIM_STEPS = 32
         private val OCTAVES = listOf(160.0 to 34.0, 48.0 to 12.0, 12.0 to 3.0)
+        private val BUMPS = listOf(70.0 to 14.0, 28.0 to 8.0)
         private const val VOID_TILE = "-"
         private const val SIZE = 64
         private const val GRID_CACHE_LIMIT = 64

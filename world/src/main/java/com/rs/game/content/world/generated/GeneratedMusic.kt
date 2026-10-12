@@ -19,7 +19,8 @@ private val musicBiomes = mapOf(
     Biome.WINTER to MusicBiome.SNOW,
     Biome.OCEAN to MusicBiome.OCEAN,
     Biome.MOUNTAIN to MusicBiome.MOUNTAIN,
-    Biome.VOLCANO to MusicBiome.VOLCANIC
+    Biome.VOLCANO to MusicBiome.VOLCANIC,
+    Biome.RUNE_ESSENCE to MusicBiome.RUNE_ESSENCE
 )
 
 private val biomeGenres: Map<Biome, Genre> by lazy {

@@ -14,13 +14,15 @@ private const val SNOW_PER_PULSE = 4
 private const val SNOW_REACH = 7
 private const val GROUND_LEVEL = 0
 
+private val SNOWY = setOf(Biome.WINTER, Biome.RUNE_ESSENCE)
+
 @ServerStartupEvent
 fun startGeneratedWeather() {
     if (!EnvVars.generateMaps) return
     val generator = GeneratedWorld.generator
     WorldTasks.scheduleTimer(SNOW_TICKS, SNOW_TICKS) {
         World.players.forEach { player ->
-            if (player.hasStarted() && !player.hasFinished() && player.plane == GROUND_LEVEL && generator.biomeAt(player.x, player.y) == Biome.WINTER) {
+            if (player.hasStarted() && !player.hasFinished() && player.plane == GROUND_LEVEL && generator.biomeAt(player.x, player.y) in SNOWY) {
                 repeat(SNOW_PER_PULSE) {
                     World.sendSpotAnim(player.tile.transform(Utils.random(-SNOW_REACH, SNOW_REACH + 1), Utils.random(-SNOW_REACH, SNOW_REACH + 1)), Spotanim.xmas_07_player_snowfall)
                 }
