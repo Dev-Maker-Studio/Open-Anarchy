@@ -1,7 +1,4 @@
 #!/bin/bash
-# Runs one 15,000 x 15,000 sector of the 26 x 26 sector world as its own world with its own cache. Only generated sectors (GENERATED_SECTORS, default MM) start.
-# usage: scripts/window-world.sh <windowX> <windowY> [lobby gateway url] [foreground]  (docs/infinite-world.md)
-# With "foreground" the world replaces this shell (the lobby's orchestrator tracks the process); otherwise it runs detached.
 set -eu
 cd "$(dirname "$0")/.."
 WX=${1:?window x}

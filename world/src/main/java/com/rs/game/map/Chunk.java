@@ -151,8 +151,6 @@ public class Chunk {
         ));
     }
 
-    // The packet type and the game model share the simple name SpotAnim, and Java has no import
-    // aliases, so one of the two has to be written out in full here.
     public void addSpotAnim(Tile tile, SpotAnim spotAnim) {
         addChunkUpdate(new org.darkan.core.net.prot.packet.SpotAnim(
             tile.getXInChunk(), tile.getYInChunk(),
@@ -249,9 +247,6 @@ public class Chunk {
                     item.getTile().getXInChunk(), item.getTile().getYInChunk(),
                     item.getId(), item.getAmount()
                 ));
-                // Re-key the same instance as public, the way legacy did: a fresh GroundItem would
-                // restart its tick counter, and getDeleteTime() is an absolute threshold, so the
-                // drop would outlive its lifetime by the whole hidden window.
                 item.removeOwner();
                 addItemToOwnerMapping(item);
             }
@@ -316,9 +311,6 @@ public class Chunk {
 
     public boolean deleteGroundItem(GroundItem item) {
         ChunkManager.markChunkActive(id);
-        //TODO: TaskedGroundItem is composition-based, not subclass - need different check
-        //if (item instanceof TaskedGroundItem tasked)
-        //    tasked.getAsyncTasks().stopAll();
         int tileHash = item.getTile().getTileHash();
         Map<Integer, List<GroundItem>> tileMap = groundItems.get(item.getVisibleToId());
         if (tileMap == null)
@@ -372,21 +364,6 @@ public class Chunk {
         loadedMapData = true;
     }
 
-//    public void loadMapFromCache() {
-//        baseObjects = new GameObject[8][8][4];
-//        Region region = new Region(getRegionId());
-//        region.loadRegionMap(false);
-//        for (int xOff = 0;xOff < 8;xOff++)
-//            for (int yOff = 0;yOff < 8;yOff++)
-//                WorldCollision.addFlag(Tile.of(getBaseX()+xOff, getBaseY()+yOff, plane), region.getClipFlags()[plane][(getBaseX()-region.getBaseX())+xOff][(getBaseY()-region.getBaseY())+yOff]);
-//        if (region.getObjects() != null && !region.getObjects().isEmpty()) {
-//            for (WorldObject object : region.getObjects()) {
-//                if (object.getTile().getChunkId() != id)
-//                    continue;
-//                addBaseObject(new GameObject(object));
-//            }
-//        }
-//    }
 
     public void addBaseObject(GameObject obj) {
         baseObjects[obj.getTile().getXInChunk()][obj.getTile().getYInChunk()][obj.getSlot()] = obj;
@@ -403,10 +380,6 @@ public class Chunk {
         WorldDelta.restoreTimed(obj);
     }
 
-    /**
-     * Adds an object the world generates, like a tree: spawned on top of the map, clipped, and sent to players with the
-     * rest of the chunk. Unlike spawnObject it does not mark the chunk active, so a forest does not keep its region loaded.
-     */
     public void addGeneratedObject(GameObject obj) {
         if (getSpawnedObjectWithSlot(obj.getTile(), obj.getSlot()) != null)
             return;

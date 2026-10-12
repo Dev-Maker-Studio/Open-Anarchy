@@ -51,7 +51,7 @@ class PenguinSpawnService () {
 
         removeAllSpawns()
 
-        for (player in World.players) { // Reset Quickchat varbit to 0 for all logged in players
+        for (player in World.players) {
             player.vars.saveVarBit(Varbit.peng_spy_week_peng, 0)
         }
 

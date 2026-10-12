@@ -16,13 +16,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * Regression tests for the dispatch paths that were silently doing nothing on the modern world
- * server: the spawn commands' inventory update, and the logout tab's buttons.
- */
 class DispatchTest {
 
-    /** The client-side container key the inventory is transmitted under (`Inventory.processRefresh`). */
     private val INVENTORY_CONTAINER = 93
 
     private val loggedIn = mutableListOf<HarnessPlayer>()
@@ -33,18 +28,12 @@ class DispatchTest {
         loggedIn.clear()
     }
 
-    /**
-     * Logs a player in and lets the world tick once. Entity.isLocked() is `lockDelay >= tickCounter`
-     * and both start at 0, so a player is nominally "locked" until its first processEntity() -
-     * exactly as on a real server, where the client cannot click before then either.
-     */
     private fun login(name: String, rights: Rights = Rights.OWNER): HarnessPlayer =
         WorldHarness.login(name, rights).also {
             loggedIn.add(it)
             WorldHarness.tick()
         }
 
-    /** Everything the command system registered must be reachable at the OWNER rights walk. */
     @Test
     fun commandsAreRegistered() {
         WorldHarness.boot()
@@ -52,7 +41,6 @@ class DispatchTest {
         assertTrue(total > 200, "expected the command registry to be populated, got $total commands")
     }
 
-    /** `::item <id>` must put the item in the inventory and emit an inventory update for it. */
     @Test
     fun itemCommandAddsToInventoryAndSendsUpdate() {
         val harness = login("itemcmd")
@@ -80,7 +68,6 @@ class DispatchTest {
         assertTrue(4151 in slots, "the inventory update did not carry item 4151, it carried $slots")
     }
 
-    /** `::giveitem <player> <id> <amount>` must do the same for another player. */
     @Test
     fun giveItemCommandAddsToTargetInventory() {
         val giver = login("giver")
@@ -98,7 +85,6 @@ class DispatchTest {
         assertTrue(995 in inventoryUpdatesFor(target), "no inventory update carried the coins")
     }
 
-    /** Logout tab, "Exit to lobby" (component 6) must queue the lobby logout packet. */
     @Test
     fun logoutButtonExitsToLobby() {
         val harness = login("logoutlobby")
@@ -107,16 +93,12 @@ class DispatchTest {
         harness.push(IfButton(opNum = 1, interfaceId = 182, componentId = 6, slotId = -1, itemId = -1))
         WorldHarness.tick()
 
-        // `flushed`, not `sent`: Player.logout() finishes the player in the same call, and the
-        // world tick's flush pass skips finished players, so a merely-queued logout never reaches
-        // the client - the exact bug this asserts against.
         assertTrue(
             harness.session.flushed.any { it is LogoutLobby },
             "LogoutLobby never reached the client; events=${harness.session.events}"
         )
     }
 
-    /** Logout tab, "Logout" (component 13) must queue the full logout packet. */
     @Test
     fun logoutButtonLogsOutFully() {
         val harness = login("logoutfull")
@@ -131,10 +113,6 @@ class DispatchTest {
         )
     }
 
-    /**
-     * The button dispatch itself: a `ButtonClickEvent` for interface 182 must find a registered
-     * handler. If this fails, no interface in the game has working buttons.
-     */
     @Test
     fun buttonClickEventHasRegisteredHandler() {
         val harness = login("buttondispatch")
@@ -144,7 +122,6 @@ class DispatchTest {
         )
     }
 
-    /** The logout tab has to actually be open, or IfButtonHandler's topOpen gate drops the click. */
     @Test
     fun logoutTabIsOpenAfterLogin() {
         val harness = login("logouttab")
@@ -154,7 +131,6 @@ class DispatchTest {
         )
     }
 
-    /** Item ids carried by inventory updates the client would actually have received. */
     private fun inventoryUpdatesFor(harness: HarnessPlayer): Set<Int> {
         val key = INVENTORY_CONTAINER
         val ids = mutableSetOf<Int>()

@@ -4,13 +4,6 @@ import org.darkan.core.update.NpcCustomisation
 import world.gregs.voidps.buffer.read.Reader
 import world.gregs.voidps.buffer.write.BufferWriter
 
-/**
- * Shared NPC customisation encoding, parameterized on the flag byte transform.
- *
- * Body customisation uses `writeByteSubtract` for the flag byte.
- * Head customisation uses `writeByteAdd` for the flag byte.
- * The rest of the encoding (models via writeBigSmart, recolors, retextures) is identical.
- */
 inline fun encodeNpcCustomisation(
     out: BufferWriter,
     custom: NpcCustomisation,

@@ -6,19 +6,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * Guards the payload-less client packets: the prots registered with no decoder at all.
- *
- * `Session.readPackets` has no bytes to hand such a prot, so it falls back to
- * [Codec.createInstanceForOpcode], which builds the packet by reflection. When that returns null
- * the packet is dropped on the floor and the handler never runs - the shape of the bug where
- * `CloseInterface` (opcode 60) was silently discarded on every interface close, because Kotlin
- * reflection does not expose the synthetic JVM no-arg constructor that an all-default-parameter
- * class gets, so a search for a zero-parameter constructor found nothing.
- *
- * Registering a decoder-less prot whose constructor needs a real argument fails this test, which
- * is the point: the failure belongs at build time, not in a production log line nobody reads.
- */
 class DecoderlessClientProtTest {
 
     private lateinit var codec: Codec
@@ -28,7 +15,6 @@ class DecoderlessClientProtTest {
         codec = register727()
     }
 
-    /** Opcodes registered without a decoder, deduplicated by opcode and sorted for stable output. */
     private fun decoderlessOpcodes(): List<Int> =
         codec.clientProtsByOpcode.filterValues { it.decoder == null }.keys.sorted()
 

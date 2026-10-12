@@ -42,12 +42,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import java.util.logging.Logger as JulLogger
 
-/**
- * Regressions the legacy port dropped: broken angle/face maths, varps that could not be set,
- * Telekinetic Grab, silently swallowed gateway sends and DB save failures, an empty
- * `abortDialogue()`, the lost force-logout on gateway rejection, and dev commands whose
- * cache-derived bounds had been stubbed to 0.
- */
 class RemainingRegressionsTest {
 
     private val loggedIn = mutableListOf<HarnessPlayer>()
@@ -65,13 +59,7 @@ class RemainingRegressionsTest {
             WorldHarness.tick()
         }
 
-    // ---------------------------------------------------------------- 1. Utils angle maths
 
-    /**
-     * `Utils.getDirection` indexes `ANGLE_DIRECTION_DELTA` by `angle shr 11`, and the table had
-     * been mirrored on X, so `Direction.fromAngle` returned the east/west mirror of the truth for
-     * six of the eight directions. Every direction's own angle must map back to itself.
-     */
     @Test
     fun everyDirectionAngleRoundTripsThroughFromAngle() {
         Direction.entries.forEach { dir ->
@@ -81,15 +69,10 @@ class RemainingRegressionsTest {
                 "Direction.fromAngle(${dir.angle}) should be $dir; the angle->delta table is mirrored"
             )
         }
-        // The specific mirror that was wrong: 4096 is due west (atan2 of dx=-1, dy=0).
         assertEquals(Direction.WEST, Direction.fromAngle(4096))
         assertEquals(Direction.EAST, Direction.fromAngle(12288))
     }
 
-    /**
-     * `getBackFace`/`getFrontFace` had become a 4-branch `when` over 0..3, returning (0,0) for
-     * every real face angle. They take a 0..16383 face angle, and are exact inverses.
-     */
     @Test
     fun faceHelpersAcceptFullAngleRangeAndAreInverses() {
         assertTrue(Utils.getBackFace(0).contentEquals(intArrayOf(0, 1)), "angle 0 faces north")
@@ -108,13 +91,7 @@ class RemainingRegressionsTest {
         assertTrue(nonZero > 2000, "getBackFace collapsed to (0,0) for almost every angle ($nonZero non-zero)")
     }
 
-    // ---------------------------------------------------------------- 3. Telekinetic Grab
 
-    /**
-     * The spellbook's Telekinetic Grab branch (interface 192, component 44) had been dropped from
-     * `IfOnGroundItemHandler`; only the tinderbox-on-logs branch survived. Legacy:
-     * `com.rs.net.decoders.handlers.impl.interfaces.IFOnGroundItemHandler` lines 70-134.
-     */
     @Test
     fun telekineticGrabSetsAnActionForSpellbookComponent44() {
         val harness = login("telegrab")
@@ -130,8 +107,6 @@ class RemainingRegressionsTest {
             "the ground item is not visible to its owner"
         )
 
-        // The handler requires the source interface to be open, exactly as legacy did. The
-        // spellbook is part of the interface set a login sends, so it already is.
         if (!player.interfaceManager.topOpen(192))
             player.interfaceManager.sendSubSpecific(false, 1477, 96, 192)
         assertTrue(player.interfaceManager.topOpen(192), "interface 192 did not register as open")
@@ -161,13 +136,7 @@ class RemainingRegressionsTest {
         )
     }
 
-    // ---------------------------------------------------------------- 4. Gateway send failures
 
-    /**
-     * `SocialClient.send` returned Unit and dropped the message with no log when the gateway was
-     * down. It now reports failure, and `WorldServer.act` tells the player, the way
-     * legacy `LobbyCommunicator.forwardPackets` did (world-server LobbyCommunicator.java:88-93).
-     */
     @Test
     fun gatewaySendFailureIsReportedAndThePlayerIsTold() {
         val harness = login("gatewaydown")
@@ -188,9 +157,7 @@ class RemainingRegressionsTest {
         )
     }
 
-    // ---------------------------------------------------------------- 5. DB save failures
 
-    /** `DBItemManager.execute` used `executor.submit`, so every Throwable died in the ignored Future. */
     @Test
     fun dbItemManagerLogsTaskFailures() {
         WorldHarness.boot()
@@ -209,9 +176,7 @@ class RemainingRegressionsTest {
         assertEquals(Level.SEVERE, failure.level, "a dropped DB save must be logged at error level")
     }
 
-    // ---------------------------------------------------------------- 6. abortDialogue
 
-    /** `abortDialogue()` was an empty body behind a stale TODO even though ServerProt 146 exists. */
     @Test
     fun abortDialogueQueuesTriggerOnDialogAbort() {
         val harness = login("abortdialogue")
@@ -225,12 +190,7 @@ class RemainingRegressionsTest {
         )
     }
 
-    // ---------------------------------------------------------------- 7. Gateway rejection
 
-    /**
-     * Legacy `Player#run` force-logged-out a player the lobby would not register
-     * (world-server Player.java:1186-1189); the port dropped the check entirely.
-     */
     @Test
     fun gatewayRejectionForcesLogout() {
         val harness = login("rejected")
@@ -245,17 +205,7 @@ class RemainingRegressionsTest {
         )
     }
 
-    // ---------------------------------------------------------------- 8. Packet failure logging
 
-    /**
-     * A handler that throws must not kill the tick, and the failure must be visible in
-     * mainlog.txt at error level naming the packet class.
-     *
-     * NOTE: the surviving catch is `PacketHandlers.handleBlocking`'s, which lives under
-     * the networking-owned `org.darkan.core.net.prot.handler` package, so it still logs
-     * only the packet and handler class. `Player.processPackets` names the player too, but can
-     * never fire while handleBlocking swallows first - see the report.
-     */
     @Test
     fun aThrowingHandlerIsLoggedAtErrorLevelNamingThePacket() {
         val harness = login("throwinghandler")
@@ -282,7 +232,6 @@ class RemainingRegressionsTest {
             failure.message.contains("AddFriend"),
             "the log line does not name the packet class: ${failure.message}"
         )
-        // The tick must have survived and the player must still be processing.
         assertFalse(harness.player.hasFinished(), "a throwing handler took the player down with it")
     }
 
@@ -290,14 +239,12 @@ class RemainingRegressionsTest {
         override suspend fun handle(player: Player, packet: AddFriend): Unit = throw IllegalStateException(marker)
     }
 
-    /** The registry's private map, so a hijacked handler can be put back exactly as it was. */
     @Suppress("UNCHECKED_CAST")
     private fun handlerMap(): MutableMap<Class<out ClientProt>, PacketHandler<*, out ClientProt>> =
         PacketHandlers::class.java.getDeclaredField("PACKET_HANDLERS")
             .apply { isAccessible = true }
             .get(PacketHandlers) as MutableMap<Class<out ClientProt>, PacketHandler<*, out ClientProt>>
 
-    /** `::tileflags` printed a raw hex mask; the flag-name decoding had been lost. */
     @Test
     fun tileFlagsPrintsDecodedFlagNames() {
         assertTrue(
@@ -320,25 +267,17 @@ class RemainingRegressionsTest {
         assertTrue(line.contains("["), "::tileflags printed no decoded flag list: $line")
     }
 
-    // ---------------------------------------------------------------- helpers
 
-    /** A client that was never `start()`ed, so its state is Stopped and every send is dropped. */
     private fun unstartedSocialClient(): SocialClient = SocialClient(CoroutineScope(Dispatchers.Default)) { }
 
     private fun setSocialClient(client: SocialClient) {
         WorldServer::class.java.getDeclaredField("socialClient").apply { isAccessible = true }.set(WorldServer, client)
     }
 
-    /** Puts the `lateinit` field back to unset so other tests see no attached gateway. */
     private fun clearSocialClient() {
         WorldServer::class.java.getDeclaredField("socialClient").apply { isAccessible = true }.set(WorldServer, null)
     }
 
-    /**
-     * Runs [block] with a handler attached to the `DarkanRS` logger and returns everything it
-     * published. [block] receives no arguments; use the [waitFor] overload taking the record list
-     * to poll for an expected record.
-     */
     private fun captureLogRecords(block: LogCapture.() -> Unit): List<LogRecord> {
         val records = Collections.synchronizedList(mutableListOf<LogRecord>())
         val handler = object : Handler() {
@@ -369,7 +308,6 @@ class RemainingRegressionsTest {
         }
     }
 
-    /** Ticks the world while waiting for an asynchronous world-thread effect. */
     private fun waitFor(condition: () -> Boolean) {
         repeat(200) {
             if (condition()) return

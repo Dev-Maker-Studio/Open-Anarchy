@@ -37,12 +37,6 @@ fun String.isValidPassword() = matches(PASSWORD_REGEX)
 
 private val SECRET_COMMANDS = setOf("changepass", "changepassother", "setpass", "resetpass")
 
-/**
- * A command line with its arguments stripped when they are a password. Every server that logs or
- * persists what a player typed goes through this: the commands only exist on the lobby, but a player
- * types them wherever they happen to be, and a world - a community world above all - must never end
- * up holding a plaintext password.
- */
 fun String.redactedCommand(): String {
     val parts = trim().split(" ")
     val name = parts.first().lowercase()
@@ -68,11 +62,6 @@ fun String.formatPlayerNameForDisplay(): String {
         }
 }
 
-/**
- * Formats a chat message: capitalizes first letter, auto-capitalizes after sentence
- * punctuation (.!?:;), preserves uppercase at start of words after spaces, and lowercases
- * mid-word uppercase letters. Matches legacy Utils.fixChatMessage behavior.
- */
 fun String.fixChatMessage(): String {
     val sb = StringBuilder(length)
     var space = false
@@ -120,9 +109,6 @@ fun generateRandomString(length: Int = 50): String {
         .joinToString("")
 }
 
-/**
- * Tick time extensions
- */
 
 fun Double.ticksToTimeString(): String = this.roundToInt().ticksToTimeString()
 fun Int.ticksToTimeString(): String = this.toLong().ticksToTimeString()
@@ -150,9 +136,6 @@ fun Double.formatNumber() = NumberFormat.getNumberInstance(Locale.US).format(toL
 
 fun generateRandom24ByteArray(): ByteArray = ByteArray(24).apply { secureRandom.nextBytes(this) }
 
-/**
- * Finds all methods with a specific annotation in the given package
- */
 fun getMethodsWithAnnotation(packageName: String, annotation: Class<out Annotation>): List<Method> =
     ClassGraph()
         .enableClassInfo()
@@ -166,9 +149,6 @@ fun getMethodsWithAnnotation(packageName: String, annotation: Class<out Annotati
                 .map { it.loadClassAndGetMethod() }
         }
 
-/**
- * Finds all classes with a specific annotation in the given package
- */
 fun getClassesWithAnnotation(packageName: String, annotation: Class<out Annotation>): List<Class<*>> =
     ClassGraph()
         .enableClassInfo()
@@ -179,9 +159,6 @@ fun getClassesWithAnnotation(packageName: String, annotation: Class<out Annotati
                 .map { it.loadClass() }
         }
 
-/**
- * Gets all classes in the given package
- */
 fun getClasses(packageName: String): List<Class<*>> =
     ClassGraph()
         .enableClassInfo()
@@ -191,9 +168,6 @@ fun getClasses(packageName: String): List<Class<*>> =
                 .map { it.loadClass() }
         }
 
-/**
- * Gets all subclasses of a specific class in the given package
- */
 fun getSubClasses(packageName: String, superClass: Class<*>): List<Class<*>> =
     ClassGraph()
         .enableClassInfo()

@@ -4,12 +4,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.ParticleDefinition
 
-/**
- * Writes a particle (index 27 archive 1) file.
- *
- * Opcodes 8, 9 and 10 are bare markers; opcode 2's byte is one the client reads and discards, so
- * it is nullable on the definition and its presence is a null check rather than a value test.
- */
 class ParticleEncoder : OpcodeEncoder<ParticleDefinition>() {
 
     override fun opcodes(definition: ParticleDefinition): IntArray {

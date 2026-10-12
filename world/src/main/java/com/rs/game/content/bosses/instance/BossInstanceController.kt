@@ -5,10 +5,6 @@ import com.rs.game.model.entity.player.Controller
 import com.rs.game.tasks.WorldTasks
 import world.gregs.voidps.type.Tile
 
-/**
- * The instance itself cannot survive a logout, but the way back out of it has to: the key is kept
- * so a player who logs in still lands on the right ground with the right area controller.
- */
 class BossInstanceController(@Transient private val instance: BossInstance? = null, private val defKey: String = "") : Controller() {
     private val def: BossInstanceDef? get() = instance?.def ?: BossInstanceDefs[defKey]
 
@@ -19,7 +15,6 @@ class BossInstanceController(@Transient private val instance: BossInstance? = nu
         setInside(1)
     }
 
-    /** A teleport already took them somewhere of their own choosing: let them keep it. */
     override fun onTeleported(type: TeleType) = release()
 
     override fun forceClose() {
@@ -27,7 +22,6 @@ class BossInstanceController(@Transient private val instance: BossInstance? = nu
         instance?.remove(player)
     }
 
-    /** Kept on through the logout so that [login] can put the player back where they belong. */
     override fun logout(): Boolean {
         setInside(0)
         instance?.remove(player)
@@ -55,10 +49,6 @@ class BossInstanceController(@Transient private val instance: BossInstance? = nu
         removeController()
     }
 
-    /**
-     * An arena inside a controlled area leaves the player standing in it, so they get its controller
-     * back: without it the godwars doors, altars and the prison entrance stop answering.
-     */
     private fun restoreArea() {
         val area = def?.returnController ?: return
         player.controllerManager.startController(area())

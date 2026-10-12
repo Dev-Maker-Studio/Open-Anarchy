@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.utils.spawns;
 
 import com.google.gson.JsonIOException;
@@ -67,8 +51,6 @@ public final class NPCSpawns {
 	@ServerStartupEvent(Priority.FILE_IO)
 	public static void init() throws JsonIOException, IOException {
 		Logger.info(NPCSpawns.class, "init", "Loading NPC spawns...");
-		// A generated world does not get the vanilla spawns: only what is in data/npcs/spawns/custom, plus what the
-		// server's own code spawns (merchants, wildlife, implings), is there.
 		File[] spawnFiles = EnvVars.INSTANCE.getGenerateMaps() ? new File(PATH + CUSTOM).listFiles() : new File(PATH).listFiles();
 		loadingCustom = true;
 		if (spawnFiles != null)
@@ -93,7 +75,6 @@ public final class NPCSpawns {
 	}
 
 	public static void add(NPCSpawn spawn) {
-		// code-registered spawns (holiday events, minigames) are vanilla content too
 		if (EnvVars.INSTANCE.getGenerateMaps() && !loadingCustom)
 			return;
 		if (spawn != null) {

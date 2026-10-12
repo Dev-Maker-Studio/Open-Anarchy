@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.slayer;
 
 import org.darkan.core.cache.EnumDefinitions;
@@ -81,20 +65,16 @@ public enum TaskMonster {
 	BRONZE_DRAGONS(58, 1, "bronze dragon"),
 	IRON_DRAGONS(59, 1, "iron dragon"),
 	STEEL_DRAGONS(60, 1, "steel dragon"),
-	//61 WALL_BEASTS
 	CAVE_SLIMES(62, 17, "cave slime"),
 	CAVE_BUGS(63, 7, "cave bug"),
 	SHADES(64, 1, "shade", "loar shadow"),
 	CROCODILES(65, 1, "crocodile"),
 	DARK_BEASTS(66, 90, "dark beast"),
-	//67 MOGRES
 	DESERT_LIZARDS(68, 22, "lizard"),
 	FEVER_SPIDERS(69, 42, Quest.CABIN_FEVER, "fever spider"),
 	HARPIE_BUG_SWARMS(70, 33, "harpie bug swarm"),
-	//71 SEA_SNAKES
 	SKELETAL_WYVERNS(72, 72, Quest.ELEMENTAL_WORKSHOP_I, "skeletal wyvern"),
 	KILLERWATTS(73, 37, "killerwatt"),
-	//74 MUTATED_ZYGOMITES
 	ICEFIENDS(75, 1, "icefiend"),
 	MINOTAURS(76, 1, "minotaur"),
 	FLESHCRAWLERS(77, 1, "flesh crawler"),
@@ -105,12 +85,9 @@ public enum TaskMonster {
 	GORAKS(82, 1, Quest.FAIRY_TALE_II_CURE_A_QUEEN, "gorak"),
 	SUQAHS(83, 1, Quest.LUNAR_DIPLOMACY, "suqah"),
 	BRINE_RATS(84, 47, Quest.OLAFS_QUEST, "brine rat"),
-	//85 SCABARITES
-	//86 TERROR_DOGS
 	MOLANISKS(87, 39, "molanisk"),
 	WATERFIENDS(88, 1, "waterfiend"),
 	SPIRITUAL_WARRIORS(89, 68, "spiritual warrior"),
-	//90 SPIRITUAL_RANGERS
 	SPIRITUAL_MAGES(91, 83, "spiritual mage"),
 	WARPED_TORTOISES(92, 56, Quest.PATH_OF_GLOUPHRIE, "warped tortoise"),
 	WARPED_TERRORBIRDS(93, 56, Quest.PATH_OF_GLOUPHRIE, "warped terrorbird"),
@@ -120,14 +97,11 @@ public enum TaskMonster {
 	GRIFOLAPINES(97, 88, "grifolapine"),
 	GRIFOLAROOS(98, 82, "grifolaroo"),
 	FUNGAL_MAGI(99, 1, "fungal mage"),
-	//100 POLYPORE_CREATURES
-	//101 TZHAAR
 	VOLCANIC_CREATURES(102, 1, "tz", "tok-"),
 	JUNGLE_STRYKEWYRMS(103, 73, "jungle strykewyrm"),
 	DESERT_STRYKEWYRMS(104, 77, "desert strykewyrm"),
 	ICE_STRYKEWYRMS(105, 93, "ice strykewyrm"),
 	LIVING_ROCK_CREATURES(106, 1, "living rock"),
-	//107 NOTHING
 	CYCLOPES(108, 1, "cyclops"),
 	MUTATED_JADINKOS(109, 80, "mutated jadinko"),
 	VYREWATCH(110, 1, Quest.BRANCHES_OF_DARKMEYER, "vyrewatch", "vyrelord", "vyrelady"),

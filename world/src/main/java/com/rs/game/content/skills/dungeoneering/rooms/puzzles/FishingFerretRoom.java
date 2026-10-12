@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.rooms.puzzles;
 
 import org.darkan.core.model.ObjectShape;
@@ -58,7 +42,7 @@ public class FishingFerretRoom extends PuzzleRoom {
 
 	private Tile pressurePlate;
 	private List<GroundItem> vileFishes;
-	private DungeonFishSpot psuedoFishingSpot;// Cheap hax
+	private DungeonFishSpot psuedoFishingSpot;
 	private int fished = 3;
 	private int cooked = 3;
 
@@ -70,7 +54,7 @@ public class FishingFerretRoom extends PuzzleRoom {
 
 		@Override
 		public void processNPC() {
-			if (isComplete())//We will keep it spawned but it won't do shit :D
+			if (isComplete())
 				return;
 			if (getWalkSteps().isEmpty()) {
 				if (getX() == pressurePlate.getX() && getY() == pressurePlate.getY()) {
@@ -81,7 +65,7 @@ public class FishingFerretRoom extends PuzzleRoom {
 					return;
 				}
 				if (!vileFishes.isEmpty()) {
-					GroundItem item = vileFishes.getFirst();//Goes in chronological order
+					GroundItem item = vileFishes.getFirst();
 					if (item == null)
 						return;
 					Tile tile = item.getTile();
@@ -91,7 +75,7 @@ public class FishingFerretRoom extends PuzzleRoom {
 					}
 					addWalkSteps(tile.getX(), tile.getY(), -1, false);
 				}
-			} else {// Should be fine won't be checked often anyways
+			} else {
 				GameObject o = World.getObjectWithType(getTile(), ObjectShape.GROUND_DECORATION);
 				if (o != null && o.getDefinitions().getName().equals("Hole")) {
 					setNextAnimation(new Animation(13797));

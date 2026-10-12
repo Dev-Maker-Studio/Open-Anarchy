@@ -1,11 +1,7 @@
-/**
- * Interface, component and dialog packets sent by the client.
- */
 package org.darkan.core.net.prot.packet
 
 import org.darkan.core.net.prot.ClientProt
 
-// Interface Interactions
 data class IfButton(val opNum: Int, val interfaceId: Int, val componentId: Int, val slotId: Int, val itemId: Int) : ClientProt
 
 data class IfOnIf(val fromInter: Int, val fromComp: Int, val fromSlot: Int, val fromItemId: Int, val toInter: Int, val toComp: Int, val toSlot: Int, val toItemId: Int) : ClientProt
@@ -26,7 +22,6 @@ data class IfDragOntoIf(val fromInter: Int, val fromComp: Int, val fromSlot: Int
 
 data class CloseInterface(val dummy: Int = 0) : ClientProt
 
-// Dialog Interactions
 @JvmInline value class ResumeItemSelect(val itemId: Int) : ClientProt
 
 @JvmInline value class ResumeTextDialog(val text: String) : ClientProt

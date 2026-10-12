@@ -7,10 +7,6 @@ import org.darkan.core.getClasses
 import org.darkan.core.getClassesWithAnnotation
 import java.lang.reflect.Modifier
 
-/**
- * Replays [PluginManager.loadPlugins]'s registration loop and reports what it would choke on,
- * without the top-level catch that hides the failure.
- */
 object PluginLoadProbe {
 
     data class Failure(val owner: String, val field: String, val error: String)

@@ -6,33 +6,15 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 
-/**
- * One file per archive, in a standard format the cache's own encoding expands into:
- * `midi_songs/42.mid`.
- *
- * For an index whose payload is a well known format wearing a private coat. Indices 6 and 11 hold
- * Jagex's compact MIDI encoding, which is a column store of exactly the events a standard MIDI file
- * carries ([world.gregs.voidps.cache.audio.JagexMidi]), so the tree stores the standard file and
- * rebuilds the compact one on the way back. What comes out is a `.mid` any sequencer opens.
- *
- * That is only allowed because the rebuild is exact: [encode] of [decode] of every archive of the
- * 727 cache reproduces the shipped bytes. The pristine fallback is here anyway, per archive and
- * guarded by the SHA-256 of the editable file, so an archive that ever stopped reproducing would
- * cost a sidecar rather than the parity guarantee - the same contract [DefinitionJsonCodec] makes.
- */
 class TranscodedArchiveCodec(
     override val id: String,
-    /** The extension of the standard file, dot included. */
     val extension: String,
-    /** The cache's bytes as the standard file. */
     private val decode: (ByteArray) -> ByteArray,
-    /** The standard file back as the cache's bytes. */
     private val encode: (ByteArray) -> ByteArray
 ) : SourceCodec {
 
     override fun fileIdsFromMetadata(archive: Int): Boolean = true
 
-    /** A `.mid` is not the shipped bytes, so the unpacker packs the archive back and proves it. */
     override fun exact(archive: Int): Boolean = false
 
     override fun unpack(directory: Path, archive: SourceArchive): UnpackedArchive {

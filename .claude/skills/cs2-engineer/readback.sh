@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-# Decompiles scripts from the packed cache and diffs each against its source in the tree.
-# usage: readback.sh <id|name>...    (CACHE_PATH defaults to ./data/cache, TREE to ./cache-source)
-# A type-only diff (obj vs graphic parameter, a bare 18637 for Obj.obj_18637, renumbered locals) is the
-# decompiler's inference, not the bytecode; keep the source. A structural diff is a real mismatch.
 set -uo pipefail
 ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
 TOOLS=$ROOT/tools/build/install/tools/bin/tools

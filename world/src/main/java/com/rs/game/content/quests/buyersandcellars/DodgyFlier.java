@@ -7,7 +7,7 @@ public class DodgyFlier {
 
     public static ItemClickHandler read = new ItemClickHandler(new Object[] { 18645 }, new String[] { "Read" }, e -> {
         e.getPlayer().sendMessage("It says to apply at the Lumbridge Guildhouse. Wonder where that is...");
-        e.getPlayer().getInterfaceManager().sendInterface(220);//Message interface
+        e.getPlayer().getInterfaceManager().sendInterface(220);
         e.getPlayer().getPackets().setIFText(220, 1, "Darren Lightfinger,");
         e.getPlayer().getPackets().setIFText(220, 2, "Chancellor of the Lumbridge Guild of Thieves,");
         e.getPlayer().getPackets().setIFText(220, 3,  "requests your presence at the First Annual Selection of Appointees.");

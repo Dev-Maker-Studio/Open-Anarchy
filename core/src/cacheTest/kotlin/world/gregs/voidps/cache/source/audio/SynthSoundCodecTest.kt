@@ -11,16 +11,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * Every one of the 727 cache's 10,084 synth sounds, twice over.
- *
- * First the encoder alone - `encode(decode(bytes)) == bytes` for every archive, which is the bar a
- * [world.gregs.voidps.cache.source.codec.DefinitionJsonCodec] needs before a type may be stored as
- * JSON at all - and then the whole trip the tree makes, `encode(read(write(decode(bytes))))`, so a
- * field the JSON mapper cannot spell shows up here rather than as a sidecar in a real tree.
- *
- * Skipped when there is no cache to test against.
- */
 class SynthSoundCodecTest {
 
     @Test

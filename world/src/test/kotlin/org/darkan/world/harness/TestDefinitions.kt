@@ -6,13 +6,6 @@ import world.gregs.voidps.cache.definition.data.NPCDefinition
 import world.gregs.voidps.cache.definition.data.ObjectDefinition
 import world.gregs.voidps.cache.definition.data.VarBitDefinition
 
-/**
- * The definitions the default test suite runs against, in place of the packed cache's.
- *
- * Every id here is written down rather than read from a cache, so `./gradlew build` passes on a
- * machine that has never built one and can never fail because someone's cache is out of date. A
- * test whose subject *is* what the cache holds belongs in `cacheTest`, not here.
- */
 object TestDefinitions {
 
     const val ORE = 440
@@ -31,7 +24,6 @@ object TestDefinitions {
     private const val SHIELD_SLOT = 5
     private const val AMMO_SLOT = 13
 
-    /** [ItemDefinition.isEquipType] reads the second and third wear slots; 5 means two-handed. */
     private const val TWO_HANDED = 5
 
     private const val STACKS = 1
@@ -88,10 +80,6 @@ object TestDefinitions {
         return table
     }
 
-    /**
-     * The layouts the bank and equipment screens pack their state into. Written down because a
-     * varbit with no definition writes to nothing, and the containers under test read them back.
-     */
     private fun npcs(): Array<NPCDefinition> {
         val table = Array(MAN + 1) { NPCDefinition(id = it) }
         table[MAN] = NPCDefinition(id = MAN, name = "Man", options = arrayOf("Talk-to", null, null, null, null, "Examine"))

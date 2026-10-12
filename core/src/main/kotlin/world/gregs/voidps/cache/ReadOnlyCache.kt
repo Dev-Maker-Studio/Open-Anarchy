@@ -10,26 +10,17 @@ import world.gregs.voidps.cache.secure.Whirlpool
 import world.gregs.voidps.cache.store.ReferenceTable
 import java.io.RandomAccessFile
 
-/**
- * [Cache] which efficiently stores information about its indexes, archives and files.
- */
 abstract class ReadOnlyCache(indexCount: Int) : Cache {
     val indices: IntArray = IntArray(indexCount) { it }
     val archives: Array<IntArray?> = arrayOfNulls(indexCount)
     val fileCounts: Array<IntArray?> = arrayOfNulls(indexCount)
     val files: Array<Array<IntArray?>?> = arrayOfNulls(indexCount)
     private val hashes: MutableMap<Int, Int> = Int2IntOpenHashMap(32767)
-    // [index] -> (archiveId -> archiveNameHash). Unlike [hashes] this is keyed per-index and by
-    // archive id, so name hashes shared between indices (or repeated within one) aren't lost.
     private val archiveHashes: Array<Int2IntOpenHashMap?> = arrayOfNulls(indexCount)
-    // [index][archive] -> (fileNameHash -> fileId). File name hashes are only unique within an archive.
     private val fileHashes: Array<Array<Int2IntOpenHashMap?>?> = arrayOfNulls(indexCount)
-    // Per-index name introspection. NAME_FLAG governs both archive and file name sections at the format
-    // level, but actual hash values can be 0 for entries without a real name, so we count non-zero hashes.
     private val nameFlags: BooleanArray = BooleanArray(indexCount)
     private val archiveNameCounts: IntArray = IntArray(indexCount)
     private val fileNameCounts: IntArray = IntArray(indexCount)
-    /** [index] -> its decoded reference table, the model everything above is projected from. */
     protected val referenceTables: Array<ReferenceTable?> = arrayOfNulls(indexCount)
 
     override lateinit var versionTable: ByteArray
@@ -124,10 +115,6 @@ abstract class ReadOnlyCache(indexCount: Int) : Cache {
         return indexTable(indexId, table)
     }
 
-    /**
-     * Project [table] onto the flat per-index lookups this class serves reads from, replacing
-     * whatever was there. Returns the highest archive id in the table, 0 when it is empty.
-     */
     internal fun indexTable(indexId: Int, table: ReferenceTable): Int {
         referenceTables[indexId] = table
         val archiveIds = IntArray(table.archiveCount) { table.archives[it].id }
@@ -259,9 +246,6 @@ abstract class ReadOnlyCache(indexCount: Int) : Cache {
         internal const val SECTOR_HEADER_SIZE_BIG = 10
         internal const val SECTOR_DATA_SIZE_BIG = 510
 
-        /**
-         * Reads a section of a cache's archive
-         */
         internal fun readSector(mainFile: RandomAccessFile, length: Long, raf: RandomAccessFile, indexId: Int, sectorId: Int): ByteArray? {
             if (length < INDEX_SIZE * sectorId + INDEX_SIZE) {
                 return null

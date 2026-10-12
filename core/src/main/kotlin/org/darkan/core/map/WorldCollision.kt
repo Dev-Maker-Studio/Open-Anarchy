@@ -11,11 +11,6 @@ fun interface CollisionWriter {
 
 private fun CollisionWriter.add(tile: Tile, flag: Int) = add(tile.x, tile.y, tile.level, flag)
 
-/**
- * Global collision flag map.
- * Stores collision flags per-zone in a flat array indexed by zone coordinate.
- * The pathfinder reads from [allFlags] directly.
- */
 object WorldCollision {
     @JvmField
     val allFlags: Array<IntArray?> = arrayOfNulls(2048 * 2048 * 4)
@@ -77,15 +72,12 @@ object WorldCollision {
         if (allFlags[zoneId] == null) allFlags[zoneId] = IntArray(64)
     }
 
-    /** Alias for [clearZone] used by legacy chunk-based callers. */
     @JvmStatic
     fun clearChunk(chunkId: Int) = clearZone(chunkId)
 
-    /** Alias for [initZone] used by legacy chunk-based callers. */
     @JvmStatic
     fun initChunk(chunkId: Int) = initZone(chunkId)
 
-    // --- Convenience flag operations ---
 
     @JvmStatic
     fun addBlockedTile(tile: Tile) = addFlag(tile, ClipFlag.PFBW_FLOOR.flag)
@@ -110,7 +102,6 @@ object WorldCollision {
     @JvmStatic
     fun getClipNPC(tile: Tile): Boolean = ClipFlag.flagged(getFlags(tile), ClipFlag.BW_NPC)
 
-    // --- Object clipping ---
 
     fun addObject(tile: Tile, sizeX: Int, sizeY: Int, blocksProjectiles: Boolean, pathfinder: Boolean, writer: CollisionWriter = live) {
         var flag = ClipFlag.BW_FULL.flag
@@ -178,9 +169,6 @@ object WorldCollision {
         }
     }
 
-    /**
-     * Clip an object into the collision map based on its shape, rotation, and definition properties.
-     */
     fun clipObject(tile: Tile, id: Int, shape: ObjectShape, rotation: Int, clipType: Int, blocksProjectiles: Boolean, ignoresPathfinder: Boolean, sizeX: Int, sizeY: Int, writer: CollisionWriter = live) {
         if (id == -1 || clipType == 0) return
         when (shape) {

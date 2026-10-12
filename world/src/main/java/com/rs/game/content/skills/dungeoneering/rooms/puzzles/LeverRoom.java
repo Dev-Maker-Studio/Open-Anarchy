@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.rooms.puzzles;
 
 import com.rs.game.World;
@@ -30,13 +14,8 @@ import world.gregs.voidps.type.Tile;
 
 public class LeverRoom extends PuzzleRoom {
 
-	/*
-	private static final int[] SWITCH_UP = {
-	49381, 49382, 49383, 54333, 33675
-	};
-	 */
 
-	private static final int[] SWITCH_DOWN = { 49384, 49385, 49386, 49386, 49386 }; //TODO find down of 54333, 33675
+	private static final int[] SWITCH_DOWN = { 49384, 49385, 49386, 49386, 49386 };
 
 	private int leverCount, leverTicks, maxTicks;
 	private Task resetTask;
@@ -66,14 +45,8 @@ public class LeverRoom extends PuzzleRoom {
 	}
 
 	private void addResetTask() {
-		//Still want it to be possible when people leave a 5:5 (4:5), and very easy on a 5:1
 		int size =  manager.getParty().getTeam().size();
 		int difficulty = Math.min(manager.getParty().getDificulty(), size);
-		//5 - 2.4 seconds
-		//4 - 3.6 seconds
-		//3 - 5.4 seconds
-		//2 - 7.2 seconds
-		//1 - 14.4 seconds
 		maxTicks = (6 - difficulty) + ((size == 1 ? 23 : 20) / difficulty);
 		resetTask = new ResetTask();
 		WorldTasks.scheduleLooping(resetTask, 0, 0);

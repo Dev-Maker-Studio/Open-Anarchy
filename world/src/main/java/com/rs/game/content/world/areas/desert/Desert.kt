@@ -36,7 +36,6 @@ fun forId(npcId: Int): CarpetLocation? {
 @ServerStartupEvent
 fun mapDesertInteractions() {
 
-    // Magic Carpets
     onNpcClick(2291, 2292, 2293, 2294, 2295, 2297, 2299, 3020, 13237) { (player, npc) ->
         player.startConversation {
             when (forId(npc.id)) {
@@ -72,7 +71,6 @@ fun mapDesertInteractions() {
         }
     }
 
-    // Monkey Colony Rug Merchant
     onLogin { (player) ->
         player.vars.setVarBit(Varbit.apmeken_transport, 1)
         player.vars.setVarBit(Varbit.apmeken_transport, 1)
@@ -80,19 +78,16 @@ fun mapDesertInteractions() {
         player.vars.setVarBit(Varbit.ics_ent_open, 1)
     }
 
-    // Spirit Waterfall
     onObjectClick(10417, 63173) { (player, obj) ->
         if (obj.id == 63173) player.useStairs(Tile.of(3348, 9535, 0))
         else player.useStairs(Tile.of(3370, 3129, 0))
     }
 
-    // Curtain Doors
     onObjectClick(1528) { (player, obj) ->
         if (obj.rotation == 2 || obj.rotation == 0) player.walkOneStep(if (player.x > obj.x) -1 else 1, 0, false)
         else player.walkOneStep(0, if (player.y == obj.y) -1 else 1, false)
     }
 
-    // Tourist Trap Mine Entrance & Exit
     onObjectClick(2675, 2676, 2690, 2691) { (player, obj) ->
         when (obj.id) {
             2675, 2676 -> player.useStairs(Tile.of(3279, 9427, 0))
@@ -100,7 +95,6 @@ fun mapDesertInteractions() {
         }
     }
 
-    // Ali Snake Charmer
     onNpcClick(1872) { (player, npc) ->
         player.startConversation {
             player(HAPPY_TALKING, "Hello...")
@@ -141,7 +135,6 @@ fun mapDesertInteractions() {
         }
     }
 
-    // Ancient Spellbook Pyramid Rear Entrance - unlocked by Desert Treasure.
     onObjectClick(Loc.desert_trasure_back_door_skew) { (player) ->
         if (player.getQuestStage(Quest.DESERT_TREASURE) == DESERT_TREASURE_COMPLETE)
             player.tele(Tile.of(3233, 9310, 0))
@@ -149,13 +142,11 @@ fun mapDesertInteractions() {
             player.sendMessage("The tunnel is sealed by an ancient power.")
     }
 
-    // Pyramid Sarcophagi
     onObjectClick(6516) { (player, obj) ->
         if (obj.tile.isAt(3233, 9309)) player.tele(Tile.of(3233, 2887, 0))
         else player.sendMessage("You search the sarcophagus but find nothing.")
     }
 
-    // Granite Splitting
     onItemClick(6979, 6981, 6983, options = arrayOf("Craft")) { (player, item)->
         if (!player.inventory.containsItem(1755, 1, true)) {
             player.sendMessage("You must have a chisel in order to craft granite.")
@@ -167,16 +158,16 @@ fun mapDesertInteractions() {
         }
         player.lock(2)
         when (item.id) {
-            6983 -> { // 5kg - splits into 2x 2kg and 2x 500g
+            6983 -> {
                 player.inventory.deleteItem(6983, 1)
                 player.inventory.addItem(6981, 2)
                 player.inventory.addItem(6979, 2)
             }
-            6981 -> { // 2kg - splits into 4x 500g
+            6981 -> {
                 player.inventory.deleteItem(6981, 1)
                 player.inventory.addItem(6979, 4)
             }
-            6979 -> { // 500g
+            6979 -> {
                 player.sendMessage("This block of granite is too small to craft into anything.")
                 return@onItemClick
             }
@@ -184,7 +175,6 @@ fun mapDesertInteractions() {
         player.anim(11146)
     }
 
-    // Sandstone Splitting
     onItemClick(6973, 6975, 6977, options = arrayOf("Craft")) { (player, item)->
         if (!player.inventory.containsItem(1755, 1, true)) {
             player.sendMessage("You must have a chisel in order to craft sandstone.")
@@ -196,16 +186,16 @@ fun mapDesertInteractions() {
         }
         player.lock(2)
         when (item.id) {
-            6977 -> { // 10kg - splits into 2x 5kg
+            6977 -> {
                 player.inventory.deleteItem(6977, 1)
                 player.inventory.addItem(6975, 2)
             }
-            6975 -> { // 5kg - splits into 2x 2kg and 1x 1kg
+            6975 -> {
                 player.inventory.deleteItem(6975, 1)
                 player.inventory.addItem(6973, 2)
                 player.inventory.addItem(6971, 1)
             }
-            6973 -> { // 2kg - splits into 2x 1kg
+            6973 -> {
                 player.inventory.deleteItem(6973, 1)
                 player.inventory.addItem(6971, 2)
             }
@@ -245,14 +235,12 @@ fun mapDesertInteractions() {
         player.tele(Tile.of(3508, 9494, 0))
     }
 
-    //Entrance to Kalphite Queen
     onItemOnObject(objectNamesOrIds = arrayOf(48803), itemNamesOrIds = arrayOf(954)) { (player) ->
-        if (player.vars.getVarBit(7263) == 1) return@onItemOnObject  // Do nothing if the condition is met
+        if (player.vars.getVarBit(7263) == 1) return@onItemOnObject
         player.inventory.deleteItem(954, 1)
         player.vars.saveVarBit(7263, 1)
     }
 
-    //Entrance to Kalphite cave
     onItemOnObject(objectNamesOrIds = arrayOf(48802), itemNamesOrIds = arrayOf(954)) { (player) ->
         if (player.vars.getVarBit(7262) == 1) return@onItemOnObject
         player.inventory.deleteItem(954, 1)

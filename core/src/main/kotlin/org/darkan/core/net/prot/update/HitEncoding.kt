@@ -6,13 +6,6 @@ import org.darkan.core.update.HitsUpdate
 import world.gregs.voidps.buffer.read.Reader
 import world.gregs.voidps.buffer.write.BufferWriter
 
-/**
- * Shared hit splat + bar encoding, parameterized on the count-prefix byte transforms.
- *
- * Player hits uses `writeByteSubtract` for splat count and `writeByte` for bar count.
- * NPC hits uses `writeByteAdd` for both splat and bar count.
- * The splat and bar encoding bodies are identical between player and NPC.
- */
 inline fun encodeHits(
     out: BufferWriter,
     hits: HitsUpdate,

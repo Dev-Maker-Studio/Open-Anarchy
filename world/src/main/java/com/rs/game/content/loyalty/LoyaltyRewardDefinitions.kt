@@ -2,13 +2,6 @@ package com.rs.game.content.loyalty
 
 import org.darkan.core.model.Item
 
-/**
- * Hardcoded loyalty reward catalogue.
- *
- * This is game content (UI component ids, item ids, reward tiers), not cache data.
- * There is no client-cache archive that provides this information for RS727, so we
- * keep it as Kotlin constants rather than as a voidps decoder.
- */
 object LoyaltyRewardDefinitions {
 
     enum class Type {
@@ -120,7 +113,6 @@ object LoyaltyRewardDefinitions {
     }
 
     enum class Reward {
-        // AURAS
         ODDBALL(Type.AURA, 0x0, -1, 20957, 2000),
         POISON_PURGE(Type.AURA, 0x1, -1, 20958, 2750),
         FRIEND_IN_NEED(Type.AURA, 0x2, -1, 20963, 3500),
@@ -196,7 +188,6 @@ object LoyaltyRewardDefinitions {
         SUPREME_TRACKER(Type.AURA, 0x48, 22931, 23872, 61000),
         SUPREME_GREENFINGERS(Type.AURA, 0x49, 22887, 23878, 61000),
 
-        // GAZES
         INFERNAL_GAZE(Type.EFFECT, 0x0, -1, 23880, 18000),
         SERENE_GAZE(Type.EFFECT, 0x1, -1, 23882, 18000),
         VERNAL_GAZE(Type.EFFECT, 0x2, -1, 23884, 18000),
@@ -206,7 +197,6 @@ object LoyaltyRewardDefinitions {
         ABYSSAL_GAZE(Type.EFFECT, 0x6, -1, 23892, 18000),
         DIVINE_GAZE(Type.EFFECT, 0x7, -1, 23894, 18000),
 
-        // EMOTES
         CAT_FIGHT(Type.EMOTE, 0x0, -1, 21314, 500),
         TALK_TO_THE_HAND(Type.EMOTE, 0x1, -1, 21306, 750),
         SHAKE_HANDS(Type.EMOTE, 0x2, -1, 21300, 750),
@@ -238,7 +228,6 @@ object LoyaltyRewardDefinitions {
         INNER_POWER(Type.EMOTE, 0x1C, -1, 23836, 6000),
         WEREWOLF_TRANSFORMATION(Type.EMOTE, 0x1D, -1, 23838, 12000),
 
-        // COSTUMES
         DERVISH_OUTFIT(Type.COSTUME, 0x0, -1, arrayOf(
             arrayOf(Item(20970, 2), Item(20980, 2), Item(20990, 2), Item(21000, 2)),
             arrayOf(Item(21010, 2), Item(21020, 2), Item(21030, 2), Item(21040, 2)),
@@ -296,7 +285,6 @@ object LoyaltyRewardDefinitions {
             arrayOf(Item(24042, 2), Item(24052, 2), Item(24062, 2), Item(24072, 2), Item(24082, 2)),
         ), 8000),
 
-        // TITLES
         SIR(Type.TITLE, 0x0, -1, 5, 1000),
         LORD(Type.TITLE, 0x1, -1, 6, 1000),
         DUDERINO(Type.TITLE, 0x2, -1, 7, 4000),
@@ -327,7 +315,6 @@ object LoyaltyRewardDefinitions {
         THE_WARRIOR(Type.TITLE, 0x1B, -1, 37, 50000),
         ATHLETE(Type.TITLE, 0x1C, -1, 71, 5000),
 
-        // RECOLORS
         PET_ROCK(Type.RECOLOR, 0x10, -1, 3695, 1000),
         ROBIN_HOOD_HAT(Type.RECOLOR, 0x11, -1, 2581, 1000),
         STAFF_OF_LIGHT(Type.RECOLOR, 0x12, -1, 15486, 2000),

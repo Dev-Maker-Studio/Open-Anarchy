@@ -45,7 +45,6 @@ object PenguinServices {
 @ServerStartupEvent
 fun mapPenguinHideAndSeekInteractions() {
 
-    // Penguin interactions
     instantiateNpc(8104, 8105, 8107, 8108, 8109, 8110, 14415, 14766) { id, tile -> PenguinNPC(id, tile) }
     getInteractionDistance(8104, 8105, 8107, 8108, 8109, 8110, 14415, 14766) { _, _ -> 3 }
     onNpcClick(8104, 8105, 8107, 8108, 8109, 8110, 14415, 14766) { (player, npc) ->
@@ -103,7 +102,6 @@ fun mapPenguinHideAndSeekInteractions() {
         }
     }
 
-    // Polar bear interactions
     onLogin { (player) ->
         player.vars.setVarBit(Varbit.peng_spy_bear, polarBearManager.getCurrentLocationId())
         player.vars.saveVarBit(Varbit.peng_spy_week_peng, player.getWeeklyI(PENGUIN_COUNT_WEEKLY_ATTR))
@@ -163,7 +161,6 @@ fun mapPenguinHideAndSeekInteractions() {
         }
     }
 
-    // Spy Notebook
     onItemClick(13732, options = arrayOf("Read")) { (player) ->
         val penguinsSpottedCount = player.getWeeklyI(PENGUIN_COUNT_WEEKLY_ATTR)
         val polarBearSpottedCount = player.getWeeklyI(POLAR_BEAR_WEEKLY_ATTR)
@@ -183,9 +180,8 @@ fun mapPenguinHideAndSeekInteractions() {
 
 @ServerStartupEvent
 fun initializePenguinHideAndSeek() {
-    penguinHideAndSeekManager.checkAndSpawn() // Penguin & Polar Bear spawning on server startup
+    penguinHideAndSeekManager.checkAndSpawn()
 
-    // Reset task
     WorldTasks.scheduleHourly {
         penguinHideAndSeekManager.checkAndSpawn()
     }

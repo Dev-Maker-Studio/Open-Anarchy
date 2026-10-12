@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs;
 
 import org.darkan.core.Globals;
@@ -26,11 +10,6 @@ import org.darkan.core.map.GeneratedWorld;
 
 import java.util.ArrayList;
 
-/**
- * Server settings backed by {@link EnvVars} (.env file).
- * Replaces the legacy worldConfig.json approach.
- * All getters delegate to EnvVars so the .env file is the single source of truth.
- */
 public final class Settings {
 
 	private static final Settings INSTANCE = new Settings();
@@ -110,14 +89,13 @@ public final class Settings {
 		}
 	}
 
-	// --- Delegates to EnvVars ---
 
 	public String getServerName() {
 		return EnvVars.INSTANCE.getServerName();
 	}
 
 	public String getOwnerName() {
-		return "trent"; // TODO: add OWNER_NAME to .env if needed
+		return "trent";
 	}
 
 	public boolean isDebug() {
@@ -129,7 +107,7 @@ public final class Settings {
 	}
 
 	public boolean isAllowHighMemUseOptimizations() {
-		return false; // TODO: add to .env if needed
+		return false;
 	}
 
 	public String getLoginMessage() {
@@ -174,17 +152,16 @@ public final class Settings {
 			EnvVars.INSTANCE.getWorldPublicHost(),
 			EnvVars.INSTANCE.getWorldPort(),
 			EnvVars.INSTANCE.getWorldName(),
-			1, // country id
+			1,
 			EnvVars.INSTANCE.getWorldQuickChat(),
 			EnvVars.INSTANCE.getWorldLootShare(),
 			EnvVars.INSTANCE.getWorldMembers(),
 			EnvVars.INSTANCE.getWorldBotsAllowed(),
-			false  // highlighted
+			false
 		);
 	}
 
 	public String getLobbyIp() {
-		// Extract host from social gateway URL
 		String url = EnvVars.INSTANCE.getSocialGatewayUrl();
 		return url.replaceAll("ws://", "").replaceAll("/.*", "").replaceAll(":.*", "");
 	}
@@ -194,7 +171,6 @@ public final class Settings {
 	}
 
 	public String getMongoDBName() {
-		// Extract DB name from MONGO_URI
 		String uri = EnvVars.INSTANCE.getMongoUri();
 		int lastSlash = uri.lastIndexOf('/');
 		int qMark = uri.indexOf('?', lastSlash);
@@ -217,6 +193,5 @@ public final class Settings {
 	}
 
 	public static void saveConfig() {
-		// No-op: .env is the source of truth, not a JSON file
 	}
 }

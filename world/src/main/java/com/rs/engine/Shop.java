@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.engine;
 
 import com.rs.game.model.entity.player.BotContainment;
@@ -127,7 +111,7 @@ public class Shop {
 				else {
 					shop.sell(e.getPlayer(), slot, e.getPlayer().getTempAttribs().getI("shopAmt", 0));
 					e.getPlayer().getVars().setVar(Varp.shop_last_viewed_slot, 0);
-					e.getPlayer().getVars().setVar(Varp.shop_filter, 1); // this is to update the tab.
+					e.getPlayer().getVars().setVar(Varp.shop_filter, 1);
 				}
 			} else if (e.getComponentId() == 208) {
 				e.getPlayer().getTempAttribs().setI("shopAmt", Utils.clampI(e.getPlayer().getTempAttribs().getI("shopAmt", 0) + 5, 1, 5000));
@@ -220,7 +204,6 @@ public class Shop {
 		player.getVars().setVar(Varp.shop_last_viewed_inventory, -1);
 		player.getVars().setVar(2562, -1);
 		player.getVars().setVar(Varp.shop_last_viewed_slot, -1);
-		//player.getVars().setVar(2565, 1); //changes to sell tab
 		player.getVars().syncVarsToClient();
 		sendStore(player);
 		player.getInterfaceManager().sendInterface(getShopInterfaceId());
@@ -247,7 +230,6 @@ public class Shop {
 		for (int i = 0;i < mainStock.length;i++) {
 			if (mainStock[i] == null)
 				continue;
-			//player.getPackets().setIFSlotGraphic(getShopInterfaceId(), 24, i, 592);
 			if (mainStock[i].getCustomPrice() > 0)
 				player.getPackets().setIFText(getShopInterfaceId(), 23, i, Utils.kmify(mainStock[i].getCustomPrice()));
 		}
@@ -264,7 +246,6 @@ public class Shop {
 		player.getPackets().sendInterSetItemsOptionsScript(1266, 0, 93, 4, 7, "Value", "Sell 1", "Sell 5", "Sell 10", "Sell 50", "Examine");
 	}
 
-	// cid 67
 	public void buy(Player player, int slotId, int quantity) {
 		if (slotId >= mainStock.length && player.isIronMan()) {
 			player.sendMessage("You can't buy something another player has sold as an ironman!");
@@ -535,24 +516,7 @@ public class Shop {
 		player.getPackets().sendItems(MAIN_STOCK_ITEMS_KEY, stock);
 	}
 
-	//	public void sendSellStore(Player player, Item[] inventory) {
-	//		Item[] stock = new Item[inventory.length + (generalStock != null ? generalStock.length : 0)];
-	//		System.arraycopy(inventory, 0, stock, 0, inventory.length);
-	//		if (generalStock != null)
-	//			System.arraycopy(generalStock, 0, stock, inventory.length, generalStock.length);
-	//		player.getPackets().sendItems(MAIN_STOCK_ITEMS_KEY, stock);
-	//	}
 
-	/**
-	 * Checks if the player is buying an item or selling it.
-	 *
-	 * @param player
-	 *            The player
-	 * @param slotId
-	 *            The slot id
-	 * @param amount
-	 *            The amount
-	 */
 	public void handleShop(Player player, int slotId, int amount) {
 		if (player.getTempAttribs().getB("shop_buying"))
 			buy(player, slotId, amount);

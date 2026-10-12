@@ -16,26 +16,6 @@ import world.gregs.voidps.cache.source.Unpacker
 import world.gregs.voidps.cache.source.Verifier
 import world.gregs.voidps.cache.source.codec.SourceCodecs
 
-/**
- * The whole cache, unpacked and packed back with index 12 stored as TypeScript.
- *
- * [Cs2SourceCodecTest] proves index 12 on its own; this proves it inside the tree, driven by the
- * framework rather than by hand - [Unpacker] writes the tree with whatever codec each index
- * claims, and [Verifier] packs every archive back in memory and compares it to the packed cache
- * container by container. Every container of every other index comes back byte for byte; index 12
- * is compiled from its TypeScript on every pack - nothing is kept beside a script, so the tree
- * holds no `.pristine` sidecar - and the roughly thousand scripts the decompiler normalises come
- * back equivalent rather than identical, which [Verifier] counts as `recompiled` rather than
- * `different` because the index's codec declares itself functional.
- *
- * Those containers carry their own CRCs, so index 12's reference table - and the version table
- * derived from every index's - cannot match the shipped cache either, and the tree's own are what
- * the client is served. That is the whole extent of the divergence, and this test pins it: every
- * other index's table has to be identical.
- *
- * Slow and large - it writes the whole cache out - and skipped with a message when there is no
- * cache to read.
- */
 class Cs2SourceTreeParityTest {
 
     @Test
@@ -58,8 +38,6 @@ class Cs2SourceTreeParityTest {
             Cs2SourceCodec.cache = { cache }
             val tree = SourceTree.create(directory)
 
-            // The map keys are the only thing the tree cannot derive; without them every
-            // encrypted map archive would be stored opaque, which still verifies but proves less.
             val keys = try {
                 Unpacker.mapKeys()
             } catch (e: Exception) {
@@ -123,7 +101,6 @@ class Cs2SourceTreeParityTest {
         }
     }
 
-    /** Every `.pristine` file under [directory], as paths relative to it. */
     private fun sidecars(directory: Path): List<String> =
         Files.walk(directory).use { stream ->
             stream.filter { Files.isRegularFile(it) && SourceFiles.isPristine(it.fileName.toString()) }

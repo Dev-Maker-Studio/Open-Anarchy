@@ -43,7 +43,7 @@ internal fun Codec.registerRev727ZonePackets() {
     }
 
     serverProt<TileMessage>(opcode = 114, size = ProtSize.VarByte) { out ->
-        out.writeByte(0) // Unused
+        out.writeByte(0)
         out.writeByte(((localX and 0x7) shl 4) or (localY and 0x7))
         out.writeShort(priority)
         out.writeByte(duration)
@@ -58,7 +58,6 @@ internal fun Codec.registerRev727ZonePackets() {
         TileMessage(coords shr 4 and 0x7, coords and 0x7, priority, duration, color, readRSString())
     }
 
-    // Ground item protocols
     serverProt<GroundItemCount>(opcode = 3, size = 7) { out ->
         out.writeByte(((localX and 0x7) shl 4) or (localY and 0x7))
         out.writeShort(itemId)
@@ -100,7 +99,6 @@ internal fun Codec.registerRev727ZonePackets() {
         RemoveGroundItem(coords shr 4 and 0x7, coords and 0x7, readUShortAddLittle())
     }
 
-    // Object protocols
     serverProt<DestroyObject>(opcode = 69, size = 2) { out ->
         out.writeByteAdd((shape shl 2) or (rotation and 0x3))
         out.writeByte(((localX and 0x7) shl 4) or (localY and 0x7))
@@ -189,7 +187,6 @@ internal fun Codec.registerRev727ZonePackets() {
         ObjAnimSpecific(tile, display shr 2, display and 0x3, animationId)
     }
 
-    // Spot anim and projectile protocols
     serverProt<SpotAnim>(opcode = 139, size = 8) { out ->
         out.writeByte(((localX and 0x7) shl 4) or (localY and 0x7))
         out.writeShort(if (spotAnimId == -1) 65535 else spotAnimId)
@@ -248,10 +245,6 @@ internal fun Codec.registerRev727ZonePackets() {
         )
     }
 
-    // The client frames opcode 95 with ServerProt size 17 but decodes 19 bytes
-    // (its two size tables contradict each other), so a standalone send always
-    // desyncs the stream. Send this enclosed in UpdateZonePartialEnclosed, where
-    // the sub-packet stream is self-delimiting and 19 is correct.
     serverProt<MapProjAnimHalfSq>(opcode = 95, size = 19) { out ->
         val coords = ((localX and 0xF) shl 4) or (localY and 0xF)
         out.writeByte(coords)
@@ -307,9 +300,6 @@ internal fun Codec.registerRev727ZonePackets() {
         out.writeByteInverse(xDist)
         out.writeByteInverse(yDist)
         out.writeShortAdd(x)
-        // The client scales startHeight by 4 unless the BAS-offset flag (0x2) is
-        // set, in which case it reinterprets the byte as signed - same rule as
-        // MapProjAnimHalfSq, and it must match the `endHeight / 4` above.
         out.writeByteInverse(if ((flags and 0x2) != 0) startHeight else startHeight / 4)
     }.decoder {
         val endHeight = (readByteAdd() and 0xff) * 4
@@ -329,10 +319,6 @@ internal fun Codec.registerRev727ZonePackets() {
         ProjAnimSpecific(endHeight, source, endTime, lockOn, flags, y, slope, startTime, spotAnimId, angle, xDist, yDist, x, startHeight)
     }
 
-    // Sound protocols (zone-specific)
-    // The client frames opcode 128 with ServerProt size 6 but decodes 8 bytes -
-    // same self-contradiction as opcode 95. Send this enclosed in
-    // UpdateZonePartialEnclosed rather than standalone.
     serverProt<SoundEffectTile>(opcode = 128, size = 8) { out ->
         out.writeByte(((localX and 0x7) shl 4) or (localY and 0x7))
         out.writeShort(if (soundId == -1) 65535 else soundId)

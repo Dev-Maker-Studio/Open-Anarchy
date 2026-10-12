@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering;
 
 import com.rs.game.content.skills.thieving.Thieving;
@@ -80,7 +64,6 @@ import com.rs.utils.music.Genre;
 import com.rs.utils.music.Music;
 import org.darkan.core.gameval.gen.Varbit;
 import org.darkan.core.gameval.gen.Interface;
-// Hit class from com.rs.game.model.entity.Hit (not core module)
 
 public class DungeonController extends Controller {
 
@@ -117,9 +100,6 @@ public class DungeonController extends Controller {
 		return false;
 	}
 
-	/**
-	 * No unlocks, we can play and unlock room music in the Room class in a later commit...
-	 */
 	@Override
 	public boolean playAmbientStrictlyBackgroundMusic() {
 		return true;
@@ -151,7 +131,6 @@ public class DungeonController extends Controller {
 	}
 
 	public void reset() {
-		//deaths = 0;
 		voteStage = 0;
 		gatestone = null;
 		killedBossWithLessThan10HP = false;
@@ -312,7 +291,6 @@ public class DungeonController extends Controller {
 							NPC npc = getNPC(player, "Yk'Lagor the Thunderous");
 							if (npc != null)
 								npc.setNextForceTalk(new ForceTalk("Another kill for the Thunderous!"));
-							//npc.playSoundEffect(1928);
 						}
 						Tile startRoom = dungeon.getHomeTile();
 						player.tele(startRoom);
@@ -352,7 +330,7 @@ public class DungeonController extends Controller {
 		if (dungeon == null)
 			return 0;
 		Integer deaths = dungeon.getPartyDeaths().get(player.getUsername());
-		return deaths == null ? 0 : deaths;//deaths;
+		return deaths == null ? 0 : deaths;
 	}
 
 	@Override
@@ -452,7 +430,7 @@ public class DungeonController extends Controller {
 				if (s.getFailAnim() == -1)
 					player.setNextAnimation(new Animation(-1));
 				if (!fail) {
-					if (room.getDoor(index) == null) //means someone else opeenda t same time
+					if (room.getDoor(index) == null)
 						return;
 					player.getSkills().addXp(s.getSkillId(), door.getLevel() * 5 + 10);
 					room.setDoor(index, null);
@@ -464,7 +442,7 @@ public class DungeonController extends Controller {
 				} else {
 					player.sendMessage(s.getFailMessage());
 					player.applyHit(new Hit(player, door.getLevel() * 4, HitLook.TRUE_DAMAGE));
-					if (room.getDoor(index) == null) //means someone else opeenda t same time
+					if (room.getDoor(index) == null)
 						return;
 					if (s.getFailObjectAnim() != -1)
 						World.sendObjectAnimation(object, new Animation(s.getFailObjectAnim()));
@@ -571,7 +549,7 @@ public class DungeonController extends Controller {
 				player.sendMessage("Only your party's leader can mark a target!");
 				return false;
 			}
-			dungeon.setMark(npc, !player.getHintIconsManager().hasHintIcon(6)); //6th slot
+			dungeon.setMark(npc, !player.getHintIconsManager().hasHintIcon(6));
 			return false;
 		}
 		if (npc.getId() == DungeonConstants.SMUGGLER) {
@@ -621,7 +599,7 @@ public class DungeonController extends Controller {
 			}
 		if (object.getId() >= 54439 && object.getId() <= 54456 && object.getDefinitions().hasOption(1, "Cleanse")) {
 			@SuppressWarnings("deprecation")
-			NPC boss = dungeon.getTemporaryBoss();//getNPC(player, 11708);
+			NPC boss = dungeon.getTemporaryBoss();
 			if (!(boss instanceof Gravecreeper))
 				return false;
 			return ((Gravecreeper) boss).cleanseTomb(player, object);
@@ -692,13 +670,13 @@ public class DungeonController extends Controller {
 			player.getInventory().deleteItem(key.getKeyId(), 1);
 			player.lock(1);
 			player.sendMessage("You unlock the door.");
-			player.setNextAnimation(new Animation(13798));// unlock key
+			player.setNextAnimation(new Animation(13798));
 			object.animate(13594);
 			dungeon.setKey(key, false);
 			room.setDoor(index, null);
 			World.removeObject(object);
 			return false;
-		} else if (object.getId() == DungeonConstants.DUNGEON_DOORS[floorType.ordinal()] || object.getId() == DungeonConstants.DUNGEON_GUARDIAN_DOORS[floorType.ordinal()] || object.getId() == DungeonConstants.DUNGEON_BOSS_DOORS[floorType.ordinal()] || DungeonUtils.isOpenSkillDoor(object.getId(), floorType) || (object.getId() >= KeyDoors.getLowestDoorId(floorType) && object.getId() <= KeyDoors.getMaxDoorId(floorType)) || (object.getDefinitions().getName().equals("Door") && object.getDefinitions().hasOption(1, "Enter")) // there's many ids for challenge doors
+		} else if (object.getId() == DungeonConstants.DUNGEON_DOORS[floorType.ordinal()] || object.getId() == DungeonConstants.DUNGEON_GUARDIAN_DOORS[floorType.ordinal()] || object.getId() == DungeonConstants.DUNGEON_BOSS_DOORS[floorType.ordinal()] || DungeonUtils.isOpenSkillDoor(object.getId(), floorType) || (object.getId() >= KeyDoors.getLowestDoorId(floorType) && object.getId() <= KeyDoors.getMaxDoorId(floorType)) || (object.getDefinitions().getName().equals("Door") && object.getDefinitions().hasOption(1, "Enter"))
 				) {
 			if (object.getId() == DungeonConstants.DUNGEON_BOSS_DOORS[floorType.ordinal()] && player.inCombat()) {
 				player.sendMessage("This door is too complex to unlock while in combat.");
@@ -1083,9 +1061,6 @@ public class DungeonController extends Controller {
 			hideBar();
 	}
 
-	/**
-	 * called once teleport is performed
-	 */
 	@Override
 	public void onTeleported(TeleType type) {
 		dungeon.playMusic(player, dungeon.getCurrentRoomReference(player.getTile()));
@@ -1102,9 +1077,6 @@ public class DungeonController extends Controller {
 		return true;
 	}
 
-	/*
-	 * return process normaly
-	 */
 	@Override
 	public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, int packet) {
 		if (dungeon == null || !dungeon.hasStarted())
@@ -1266,7 +1238,7 @@ public class DungeonController extends Controller {
 			player.sendMessage("You can't teleport here.");
 			return;
 		}
-		if (tile == null) { // Shouldn't happen for group gatestone
+		if (tile == null) {
 			player.sendMessage("You currently do not have an active gatestone.");
 			return;
 		}
@@ -1284,7 +1256,7 @@ public class DungeonController extends Controller {
 		Magic.sendTeleportSpell(player, 13288, 13285, 2516, 2517, group ? 64 : 32, 0, tile, 3, false, TeleType.MAGIC, null);
 		if (!group) {
 			player.setCantWalk(true);
-			player.getEmotesManager().setNextEmoteEnd(3); //prevents dropping etc
+			player.getEmotesManager().setNextEmoteEnd(3);
 			WorldTasks.schedule(new Task() {
 				@Override
 				public void run() {
@@ -1296,7 +1268,7 @@ public class DungeonController extends Controller {
 
 	private void portalGroupStoneTeleport() {
 		Tile tile = dungeon.getGroupGatestone();
-		if (tile == null) //cant happen
+		if (tile == null)
 			return;
 		Magic.sendTeleportSpell(player, 14279, 13285, 2518, 2517, 1, 0, tile, 1, false, TeleType.OBJECT, null);
 	}

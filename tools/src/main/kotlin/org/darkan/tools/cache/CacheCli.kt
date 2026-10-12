@@ -10,24 +10,6 @@ import world.gregs.voidps.cache.source.Verifier
 import java.io.File
 import kotlin.system.exitProcess
 
-/**
- * `tools cache ...` - the cache source tree from the command line.
- *
- * The tree is the whole packed cache unpacked into one file per asset; `docs/cache-source.md` is
- * the contract it upholds. Everything here is a thin shell over
- * [world.gregs.voidps.cache.source]: [Unpacker] one way, [Packer] and [Builder] the other,
- * [Verifier] to prove the two agree byte for byte, and a read-only inventory for `status`.
- *
- * ```
- * cache unpack <tree> [packedDir]     unpack a packed cache (default CACHE_PATH) into a tree
- * cache pack <tree> <outDir>          full pack
- * cache build <tree> <outDir>         incremental pack (what the server runs on startup)
- * cache verify <tree> <packedDir>     container-level parity report against a packed cache
- * cache status <tree>                 codec per index, pristine counts, stale sidecars
- * ```
- *
- * Only `unpack` opens a packed cache, which is why `Main` dispatches this before it loads one.
- */
 fun runCache(args: List<String>) {
     when (args.firstOrNull()?.lowercase()) {
         "unpack" -> unpack(args.drop(1))
@@ -53,7 +35,6 @@ fun printCacheUsage() {
     )
 }
 
-/** `cache unpack <tree> [packedDir]` - a packed cache into a source tree. */
 private fun unpack(args: List<String>) {
     val treePath = args.getOrNull(0)
     if (treePath == null) {
@@ -63,9 +44,6 @@ private fun unpack(args: List<String>) {
     val packed = args.getOrNull(1) ?: EnvVars.cachePath
     println("Unpacking ${File(packed).absolutePath} into ${File(treePath).absolutePath}")
     val tree = SourceTree.create(File(treePath))
-    // The keys are the only thing the tree cannot derive: the `l`/`n` map archives are stored
-    // decrypted with their key in the metadata, so an unpack without them leaves every encrypted
-    // archive opaque and the tree becomes a worse copy of the cache than it should be.
     val keys = Unpacker.mapKeys()
     println("map keys: ${keys.size} regions")
     val cache = FileCache.load(packed)
@@ -86,7 +64,6 @@ private fun unpack(args: List<String>) {
     println("  time     : ${report.millis} ms")
 }
 
-/** `cache pack <tree> <outDir>` - every archive, from scratch. */
 private fun pack(args: List<String>) {
     val treePath = args.getOrNull(0)
     val output = args.getOrNull(1)
@@ -104,7 +81,6 @@ private fun pack(args: List<String>) {
     println("  time     : ${result.millis} ms")
 }
 
-/** `cache build <tree> <outDir>` - what the server runs on startup. */
 private fun build(args: List<String>) {
     val treePath = args.getOrNull(0)
     val output = args.getOrNull(1)
@@ -127,7 +103,6 @@ private fun build(args: List<String>) {
     println("  time          : ${result.millis} ms")
 }
 
-/** `cache verify <tree> <packedDir>` - the parity guarantee, as an exit code. */
 private fun verify(args: List<String>) {
     val treePath = args.getOrNull(0)
     val packed = args.getOrNull(1)
@@ -168,16 +143,6 @@ private fun verify(args: List<String>) {
     exitProcess(1)
 }
 
-/**
- * `cache status <tree>` - what the tree holds and what it is still keeping original bytes for.
- *
- * The pristine count is the number of editable files whose codec could not reproduce the shipped
- * bytes, so a `.pristine` sidecar is carrying them; the goal is zero, and index 12 - which is
- * compiled from its TypeScript on every pack and keeps no sidecar - contributes none. A *stale*
- * sidecar is one whose editable file no longer hashes to the value `index.json` recorded, which is
- * how a pack knows to compile the edit rather than emit the original - it is reported here so an
- * edit that has not been packed yet is visible.
- */
 private fun status(args: List<String>) {
     val treePath = args.getOrNull(0)
     if (treePath == null) {
@@ -185,8 +150,6 @@ private fun status(args: List<String>) {
         return
     }
     val tree = open(treePath) ?: return
-    // Every number here is a property of the tree's contract - which archive a path belongs to is
-    // the codec's answer and nobody else's - so the tree derives them and this only prints them.
     val status = tree.status()
     println("$tree, format ${tree.format}, ${tree.indexCount} indices")
     println(
@@ -225,7 +188,6 @@ private fun status(args: List<String>) {
     }
 }
 
-/** Open the tree at [path], or explain why it is not one. */
 private fun open(path: String): SourceTree? {
     return try {
         SourceTree.open(File(path))
@@ -235,5 +197,4 @@ private fun open(path: String): SourceTree? {
     }
 }
 
-/** How many stale sidecars are named individually. */
 private const val STALE_EXAMPLES = 10

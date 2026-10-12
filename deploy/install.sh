@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# Sets up one Darkan server directory and its systemd unit on a host.
-#   deploy/install.sh <name> <lobby|world> <release|dev> [git-url] [gitlab-project-id]
-# Run as trent. Creates /home/trent/<name> as a shallow clone, writes .env and .env.unit from the
-# examples when they do not exist yet, and installs the darkan@ unit. Secrets are never written by
-# this script: fill them into the two env files afterwards.
 set -euo pipefail
 NAME="${1:?name}"; KIND="${2:?lobby|world}"; CHANNEL="${3:?release|dev}"
 REPO="${4:-git@gitlab.com:darkanrs/server.git}"; PROJECT_ID="${5:-67255206}"

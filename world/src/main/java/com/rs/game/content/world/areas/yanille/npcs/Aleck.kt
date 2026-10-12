@@ -12,7 +12,7 @@ import com.rs.plugin.kts.onNpcClick
 import com.rs.utils.shop.ShopsHandler
 
 const val WATCHTOWER_TELEPORT_LOCATION_KEY = "watchtowerTeleport"
-const val DEFAULT_TELEPORT_LOCATION = false // false = Watchtower, true = Yanille
+const val DEFAULT_TELEPORT_LOCATION = false
 
 class Aleck(player: Player, npc: NPC) {
     private val hardRequirementMet = SetReward.ARDOUGNE_CLOAK.hasRequirements(player, AchievementDef.Area.ARDOUGNE, AchievementDef.Difficulty.HARD, false)

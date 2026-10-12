@@ -3,9 +3,6 @@ package org.darkan.tools.cache.texture.ops
 import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 
-/**
- * Type 16: Generates a herringbone pattern.
- */
 class TextureOpHerringbone : TextureOperation(0, true) {
     private var scaleX: Int = 1
     private var scaleY: Int = 1

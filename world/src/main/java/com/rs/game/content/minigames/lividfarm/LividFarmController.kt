@@ -31,7 +31,6 @@ object LividFarmController : Controller() {
             updatePlayersInArea()
             true
         }
-        //Rush the first round on server start to stabilize the state.
         for (initialRound in 1..5) {
             roundCounter = initialRound
             runRound(roundCounter)
@@ -41,9 +40,7 @@ object LividFarmController : Controller() {
             if (roundCounter > 5) {
                 roundCounter = 1
                 cycleCounter++
-//                Logger.info(LividFarmController::class.java, "startFarmLoop", "Current Cycle: $cycleCounter")
             }
-//            Logger.info(LividFarmController::class.java, "startFarmLoop", "Current round: $roundCounter")
             runRound(roundCounter)
             true
         }
@@ -95,7 +92,6 @@ object LividFarmController : Controller() {
     private fun syncRoundStateToPlayer(player: Player) {
         val paulineDrainVarbit = 9063
         val producePileVarbit = 9042
-        //Logger.info(LividFarmController::class.java, "syncRoundStateToPlayer", "Sending state to player: ${player.displayName}")
         player.vars.setVarBit(paulineDrainVarbit, if (roundCounter == 2) 1 else 0)
         player.vars.setVarBit(producePileVarbit, if (roundCounter == 4) 1 else 0)
         patchStates.forEach { (varbit, state) ->
@@ -111,7 +107,6 @@ object LividFarmController : Controller() {
     private fun clearRoundStateFromPlayer(player: Player) {
         val paulineDrainVarbit = 9063
         val producePileVarbit = 9042
-        //Logger.info(LividFarmController::class.java, "clearRoundStateFromPlayer", "Clearing state from player: ${player.displayName}")
         player.vars.setVarBit(paulineDrainVarbit, 0)
         player.vars.setVarBit(producePileVarbit, 0)
         LividFarm.PATCHES.forEach { player.vars.setVarBit(it.varbit, 0) }
@@ -120,19 +115,16 @@ object LividFarmController : Controller() {
     }
 
     private fun updatePlayersInArea() {
-        //Logger.info(LividFarmController::class.java, "updatePlayersInArea", "Looking for players")
         val currentlyInArea = World.players.filter {
             it.tile.x in 2096..2120 && it.tile.y in 3941..3953
         }.toSet()
         currentlyInArea.forEach { player ->
             if (!players.contains(player)) {
-                //Logger.info(LividFarmController::class.java, "updatePlayersInArea", "Updating players adding ${player.displayName}")
                 joinFarm(player)
             }
         }
         val toRemove = players.filterNot { currentlyInArea.contains(it) }
         toRemove.forEach { player ->
-            //Logger.info(LividFarmController::class.java, "updatePlayersInArea", "Updating players removing ${player.displayName}")
             leaveFarm(player)
         }
     }
@@ -148,30 +140,26 @@ object LividFarmController : Controller() {
     }
 
     private fun updatePatchStates() {
-        // 1) Random growth transitions
         val nextStates = mutableMapOf<Int, Int>()
         for (patch in LividFarm.PATCHES) {
             val vb = patch.varbit
             val current = patchStates[vb] ?: 0
             nextStates[vb] = when (current) {
-                0 -> 1                      // empty → bud
-                1 -> 2                      // bud → healthy
-                2 -> Utils.random(3, 4)     // healthy → diseased(3) or fully-grown(4)
-                3 -> Utils.random(3, 0)     // diseased → stays diseased(3) or becomes empty(0)
-                4 -> 0                      // fully-grown → empty
+                0 -> 1
+                1 -> 2
+                2 -> Utils.random(3, 4)
+                3 -> Utils.random(3, 0)
+                4 -> 0
                 else -> 1
             }
         }
 
-        // 2) Clamp to exactly 3 empty patches
         val empties = nextStates.filterValues { it == 0 }.keys.toMutableList()
         if (empties.size > 3) {
-            // too many empties → revert extras back to healthy
             empties.shuffled().take(empties.size - 3).forEach { vb ->
                 nextStates[vb] = 2
             }
         } else if (empties.size < 3) {
-            // too few empties → turn healthy or diseased into empty
             nextStates.filterValues { it == 2 || it == 3 }
                 .keys
                 .shuffled()
@@ -181,17 +169,14 @@ object LividFarmController : Controller() {
                 }
         }
 
-        // 3) Clamp to exactly 3 diseased plants
         val beforeDiseased = patchStates.filter { it.value == 3 }.keys
         val diseased = nextStates.filterValues { it == 3 }.keys.toMutableList()
 
         if (diseased.size > 3) {
-            // too many diseased → revert extras back to healthy
             diseased.shuffled().take(diseased.size - 3).forEach { vb ->
                 nextStates[vb] = 2
             }
         } else if (diseased.size < 3) {
-            // too few diseased → promote healthy → diseased
             nextStates.filterValues { it == 2 }
                 .keys
                 .shuffled()
@@ -201,14 +186,12 @@ object LividFarmController : Controller() {
                 }
         }
 
-        // spot-anim only on patches that became diseased this round
         val afterDiseased = nextStates.filterValues { it == 3 }.keys
         (afterDiseased - beforeDiseased).forEach { vb ->
             val patch = LividFarm.PATCHES.first { it.varbit == vb }
             sendSpotAnim(patch.tile, SpotAnim(2309, 0, 100))
         }
 
-        // 4) Commit states and sync all players
         nextStates.forEach { (vb, state) ->
             patchStates[vb] = state
             players.forEach { it.vars.setVarBit(vb, state) }

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.fletching;
 
 import org.darkan.core.gameval.gen.Obj;
@@ -58,7 +42,6 @@ public class Fletching extends PlayerAction {
 
 		OGRE_ARROWS(Obj.obj_2861, Obj.ogre_headless_arrow, new int[] { Obj.ogre_arrow }, new int[] { 5 }, new double[] { 1.0 }, new Animation(-1)),
 
-		//STRUNG_COMP_BOW(4825, BOW_STRING, new int[] { 4827 }, new int[] { 30 }, new double[] { 45 }, new Animation(6684)),
 
 		OAK_LOG(1521, KNIFE, new int[] { ARROW_SHAFT, 54, 56, 9442 }, new int[] { 15, 20, 25, 24 }, new double[] { 0.375, 16.5, 25, 16 }, new Animation(6702)),
 
@@ -94,9 +77,6 @@ public class Fletching extends PlayerAction {
 
 		STRUNG_MAGIC_LONG_BOW(70, BOW_STRING, new int[] { 859 }, new int[] { 85 }, new double[] { 91.5 }, new Animation(6689)),
 
-		/**
-		 * Crossbows
-		 */
 		U_BRONZE_CBOW(9440, 9420, new int[] { 9454 }, new int[] { 9 }, new double[] { 6 }, new Animation(-1)),
 
 		U_IRON_CBOW(9444, 9423, new int[] { 9457 }, new int[] { 39 }, new double[] { 22 }, new Animation(-1)),
@@ -128,9 +108,6 @@ public class Fletching extends PlayerAction {
 		MITH_GRAPPLE(9416, 9142, new int[] { 9418 }, new int[] { 59 }, new double[] { 11 }, new Animation(-1)),
 		MITH_GRAPPLE_ROPE(9418, 954, new int[] { 9419 }, new int[] { 59 }, new double[] { 0 }, new Animation(-1)),
 
-		/**
-		 * Arrows
-		 */
 		HEADLESS_ARROWS(ARROW_SHAFT, FEATHER, new int[] { HEADLESS_ARROW }, new int[] { 1 }, new double[] { 1 }, new Animation(-1)),
 
 		BRONZE_ARROWS(39, HEADLESS_ARROW, new int[] { 882 }, new int[] { 1 }, new double[] { 1.3 }, new Animation(-1)),
@@ -155,9 +132,6 @@ public class Fletching extends PlayerAction {
 		WALLASALKIBANE_ARROW(21828, HEADLESS_ARROW, new int[] { 21645 }, new int[] { 76 }, new double[] { 12.5 }, new Animation(-1)),
 		BASILISKBANE_ARROW(21833, HEADLESS_ARROW, new int[] { 21650 }, new int[] { 76 }, new double[] { 12.5 }, new Animation(-1)),
 
-		/**
-		 * Bolts
-		 */
 		BRONZE_BOLT(9375, FEATHER, new int[] { 877 }, new int[] { 9 }, new double[] { 0.5 }, new Animation(-1)),
 
 		IRON_BOLT(9377, FEATHER, new int[] { 9140 }, new int[] { 39 }, new double[] { 1.5 }, new Animation(-1)),
@@ -202,9 +176,6 @@ public class Fletching extends PlayerAction {
 
 		BRONZE_DART(819, FEATHER, new int[] { 806 }, new int[] { 1 }, new double[] { 0.8 }, new Animation(-1)),
 
-		/**
-		 * Darts
-		 */
 		IRON_DART(820, FEATHER, new int[] { 807 }, new int[] { 22 }, new double[] { 1 }, new Animation(-1)),
 
 		STEEL_DART(821, FEATHER, new int[] { 808 }, new int[] { 37 }, new double[] { 1.7 }, new Animation(-1)),

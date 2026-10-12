@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# Screenshots the real 727 client on a PRIVATE Xvfb (never the user's desktop), against any lobby.
-# usage: client-shot.sh <out.png> <host> <port> [settle-seconds]
-#   INPUT="<xdotool commands>"  run against the private display after the settle (e.g. the first-run
-#                               "Auto Setup" click: "mousemove 386 320 mousedown 1 sleep 0.3 mouseup 1")
-#   SETTLE2, GAP                 seconds after INPUT, and between the three captures (<out>-1..3.png)
-# GLX is disabled on purpose: with it, Auto Setup picks the OpenGL toolkit and every frame is black.
-# The client home is a scratch dir (CLIENT_HOME) so the user's own ~/.darkanrs cache and prefs are untouched.
 set -uo pipefail
 OUT=$1; HOST=$2; PORT=$3; SETTLE=${4:-45}
 S=${CLIENT_HOME:-/tmp/darkan-client-shot}

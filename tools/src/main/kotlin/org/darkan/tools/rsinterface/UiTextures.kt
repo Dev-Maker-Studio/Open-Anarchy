@@ -16,23 +16,8 @@ import org.lwjgl.opengl.GL11.glTexParameteri
 import org.lwjgl.opengl.GL12.GL_CLAMP_TO_EDGE
 import org.lwjgl.system.MemoryUtil
 
-/**
- * GL texture helpers for the 2D interface pass.
- *
- * Interface art is blitted at, or close to, 1:1 so everything is uploaded with
- * nearest filtering and no mipmaps - the opposite of the 3D texture path, which
- * wants trilinear filtering. Rows are uploaded top-first so that `v = 0` is the
- * top of the image, matching [org.darkan.tools.engine.render.Canvas2D]'s
- * top-left origin.
- */
 object UiTextures {
 
-    /**
-     * Uploads an ARGB pixel array as an RGBA texture.
-     *
-     * @param repeat wrap mode; tiled component graphics rely on GL_REPEAT so a
-     *   whole tiled fill is a single quad instead of one quad per tile.
-     */
     fun createArgb(pixels: IntArray, width: Int, height: Int, repeat: Boolean = false): Int {
         val textureId = glGenTextures()
         glBindTexture(GL_TEXTURE_2D, textureId)

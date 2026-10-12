@@ -11,15 +11,6 @@ import world.gregs.voidps.cache.source.SourceTree
 import world.gregs.voidps.cache.source.codec.SourceCodecs
 import world.gregs.voidps.cache.store.ArchiveGroup
 
-/**
- * A cache source tree the editor reads live, without packing it first.
- *
- * Index 3 goes through the tree's own codec rather than a second reader of the JSON: [components]
- * packs the interface's directory exactly as a build would and decodes the bytes that come out, so
- * what the stage shows is what the next `cache build` will put in the cache - pristine sidecars,
- * encoder quirks and all. Interfaces the tree does not hold fall back to the packed cache the
- * viewer opened, which is also where every graphic, font and model still comes from.
- */
 class InterfaceSourceTree private constructor(val root: File, private val tree: SourceTree) {
 
     val clientscripts: File = File(root, CLIENTSCRIPTS)
@@ -42,7 +33,6 @@ class InterfaceSourceTree private constructor(val root: File, private val tree: 
         .mapNotNull { if (it.isDirectory) it.name.toIntOrNull() else null }
         .sorted()
 
-    // A gap in the file ids yields a default component, as the cache decoder does; the index is the position.
     fun components(interfaceId: Int): List<InterfaceComponentDefinition> {
         val packed = codec.pack(interfaces.toPath(), interfaceId, archive(interfaceId))
         val files = ArchiveGroup.split(packed.group, packed.fileIds).files

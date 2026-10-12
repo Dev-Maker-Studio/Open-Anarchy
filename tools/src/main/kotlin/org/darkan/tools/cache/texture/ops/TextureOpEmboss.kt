@@ -6,13 +6,10 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-/**
- * Type 32: Emboss filter that creates a 3D relief effect.
- */
 class TextureOpEmboss : TextureOperation(1, true) {
     private var intensity: Int = 4096
-    private var azimuth: Int = 3216  // Light direction horizontal angle
-    private var elevation: Int = 3216  // Light direction vertical angle
+    private var azimuth: Int = 3216
+    private var elevation: Int = 3216
     private val lightVector = IntArray(3)
 
     override fun getMonochromeOutput(y: Int): IntArray {
@@ -58,7 +55,6 @@ class TextureOpEmboss : TextureOperation(1, true) {
         lightVector[1] = (cos(azimuth / 4096.0) * cosElevation * 4096.0).toInt()
         lightVector[2] = (sin(elevation / 4096.0) * 4096.0).toInt()
 
-        // Normalize the light vector
         val magSquared = (lightVector[0] * lightVector[0] shr 12) +
                 (lightVector[1] * lightVector[1] shr 12) +
                 (lightVector[2] * lightVector[2] shr 12)
@@ -79,7 +75,6 @@ class TextureOpEmboss : TextureOperation(1, true) {
     }
 
     companion object {
-        /** Precomputed normal magnitude lookup table for emboss calculations */
         private val NORMAL_TABLE: ByteArray
 
         init {

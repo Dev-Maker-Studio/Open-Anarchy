@@ -34,15 +34,6 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
-/**
- * The world's end of the social gateway socket.
- *
- * Outgoing messages are queued in the order [send] is called and written by one coroutine, so a
- * player's online, actions and offline reach the lobby in the order the world produced them.
- * Presence is pushed, not asked for: [onlinePlayers] is sent as a [WorldPresenceSnapshot] the
- * moment the socket comes up and again every [EnvVars.socialPresenceResyncSeconds], so the lobby
- * can always rebuild its picture of this world from the world's own.
- */
 class SocialClient(
     private val scope: CoroutineScope,
     private val onlinePlayers: () -> List<GatewayPlayerPresence> = { emptyList() },
@@ -74,7 +65,6 @@ class SocialClient(
         scope.launch(Dispatchers.IO + SupervisorJob()) { connectLoop() }
     }
 
-    /** False when the gateway is down, so the caller can tell the player rather than lose the intent. */
     fun send(msg: SocialGatewayWireMessage): Boolean {
         val current = state.get()
         if (current !is State.Connected) {

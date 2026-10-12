@@ -5,25 +5,7 @@ import world.gregs.voidps.buffer.read.BufferReader
 import kotlin.math.max
 import kotlin.math.min
 
-/**
- * Type 7: Combines two input operations using various blend modes.
- *
- * Blend modes:
- * 1 = Add
- * 2 = Subtract
- * 3 = Multiply
- * 4 = Divide
- * 5 = Screen
- * 6 = Soft Light
- * 7 = Dodge
- * 8 = Burn
- * 9 = Min
- * 10 = Max
- * 11 = Difference
- * 12 = Exclusion
- */
 class TextureOpCombine : TextureOperation(2, false) {
-    /** Blend mode (1-12) */
     private var blendMode: Int = 6
 
     override fun getMonochromeOutput(y: Int): IntArray {
@@ -34,33 +16,33 @@ class TextureOpCombine : TextureOperation(2, false) {
             val input1 = getChildMonochromeOutput(1, y)
 
             when (blendMode) {
-                1 -> { // Add
+                1 -> {
                     for (x in 0 until currentWidth) {
                         output[x] = input0[x] + input1[x]
                     }
                 }
-                2 -> { // Subtract
+                2 -> {
                     for (x in 0 until currentWidth) {
                         output[x] = input0[x] - input1[x]
                     }
                 }
-                3 -> { // Multiply
+                3 -> {
                     for (x in 0 until currentWidth) {
                         output[x] = input0[x] * input1[x] shr 12
                     }
                 }
-                4 -> { // Divide
+                4 -> {
                     for (x in 0 until currentWidth) {
                         val b = input1[x]
                         output[x] = if (b != 0) (input0[x] shl 12) / b else 4096
                     }
                 }
-                5 -> { // Screen
+                5 -> {
                     for (x in 0 until currentWidth) {
                         output[x] = 4096 - ((4096 - input0[x]) * (4096 - input1[x]) shr 12)
                     }
                 }
-                6 -> { // Soft Light
+                6 -> {
                     for (x in 0 until currentWidth) {
                         val b = input1[x]
                         output[x] = if (b < 2048) {
@@ -70,36 +52,36 @@ class TextureOpCombine : TextureOperation(2, false) {
                         }
                     }
                 }
-                7 -> { // Dodge
+                7 -> {
                     for (x in 0 until currentWidth) {
                         val a = input0[x]
                         output[x] = if (a == 4096) 4096 else (input1[x] shl 12) / (4096 - a)
                     }
                 }
-                8 -> { // Burn
+                8 -> {
                     for (x in 0 until currentWidth) {
                         val a = input0[x]
                         output[x] = if (a == 0) 0 else 4096 - ((4096 - input1[x]) shl 12) / a
                     }
                 }
-                9 -> { // Min
+                9 -> {
                     for (x in 0 until currentWidth) {
                         output[x] = min(input0[x], input1[x])
                     }
                 }
-                10 -> { // Max
+                10 -> {
                     for (x in 0 until currentWidth) {
                         output[x] = max(input0[x], input1[x])
                     }
                 }
-                11 -> { // Difference
+                11 -> {
                     for (x in 0 until currentWidth) {
                         val a = input0[x]
                         val b = input1[x]
                         output[x] = if (a > b) a - b else b - a
                     }
                 }
-                12 -> { // Exclusion
+                12 -> {
                     for (x in 0 until currentWidth) {
                         val a = input0[x]
                         val b = input1[x]
@@ -130,28 +112,28 @@ class TextureOpCombine : TextureOperation(2, false) {
             val inB1 = input1[2]
 
             when (blendMode) {
-                1 -> { // Add
+                1 -> {
                     for (x in 0 until currentWidth) {
                         outR[x] = inR0[x] + inR1[x]
                         outG[x] = inG0[x] + inG1[x]
                         outB[x] = inB1[x] + inB0[x]
                     }
                 }
-                2 -> { // Subtract
+                2 -> {
                     for (x in 0 until currentWidth) {
                         outR[x] = inR0[x] - inR1[x]
                         outG[x] = inG0[x] - inG1[x]
                         outB[x] = inB0[x] - inB1[x]
                     }
                 }
-                3 -> { // Multiply
+                3 -> {
                     for (x in 0 until currentWidth) {
                         outR[x] = inR1[x] * inR0[x] shr 12
                         outG[x] = inG0[x] * inG1[x] shr 12
                         outB[x] = inB0[x] * inB1[x] shr 12
                     }
                 }
-                4 -> { // Divide
+                4 -> {
                     for (x in 0 until currentWidth) {
                         val r1 = inR1[x]
                         val g1 = inG1[x]
@@ -161,14 +143,14 @@ class TextureOpCombine : TextureOperation(2, false) {
                         outB[x] = if (b1 != 0) (inB0[x] shl 12) / b1 else 4096
                     }
                 }
-                5 -> { // Screen
+                5 -> {
                     for (x in 0 until currentWidth) {
                         outR[x] = 4096 - ((4096 - inR1[x]) * (4096 - inR0[x]) shr 12)
                         outG[x] = 4096 - ((4096 - inG0[x]) * (4096 - inG1[x]) shr 12)
                         outB[x] = 4096 - ((4096 - inB0[x]) * (4096 - inB1[x]) shr 12)
                     }
                 }
-                6 -> { // Soft Light
+                6 -> {
                     for (x in 0 until currentWidth) {
                         val r1 = inR1[x]
                         val g1 = inG1[x]
@@ -178,7 +160,7 @@ class TextureOpCombine : TextureOperation(2, false) {
                         outB[x] = if (b1 < 2048) b1 * inB0[x] shr 11 else 4096 - ((4096 - inB0[x]) * (4096 - b1) shr 11)
                     }
                 }
-                7 -> { // Dodge
+                7 -> {
                     for (x in 0 until currentWidth) {
                         val r0 = inR0[x]
                         val g0 = inG0[x]
@@ -188,7 +170,7 @@ class TextureOpCombine : TextureOperation(2, false) {
                         outB[x] = if (b0 == 4096) 4096 else (inB1[x] shl 12) / (4096 - b0)
                     }
                 }
-                8 -> { // Burn
+                8 -> {
                     for (x in 0 until currentWidth) {
                         val r0 = inR0[x]
                         val g0 = inG0[x]
@@ -198,21 +180,21 @@ class TextureOpCombine : TextureOperation(2, false) {
                         outB[x] = if (b0 == 0) 0 else 4096 - ((4096 - inB1[x]) shl 12) / b0
                     }
                 }
-                9 -> { // Min
+                9 -> {
                     for (x in 0 until currentWidth) {
                         outR[x] = min(inR0[x], inR1[x])
                         outG[x] = min(inG0[x], inG1[x])
                         outB[x] = min(inB0[x], inB1[x])
                     }
                 }
-                10 -> { // Max
+                10 -> {
                     for (x in 0 until currentWidth) {
                         outR[x] = max(inR0[x], inR1[x])
                         outG[x] = max(inG0[x], inG1[x])
                         outB[x] = max(inB0[x], inB1[x])
                     }
                 }
-                11 -> { // Difference
+                11 -> {
                     for (x in 0 until currentWidth) {
                         val r0 = inR0[x]
                         val g0 = inG0[x]
@@ -225,7 +207,7 @@ class TextureOpCombine : TextureOperation(2, false) {
                         outB[x] = if (b0 > b1) b0 - b1 else b1 - b0
                     }
                 }
-                12 -> { // Exclusion
+                12 -> {
                     for (x in 0 until currentWidth) {
                         val r0 = inR0[x]
                         val g0 = inG0[x]

@@ -11,50 +11,13 @@ import javax.imageio.ImageIO
 import javax.imageio.stream.MemoryCacheImageInputStream
 import javax.imageio.stream.MemoryCacheImageOutputStream
 
-/**
- * One graphic frame as one standard PNG, and everything a byte exact encoder needs written inside
- * the same file.
- *
- * The picture is **8 bit RGBA truecolour at the group's canvas size** - the canvas the client
- * composes every frame of the group onto - with the frame painted at its own offset and the rest
- * fully transparent. So the pixels alone say where the frame is (trim the transparent border), what
- * colours it uses and how opaque each one is, which is what makes a PNG dropped in by any image
- * editor packable: see [GraphicCodec] for the derivation. The colours are the palette entries the
- * *client* renders - the normalised ones, entry 0 apart - and the alpha is the client's own rule:
- * the frame's alpha plane where it has one, else opaque for every pixel whose palette index is not
- * 0 and transparent for index 0, which is the client's transparent colour.
- *
- * What the pixels cannot say rides along in three **private ancillary PNG chunks**, which every
- * decoder ignores and which make the unedited round trip byte exact:
- *
- * | chunk | scope | holds |
- * |---|---|---|
- * | `rsPL` | the group | the palette exactly as the file spells it, entry 0 first, and `paletteZeroEntry` |
- * | `rsFR` | the frame | the archive and frame ids, the canvas, the frame's box, the format byte and which shape its alpha plane is |
- * | `rsIX` | the frame | the palette index raster, only where the colours cannot recover it |
- *
- * All three are lowercase-first (ancillary) and lowercase-second (private) with an uppercase fourth
- * letter, which is PNG's "unsafe to copy": an editor that rewrites the pixels is told by the type
- * itself to drop them rather than carry a stale one forward. An editor that strips them entirely -
- * which is most of them - loses nothing but the byte exactness of frames the pixels under-determine;
- * see `docs/cache-source.md`, "graphics".
- *
- * The PNG is written through an in-memory stream rather than `ImageIO.write`, which otherwise spills
- * to a temporary file per image and is process-wide state to turn off, and the chunks are spliced in
- * straight after `IHDR` so the file stays a fixed, deterministic byte sequence for a given frame -
- * re-unpacking an unchanged cache must rewrite nothing.
- */
 internal object GraphicImage {
 
-    /** The group's palette, as `rsPL` carries it. */
     class Palette(
-        /** The entries exactly as the graphic file spells them, entry 0 first. */
         val entries: IntArray,
-        /** Whether the file writes an explicit `000000` for entry 0; [GraphicDefinition.paletteZeroEntry]. */
         val zeroEntry: Boolean
     )
 
-    /** One frame's placement and format, as `rsFR` carries it. */
     class Frame(
         val archive: Int,
         val frame: Int,
@@ -64,41 +27,27 @@ internal object GraphicImage {
         val minY: Int,
         val width: Int,
         val height: Int,
-        /** The frame's format byte; [IndexedGraphic.flags]. */
         val flags: Int,
-        /** [NO_PLANE], [PLANE] or [OPAQUE_PLANE]. */
         val alpha: Int
     )
 
-    /** `rsIX`'s payload: the frame's palette indices, row major over the frame's own box. */
     class Raster(val width: Int, val height: Int, val values: ByteArray)
 
-    /** A frame PNG as it is on disk: the pixels, and whichever of the three chunks survived. */
     class Image(
         val width: Int,
         val height: Int,
-        /** Non-premultiplied ARGB, row major, [width] x [height]. */
         val pixels: IntArray,
         val palette: Palette?,
         val frame: Frame?,
-        /** `rsIX`'s raster, row major over the frame's box, or null. */
         val indices: Raster?
     )
 
-    /** The frame's format byte has no alpha bit, so index 0 is its only transparency. */
     const val NO_PLANE = 0
 
-    /** The frame carries an alpha plane and the PNG's alpha channel *is* that plane. */
     const val PLANE = 1
 
-    /**
-     * The frame carries an alpha plane that is entirely opaque, which the decoder (and the client)
-     * drops - so only this says the plane was there, and the PNG's alpha channel is the index 0
-     * rule rather than the plane.
-     */
     const val OPAQUE_PLANE = 2
 
-    /** [graphic] as the one PNG the source tree stores it in. */
     fun write(archive: Int, index: Int, definition: GraphicDefinition, graphic: IndexedGraphic): ByteArray {
         val canvasWidth = maxOf(definition.width, 1)
         val canvasHeight = maxOf(definition.height, 1)
@@ -118,8 +67,6 @@ internal object GraphicImage {
                 val entry = graphic.raster[offset].toInt() and 0xff
                 val alpha = if (plane != null) plane[offset].toInt() and 0xff else if (entry == 0) 0 else OPAQUE
                 image.setRGB(x + graphic.offsetX, y + graphic.offsetY, (alpha shl 24) or palette[entry])
-                // The index the colours alone would recover; where that is not the index the frame
-                // actually holds, rsIX has to carry the raster.
                 val recovered = if (alpha == 0) 0 else lookup.getOrDefault(palette[entry], -1)
                 if (recovered != entry && raster == null) {
                     raster = graphic.raster
@@ -135,7 +82,6 @@ internal object GraphicImage {
         return splice(png(image), chunks)
     }
 
-    /** [bytes] as its pixels and its chunks; [name] names the file in any error. */
     fun read(bytes: ByteArray, name: String): Image {
         val image = decode(bytes, name)
         val width = image.width
@@ -155,7 +101,6 @@ internal object GraphicImage {
         return Image(width, height, pixels, palette, frame, indices)
     }
 
-    /** The palette the client renders: entry 0 apart, an entry that really is black becomes 1. */
     fun normalise(raw: IntArray): IntArray {
         val palette = raw.copyOf()
         for (index in 1 until palette.size) {
@@ -166,14 +111,6 @@ internal object GraphicImage {
         return palette
     }
 
-    /**
-     * Colour to palette index, for entries 1 and up: the normalised colour first, then the raw one
-     * where nothing claims it, and the lowest index wins a tie.
-     *
-     * Entry 0 is deliberately unreachable - it is the transparent index and a fully transparent
-     * pixel is the only thing that recovers it - so an opaque pixel that really is black lands on
-     * whichever entry the file spells `000000` and the client renders as 1.
-     */
     fun lookup(raw: IntArray, palette: IntArray): MutableMap<Int, Int> {
         val out = HashMap<Int, Int>(palette.size * 2)
         for (index in 1 until palette.size) {
@@ -280,7 +217,6 @@ internal object GraphicImage {
         return Raster(width, height, payload.copyOfRange(5, payload.size))
     }
 
-    /** [type] and [payload] as a PNG chunk, length and CRC and all. */
     private fun chunk(type: String, payload: ByteArray): ByteArray {
         val out = ByteArray(12 + payload.size)
         write32(out, 0, payload.size)
@@ -294,7 +230,6 @@ internal object GraphicImage {
         return out
     }
 
-    /** [png] with [chunks] inserted straight after its `IHDR`. */
     private fun splice(png: ByteArray, chunks: List<ByteArray>): ByteArray {
         val insert = SIGNATURE + 12 + IHDR_SIZE
         if (png.size < insert) {
@@ -309,7 +244,6 @@ internal object GraphicImage {
         return out.toByteArray()
     }
 
-    /** Every chunk of [bytes] this cares about, in file order, as type to payload. */
     private fun chunks(bytes: ByteArray, name: String): List<Pair<String, ByteArray>> {
         val out = ArrayList<Pair<String, ByteArray>>(3)
         var position = SIGNATURE
@@ -327,12 +261,6 @@ internal object GraphicImage {
         return out
     }
 
-    /**
-     * The image, through a reader this owns.
-     *
-     * `ImageIO.read` disposes the stream it is handed, so the stream cannot also be closed by the
-     * caller; driving the reader directly keeps both halves of this file symmetrical.
-     */
     private fun decode(bytes: ByteArray, name: String): BufferedImage {
         val stream = MemoryCacheImageInputStream(ByteArrayInputStream(bytes))
         val readers = ImageIO.getImageReaders(stream)
@@ -382,38 +310,29 @@ internal object GraphicImage {
         ((bytes[offset].toInt() and 0xff) shl 24) or ((bytes[offset + 1].toInt() and 0xff) shl 16) or
             ((bytes[offset + 2].toInt() and 0xff) shl 8) or (bytes[offset + 3].toInt() and 0xff)
 
-    /** The group's palette, entry 0 first, exactly as the graphic file spells it. */
     private const val PALETTE_CHUNK = GraphicCodec.PALETTE_CHUNK
 
-    /** The frame's placement in the group canvas, and its format byte. */
     private const val FRAME_CHUNK = GraphicCodec.FRAME_CHUNK
 
-    /** The frame's palette index raster, where the colours alone cannot recover it. */
     private const val INDEX_CHUNK = GraphicCodec.INDEX_CHUNK
 
     private val CHUNKS = setOf(PALETTE_CHUNK, FRAME_CHUNK, INDEX_CHUNK)
 
-    /** Every chunk this writes starts with its own version byte, so a reader can refuse a newer one. */
     private const val VERSION: Byte = 1
 
-    /** `rsFR`: a version, an int, eight shorts and two bytes. */
     private const val FRAME_SIZE = 21
 
-    /** The frame carries an alpha plane after its pixels. */
     private const val ALPHA_FLAG = 0x2
 
     private const val OPAQUE = 0xff
 
     private const val COLOUR = 3
 
-    /** The PNG signature, which every chunk sits after. */
     private const val SIGNATURE = 8
 
-    /** `IHDR`'s payload: width, height, depth, colour, compression, filter, interlace. */
     private const val IHDR_SIZE = 13
 
     private const val FORMAT = "png"
 
-    /** Roughly what a PNG's chunks cost before any pixels. */
     private const val HEADER = 1024
 }

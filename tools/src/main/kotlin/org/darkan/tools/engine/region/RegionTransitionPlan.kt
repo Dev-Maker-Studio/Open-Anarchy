@@ -1,17 +1,9 @@
 package org.darkan.tools.engine.region
 
-/**
- * Unique key for a region by its coordinates.
- */
 data class RegionKey(val regionX: Int, val regionY: Int) {
     fun toLong(): Long = (regionX.toLong() shl 32) or (regionY.toLong() and 0xFFFFFFFFL)
 }
 
-/**
- * Diff between current and desired region sets.
- * Used by AsyncRegionManager to determine which regions to load/unload
- * when the render distance or center changes.
- */
 data class RegionTransitionPlan(
     val regionsToKeep: Set<RegionKey>,
     val regionsToLoad: Set<RegionKey>,
@@ -19,10 +11,6 @@ data class RegionTransitionPlan(
     val centerChanged: Boolean
 ) {
     companion object {
-        /**
-         * Compute the transition plan from a current set of loaded regions
-         * to a new desired set.
-         */
         fun compute(
             currentRegions: Set<RegionKey>,
             centerRegionX: Int,

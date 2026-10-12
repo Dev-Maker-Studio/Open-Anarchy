@@ -11,28 +11,17 @@ import org.darkan.core.model.FriendsChat
 import org.darkan.core.model.Social
 import java.util.Date
 
-/**
- * Rewrites one legacy document into the shape the modern Kotlin classes persist. Returns null to
- * drop the document, having recorded why on the [Report].
- */
 interface Transform {
     fun prepare(source: MongoCollection<Document>) {}
     fun apply(doc: Document, report: Report): Document?
 }
 
-/** Collections whose documents already match the modern classes are copied verbatim. */
 object CopyTransform : Transform {
     override fun apply(doc: Document, report: Report): Document = doc
 }
 
-/**
- * `accounts` → [Account]. The classes match field for field apart from the
- * renamed password history; the remaining work is making legacy nulls and casing conform to the
- * modern non-null, lowercase-email model.
- */
 object AccountsTransform : Transform {
     private val nonNullStrings = listOf("email", "recoveryEmail", "displayName", "prevDisplayName", "passwordHash")
-    // `currentFriendsChat` is nullable on the modern model (null = not in a chat), so a legacy null stays.
     private val socialNonNull = listOf("friends", "ignores", "status", "fcStatus", "connectedToClan", "friendsChat")
     private val friendsChatNonNull = listOf("friendsChatRanks", "rankToEnter", "rankToSpeak", "rankToKick", "rankToLS", "coinshare")
 
@@ -77,7 +66,6 @@ object AccountsTransform : Transform {
 
     private val newestByUsername = HashMap<String, ObjectId>()
 
-    /** Two documents with one username: the newest survives, since a re-registration superseded the first. */
     override fun prepare(source: MongoCollection<Document>) {
         for (doc in source.find().projection(Document("username", 1))) {
             val username = doc.getString("username") ?: continue
@@ -101,7 +89,6 @@ object AccountsTransform : Transform {
 
         if (doc.containsKey("prevPasswords")) {
             val history = (doc["prevPasswords"] as? List<*>).orEmpty()
-            // Legacy tolerated raw byte arrays mixed in; only Argon2 strings mean anything now.
             val strings = history.filterIsInstance<String>()
             report.count("prevPasswords renamed", 1)
             report.count("non-string password history entries dropped", history.size - strings.size)
@@ -121,10 +108,6 @@ object AccountsTransform : Transform {
                 report.count("null $field unset", 1)
             }
         }
-        // The nested Social / FriendsChat constructors are non-null for these too.
-        // Social and FriendsChat are Kotlin data classes; their codec passes a missing field to the
-        // constructor as null instead of applying the declared default, so absent keys are filled
-        // from a freshly constructed instance - the defaults can never drift from the class.
         val social = doc.get("social", Document::class.java)
         if (social != null) {
             unsetNulls(social, socialNonNull, "social", report)
@@ -150,10 +133,6 @@ object AccountsTransform : Transform {
     }
 }
 
-/**
- * `clans` → [Clan]. Settings move from client var ids to enum names, the
- * motto is surfaced as its own field, and the transient update block is dropped.
- */
 object ClansTransform : Transform {
     override fun apply(doc: Document, report: Report): Document? {
         val name = doc.getString("name")
@@ -175,7 +154,6 @@ object ClansTransform : Transform {
             val value = normaliseNumber(raw, report, "settings")
             val id = key.toIntOrNull()
             if (id == null) {
-                // Already an enum name, or junk; keep whatever the modern enum recognises.
                 if (ClanSetting.forName(key) != null) named[key] = value
                 else report.problem("unknown settings key dropped", "$name: $key")
                 continue
@@ -215,11 +193,6 @@ object ClansTransform : Transform {
         return doc
     }
 
-    /**
-     * The legacy read path went through Gson with `Object` targets, which turns every number into
-     * a double, so integers that were re-saved come back as `3.0`. The modern setting values are
-     * ints, longs or strings.
-     */
     private fun normaliseNumber(value: Any?, report: Report, where: String): Any? {
         if (value !is Double) return value
         if (value != Math.floor(value) || value.isInfinite()) return value
@@ -229,10 +202,6 @@ object ClansTransform : Transform {
     }
 }
 
-/**
- * `players`: the save graph is identical between legacy and modern apart from the join date,
- * which becomes a real BSON date so the world's [DateAdapter] can read it.
- */
 object PlayersTransform : Transform {
     override fun apply(doc: Document, report: Report): Document? {
         val username = doc.getString("username")
@@ -240,7 +209,6 @@ object PlayersTransform : Transform {
             report.problem("missing username (dropped)", doc.idKey())
             return null
         }
-        // An unreadable join date is not worth losing a character over: drop the field, keep the save.
         convertDate(doc, "dateJoined", username, report, dropDocument = false)
         rename(doc.get("appearence", Document::class.java), "male", "isMale", report)
         rename(doc.get("prayer", Document::class.java), "curses", "isCurses", report)
@@ -267,7 +235,6 @@ object PlayersTransform : Transform {
     }
 }
 
-/** `grandexchange`: offers embed items, whose metadata key the modern [org.darkan.core.model.Item] spells differently. */
 object OffersTransform : Transform {
     override fun apply(doc: Document, report: Report): Document {
         report.count("item metaData renamed metadata", renameItemMetadata(doc))
@@ -288,20 +255,13 @@ private fun renameItemMetadata(value: Any?): Int = when (value) {
     else -> 0
 }
 
-/** `logs`: the entry date becomes a BSON date, which also makes the 180 day TTL index effective. */
 object LogsTransform : Transform {
     override fun apply(doc: Document, report: Report): Document? {
         val key = doc["hash"]?.toString() ?: doc.idKey()
-        // Without a date the TTL index can never expire the entry, so an unreadable one is dropped.
         return if (convertDate(doc, "date", key, report, dropDocument = true)) doc else null
     }
 }
 
-/**
- * Replaces a legacy date string in [field] with a BSON date. Returns false when the value could not
- * be read and [dropDocument] asks for the document to be discarded; otherwise the field is unset and
- * the document kept.
- */
 private fun convertDate(doc: Document, field: String, key: String, report: Report, dropDocument: Boolean): Boolean {
     if (!doc.containsKey(field)) return true
     val raw = doc[field]

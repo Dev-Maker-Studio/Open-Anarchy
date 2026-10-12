@@ -27,24 +27,6 @@ import world.gregs.voidps.cache.Cache
 import java.util.concurrent.Executors
 import java.util.logging.Level
 
-/**
- * Boots exactly as much of the world server as content needs, with no socket, no world thread and
- * no database, so dispatch can be driven and asserted from a unit test.
- *
- * Definitions come from [TestDefinitions], never from a packed cache, so the suite passes on a
- * machine that has never built one.
- *
- * What it boots, in [Launcher][com.rs.Launcher] order: config, cache, map XTEAs, the rev727 codec,
- * the async executors, the plugin system (handler registration + `@ServerStartupEvent` hooks, which
- * is where every `Commands.add` lives) and the packet handler registry.
- *
- * What it does not boot: `WorldDB` (so nothing writes to Mongo - the log writers swallow the
- * uninitialised-connection error on their own executor), `WorldServer.start` (no listening socket,
- * no social gateway) and `WorldThread` (the test drives ticks itself via [tick]).
- *
- * The test task runs with `workingDir = rootDir`, so `.env`, `data/` and the built cache resolve
- * the same way they do for a real server.
- */
 object WorldHarness {
 
     @Volatile
@@ -53,10 +35,8 @@ object WorldHarness {
     @Volatile
     private var cacheDefinitions = false
 
-    /** Lets the world boot on an empty cache; a server without this dies on a cache it cannot read. */
     private const val OPTIONAL_CACHE = "darkan.cache.optional"
 
-    /** The rev727 codec, available once [boot] has run. */
     lateinit var codec: Codec
         private set
 
@@ -80,10 +60,6 @@ object WorldHarness {
 
         AsyncTaskExecutor.initExecutors()
 
-        // Player.run() fires off account/clan/presence work on WorldServer's dispatcher. The real
-        // one is created by WorldServer.start(); the harness installs a plain thread pool instead
-        // so nothing opens a socket. socialClient stays unset - every use of it inside those
-        // coroutines is already wrapped in try/catch.
         installWorldServerDispatcher()
 
         PluginManager.loadPlugins()
@@ -94,15 +70,6 @@ object WorldHarness {
         booted = true
     }
 
-    /**
-     * Creates a fully initialised, started player backed by a [RecordingSession], the same way
-     * `WorldServer.initWorldLogin` does: `init(...)`, `start()`, flush, `setStarted()`.
-     *
-     * [chosenAccountType] defaults to true, i.e. an established character. `Player.processPackets`
-     * drops every packet except IfContinue and IfButton op1 while it is false, and `start()` hands
-     * a player without it to the tutorial, so a harness player left at the `new Player(...)`
-     * default cannot click, walk or talk at all - pass false only to test that gate.
-     */
     fun login(
         username: String = "harness",
         rights: Rights = Rights.OWNER,
@@ -116,16 +83,12 @@ object WorldHarness {
         val session = RecordingSession(codec)
         val player = Player(account)
         player.init(session, account, screenMode, 1024, 768, MachineInformation())
-        // Before start(), which is where an unchosen account type takes over the login: tutorial
-        // island in a normal build, character customising in a debug one. Either leaves the player
-        // locked, so setting it afterwards made every test read the developer's own .env.
         player.isChosenAccountType = chosenAccountType
         player.start()
         player.setStarted()
         return HarnessPlayer(player, session)
     }
 
-    /** For `cacheTest`, whose subject is what the packed cache holds rather than how content behaves. */
     @Synchronized
     fun bootWithCacheDefinitions() {
         check(!booted || cacheDefinitions) { "the harness has already booted on test definitions" }
@@ -133,16 +96,10 @@ object WorldHarness {
         boot()
     }
 
-    /** Removes [player] from the world so a later login of the same name is not rejected. */
     fun logout(player: HarnessPlayer) {
         World.removePlayer(player.player)
     }
 
-    /**
-     * Runs one world tick over the players and NPCs currently in the world, mirroring
-     * [WorldThread]'s body: chunk processing, scheduled tasks, entity processing, movement, the
-     * post-sync pass that actually emits the inventory/var/XP packets, and the flush request.
-     */
     fun tick() {
         ChunkManager.processChunks()
         WorldTasks.processTasks()
@@ -180,7 +137,6 @@ object WorldHarness {
         WorldThread.WORLD_CYCLE++
     }
 
-    /** Runs [count] ticks. */
     fun tick(count: Int) {
         repeat(count) { tick() }
     }
@@ -208,9 +164,7 @@ object WorldHarness {
     private val Player.packets get() = getPackets()
 }
 
-/** A logged-in harness player together with the session recording everything sent to it. */
 data class HarnessPlayer(val player: Player, val session: RecordingSession) {
-    /** Everything queued to the client so far. */
     val sent get() = session.sent
 
     fun clearSent() = session.clearSent()

@@ -1,41 +1,12 @@
 package world.gregs.voidps.cache.store
 
-/**
- * The files of a group and the chunk layout they were stored in.
- *
- * [chunks] has one entry per chunk, each holding that chunk's contribution to every file in
- * file id order. Handing it back to [ArchiveGroup.join] reproduces the group byte for byte.
- */
 class GroupFiles(
     val files: List<ByteArray>,
     val chunks: List<IntArray>
 )
 
-/**
- * Splits and joins a decompressed archive - a *group* in JS5 terms.
- *
- * A group of one file is that file's bytes and nothing else. A group of several is
- *
- * ```
- * [file data...][i32 length delta * chunkCount * fileCount][u8 chunkCount]
- * ```
- *
- * where the deltas run chunk-major and are cumulative *within* a chunk, so the length of file
- * `f` in chunk `c` is the sum of deltas 0..f of that chunk. The data is laid out in the same
- * order: for every chunk, for every file, that chunk's slice of the file.
- *
- * Almost every multi-file group in the 727 cache uses a single chunk. Index 0 is the exception:
- * all 4,074 of its multi-file archives use three, with a split that is not derivable from
- * anything, so it is recorded and replayed rather than recomputed.
- */
 object ArchiveGroup {
 
-    /**
-     * Split a decompressed [group] into its files.
-     *
-     * @param fileIds the archive's file ids from its reference table, ascending. Only the count
-     *   is needed to parse the group; the ids are what the returned files are keyed by upstream.
-     */
     fun split(group: ByteArray, fileIds: IntArray): GroupFiles {
         val fileCount = fileIds.size
         require(fileCount > 0) { "A group has at least one file." }
@@ -83,12 +54,6 @@ object ArchiveGroup {
         return GroupFiles(files, chunks)
     }
 
-    /**
-     * Join [files] back into a group.
-     *
-     * @param chunks the recorded layout, whose per-chunk lengths must add up to each file's
-     *   size. Null writes a single chunk, which is what every index but 0 uses.
-     */
     fun join(files: List<ByteArray>, chunks: List<IntArray>? = null): ByteArray {
         require(files.isNotEmpty()) { "A group has at least one file." }
         if (files.size == 1) {

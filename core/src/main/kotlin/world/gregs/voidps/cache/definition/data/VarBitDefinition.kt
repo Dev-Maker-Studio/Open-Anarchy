@@ -10,14 +10,8 @@ data class VarBitDefinition(
     var endBit: Int = 0
 ) : Definition, OpcodeOrdered {
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var opcodeOrder: IntArray? = null
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var shadowedPayloads: Array<ByteArray?>? = null
 
     override fun equals(other: Any?): Boolean {

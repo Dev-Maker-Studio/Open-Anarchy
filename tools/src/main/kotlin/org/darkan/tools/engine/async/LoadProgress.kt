@@ -1,8 +1,5 @@
 package org.darkan.tools.engine.async
 
-/**
- * Phases of region loading.
- */
 enum class LoadPhase {
     IDLE,
     TERRAIN,
@@ -12,10 +9,6 @@ enum class LoadPhase {
     DONE
 }
 
-/**
- * Snapshot of the current loading progress.
- * Thread-safe: created as an immutable snapshot by [AsyncRegionManager].
- */
 data class LoadProgress(
     val totalRegions: Int = 0,
     val regionsReady: Int = 0,

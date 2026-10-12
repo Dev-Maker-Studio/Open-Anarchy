@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.herblore;
 
 import org.darkan.core.cache.ItemDefinitions;
@@ -85,7 +69,6 @@ public class BobBarter {
 
 			String potionName = getNameWithoutDoses(i.getName());
 			int doses = p.getInventory().getNumberOf(i.getId()) * getDosage(i.getName());
-			//Logger.debug("doses " + doses);
 			if (potionDoses.containsKey(potionName)) {
 				ArrayList<Integer> temp = potionDoses.get(potionName);
 				doses += temp.getFirst();
@@ -107,15 +90,10 @@ public class BobBarter {
 				int totalDoses = pot.getFirst();
 				int fullQty = totalDoses / dose;
 				int partialDose = totalDoses % dose;
-				//				Logger.debug("Making " + dose + " dose " + name + " potions.");
-				//				Logger.debug("Total doses available: " + totalDoses + ", converting to " + fullQty + " potions with a remaining " + partialDose + " dose");
-				//
-				//				Logger.debug("item id full: " + ((int)(pot.get(pot.size()-dose))+1));
 				ItemDefinition fullDef = ItemDefinitions.getDefs(((pot.get(pot.size()-dose))));
 				if (fullDef.getName().contains(name) && fullQty > 0)
 					p.getInventory().addItemDrop(fullDef.getCertId() == -1 ? fullDef.getId() : fullDef.getCertId(), fullQty);
 				if (partialDose > 0) {
-					//Logger.debug("item id partial: " + ((int)(pot.get(pot.size()-partialDose))));
 					ItemDefinition partialDef = ItemDefinitions.getDefs((pot.get(pot.size()-partialDose)));
 					if (partialDef.getName().contains(name))
 						p.getInventory().addItemDrop(partialDef.getCertId() == -1 ? partialDef.getId() : partialDef.getCertId(), 1);

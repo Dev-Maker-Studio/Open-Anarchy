@@ -1,9 +1,5 @@
 package org.darkan.core.map
 
-/**
- * Legacy clip flags used by WorldCollision for terrain/object clipping.
- * BW = Blocks walk step, BP = Blocks projectiles, PF = Pathfinder only, PFBW = Both
- */
 enum class ClipFlag(val flag: Int) {
     EMPTY(-1),
 
@@ -46,11 +42,6 @@ enum class ClipFlag(val flag: Int) {
     UNDER_ROOF(1 shl 31);
 
     companion object {
-        /**
-         * Decodes a raw clip mask into the flags it has set, [EMPTY] excluded (its -1 matches
-         * everything). Legacy `com.rs.cache.loaders.map.ClipFlag#getFlags`
-         * (core ClipFlag.java:80-86); the `::tileflags` command prints this.
-         */
         @JvmStatic
         fun getFlags(value: Int): List<ClipFlag> =
             entries.filter { it != EMPTY && (value and it.flag) != 0 }

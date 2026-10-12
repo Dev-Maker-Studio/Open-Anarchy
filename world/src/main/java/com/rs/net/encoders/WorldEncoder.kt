@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.net.encoders
 
 import org.darkan.core.EnvVars
@@ -164,7 +148,6 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         }
     }
 
-    // ======================== Interface packets ========================
 
     fun sendWindowsPane(id: Int, type: Int) {
         session.queuePacket(IfOpenTop(id, type, EMPTY_XTEAS))
@@ -199,12 +182,6 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         session.queuePacket(IfCloseSub(topChildId ushr 16, topChildId and 0xFFFF))
     }
 
-    /**
-     * Tells the client to run its dialogue-abort hook, tearing down the enter-amount /
-     * enter-name prompt and the chat dialogue. Legacy sent ServerPacket.TRIGGER_ONDIALOGABORT
-     * straight from Player#abortDialogue; it lives here because [TriggerOnDialogAbort] is a
-     * Kotlin value class and cannot be constructed from Java.
-     */
     fun sendTriggerOnDialogAbort() {
         session.queuePacket(TriggerOnDialogAbort())
     }
@@ -281,7 +258,6 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         setIFNPCHead(component shr 16, component and 0xFFFF, npcId)
     }
 
-    // ======================== GE / Draw / Hint ========================
 
     fun updateGESlot(slot: Int, progress: Int, item: Int, price: Int, amount: Int, currAmount: Int, totalPrice: Int) {
         session.queuePacket(UpdateGESlot(slot, GrandExchangeOffer(progress, item, price, amount, currAmount, totalPrice)))
@@ -291,19 +267,9 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         session.queuePacket(SetDrawOrder(playerFirst))
     }
 
-    /**
-     * Draws hint trail [index] (0-8) from [start] along the first [size] entries of [stepsX]/[stepsY].
-     *
-     * The trail body is built here because the modern [HintTrail] packet carries it pre-encoded. The
-     * route finder hands its steps out destination-first, so they are written back-to-front, as signed
-     * byte offsets from [start]. A zero offset pair is written ahead of them - and the step count is
-     * padded by one to match - so the trail's first node is the player's own tile; the route finder
-     * doesn't include it.
-     */
     @JvmOverloads
     fun sendHintTrail(start: Tile, modelId: Int, stepsX: IntArray, stepsY: IntArray, size: Int, index: Int = 0) {
         val body = ByteArrayOutputStream(7 + size * 2)
-        // The client reads this length with an offset "unsigned smart": byte - 64, or short - 49152.
         val length = size + 1
         if (length < 64) {
             body.write(length + 64)
@@ -324,10 +290,6 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         session.queuePacket(HintTrail(index, modelId, body.toByteArray()))
     }
 
-    /**
-     * Clears hint trail [index]. A model id of -1 is the client's signal to drop the trail, and it stops
-     * reading before the body, so no body is sent.
-     */
     @JvmOverloads
     fun clearHintTrail(index: Int = 0) {
         session.queuePacket(HintTrail(index, -1, ByteArray(0)))
@@ -349,7 +311,6 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         )
     }
 
-    // ======================== Camera packets ========================
 
     fun sendCameraShake(slotId: Int, v1: Int, v2: Int, v3: Int, v4: Int) {
         session.queuePacket(CamShake(slotId, v1, v2, v3, v4))
@@ -395,15 +356,10 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         sendCameraPos(moveLocalX, moveLocalY, moveZ, -1, -1)
     }
 
-    /**
-     * @param speedToTile defines speed of the camera to the world tile with the default height then the exact position
-     * @param speedToExactDestination defines speed of camera to the exact position specified by previous parameters.
-     */
     fun sendCameraPos(moveLocalX: Int, moveLocalY: Int, moveZ: Int, speedToTile: Int, speedToExactDestination: Int) {
         session.queuePacket(CamMoveTo(moveLocalX, moveLocalY, moveZ, speedToTile, speedToExactDestination))
     }
 
-    // ======================== RunScript ========================
 
     fun sendRunScript(scriptId: Int, vararg params: Any) {
         val l = params.toMutableList()
@@ -423,7 +379,6 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         session.queuePacket(RunScript(scriptId, arrayOf(*params)))
     }
 
-    // ======================== Var packets ========================
 
     fun sendVarc(id: Int, value: Int) {
         session.queuePacket(setVarcPacket(id, value))
@@ -464,7 +419,6 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         }
     }
 
-    // ======================== Player stats / weight / energy ========================
 
     fun sendRunEnergy(energy: Double) {
         session.queuePacket(RunEnergy((energy * PERCENT / player.maxRunEnergy).toInt().coerceIn(0, PERCENT)))
@@ -480,7 +434,6 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         }
     }
 
-    // ======================== Zone update packets ========================
 
     private fun sendZoneHeader(tile: Tile) {
         val baseCoords = MapUtils.decode(Structure.CHUNK, player.sceneBaseChunkId)
@@ -574,7 +527,6 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         )
     }
 
-    // ======================== Message packets ========================
 
     fun sendMessage(type: ChatMessageType, text: String, p: Player?) {
         session.queuePacket(GameMessage(type, text, p?.account?.displayName))
@@ -600,7 +552,6 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         session.queuePacket(ChatFilterSettingsPrivateChat(player.account.social.status.toInt()))
     }
 
-    // ======================== Map region packets ========================
 
     fun sendDynamicMapRegion() {
         val chunks = BuildInstancedRegion.chunks(player.chunkX, player.chunkY, player.mapSize, ::instancedChunkDescriptor)
@@ -672,14 +623,11 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         return regionIds
     }
 
-    // ======================== Cutscene ========================
 
     fun sendCutscene(id: Int) {
-        // TODO: Load cutscene areas from cache to provide XTEA keys
         session.queuePacket(Cutscene(id, emptyArray(), player.appearance.appeareanceData!!))
     }
 
-    // ======================== Player option ========================
 
     @Deprecated("Use modern player option system")
     fun sendPlayerOption(option: String, slot: Int, top: Boolean) {
@@ -691,7 +639,6 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         session.queuePacket(PlayerOption(option, slot, top, cursor))
     }
 
-    // ======================== Entity updates ========================
 
     fun sendLocalPlayersUpdate() {
         val snapshot = EntitySnapshotFactory.buildPlayerSnapshot(player)
@@ -708,7 +655,6 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
             session.queuePacket(NpcUpdate(bytes))
     }
 
-    // ======================== Spot anim ========================
 
     fun sendSpotAnim(spotAnim: SpotAnim, target: Any) {
         val targetHash = when (target) {
@@ -729,7 +675,6 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         )
     }
 
-    // ======================== System / misc ========================
 
     fun sendSystemUpdate(delay: Int) {
         session.queuePacket(UpdateRebootTimer(delay))
@@ -796,10 +741,6 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
 
     fun sendLogout(lobby: Boolean) {
         session.queuePacket(if (lobby) LogoutLobby() else LogoutFull())
-        // Every caller (Player.logout, forceLogout, idleLog) finishes the player immediately after
-        // this returns, and the world tick's flush pass skips finished players - so without a flush
-        // here the logout packet is queued and never written, and the client just sits there. The
-        // legacy encoder flushed on the spot for exactly this reason.
         session.requestFlush()
         if (player.hasFinished())
             player.session.close()
@@ -833,7 +774,6 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         session.queuePacket(SetCursor(cursor, walkHereReplace))
     }
 
-    // ======================== Convenience / composite methods ========================
 
     fun sendGameBarStages() {
         sendVar(1054, player.clanStatus)

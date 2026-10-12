@@ -27,20 +27,15 @@ import org.darkan.cs2.ir.VarAssign
 import org.darkan.cs2.ir.VarRef
 import org.darkan.cs2.ir.VarSpace
 
-/** What a block does, once its instructions are folded back into expressions. */
 class LiftedBlock(
     val statements: List<Stmt>,
-    /** Set when the block ends in a conditional branch. */
     val condition: Compare?,
-    /** Set when the block ends in a `SWITCH`. */
     val switchSubject: Expr?,
     val switchTable: Int,
     val returns: List<Expr>?,
-    /** Values still on the stacks at the end, handed to the successor blocks. */
     val exitStack: StackState,
 )
 
-/** Expressions left on the three operand stacks at a control-flow edge. */
 data class StackState(
     val ints: List<Expr> = emptyList(),
     val strings: List<Expr> = emptyList(),
@@ -49,13 +44,6 @@ data class StackState(
     val isEmpty: Boolean get() = ints.isEmpty() && strings.isEmpty() && longs.isEmpty()
 }
 
-/**
- * Folds a basic block's instructions back into expression trees.
- *
- * CS2 is a stack machine emitted by an expression compiler, so replaying the
- * stack recovers the original expressions almost exactly: each opcode pops its
- * arguments in reverse order and pushes its results.
- */
 class Cs2Lifter(
     private val script: Cs2Script,
     private val context: Cs2Context,
@@ -73,9 +61,6 @@ class Cs2Lifter(
         val longs = ArrayList(entry.longs)
         val statements = ArrayList<Stmt>()
 
-        // The three stacks are independent, so their contents alone cannot say
-        // which value was pushed first. Return values have to go back out in the
-        // original order, so live values are also tracked in one ordered list.
         val live = ArrayList<Expr>(entry.ints + entry.strings + entry.longs)
 
         fun stackFor(type: Cs2Type) = when (type) {
@@ -93,7 +78,6 @@ class Cs2Lifter(
             return value
         }
 
-        /** Pops `count` values, restoring source order. */
         fun popMany(type: Cs2Type, count: Int): List<Expr> {
             val out = ArrayList<Expr>(count)
             repeat(count) { out.add(pop(type)) }
@@ -106,11 +90,6 @@ class Cs2Lifter(
             live.add(value)
         }
 
-        /**
-         * The top `count` live values in the order they were pushed. Arguments
-         * are spread across three stacks, so their relative order is only
-         * visible here - and it has to survive to re-compilation.
-         */
         fun argumentsInPushOrder(count: Int): List<Expr> = live.takeLast(count)
 
         var index = block.start
@@ -119,12 +98,8 @@ class Cs2Lifter(
             val op = instruction.op
             val operand = instruction.intOperand
 
-            // A run of stores with nothing pushed between them is one parallel
-            // assignment: every value was computed before any was stored.
             val run = storeRunLength(index, block.end)
             if (run > 1) {
-                // The first store takes the value pushed last, so both lists are
-                // reversed to put them back in source order.
                 val stores = ArrayList<Expr>(run)
                 val popped = ArrayList<Expr>(run)
                 for (offset in 0 until run) {
@@ -174,7 +149,6 @@ class Cs2Lifter(
         )
     }
 
-    /** The stack a single-value store consumes, or null when it is not one. */
     private fun storeType(op: Cs2Op): Cs2Type? = when (op) {
         Cs2Op.POP_INT_LOCAL, Cs2Op.POP_VAR, Cs2Op.POP_VARBIT, Cs2Op.POP_VARC_INT -> Cs2Type.INT
         Cs2Op.POP_STRING_LOCAL, Cs2Op.POP_VARC_STRING -> Cs2Type.STRING
@@ -182,7 +156,6 @@ class Cs2Lifter(
         else -> null
     }
 
-    /** Where a single-value store puts its value. */
     private fun storeTarget(instruction: Cs2Instruction, type: Cs2Type): Expr =
         when (instruction.op) {
             Cs2Op.POP_INT_LOCAL, Cs2Op.POP_STRING_LOCAL, Cs2Op.POP_LONG_LOCAL ->
@@ -194,13 +167,6 @@ class Cs2Lifter(
             else -> error("Not a store: ${instruction.op.name}")
         }
 
-    /**
-     * How many consecutive local stores of the *same* type start at [index].
-     *
-     * Same-type runs pop in exact reverse of the push order, so the pairing is
-     * unambiguous. A mixed-type run draws from different stacks and its push
-     * order cannot be recovered positionally, so it is left as separate stores.
-     */
     private fun storeRunLength(index: Int, end: Int): Int {
         val type = storeType(script[index].op) ?: return 0
         var length = 0
@@ -209,8 +175,6 @@ class Cs2Lifter(
     }
 
     private fun liftCondition(op: Cs2Op, pop: (Cs2Type) -> Expr): Compare {
-        // `BRANCH_IF_TRUE` / `BRANCH_IF_FALSE` compare a single value against a
-        // literal; everything else pops both sides.
         val longs = Cs2Cfg.isLongBranch(op)
         val type = if (longs) Cs2Type.LONG else Cs2Type.INT
         return when (op) {
@@ -336,16 +300,11 @@ class Cs2Lifter(
         )
     }
 
-    /** The type a hook format character names, where it is known. */
     private fun hookArgType(spec: Char): ArgType? = when (spec) {
         'I' -> ArgType.COMPONENT
         else -> null
     }
 
-    /**
-     * Replaces constant arguments with typed ones where the opcode says what
-     * they mean. Only literals are rewritten - an expression keeps its shape.
-     */
     private fun applyArgTypes(op: Cs2Op, args: List<Expr>): List<Expr> {
         if (op.argTypes.isEmpty()) return args
         var intIndex = 0
@@ -357,13 +316,6 @@ class Cs2Lifter(
         }
     }
 
-    /**
-     * Result counts for one instruction.
-     *
-     * `ENUM` is self-describing: its second argument is the value type as a
-     * character code. The other polymorphic opcodes take the param id as their
-     * last int argument and the type comes from the param definition.
-     */
     private fun pushCounts(op: Cs2Op, intArgs: List<Expr>): ReturnSignature {
         if (op.kind != OpKind.PARAM) {
             return ReturnSignature(op.pushInt, op.pushStr, op.pushLong)
@@ -384,17 +336,11 @@ class Cs2Lifter(
         else -> Cs2Type.INT
     }
 
-    /**
-     * Pushes a call's results. A single result becomes the expression itself; a
-     * call producing several binds them all in one statement so the emitted
-     * TypeScript can destructure it.
-     */
     private fun emitResults(
         call: Expr,
         signature: ReturnSignature,
         statements: MutableList<Stmt>,
         push: (Expr) -> Unit,
-        /** The callee's push order, when known; results are bound in it. */
         order: List<Cs2Type> = emptyList(),
     ) {
         if (signature.total == 0) {
@@ -405,8 +351,6 @@ class Cs2Lifter(
             push(call)
             return
         }
-        // The name carries the type: a destructured binding has no annotation,
-        // so this is how the compiler knows which stack each result came off.
         val types = if (order.size == signature.total) order else {
             List(signature.ints) { Cs2Type.INT } +
                 List(signature.strings) { Cs2Type.STRING } +
@@ -424,10 +368,6 @@ class Cs2Lifter(
         names.forEach(push)
     }
 
-    /**
-     * Hook setters take a callback described by a format string: one character
-     * per bound argument, optionally followed by `Y` for a trigger list.
-     */
     private fun liftHook(
         instruction: Cs2Instruction,
         pop: (Cs2Type) -> Expr,
@@ -448,8 +388,6 @@ class Cs2Lifter(
             triggers = popMany(Cs2Type.INT, count)
         }
 
-        // Bound arguments were pushed in order, so pop them back to front. The
-        // spec character also names the type: `I` marks a component.
         val args = arrayOfNulls<Expr>(spec.length)
         for (position in spec.indices.reversed()) {
             args[position] = when (spec[position]) {

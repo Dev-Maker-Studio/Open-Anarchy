@@ -133,10 +133,6 @@ public class KingBolrenTreeGnomeVillageD extends Conversation {
 					addNPC(NPC, HeadE.CALM_TALK, "Hooray, you're amazing. I didn't think it was possible but you've saved us.");
 					addNPC(NPC, HeadE.CALM_TALK, "Once the orbs are replaced we will be safe once more.");
 					addNext(()-> this.player.getQuestManager().completeQuest(Quest.TREE_GNOME_VILLAGE));
-					/* We must begin the ceremony immediately.");
-					addPlayer(HeadE.HAPPY_TALKING, "What does the ceremony involve?");
-					addNPC(NPC, HeadE.CALM_TALK, "The spirit tree has looked over us for centuries. Now we must pay our respects.");
-					addNext(()->{TreeGnomeParty(player);});*/
 
 					return;
 				}

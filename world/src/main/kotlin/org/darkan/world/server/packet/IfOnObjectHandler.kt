@@ -32,16 +32,12 @@ class IfOnObjectHandler : PacketHandler<Player, IfOnObject> {
             player.setRun(true)
 
         when (packet.interfaceId) {
-            // Item on object. The item has to come out of the player's own container and be
-            // checked against the id the client claims - trusting packet.itemId here both routed
-            // every "use X on Y" to the wrong event and let a client name an item it does not hold.
             Interface.inventory -> {
                 val item = player.inventory.getItem(packet.slotId) ?: return
                 if (item.id != packet.itemId)
                     return
                 ObjectHandler.handleItemOnObject(player, obj, packet.interfaceId, item, packet.slotId)
             }
-            // Familiar special attack on an object.
             662, 747 -> {
                 val familiar = player.familiar ?: return
                 player.resetWalkSteps()
@@ -50,7 +46,6 @@ class IfOnObjectHandler : PacketHandler<Player, IfOnObject> {
                 )
                     familiar.castSpecial(obj)
             }
-            // Anything else (spells, scrolls, ...): once before walking, once on arrival.
             else -> {
                 PluginManager.handle(
                     InterfaceOnObjectEvent(player, obj, packet.interfaceId, packet.componentId, packet.slotId, false)

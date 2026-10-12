@@ -10,12 +10,6 @@ import org.darkan.core.social.gateway.SocialGatewayWireMessage
 import org.darkan.core.social.gateway.SocialNotification
 import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * One connected world: a way to push a line of JSON at it, and an inbox that processes its
- * messages one at a time in the order they arrived, so a player's online, offline and actions
- * can never be applied out of order. The transport is a lambda rather than the socket so a test
- * can drive the gateway with no socket behind it.
- */
 class WorldSession(
     val worldId: Int,
     val worldName: String,

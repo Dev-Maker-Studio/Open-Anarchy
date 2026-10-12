@@ -322,7 +322,6 @@ fun mapVelorina() {
         else
             Velorina(player, npc)
     }
-    //Temporary method to allow players to repair their quest stage
     onItemOnNpc(1683) { e ->
         if(e.player.isQuestComplete(Quest.GHOSTS_AHOY) || !e.player.isQuestStarted(Quest.GHOSTS_AHOY))
             return@onItemOnNpc

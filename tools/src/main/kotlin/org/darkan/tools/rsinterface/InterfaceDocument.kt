@@ -6,65 +6,11 @@ import world.gregs.voidps.cache.definition.data.InterfaceDefinition
 import world.gregs.voidps.cache.definition.decoder.InterfaceDecoder
 import java.util.Collections
 
-/** Sentinel for "this slot's parent is supplied by the other field". */
 private const val UNSET = Int.MIN_VALUE
 
-/**
- * The editable model of one interface: an ordered component array plus undo,
- * validation, and a lazily rebuilt [InterfaceInstance] for the renderer.
- *
- * ```
- * cache index 3  --decode-->  InterfaceDocument  --instance()-->  InterfaceInstance
- *      ^                        (definitions)                      (render state)
- *      |                             |
- *      +--------- InterfaceStore.save ---------+
- * ```
- *
- * ### Definition state versus render state
- *
- * A document owns `InterfaceComponentDefinition`s. [InterfaceInstance] owns
- * [ComponentState]s, which are *seeded* from those definitions and then diverge -
- * a CS2 script or the editor's live property panel writes render state, never the
- * definition. That means:
- *
- * - Editing a definition through [edit] / [editComponent] and then asking for
- *   [instance] re-seeds the states, so the change is visible.
- * - Editing a [ComponentState] directly is invisible to the document and is
- *   **lost** the next time the instance is re-seeded or rebuilt. [bakeLiveState]
- *   promotes live state back into the definitions, which is the "tweak live, then
- *   commit" workflow.
- *
- * ### Reindexing
- *
- * A component's array position is its cache file number, the low 16 bits of its
- * `id`, the value its children hold in `parent`, and the low 16 bits of every CS2
- * component hash aimed at it. Nothing indirects any of that, so every insert,
- * delete and move shifts a range of components and has to rewrite all four. Every
- * structural method here funnels through one private routine that:
- *
- * 1. rewrites `id` to `index or (interfaceId shl 16)` for every component,
- * 2. rewrites `parent` through the old-index to new-index map, and drops a parent
- *    that no longer exists back to [ROOT],
- * 3. rewrites integer hook arguments that look like a component hash of *this*
- *    interface (see [ComponentDefinitions.isComponentHash]) to the new hash, and
- *    rewrites a hash whose target was deleted to -1, the client's "no component"
- *    value, recording each of those in [lastReindexIssues],
- * 4. remaps [selected] so the selection follows the component it was on.
- *
- * Two classes of reference are deliberately **not** remapped, because they cannot
- * be: component hashes belonging to *other* interfaces (an interface this
- * document has never seen may hold `thisInterface shl 16 or index` in a script
- * argument, and nothing enumerates those), and every hash in compiled CS2
- * bytecode. Renumbering an interface that other content already references is a
- * breaking change no matter how careful the editor is; append rather than insert
- * when that matters. When [id] is 0 hash remapping is disabled entirely, since
- * every small integer argument would look like a component hash of interface 0.
- */
 class InterfaceDocument(
-    /** Interface id; also the archive number in cache index 3. */
     val id: Int,
     components: List<InterfaceComponentDefinition> = emptyList(),
-    /** Undo stack; injectable so a caller can widen the limit or share a clock. */
     val history: InterfaceHistory = InterfaceHistory()
 ) {
 
@@ -75,35 +21,22 @@ class InterfaceDocument(
     private var structureDirty = true
     private var statesDirty = false
 
-    /** Whether hook argument hashes can be remapped at all; see the class doc. */
     private val remapHashes = id > 0
 
-    /** True when there are edits that have not been persisted by [InterfaceStore]. */
     var dirty: Boolean = false
         private set
 
-    /**
-     * Component the UI has selected, or -1. Structural edits move this so it keeps
-     * pointing at the same component, or clear it when that component is gone.
-     */
     var selected: Int = -1
         set(value) {
             field = if (value in items.indices) value else -1
         }
 
-    /** Invoked whenever a structural edit produced a brand new [InterfaceInstance]. */
     var onRebuild: ((InterfaceInstance) -> Unit)? = null
 
-    /**
-     * References the last structural edit could not preserve, cleared at the start
-     * of every edit. Surface these; they are silent data loss otherwise.
-     */
     var lastReindexIssues: List<InterfaceIssue> = emptyList()
         private set
 
     init {
-        // The invariant is enforced up front so a document imported from JSON, or
-        // built by hand, is indistinguishable from one decoded out of the cache.
         for (index in items.indices) {
             items[index].id = ComponentDefinitions.pack(id, index)
         }
@@ -111,23 +44,15 @@ class InterfaceDocument(
 
     val componentCount: Int get() = items.size
 
-    /** Components in cache order, which is also draw order. Read only. */
     val components: List<InterfaceComponentDefinition> get() = view
 
     fun component(index: Int): InterfaceComponentDefinition? = items.getOrNull(index)
 
-    /** The packed `interfaceId shl 16 or index` hash for a component. */
     fun hash(index: Int): Int = ComponentDefinitions.pack(id, index)
 
-    // --- Tree queries ------------------------------------------------------
 
-    /** Child indices of [parentIndex] in draw order; pass [ROOT] for the top level. */
     fun children(parentIndex: Int): List<Int> = items.indices.filter { items[it].parent == parentIndex }
 
-    /**
-     * [index] plus every descendant, in ascending array order. Cycle safe: each
-     * component is visited at most once.
-     */
     fun subtree(index: Int): List<Int> {
         if (index !in items.indices) {
             return emptyList()
@@ -135,7 +60,6 @@ class InterfaceDocument(
         return collectSubtree(index, childMap()).sorted()
     }
 
-    /** How many parents deep [index] sits, or -1 when it is not a valid index. */
     fun depth(index: Int): Int {
         if (index !in items.indices) {
             return -1
@@ -150,12 +74,7 @@ class InterfaceDocument(
         return depth
     }
 
-    // --- Instance ----------------------------------------------------------
 
-    /**
-     * The instance the renderer should draw, rebuilt when the structure changed
-     * and re-seeded when only definition fields changed. Cheap to call per frame.
-     */
     fun instance(): InterfaceInstance {
         var current = cachedInstance
         if (current == null || structureDirty) {
@@ -165,28 +84,22 @@ class InterfaceDocument(
             statesDirty = false
             onRebuild?.invoke(current)
         } else if (statesDirty) {
-            // Same ComponentState objects, re-seeded from the definitions they were
-            // built from, so nothing holding on to the instance needs to know.
             current.reset()
             statesDirty = false
         }
         return current
     }
 
-    /** The `InterfaceDefinition` backing the current [instance]. */
     fun definition(): InterfaceDefinition = instance().definition
 
-    /** Forces the next [instance] call to re-seed every [ComponentState]. */
     fun invalidateStates() {
         statesDirty = true
     }
 
-    /** Forces the next [instance] call to build a whole new instance. */
     fun rebuild() {
         structureDirty = true
     }
 
-    // --- History -----------------------------------------------------------
 
     val canUndo: Boolean get() = history.canUndo
 
@@ -196,7 +109,6 @@ class InterfaceDocument(
 
     val redoLabel: String? get() = history.redoLabel
 
-    /** Deep copy of the component array, the unit the history stores. */
     fun snapshot(): Array<InterfaceComponentDefinition> =
         Array(items.size) { ComponentDefinitions.deepCopy(items[it]) }
 
@@ -216,10 +128,6 @@ class InterfaceDocument(
         history.clear()
     }
 
-    /**
-     * Closes any coalescing gesture, so the next edit opens a new undo step.
-     * Call on mouse release or when an input loses focus.
-     */
     fun endEdit() {
         history.endCoalescing()
     }
@@ -235,32 +143,11 @@ class InterfaceDocument(
         dirty = true
     }
 
-    /** Marks the document as matching what is on disk again. */
     fun markSaved() {
         dirty = false
     }
 
-    // --- Property edits ----------------------------------------------------
 
-    /**
-     * Runs [block] as one undoable step.
-     *
-     * Everything the UI writes to a definition should go through here, whatever
-     * the field: there is intentionally no per-field setter, because
-     * `InterfaceComponentDefinition` has around a hundred fields and a property
-     * panel needs all of them.
-     *
-     * @param label what the step is called in the undo menu.
-     * @param coalesceKey identity of a continuous gesture; consecutive edits
-     *   sharing a key inside [InterfaceHistory.coalesceWindowMillis] collapse into
-     *   a single undo step. Include the component index, e.g. `"pos@$index"`, so
-     *   dragging one component does not swallow the previous edit to another.
-     *
-     * Structural fields are allowed too: `parent` changes are detected and trigger
-     * an instance rebuild. Note that changing `parent` this way does **not**
-     * reposition the component in the array, so use [reparent] when draw order
-     * matters.
-     */
     fun <T> edit(label: String, coalesceKey: String? = null, block: () -> T): T {
         beginEdit(label, coalesceKey)
         val parentsBefore = IntArray(items.size) { items[it].parent }
@@ -280,7 +167,6 @@ class InterfaceDocument(
         return result
     }
 
-    /** [edit] scoped to one component; a no-op returning false when out of range. */
     fun editComponent(
         index: Int,
         label: String,
@@ -292,7 +178,6 @@ class InterfaceDocument(
         return true
     }
 
-    /** [edit] applied to several components as one step; returns how many were hit. */
     fun editComponents(
         indices: Collection<Int>,
         label: String,
@@ -313,23 +198,10 @@ class InterfaceDocument(
         dirty = true
     }
 
-    // --- Structural edits --------------------------------------------------
 
-    /**
-     * Inserts a new component of [type] with default fields.
-     *
-     * @param parentIndex the container to attach to, or [ROOT] for the top level.
-     * @param insertAt position among that parent's children, or -1 to append.
-     * @return the new component's index, or -1 when [parentIndex] is invalid or the
-     *   interface is already at [ComponentDefinitions.MAX_COMPONENTS].
-     */
     fun addComponent(type: Int, parentIndex: Int = ROOT, insertAt: Int = -1): Int =
         addComponent(ComponentTemplates.defaults(type), parentIndex, insertAt)
 
-    /**
-     * Inserts [definition] as a new component; the id and parent are overwritten to
-     * keep the invariant, everything else is used as given.
-     */
     fun addComponent(
         definition: InterfaceComponentDefinition,
         parentIndex: Int = ROOT,
@@ -354,11 +226,6 @@ class InterfaceDocument(
         return position
     }
 
-    /**
-     * Instantiates a [ComponentTemplate], which may produce a small tree.
-     *
-     * @return the new indices in template order; the template's own root is first.
-     */
     fun addTemplate(
         template: ComponentTemplate,
         parentIndex: Int = ROOT,
@@ -394,18 +261,8 @@ class InterfaceDocument(
         return IntArray(created.size) { position + it }
     }
 
-    /** Deletes [index] and everything under it. */
     fun deleteComponent(index: Int): Boolean = deleteComponents(listOf(index)) > 0
 
-    /**
-     * Deletes several subtrees as one undoable step.
-     *
-     * Descendants are always removed with their parent, so a component can never be
-     * left pointing at a hole. The selection falls back to the nearest surviving
-     * ancestor of whatever was selected.
-     *
-     * @return how many components were removed in total.
-     */
     fun deleteComponents(indices: Collection<Int>): Int {
         val roots = topLevel(indices)
         if (roots.isEmpty()) {
@@ -437,20 +294,8 @@ class InterfaceDocument(
         return count
     }
 
-    /** Deep copies [index] and its subtree, inserting the copy after the original. */
     fun duplicateComponent(index: Int): Int = duplicateComponents(listOf(index)).firstOrNull() ?: -1
 
-    /**
-     * Deep copies several subtrees as one step. Each copy is inserted immediately
-     * after its source subtree.
-     *
-     * Hook arguments inside a copy that pointed at another component of the same
-     * source subtree are repointed at the corresponding copy, so a duplicated
-     * widget wires itself up rather than driving the original. Arguments pointing
-     * outside the subtree are left aimed where they were.
-     *
-     * @return the index of each copy's root, in source order.
-     */
     fun duplicateComponents(indices: Collection<Int>): IntArray {
         val roots = topLevel(indices)
         if (roots.isEmpty()) {
@@ -504,13 +349,6 @@ class InterfaceDocument(
         return IntArray(groups.size) { groups[it].slots[0] }
     }
 
-    /**
-     * Moves [index] and its subtree under [newParent] at sibling position
-     * [insertAt] (-1 appends).
-     *
-     * The subtree becomes a contiguous block in the array, which means components
-     * between the old and the new location are renumbered.
-     */
     fun reparent(index: Int, newParent: Int, insertAt: Int = -1): Boolean {
         if (index !in items.indices) {
             return false
@@ -519,11 +357,6 @@ class InterfaceDocument(
         return moveSubtrees(listOf(index), newParent, insertAt, label) > 0
     }
 
-    /**
-     * [reparent] applied to several subtrees at once, keeping their relative order.
-     * Doing it in one pass matters: each move renumbers the array, so moving them
-     * one at a time would leave the caller's remaining indices stale.
-     */
     fun reparentAll(indices: Collection<Int>, newParent: Int, insertAt: Int = -1): Int {
         val roots = topLevel(indices)
         if (roots.isEmpty()) {
@@ -533,12 +366,6 @@ class InterfaceDocument(
         return moveSubtrees(roots, newParent, insertAt, label)
     }
 
-    /**
-     * Lifts [roots] and their subtrees out of the array and reinserts them as one
-     * contiguous block under [newParent].
-     *
-     * @return how many subtrees moved, 0 when the move was rejected.
-     */
     private fun moveSubtrees(roots: List<Int>, newParent: Int, insertAt: Int, label: String): Int {
         if (roots.isEmpty() || !validParent(newParent)) {
             return 0
@@ -551,8 +378,6 @@ class InterfaceDocument(
             moving.addAll(collectSubtree(root, map))
         }
         if (newParent in moving) {
-            // The new parent is inside what is being moved, which would detach the
-            // whole block from the root and build a parent cycle.
             return 0
         }
         val remaining = items.indices.filter { it !in moving }
@@ -574,7 +399,6 @@ class InterfaceDocument(
         return roots.size
     }
 
-    /** Shifts [index] within its sibling group, negative moves it earlier. */
     fun move(index: Int, delta: Int): Boolean {
         if (index !in items.indices || delta == 0) {
             return false
@@ -589,10 +413,6 @@ class InterfaceDocument(
         return reorder(index, target)
     }
 
-    /**
-     * Moves [index] to [toPosition] within its sibling group, where position is
-     * counted over the parent's children in draw order.
-     */
     fun reorder(index: Int, toPosition: Int): Boolean {
         if (index !in items.indices) {
             return false
@@ -600,15 +420,6 @@ class InterfaceDocument(
         return reparent(index, items[index].parent, toPosition)
     }
 
-    /**
-     * Changes a component's type.
-     *
-     * Type decides which block of fields the cache stores, so switching type
-     * silently drops whatever the old type owned on the next save.
-     *
-     * @param applyDefaults also resets the new type's own fields to the template
-     *   defaults, keeping geometry, parent, name, options and hooks.
-     */
     fun setType(index: Int, type: Int, applyDefaults: Boolean = false): Boolean {
         val component = items.getOrNull(index) ?: return false
         if (component.type == type) {
@@ -622,28 +433,7 @@ class InterfaceDocument(
         }
     }
 
-    // --- Live state -------------------------------------------------------
 
-    /**
-     * Writes the live [ComponentState] values back into the definitions, so a
-     * session of dragging and recolouring in the property panel becomes something
-     * [InterfaceStore] can save.
-     *
-     * Exactly the fields [ComponentState] seeds from the definition are written
-     * back. State that has no definition home is **not** baked, because the cache
-     * has nowhere to put it: `aspectX`/`aspectY` (the client defaults them to 1:1
-     * and only CS2 changes them), `scrollX`/`scrollY`, `itemId`/`itemAmount`, and
-     * the computed box model (`x`, `y`, `width`, `height`, `screenX`, `screenY`).
-     *
-     * The interaction fields [ComponentState] grew for the runtime - the event
-     * bitfield, the option array, the option base and the continue text - are not
-     * baked yet either, deliberately, while their names settle. They map onto
-     * `setting.setting`, `options`, `name`, `optionOverride`, `useOption` and
-     * `disableHover` when that is worth wiring up.
-     *
-     * @param indices components to bake, or null for all of them.
-     * @return how many components were written.
-     */
     fun bakeLiveState(indices: Collection<Int>? = null): Int {
         val current = cachedInstance ?: return 0
         val targets = (indices ?: items.indices).filter { it in items.indices }
@@ -705,21 +495,11 @@ class InterfaceDocument(
         definition.lineMirrored = state.lineMirrored
     }
 
-    // --- Validation --------------------------------------------------------
 
-    /** Developer facing warnings; see [InterfaceValidator] for the rule set. */
     fun validate(assets: InterfaceAssets = InterfaceAssets.NONE): List<InterfaceIssue> =
         InterfaceValidator.validate(id, items, assets)
 
-    // --- Copying ----------------------------------------------------------
 
-    /**
-     * An independent document holding the same components under a new interface id.
-     *
-     * Hook arguments that were component hashes of this interface are repacked onto
-     * [newId], so a copied interface drives its own components. Backs
-     * [InterfaceStore.saveAs].
-     */
     fun copyAs(newId: Int): InterfaceDocument {
         val copies = List(items.size) { ComponentDefinitions.deepCopy(items[it]) }
         val count = copies.size
@@ -737,17 +517,7 @@ class InterfaceDocument(
         return InterfaceDocument(newId, copies)
     }
 
-    // --- Reindexing internals ---------------------------------------------
 
-    /**
-     * One position in the new component array: either an existing component, moved
-     * from [source], or a freshly created one.
-     *
-     * A created component's parent is expressed either as an old index
-     * ([parentOld], remapped like everybody else) or as a position in the new array
-     * ([parentSlot]), which is what lets a template or a duplicated subtree point
-     * at components that do not exist yet.
-     */
     private class Slot(
         val source: Int,
         val created: InterfaceComponentDefinition? = null,
@@ -756,22 +526,11 @@ class InterfaceDocument(
     )
 
     private class DuplicateGroup(
-        /** Source components in pre-order; the subtree root first. */
         val order: List<Int>,
-        /** Array position the copies are inserted at. */
         val position: Int,
-        /** New index of each copy, filled in while the slot list is built. */
         val slots: IntArray
     )
 
-    /**
-     * Rewrites the component array to the ordering described by [slots] and repairs
-     * every index that encodes a component position. This is the only place the
-     * array is reordered.
-     *
-     * @param selectionSource the old index the selection should follow, or -1.
-     * @return the old index to new index map; -1 for components that were removed.
-     */
     private fun applySlots(slots: List<Slot>, selectionSource: Int = selected): IntArray {
         val previousCount = items.size
         val oldToNew = IntArray(previousCount) { -1 }
@@ -847,10 +606,6 @@ class InterfaceDocument(
         return ROOT
     }
 
-    /**
-     * Repoints hook arguments inside freshly made copies from the originals to the
-     * copies. Runs after [applySlots], so both sides are already in new indices.
-     */
     private fun repointCopies(groups: List<DuplicateGroup>, oldToNew: IntArray) {
         if (!remapHashes) {
             return
@@ -870,7 +625,6 @@ class InterfaceDocument(
         }
     }
 
-    /** Child indices per parent, built once for the tree walks below. */
     private fun childMap(): Map<Int, List<Int>> = items.indices.groupBy { items[it].parent }
 
     private fun collectSubtree(index: Int, map: Map<Int, List<Int>>): List<Int> {
@@ -892,7 +646,6 @@ class InterfaceDocument(
         return result
     }
 
-    /** [index] and its descendants in pre-order, so a parent always precedes a child. */
     private fun orderedSubtree(index: Int, map: Map<Int, List<Int>>): List<Int> {
         val result = ArrayList<Int>()
         val seen = BooleanArray(items.size)
@@ -910,17 +663,9 @@ class InterfaceDocument(
         return result
     }
 
-    /** True for [ROOT] or an existing component. */
     private fun validParent(parentIndex: Int): Boolean =
         parentIndex == ROOT || parentIndex in items.indices
 
-    /**
-     * Where a new child of [parentIndex] belongs in the array so that it lands at
-     * sibling position [insertAt].
-     *
-     * Siblings are not necessarily contiguous in a cache authored interface, so
-     * "append" means after the end of the last sibling's whole subtree.
-     */
     private fun insertionPosition(parentIndex: Int, insertAt: Int): Int {
         val siblings = children(parentIndex)
         if (insertAt in siblings.indices) {
@@ -933,11 +678,6 @@ class InterfaceDocument(
         return if (parentIndex in items.indices) parentIndex + 1 else items.size
     }
 
-    /**
-     * The [insertionPosition] equivalent for [reparent], counted over [remaining]
-     * (the array with the moving subtree taken out) and ignoring anything in
-     * [moving].
-     */
     private fun insertionPositionAmong(
         remaining: List<Int>,
         moving: Set<Int>,
@@ -960,11 +700,6 @@ class InterfaceDocument(
         return remaining.size
     }
 
-    /**
-     * The given indices with anything that also has an ancestor in the set removed,
-     * sorted ascending. Deleting or duplicating both a parent and its child would
-     * otherwise process the child twice.
-     */
     private fun topLevel(indices: Collection<Int>): List<Int> {
         val requested = indices.filter { it in items.indices }.toHashSet()
         return requested.filter { index ->
@@ -1023,16 +758,8 @@ class InterfaceDocument(
 
     companion object {
 
-        /** Parent value meaning "no parent". */
         const val ROOT = ComponentDefinitions.ROOT
 
-        /**
-         * Decodes interface [id] out of cache index 3.
-         *
-         * Returns an empty document when the archive is absent, which is exactly
-         * what [InterfaceStore.newInterface] wants; check
-         * [InterfaceStore.exists] first if the difference matters.
-         */
         fun decode(cache: Cache, id: Int): InterfaceDocument {
             val decoder = InterfaceDecoder()
             val definitions = decoder.create(id + 1)
@@ -1040,11 +767,9 @@ class InterfaceDocument(
             return of(definitions[id], id)
         }
 
-        /** Wraps an already decoded definition. */
         fun of(definition: InterfaceDefinition, id: Int = definition.id): InterfaceDocument =
             InterfaceDocument(id, definition.components?.toList() ?: emptyList())
 
-        /** An interface with no components yet. */
         fun empty(id: Int): InterfaceDocument = InterfaceDocument(id)
     }
 }

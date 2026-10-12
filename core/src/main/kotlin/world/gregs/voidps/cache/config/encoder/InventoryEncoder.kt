@@ -4,9 +4,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.config.data.InventoryDefinition
 
-/**
- * Writes an inventory (`inv`, index 2 archive 5) file.
- */
 class InventoryEncoder : OpcodeEncoder<InventoryDefinition>() {
 
     override fun opcodes(definition: InventoryDefinition): IntArray {

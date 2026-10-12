@@ -27,42 +27,16 @@ import java.io.File
 import java.lang.reflect.Field
 import java.nio.BufferOverflowException
 
-/**
- * Raised when a save would have to write to a cache that cannot be written to.
- *
- * Both cache implementations the tools use extend
- * [world.gregs.voidps.cache.ReadOnlyCache], whose `write` throws and whose
- * `update` returns false, so this is the normal outcome of [InterfaceStore.save]
- * today. It exists so the failure is loud: the alternative is a save button that
- * appears to work and changes nothing.
- */
 class CacheNotWritableException(message: String) : IllegalStateException(message)
 
-/** What [InterfaceStore.save] should do besides writing components. */
 data class SaveOptions(
-    /** Refuse to replace an interface that already exists when false. */
     val overwrite: Boolean = true,
-    /** Dump the current archive bytes next to the JSON before writing. */
     val backup: Boolean = true,
-    /** Write the JSON sidecar as well, which is the diffable source of truth. */
     val exportJson: Boolean = true,
-    /**
-     * Overwrite files left behind by deleted trailing components with an inert
-     * placeholder, since the cache API has no way to remove a file from an archive.
-     */
     val padStaleFiles: Boolean = true,
-    /** Decode each encoded component back and report fields that changed. */
     val verify: Boolean = true
 )
 
-/**
- * One field that did not survive an encode followed by a decode.
- *
- * [derived] marks fields the decoder computes rather than reads - `id` comes from
- * the archive and file numbers, `hasScript` and `clickable` are set as a side
- * effect of reading hooks and key bindings - so a difference there is bookkeeping
- * rather than data loss.
- */
 data class FieldDifference(
     val componentIndex: Int,
     val field: String,
@@ -73,51 +47,21 @@ data class FieldDifference(
     override fun toString(): String = "[$componentIndex] $field: wrote $written, read back $decoded"
 }
 
-/** Outcome of [InterfaceStore.save]. */
 data class SaveResult(
     val interfaceId: Int,
-    /** Number of component files written. */
     val files: Int,
-    /** Total encoded size in bytes. */
     val bytes: Int,
-    /** Files that existed in the archive past the last component; see [SaveOptions.padStaleFiles]. */
     val staleFiles: List<Int>,
     val backupFile: File?,
     val jsonFile: File?,
     val differences: List<FieldDifference>,
-    /** What [Cache.update] returned, i.e. whether the index was actually committed. */
     val committed: Boolean,
     val warnings: List<String>
 )
 
-/**
- * Reads interfaces out of cache index 3, writes them back, and keeps a JSON
- * sidecar so an interface can live in version control as source.
- *
- * ### Layout of an interface in the cache
- *
- * Index 3, archive = interface id, **one file per component**, file number =
- * component index. There is no per-interface header: the component count is the
- * archive's file count. That is what makes deletion awkward (see
- * [SaveOptions.padStaleFiles]) and what makes component index load bearing.
- *
- * ### Whether any of this reaches the cache
- *
- * [Cache.write] and [Cache.update] exist on the interface, but
- * [world.gregs.voidps.cache.FileCache] and
- * [world.gregs.voidps.cache.MemoryCache] both inherit
- * [world.gregs.voidps.cache.ReadOnlyCache]'s implementations, which throw and
- * return false respectively. So with the cache the tools load today, [save]
- * writes the JSON sidecar and the backup and then throws
- * [CacheNotWritableException]. [writable] says so up front; use it to grey out a
- * save button, and use [exportJson] as the working save path until a writable
- * cache exists.
- */
 class InterfaceStore(
     private val cache: Cache,
-    /** Where JSON sidecars are written; created on demand. */
     val directory: File = File(DEFAULT_DIRECTORY),
-    /** Where pre-overwrite archive dumps go. */
     val backupDirectory: File = File(directory, "backups")
 ) {
 
@@ -128,7 +72,6 @@ class InterfaceStore(
         prettyPrintIndent = "  "
     }
 
-    /** False when [save] cannot reach the cache; [readOnlyReason] says why. */
     val writable: Boolean = cache !is ReadOnlyCache
 
     val readOnlyReason: String? = if (writable) {
@@ -139,22 +82,13 @@ class InterfaceStore(
             "committed to cache index ${Index.INTERFACES}"
     }
 
-    // --- Reading -----------------------------------------------------------
 
-    /** Whether archive [id] of index 3 holds any component files. */
     fun exists(id: Int): Boolean = id >= 0 && cache.files(Index.INTERFACES, id).isNotEmpty()
 
-    /** Highest interface id present in the cache. */
     fun lastInterfaceId(): Int = cache.lastArchiveId(Index.INTERFACES)
 
-    /** Decodes interface [id] into an editable document. */
     fun open(id: Int): InterfaceDocument = InterfaceDocument.decode(cache, id)
 
-    /**
-     * A blank document for a new interface.
-     *
-     * @throws IllegalStateException when [id] already exists and [overwrite] is false.
-     */
     fun newInterface(id: Int, overwrite: Boolean = false): InterfaceDocument {
         require(id >= 0) { "Interface id must not be negative" }
         check(overwrite || !exists(id)) {
@@ -164,15 +98,7 @@ class InterfaceStore(
         return InterfaceDocument.empty(id)
     }
 
-    // --- Encoding ----------------------------------------------------------
 
-    /**
-     * Encodes one component to its if3 file bytes.
-     *
-     * The buffer is grown and the encode retried on overflow, because
-     * [BufferWriter] is fixed capacity and a component's size depends on its
-     * strings and hooks.
-     */
     fun encode(definition: InterfaceComponentDefinition): ByteArray {
         check(definition.id != -1) {
             "Component id is -1; InterfaceEncoder writes nothing for an unassigned id, which " +
@@ -193,7 +119,6 @@ class InterfaceStore(
         }
     }
 
-    /** Encodes every component, keyed by the file number it belongs in. */
     fun encode(document: InterfaceDocument): Map<Int, ByteArray> {
         val files = LinkedHashMap<Int, ByteArray>(document.componentCount)
         document.components.forEachIndexed { index, definition ->
@@ -202,16 +127,7 @@ class InterfaceStore(
         return files
     }
 
-    // --- Round-trip verification -------------------------------------------
 
-    /**
-     * Encodes [definition], decodes the bytes straight back, and reports every
-     * field that changed.
-     *
-     * This is the honest answer to "will a save lose anything": rather than
-     * trusting a list of known lossy fields, it compares all of them reflectively,
-     * so a codec change shows up here rather than in a corrupted interface.
-     */
     fun verifyRoundTrip(definition: InterfaceComponentDefinition, componentIndex: Int): List<FieldDifference> {
         val bytes = try {
             encode(definition)
@@ -248,7 +164,6 @@ class InterfaceStore(
         return differences
     }
 
-    /** [verifyRoundTrip] across a whole document. */
     fun verifyRoundTrip(document: InterfaceDocument): List<FieldDifference> {
         val differences = ArrayList<FieldDifference>()
         document.components.forEachIndexed { index, definition ->
@@ -257,20 +172,7 @@ class InterfaceStore(
         return differences
     }
 
-    // --- Saving ------------------------------------------------------------
 
-    /**
-     * Encodes [document] and writes it to index 3 as archive = interface id,
-     * file = component index.
-     *
-     * The order matters: everything that cannot lose work - the JSON sidecar and
-     * the backup - happens first, so a read-only cache still leaves the developer
-     * with their interface on disk before this throws.
-     *
-     * @throws CacheNotWritableException when the cache cannot be written to.
-     * @throws IllegalStateException when the interface exists and
-     *   [SaveOptions.overwrite] is false.
-     */
     fun save(document: InterfaceDocument, options: SaveOptions = SaveOptions()): SaveResult {
         check(options.overwrite || !exists(document.id)) {
             "Interface ${document.id} already exists; pass SaveOptions(overwrite = true) to replace it"
@@ -334,19 +236,9 @@ class InterfaceStore(
         )
     }
 
-    /**
-     * Saves [document] under a different interface id.
-     *
-     * The copy's component hashes are repacked onto [newId] by
-     * [InterfaceDocument.copyAs], so the duplicate drives its own components.
-     */
     fun saveAs(document: InterfaceDocument, newId: Int, options: SaveOptions = SaveOptions()): SaveResult =
         save(document.copyAs(newId), options)
 
-    /**
-     * The safe half of [save]: JSON sidecar plus a backup of whatever is in the
-     * cache, with nothing written to the cache itself.
-     */
     fun saveSidecar(document: InterfaceDocument): File {
         if (exists(document.id)) {
             backup(document.id)
@@ -354,13 +246,6 @@ class InterfaceStore(
         return exportJson(document)
     }
 
-    /**
-     * A component that decodes cleanly and draws nothing, used to neutralise files
-     * left over from deleted components.
-     *
-     * Hidden, parentless, zero sized and type 0, so it is never laid out, never
-     * drawn and never hit tested even though the file still exists.
-     */
     fun inertPlaceholder(interfaceId: Int, index: Int): InterfaceComponentDefinition {
         val placeholder = ComponentDefinitions.create(interfaceId, index, ComponentType.CONTAINER)
         placeholder.hidden = true
@@ -369,21 +254,9 @@ class InterfaceStore(
         return placeholder
     }
 
-    // --- Backups -----------------------------------------------------------
 
     fun backupFile(id: Int): File = File(backupDirectory, "interface-$id-${System.currentTimeMillis()}.bin")
 
-    /**
-     * Dumps every existing file of archive [id] to a single container so a bad save
-     * can be undone.
-     *
-     * Format: the ascii magic `IFBK`, a version int, the interface id, the file
-     * count, then per file its number, its length and its bytes. Decompressed
-     * per-file data rather than the raw sector, because that is the shape
-     * [Cache.write] takes when restoring.
-     *
-     * @return the file written, or null when the archive is empty.
-     */
     fun backup(id: Int, file: File = backupFile(id)): File? {
         val fileIds = cache.files(Index.INTERFACES, id)
         if (fileIds.isEmpty()) {
@@ -405,7 +278,6 @@ class InterfaceStore(
         return file
     }
 
-    /** Reads a container written by [backup] back into file number to bytes. */
     fun readBackup(file: File): Map<Int, ByteArray> {
         DataInputStream(file.inputStream().buffered()).use { input ->
             check(input.readInt() == BACKUP_MAGIC) { "$file is not an interface backup" }
@@ -424,30 +296,17 @@ class InterfaceStore(
         }
     }
 
-    // --- JSON sidecar ------------------------------------------------------
 
     fun jsonFile(id: Int): File = File(directory, "interface-$id.json")
 
-    /** Writes [document] as JSON and returns the file. */
     fun exportJson(document: InterfaceDocument, file: File = jsonFile(document.id)): File {
         file.parentFile?.mkdirs()
         file.writeText(toJson(document))
         return file
     }
 
-    /** Reads a document back out of a file written by [exportJson]. */
     fun importJson(file: File): InterfaceDocument = fromJson(file.readText())
 
-    /**
-     * The document as JSON.
-     *
-     * Fields equal to the `InterfaceComponentDefinition` constructor default are
-     * omitted, which keeps a diff to the fields an author actually touched. `id` is
-     * omitted too: it is always `componentIndex or (interfaceId shl 16)` and is
-     * rebuilt on import, so it can never drift out of sync in a hand edited file.
-     * `clientParams`, `stringId` and `extras` are omitted because no cache byte
-     * carries them.
-     */
     fun toJson(document: InterfaceDocument): String {
         val defaults = InterfaceComponentDefinition()
         val components = document.components.mapIndexed { index, definition ->
@@ -477,13 +336,6 @@ class InterfaceStore(
         return json.encodeToString(JsonObject.serializer(), root)
     }
 
-    /**
-     * Parses [text] written by [toJson].
-     *
-     * Unknown keys are ignored so an older sidecar still loads; a known key with
-     * the wrong shape throws, because silently dropping it would lose data the file
-     * clearly meant to carry.
-     */
     fun fromJson(text: String): InterfaceDocument {
         val root = json.parseToJsonElement(text).jsonObject
         val format = root["format"]?.jsonPrimitive?.int ?: JSON_FORMAT
@@ -590,10 +442,6 @@ class InterfaceStore(
         )
     }
 
-    /**
-     * A starting buffer size for [encode]. Over-estimating costs one short lived
-     * allocation; under-estimating costs a retry, so this leans generous.
-     */
     private fun estimateSize(definition: InterfaceComponentDefinition): Int {
         var size = BASE_COMPONENT_BYTES
         size += (definition.unknown?.length ?: 0) + definition.text.length +
@@ -614,12 +462,11 @@ class InterfaceStore(
     }
 
     companion object {
-        /** Bumped when the sidecar shape changes incompatibly. */
         const val JSON_FORMAT = 1
 
         const val DEFAULT_DIRECTORY = "data/interfaces"
 
-        private const val BACKUP_MAGIC = 0x4946424b // "IFBK"
+        private const val BACKUP_MAGIC = 0x4946424b
         private const val BACKUP_VERSION = 1
 
         private const val BASE_COMPONENT_BYTES = 256

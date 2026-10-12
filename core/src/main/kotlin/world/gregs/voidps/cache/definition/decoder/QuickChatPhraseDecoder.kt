@@ -57,7 +57,6 @@ class QuickChatPhraseDecoder : DefinitionDecoder<QuickChatPhraseDefinition>(QUIC
         }
     }
 
-    /** The order [QuickChatPhraseEncoder] writes on its own; see [OpcodeOrdered.opcodeOrder]. */
     override fun canonicalOpcodes(definition: QuickChatPhraseDefinition): IntArray =
         QuickChatPhraseEncoder.opcodesOf(definition)
 

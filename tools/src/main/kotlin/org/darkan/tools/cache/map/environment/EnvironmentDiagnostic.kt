@@ -5,10 +5,6 @@ import world.gregs.voidps.cache.Index
 import world.gregs.voidps.cache.secure.CRC
 import world.gregs.voidps.cache.store.Container
 
-/**
- * `tools env <regionX> <regionY>` - dumps the decoded environment block of a region:
- * per-chunk environments, point lights, light grid summary and the referenced configs.
- */
 fun runEnvironmentDiagnostic(cache: Cache, args: List<String>) {
     when (args.firstOrNull()?.lowercase()) {
         "scan" -> {
@@ -55,10 +51,6 @@ fun runEnvironmentDiagnostic(cache: Cache, args: List<String>) {
     printLightGrid(environment)
 }
 
-/**
- * Decodes every region in the cache. A desync in the tile skip or the opcode grammar shows
- * up immediately as a bad opcode or a buffer underrun, so this is the real correctness check.
- */
 private fun runEnvironmentScan(cache: Cache) {
     println("\n=== MAP ENVIRONMENT SCAN ===")
     printConfigAvailability(cache)
@@ -139,19 +131,6 @@ private fun runEnvironmentScan(cache: Cache) {
     }
 }
 
-/**
- * `tools env write <regionX> <regionY> [field=value ...] [--apply]`
- *
- * Dry run by default: it prints the field-level diff, the byte sizes and where the backup
- * would go, and writes nothing. `--apply` is the only thing that mutates the cache.
- *
- * Fields: `fogColour` / `sunColour` (hex or decimal), `fogDepth`, `sunAmbient`, `sunLight`,
- * `sunBacklight`, `sunPos=x,y,z`, `skybox`, `skyboxRotation`.
- *
- * The write goes through the shared cache library, which always brings the reference table and
- * the signed version table along with the archive; there is no way to write one without the
- * others, and nothing here wants one.
- */
 private fun runEnvironmentWrite(cache: Cache, args: List<String>) {
     val regionX = args.getOrNull(0)?.toIntOrNull()
     val regionY = args.getOrNull(1)?.toIntOrNull()
@@ -233,17 +212,6 @@ private fun parseColour(value: String): Int? {
     return if (trimmed == value) value.toIntOrNull() else trimmed.toIntOrNull(16)
 }
 
-/**
- * Decodes every map archive's effects block, re-encodes it and compares the bytes.
- *
- * This is the gate on write-back: until every archive in the cache survives a decode/encode
- * cycle unchanged, nothing may be written back, because a mismatch means the encoder is
- * inventing or dropping bytes and would corrupt whatever it touches.
- *
- * The comparison is done twice per archive - once on the effects block alone, once on the
- * whole archive rebuilt by [MapEnvironmentEncoder.encodeArchive] - so a tile-splice bug
- * cannot hide behind a correct effects encoder.
- */
 private fun runEnvironmentRoundTrip(cache: Cache) {
     println("\n=== MAP ENVIRONMENT ROUND TRIP ===")
 
@@ -264,10 +232,6 @@ private fun runEnvironmentRoundTrip(cache: Cache) {
     val flagCounts = sortedMapOf<Int, Int>()
     val gridModes = IntArray(8)
 
-    // The archive CRCs in index 255 are what a JS5 client validates a download against, so
-    // the same walk checks that every stored CRC still matches the bytes on disk. Untouched
-    // archives prove the convention (container minus the trailing version); a rewritten one
-    // proves the write path kept the table honest.
     val table = cache.referenceTable(Index.MAPS)
 
     for (regionX in 0 until 256) {
@@ -281,8 +245,6 @@ private fun runEnvironmentRoundTrip(cache: Cache) {
                 val container = cache.sector(Index.MAPS, archiveId)
                 val stored = table.archive(archiveId)?.crc
                 if (container != null && stored != null) {
-                    // The CRC covers the container without its two byte version trailer, which
-                    // is the range JS5 sends and the client hashes.
                     val trailing = if (Container.decode(container).version == null) 0 else 2
                     if (CRC.calculate(container, 0, container.size - trailing) == stored) {
                         crcMatched++

@@ -12,9 +12,6 @@ import org.darkan.world.server.WorldServer
 class QCPublicHandler : PacketHandler<Player, QuickChatPublic> {
     override suspend fun handle(player: Player, packet: QuickChatPublic) {
         if (!player.hasStarted()) return
-        // 2 is the player's own clan channel, 3 the guest channel: a typed clan action rather than
-        // a forwarded client packet (docs/clans.md). The text is the client's, so only the file id
-        // and its data travel.
         if (packet.chatType == 2 || packet.chatType == 3) {
             ClanRegistry.send(
                 player,
@@ -32,6 +29,5 @@ class QCPublicHandler : PacketHandler<Player, QuickChatPublic> {
             )
             return
         }
-        // TODO: Quick chat public message handling
     }
 }

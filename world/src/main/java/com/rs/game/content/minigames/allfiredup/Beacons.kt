@@ -18,7 +18,7 @@ fun Player.isBeaconEmpty(beacon: Beacon) = vars.getVarBit(beacon.varBit) == 0
 fun Player.isBeaconFilled(beacon: Beacon) = vars.getVarBit(beacon.varBit) == 1
 fun Player.isBeaconLit(beacon: Beacon) = vars.getVarBit(beacon.varBit) == 2
 fun Player.isBeaconDyingOut(beacon: Beacon) = vars.getVarBit(beacon.varBit) == 3
-fun Player.isBeaconEmergencyColour(beacon: Beacon) = vars.getVarBit(beacon.varBit) == 4 //Not used in minigame but changes flame to green.
+fun Player.isBeaconEmergencyColour(beacon: Beacon) = vars.getVarBit(beacon.varBit) == 4
 
 
 object Beacons {
@@ -325,7 +325,7 @@ fun Player.hasTinderbox(): Boolean {
     return inventory.containsItem(Obj.tinderbox)
 }
 
-private const val MAX_BEACON_BURN_TICKS = 1177 // Magic logs (1077) + generous buffer
+private const val MAX_BEACON_BURN_TICKS = 1177
 
 fun Player.hasInvalidBeaconTimers(beacon: Beacon, burnExpiry: Long, now: Long): Boolean {
     if (burnExpiry <= 0) return true

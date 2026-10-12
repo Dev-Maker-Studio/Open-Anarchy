@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.npcs.combat;
 
 import com.rs.game.World;
@@ -67,9 +51,6 @@ public class NightGazerKhighorahkCombat extends CombatScript {
 		final NightGazerKhighorahk gazer = (NightGazerKhighorahk) npc;
 		final DungeonManager manager = gazer.getManager();
 
-		/*
-		 * without this check its possible to lure him so that he always nukes
-		 */
 		if (!gazer.isUsedSpecial()) {
 			final List<Entity> targets = gazer.getPossibleTargets();
 			boolean success = false;
@@ -78,7 +59,7 @@ public class NightGazerKhighorahkCombat extends CombatScript {
 					if (!success)
 						success = true;
 					npc.setNextAnimation(new Animation(gazer.isSecondStage() ? 13427 : 13429));
-					npc.setNextSpotAnim(new SpotAnim(/* gazer.isSecondStage() ? 2391 : */2390));
+					npc.setNextSpotAnim(new SpotAnim( 2390));
 					gazer.setUsedSpecial(true);
 				}
 			if (success) {
@@ -137,13 +118,12 @@ public class NightGazerKhighorahkCombat extends CombatScript {
 			WorldTasks.delay(1, () -> sendRangeAoe(gazer));
 			return npc.getAttackSpeed() + 6;
 		}
-		if (Utils.random(3) == 0) { // range single target
+		if (Utils.random(3) == 0) {
 			npc.setNextAnimation(new Animation(gazer.isSecondStage() ? 13433 : 13434));
 			World.sendProjectile(npc, target, 2385, new Pair<>(gazer.isSecondStage() ? 60 : 40, 16), 41, 5, 0);
 			delayHit(npc, 3, target, Hit.range(npc, getMaxHitFromAttackStyleLevel(npc, CombatStyle.RANGE, target)));
 			return npc.getAttackSpeed() + 1;
 		}
-		// magic
 		npc.setNextAnimation(new Animation(gazer.isSecondStage() ? 13430 : 13431));
 		World.sendProjectile(npc, target, 2385, new Pair<>(gazer.isSecondStage() ? 60 : 40, 16), 41, 10, 0);
 		target.setNextSpotAnim(new SpotAnim(2386, 70, 100));

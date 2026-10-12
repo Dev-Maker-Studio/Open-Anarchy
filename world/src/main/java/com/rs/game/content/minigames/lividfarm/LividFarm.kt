@@ -30,7 +30,7 @@ private const val LogPile = 40444
 private const val lunarLumber = 20702
 private const val lunarFencepost = 20703
 
-private const val MAX_PRODUCE_POINTS = 85000 // CS2 is Varbit/10
+private const val MAX_PRODUCE_POINTS = 85000
 
 var Player.producePoints: Int
     get() = vars.getVarBit(Varbit.lunarfm_produce_points)
@@ -47,19 +47,16 @@ fun Player.isOnLividFarm(): Boolean {
 class LividFarm {
     companion object {
         val PATCHES = listOf(
-            //A1-5
             Patch(40461, 9044, 1, Tile.of(2098, 3949, 0)),
             Patch(40460, 9043, 1, Tile.of(2100, 3949, 0)),
             Patch(40463, 9046, 1, Tile.of(2102, 3949, 0)),
             Patch(40488, 9050, 2, Tile.of(2104, 3949, 0)),
             Patch(40462, 9045, 1, Tile.of(2106, 3949, 0)),
-            //B1-5
             Patch(40533, 9057, 4, Tile.of(2098, 3946, 0)),
             Patch(40499, 9053, 3, Tile.of(2100, 3946, 0)),
             Patch(40487, 9049, 2, Tile.of(2102, 3946, 0)),
             Patch(40464, 9047, 2, Tile.of(2104, 3946, 0)),
             Patch(40486, 9048, 2, Tile.of(2106, 3946, 0)),
-            //C1-5
             Patch(40504, 9054, 3, Tile.of(2098, 3943, 0)),
             Patch(40532, 9056, 4, Tile.of(2100, 3943, 0)),
             Patch(40534, 9058, 4, Tile.of(2102, 3943, 0)),
@@ -72,11 +69,11 @@ class LividFarm {
         var pauline: NPC? = null
 
         val FENCES = listOf(
-            Fence(40435, 9039), // FenceRightSouth
-            Fence(40434, 9038), // FenceRightNorth
-            Fence(40432, 9036), // FenceTopEast
-            Fence(40437, 9041), // FenceTopMiddle
-            Fence(40433, 9037), // FenceTopWest
+            Fence(40435, 9039),
+            Fence(40434, 9038),
+            Fence(40432, 9036),
+            Fence(40437, 9041),
+            Fence(40433, 9037),
         )
     }
 }
@@ -96,7 +93,7 @@ fun mapLividFarm() {
             val currentState = player.vars.getVarBit(patch.varbit)
             player.tempAttribs.setO<Patch>("LividFarm.currentLividFarmPatch", patch)
             when (currentState) {
-                0 -> { //Empty patch
+                0 -> {
                     if (!player.canCastSpell() || !Magic.checkMagicAndRunes(player, 1, false, RuneSet(Rune.ASTRAL, 3, Rune.EARTH, 15, Rune.NATURE, 2))) {
                         return@onObjectClick
                     }
@@ -110,17 +107,17 @@ fun mapLividFarm() {
                     player.producePoints += 2
                     player.sendMessage("You are awarded 20 Produce Points. Current total: ${player.producePoints * 10}")
                 }
-                1, 2 -> { //Bud or Healthy
+                1, 2 -> {
                     player.sendMessage("Composting it isn't going to make it get any bigger.")
                 }
-                3 -> { //Diseased
+                3 -> {
                     if (!player.canCastSpell() || !Magic.checkMagicAndRunes(player, 1, false, RuneSet(Rune.ASTRAL, 1, Rune.EARTH, 8))) {
                         return@onObjectClick
                     }
                     else
                         player.interfaceManager.sendInventoryInterface(IDENTIFY_LIVID_INTERFACE)
                 }
-                4 -> { // Fully Grown Healthy Plant
+                4 -> {
                     player.sendMessage("It's fully grown... Composting it isn't going to make it get any bigger.")
                 }
             }

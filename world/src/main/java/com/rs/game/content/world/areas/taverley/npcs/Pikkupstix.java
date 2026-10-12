@@ -21,7 +21,6 @@ import com.rs.utils.shop.ShopsHandler;
 public class Pikkupstix extends Conversation {
 	final static int PIKKUPSTIX = 6988;
 
-	// right click options
 	final static int TALK_TO = 1;
 	final static int TRADE = 3;
 	final static int ENCHANT = 4;
@@ -69,7 +68,6 @@ public class Pikkupstix extends Conversation {
 																.addNPC(PIKKUPSTIX, HeadE.CONFUSED, "Where was I?")
 																.addNPC(PIKKUPSTIX, HeadE.CALM_TALK, "Ah, yes, the last part of Summoning: the pets. The more you practice the skill, the more you will comprehend the natural world around you.")
 																.addNPC(PIKKUPSTIX, HeadE.CALM_TALK, "This is reflected in your increased ability to raise animals as pets, It takes a skilled summoner  to be able to raise some of Gielinor's more exotic animals, such as the lizards of Karamja, or even dragons!")
-														//.addNPC(PIKKUPSTIX, HeadE.CALM_TALK, "Now that I've given you this overview, do you want to know about anything specific?") LOOP ME
 												);
 												option("Tell me about summoning familiars.", new Dialogue()
 																.addNPC(PIKKUPSTIX, HeadE.CALM_TALK, "Summoned familiars are at the very core of Summoning. Each familiar is different, and the more powerful the summoner, the more powerful the familiar they can summon.")
@@ -94,7 +92,6 @@ public class Pikkupstix extends Conversation {
 																.addNPC(PIKKUPSTIX, HeadE.CALM_TALK, "Other familiars will not fight, for various reasons, but they may provide bonuses in other tasks. Some will even carry your items for you, if you need them to.")
 																.addPlayer(HeadE.CHEERFUL_EXPOSITION, "Amazing!")
 																.addNPC(PIKKUPSTIX, HeadE.CALM_TALK, "")
-														//.addNPC(PIKKUPSTIX, HeadE.CALM_TALK, "Would you like to know anything else about summoning?") LOOP ME
 												);
 
 												if (player.getQuestManager().isComplete(Quest.WOLF_WHISTLE)) {
@@ -117,7 +114,6 @@ public class Pikkupstix extends Conversation {
 																	.addNPC(PIKKUPSTIX, HeadE.CALM_TALK, "If your familiar is fighting with you, it will use its normal ability whenever it can.")
 																	.addNPC(PIKKUPSTIX, HeadE.CALM_TALK, "It won't however, use its special move unless you have expressly asked it to, by activating a scroll.")
 																	.addPlayer(HeadE.CALM_TALK, "I see. Thanks for the information.")
-															//.addNPC(PIKKUPSTIX, HeadE.CALM_TALK, "Would you like to know anything else about summoning?") LOOP ME
 													);
 												} else {
 													option("Tell me about special moves.", new Dialogue()
@@ -138,7 +134,7 @@ public class Pikkupstix extends Conversation {
 															.addPlayer(HeadE.CALM_TALK, "I see. Thanks for the information.")
 													);
 												}
-												option("Tell me about charged items."); // unimplemented
+												option("Tell me about charged items.");
 												option("Tell me about pets.", new Dialogue()
 														.addNPC(PIKKUPSTIX, HeadE.SAD_MILD_LOOK_DOWN, "Unfortunately, pets are not implemented yet.")
 												);
@@ -154,8 +150,6 @@ public class Pikkupstix extends Conversation {
 					option(quest_option, () -> p.startConversation(new QuestPikkupstix(p, pikkupstix)));
 				}
 
-				// only if you know about Pikkenmix
-//				option("Talk about Pikkenmix.");
 
 				if (p.getQuestManager().getStage(Quest.WOLF_WHISTLE) > WolfWhistle.WOLPERTINGER_CREATION) {
 					option("You really seem to have had some problems with your assistants.", new Dialogue()

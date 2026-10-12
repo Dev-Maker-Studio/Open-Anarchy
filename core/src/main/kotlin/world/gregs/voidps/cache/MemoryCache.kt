@@ -13,16 +13,6 @@ import java.io.RandomAccessFile
 import java.math.BigInteger
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * [Cache] that holds all data in memory
- * Read speeds are as fast, loading is slow and memory usage is high but stable.
- * Loading is done in parallel as it is much slower to load than [FileCache]
- *
- * Not much benefit of using this in the live game as file providers cache the
- * sector data independently for the file server; so the only use after startup is
- * reading dynamic map regions in MapDefinitions.
- * It is however very useful for integration tests to speed world resetting.
- */
 class MemoryCache(indexCount: Int) : ReadOnlyCache(indexCount) {
 
     val data: Array<Array<Array<ByteArray?>?>?> = arrayOfNulls(indexCount)
@@ -85,7 +75,6 @@ class MemoryCache(indexCount: Int) : ReadOnlyCache(indexCount) {
         }
         val sector = sector(index, archive) ?: return null
         val result = try {
-            // Deciphering is in place, so the loaded sector is copied rather than consumed.
             val decompressed = context.get().decompress(sector.copyOf(), xtea) ?: return null
             val files = arrayOfNulls<ByteArray>(fileIds.last() + 1)
             if (fileIds.size == 1) {
@@ -110,9 +99,6 @@ class MemoryCache(indexCount: Int) : ReadOnlyCache(indexCount) {
             return load(path, exponent, modulus, xteas, threadUsage) as ReadOnlyCache
         }
 
-        /**
-         * Load each index in parallel using a percentage of cpu cores
-         */
         @OptIn(DelicateCoroutinesApi::class)
         override fun load(
             path: String,
@@ -147,9 +133,6 @@ class MemoryCache(indexCount: Int) : ReadOnlyCache(indexCount) {
             return cache
         }
 
-        /**
-         * Reads an indexes archive information before reading each archive in parallel
-         */
         private suspend fun loadIndex(
             path: String,
             indexId: Int,
@@ -200,9 +183,6 @@ class MemoryCache(indexCount: Int) : ReadOnlyCache(indexCount) {
             return
         }
 
-        /**
-         * Reads data for every file in each [archives] into the [cache]
-         */
         private fun loadArchives(
             cache: MemoryCache,
             archives: List<Int>,

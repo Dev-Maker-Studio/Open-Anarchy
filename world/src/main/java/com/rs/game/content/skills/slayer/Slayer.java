@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.slayer;
 
 import com.rs.game.World;
@@ -47,17 +31,6 @@ public class Slayer {
 	
 	public static ItemOnPlayerHandler groupSlayer = new ItemOnPlayerHandler(new Object[] { 4155 }, e -> {
 		e.getPlayer().sendMessage("Group slayer is in progress.");
-//		if (other.getCoopSlayerPartner() != null) {
-//			player.sendMessage("This player is already in a slayer group with: " + other.getCoopSlayerPartner().getDisplayName());
-//			return;
-//		}
-//		if (player.getCoopSlayerPartner() != null) {
-//			player.sendMessage("You are already in a slayer group with: " + player.getCoopSlayerPartner().getDisplayName());
-//			return;
-//		}
-//		player.sendMessage("Sending co-op slayer request...");
-//		other.getPackets().sendCoOpSlayerRequestMessage(player);
-//		player.getTemporaryAttributtes().put("coopSlayerRequest", other);
 	});
 
 	public static void openBuyInterface(Player player) {

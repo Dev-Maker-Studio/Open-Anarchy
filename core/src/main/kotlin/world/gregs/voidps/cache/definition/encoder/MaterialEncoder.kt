@@ -3,18 +3,6 @@ package world.gregs.voidps.cache.definition.encoder
 import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.definition.data.MaterialDefinition
 
-/**
- * The exact inverse of [world.gregs.voidps.cache.definition.decoder.MaterialDecoder]: the whole of
- * index 26 as one blob.
- *
- * A single material cannot be encoded on its own - the format is columns, so every field of every
- * material is interleaved with the same field of all the others - which is why this takes the list
- * and not a definition. The count is the list's size and the presence column is
- * [MaterialDefinition.defined]; only defined materials contribute to the columns after it.
- *
- * The booleans are written as 0 and 1, which is what every one of the 727 cache's 2,591 materials
- * holds - the client reads them as `byte == 1`, so any other value would be a lossy read.
- */
 class MaterialEncoder {
 
     fun Writer.encode(materials: List<MaterialDefinition>) {
@@ -25,7 +13,6 @@ class MaterialEncoder {
         }
         val defined = materials.filter { it.defined }
         for (material in defined) {
-            // `detailsOnly` is the presence byte being 0, so it is the one inverted column.
             writeByte(if (material.detailsOnly) 0 else 1)
         }
         for (material in defined) {
@@ -85,7 +72,6 @@ class MaterialEncoder {
     }
 
     private companion object {
-        /** The blob's count is a short. */
         private const val LIMIT = 0xffff
     }
 }

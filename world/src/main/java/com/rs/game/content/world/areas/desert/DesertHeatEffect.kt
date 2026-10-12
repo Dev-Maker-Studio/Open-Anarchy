@@ -15,35 +15,29 @@ import com.rs.plugin.kts.*
 import com.rs.utils.Areas
 import com.rs.utils.Ticks
 
-// Var Keys
 const val DESERT_HEAT_AREA = "desert_heat_area"
 const val DESERT_HEAT_TASK = "desert_heat_task"
 const val DESERT_HEAT_EFFECT_DELAY_ATTR = "desert_heat_effect_delay"
 
-// Item Configs
 private val WATER_SKINS = arrayOf(Item(1823), Item(1825), Item(1827), Item(1829), Item(1831))
 private val WATER_CONTAINERS = arrayOf(intArrayOf(1937, 1935), intArrayOf(1929, 1925), intArrayOf(1921, 1923), intArrayOf(227, 229))
 private val CHOC_ICE = Item(6794)
 
-// Male Dervish items
-private val dervishHeadM = getDervishItemDelays(20970, 20978, 6) // Dervish Head Wraps (Male)
-private val dervishTopM = getDervishItemDelays(20980, 20988, 12) // Dervish Robes (Male)
-private val dervishLegsM = getDervishItemDelays(20990, 20998, 12) // Dervish Trousers (Male)
-private val dervishFeetM = getDervishItemDelays(21000, 21008, 6) // Dervish Shoes (Male)
-// Female Dervish items
-private val dervishHeadF = getDervishItemDelays(21010, 21018, 6) // Dervish Hoods (Female)
-private val dervishTopF = getDervishItemDelays(21020, 21028, 12) // Dervish Robes (Female)
-private val dervishLegsF = getDervishItemDelays(21030, 21038, 12) // Dervish Trousers (Female)
-private val dervishFeetF = getDervishItemDelays(21040, 21048, 6) // Dervish Shoes (Female)
+private val dervishHeadM = getDervishItemDelays(20970, 20978, 6)
+private val dervishTopM = getDervishItemDelays(20980, 20988, 12)
+private val dervishLegsM = getDervishItemDelays(20990, 20998, 12)
+private val dervishFeetM = getDervishItemDelays(21000, 21008, 6)
+private val dervishHeadF = getDervishItemDelays(21010, 21018, 6)
+private val dervishTopF = getDervishItemDelays(21020, 21028, 12)
+private val dervishLegsF = getDervishItemDelays(21030, 21038, 12)
+private val dervishFeetF = getDervishItemDelays(21040, 21048, 6)
 
-// Combat Equipment Slots
 const val HEAD_SLOT = Equipment.HEAD
 const val CHEST_SLOT = Equipment.CHEST
 const val LEGS_SLOT = Equipment.LEGS
 const val FEET_SLOT = Equipment.FEET
 const val HANDS_SLOT = Equipment.HANDS
 
-// Combat Equipment Penalties
 private val slotPenalties = mapOf(
     HEAD_SLOT to 6,
     CHEST_SLOT to 24,
@@ -52,39 +46,35 @@ private val slotPenalties = mapOf(
     HANDS_SLOT to 6
 )
 
-// Equipment Delays - Item ID & time to add on.
 private val EQUIPMENT_DELAYS = arrayOf(
-    Pair(1833, 12), // Desert Shirt
-    Pair(1835, 12), // Desert Robe
-    Pair(1837, 6),  // Desert Boots
-    Pair(6384, 12), // Desert Top (Shirt)
-    Pair(6386, 12), // Desert Robes
-    Pair(6388, 12), // Desert Top (Coat)
-    Pair(3690, 12), // Desert Legs
-    Pair(6392, 12), // Menap Headgear (Purple)
-    Pair(6400, 12), // Menap Headgear (Red)
-    Pair(1844, 6), // Slave Shirt
-    Pair(1845, 6), // Slave Robe
-    Pair(1846, 3), // Slave Boots
+    Pair(1833, 12),
+    Pair(1835, 12),
+    Pair(1837, 6),
+    Pair(6384, 12),
+    Pair(6386, 12),
+    Pair(6388, 12),
+    Pair(3690, 12),
+    Pair(6392, 12),
+    Pair(6400, 12),
+    Pair(1844, 6),
+    Pair(1845, 6),
+    Pair(1846, 3),
 ).plus(
     dervishHeadM + dervishTopM + dervishLegsM + dervishFeetM +
             dervishHeadF + dervishTopF + dervishLegsF + dervishFeetF
 )
 
-// Equipment IDs for unequip handling
 val equipmentIds = EQUIPMENT_DELAYS.map { it.first }.toTypedArray()
 
 @ServerStartupEvent
 fun mapDesertHeatEffect() {
 
-    // Apply short heat delay on login in desert area
     onLogin { e ->
         if (Areas.withinArea(DESERT_HEAT_AREA, e.player.getChunkId())) {
             e.player.tempAttribs.setI(DESERT_HEAT_EFFECT_DELAY_ATTR, Utils.randomInclusive(Ticks.fromSeconds(10), Ticks.fromSeconds(15)))
         }
     }
 
-    // Apply heat delay effect to player as they enter chunks
     onChunkEnter { (entity, _) ->
         val player = entity as? Player ?: return@onChunkEnter
 
@@ -118,23 +108,20 @@ fun mapDesertHeatEffect() {
         }
     }
 
-    // Refill waterskins from Kharidian Cacti
     onObjectClick(2670) { (player, obj) -> cutCactus(player, obj) }
     onItemOnObject(objectNamesOrIds = arrayOf(2670), itemNamesOrIds = arrayOf(946)) { (player, obj) -> cutCactus(player, obj) }
 
-    // Increase/Decrease player's heatEffectDelay by Item's amount if equipped/unequipped
     onItemEquip(*equipmentIds) { e ->
         if (Areas.withinArea(DESERT_HEAT_AREA, e.player.getChunkId())) {
             var heatEffectDelay = e.player.tempAttribs.getI(DESERT_HEAT_EFFECT_DELAY_ATTR)
 
-            // Apply equipment delay increments
             EQUIPMENT_DELAYS.forEach { (equipmentId, delayIncrement) ->
                 if (e.item.id == equipmentId) {
                     if (e.equip()) {
                         heatEffectDelay += delayIncrement
                     } else if (e.dequip()) {
                         heatEffectDelay -= delayIncrement
-                        heatEffectDelay = heatEffectDelay.coerceAtLeast(0) // Ensure delay doesn't drop below 0
+                        heatEffectDelay = heatEffectDelay.coerceAtLeast(0)
                     }
                 }
             }
@@ -148,7 +135,6 @@ fun mapDesertHeatEffect() {
 private fun getHeatEffectDelay(player: Player): Int {
     var heatEffectDelay = Utils.randomInclusive(Ticks.fromSeconds(60), Ticks.fromSeconds(90))
 
-    // Iterate through the slots and apply the corresponding penalties if the item has combat stats
     slotPenalties.forEach { (slot, penalty) ->
         val item = player.equipment.getItem(slot)
         if (hasCombatStats(item)) {
@@ -156,13 +142,11 @@ private fun getHeatEffectDelay(player: Player): Int {
         }
     }
 
-    // Apply equipment delays
     EQUIPMENT_DELAYS.forEach { (itemId, delayIncrement) ->
         if (player.equipment.containsOneItem(itemId))
             heatEffectDelay += delayIncrement
     }
 
-    // Ensure delay doesn't drop below 0
     return heatEffectDelay.coerceAtLeast(0)
 }
 
@@ -203,12 +187,10 @@ private fun refillWaterskin(player: Player): Boolean {
 }
 
 private fun checkAndDrinkWater(player: Player): Boolean {
-    // Try Enchanted Water Tiara first
     if (EnchantedWaterTiara(player).depleteEnchantedWaterTiara()) {
         return true
     }
 
-    // If no enchanted water tiara with enough charges, try to consume a waterskin charge
     val sortedWaterskins = WATER_SKINS.sortedByDescending { it.id }
     for (waterskin in sortedWaterskins) {
         if (waterskin.id != 1831 && player.inventory.containsOneItem(waterskin.id)) {
@@ -222,7 +204,6 @@ private fun checkAndDrinkWater(player: Player): Boolean {
         }
     }
 
-    // If no waterskin is available, try to consume a choc-ice
     val chocIce = player.inventory.getItemById(CHOC_ICE.id)
     if (chocIce != null) {
         Foods.eat(player, CHOC_ICE, chocIce.slot, null)

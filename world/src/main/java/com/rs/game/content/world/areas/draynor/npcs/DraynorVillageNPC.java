@@ -87,11 +87,6 @@ public class DraynorVillageNPC {
 
                         ops.add("I'd like to check holiday items please!")
                                 .addPlayer(HeadE.CALM, "I'd like to check holiday items please!")
-                                //TODO
-                                //.addNPC(DIANGO, HeadE.HAPPY_TALKING, "Sure thing, let me just see what you're missing.")
-                                //.addNext(() -> {
-                                //    Open holiday item interface (468)
-                                //        })
                                 .addNPC(DIANGO, HeadE.SHAKING_HEAD, "I seem to have mislaid my crate of holiday items, Sorry!");
 
                         ops.add("What else are you selling?")

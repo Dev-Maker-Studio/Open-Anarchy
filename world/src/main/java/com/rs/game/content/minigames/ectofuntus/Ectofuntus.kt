@@ -49,10 +49,10 @@ class Ectofuntus {
 @ServerStartupEvent
 fun mapEctofuntusInteractions() {
 
-    onObjectClick(5268) { (player) -> player.useLadder(Tile.of(3669, 9888, 3)) } // Entrance to Ectofuntus Pool
-    onObjectClick(5264) { (player) -> player.useLadder(Tile.of(3654, 3519, 0)) } // Exit from Ectofuntus Pool
+    onObjectClick(5268) { (player) -> player.useLadder(Tile.of(3669, 9888, 3)) }
+    onObjectClick(5264) { (player) -> player.useLadder(Tile.of(3654, 3519, 0)) }
 
-    onObjectClick(9307, 9308) { (player, obj) ->  // Ectofuntus Pool Shortcuts
+    onObjectClick(9307, 9308) { (player, obj) ->
         when (obj.id) {
             9307 -> {
                 if (!Agility.hasLevel(player, 53)) return@onObjectClick
@@ -66,7 +66,7 @@ fun mapEctofuntusInteractions() {
         }
     }
 
-    onObjectClick(5262, 5263) { (player, obj) ->  // Ectofuntus Pool Stairs
+    onObjectClick(5262, 5263) { (player, obj) ->
         when (obj.id) {
             5262 -> {
                 when (player.plane) {
@@ -86,7 +86,7 @@ fun mapEctofuntusInteractions() {
         }
     }
 
-    onObjectClick(Ectofuntus.ECTOFUNTUS) { (player) ->  // Ectofuntus Worship
+    onObjectClick(Ectofuntus.ECTOFUNTUS) { (player) ->
         if (!player.inventory.containsItem(Ectofuntus.BUCKET_OF_SLIME, 1)) {
             player.sendMessage("You need a bucket of slime before you can worship at the ectofuntus.")
             return@onObjectClick
@@ -132,13 +132,13 @@ fun mapEctofuntusInteractions() {
         }
     }
 
-    onObjectClick(37454) { (player, obj) -> player.useStairs(-1, Tile.of(player.x, obj.y + 5, player.plane + 1), 0, 1) } // Ectofuntus Grinder Stairs Up
-    onObjectClick(5281) { (player, obj) -> player.useStairs(-1, Tile.of(player.x, obj.y - 4, player.plane - 1), 0, 1) } // Ectofuntus Grinder Stairs Down
+    onObjectClick(37454) { (player, obj) -> player.useStairs(-1, Tile.of(player.x, obj.y + 5, player.plane + 1), 0, 1) }
+    onObjectClick(5281) { (player, obj) -> player.useStairs(-1, Tile.of(player.x, obj.y - 4, player.plane - 1), 0, 1) }
 
-    onObjectClick(11163) { (player) -> grinder(player) } // Bone Grinder
-    onObjectClick(11164) { (player) -> bin(player) } // Bone Grinder Bin
+    onObjectClick(11163) { (player) -> grinder(player) }
+    onObjectClick(11164) { (player) -> bin(player) }
 
-    onItemClick(Ectofuntus.FULL_ECTOPHIAL) { (player) -> // Empty Ectophial (Teleport)
+    onItemClick(Ectofuntus.FULL_ECTOPHIAL) { (player) ->
         if (!player.isQuestComplete(Quest.GHOSTS_AHOY, "to use the ectophial.")) return@onItemClick
 
         player.schedule {
@@ -156,26 +156,12 @@ fun mapEctofuntusInteractions() {
                 Runnable {
                     player.unlock()
                     player.sendMessage("Your ectophial magically fills itself from the nearby ectofuntus.", true)
-                    /*val obj = World.getObject(Tile.of(3658, 3518, 0))
-                    if (obj != null) {
-                        player.inventory.replace(Ectofuntus.FULL_ECTOPHIAL, Ectofuntus.EMPTY_ECTOPHIAL)
-                        player.walkToAndExecute(World.findClosestAdjacentFreeTile(Tile.of(3659, 3521, 0), 1)) {
-                            player.schedule {
-                                wait(1)
-                                player.faceTile(obj.tile)
-                                wait(1)
-                                player.anim(833)
-                                player.inventory.replace(Ectofuntus.EMPTY_ECTOPHIAL, Ectofuntus.FULL_ECTOPHIAL)
-                                player.sendMessage("You refill your ectophial from the ectofuntus.")
-                            }
-                        }
-                    }*/
                 }
             )
         }
     }
 
-    onItemOnObject(arrayOf(Ectofuntus.ECTOFUNTUS), arrayOf(Ectofuntus.EMPTY_ECTOPHIAL, Ectofuntus.FULL_ECTOPHIAL)) { e -> // Refill ectophial
+    onItemOnObject(arrayOf(Ectofuntus.ECTOFUNTUS), arrayOf(Ectofuntus.EMPTY_ECTOPHIAL, Ectofuntus.FULL_ECTOPHIAL)) { e ->
         when (e.item.id) {
             Ectofuntus.EMPTY_ECTOPHIAL -> {
                 e.player.anim(833)

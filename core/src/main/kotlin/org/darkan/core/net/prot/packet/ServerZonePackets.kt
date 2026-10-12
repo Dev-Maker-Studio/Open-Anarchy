@@ -1,6 +1,3 @@
-/**
- * Zone packets: objects, ground items, projectiles and positional effects.
- */
 package org.darkan.core.net.prot.packet
 
 import org.darkan.core.net.prot.ServerProt
@@ -64,7 +61,6 @@ data class MapProjAnimHalfSq(
     val useFloorHeight: Boolean = false,
 ) : ServerProt
 
-// Object and ground item protocols
 data class GroundItemCount(val localX: Int, val localY: Int, val itemId: Int, val oldAmount: Int, val newAmount: Int) : ServerProt
 
 data class CreateGroundItem(val localX: Int, val localY: Int, val itemId: Int, val amount: Int) : ServerProt
@@ -97,7 +93,6 @@ data class CustomizeObject(
 
 data class ObjectPrefetch(val objectId: Int, val typeIndex: Int) : ServerProt
 
-// Animation related protocols
 data class SpotAnim(val localX: Int, val localY: Int, val spotAnimId: Int, val height: Int, val speed: Int, val rotation: Int) : ServerProt
 
 data class SpotAnimSpecific(

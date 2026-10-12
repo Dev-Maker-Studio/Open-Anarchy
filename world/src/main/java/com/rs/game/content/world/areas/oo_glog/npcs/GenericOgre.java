@@ -35,7 +35,6 @@ public class GenericOgre {
                     ops.add("How are you today?", () -> randomDialogue(player, npc));
                     int npcId = npc.getId();
                     switch (npc.getId()) {
-                        // Thuddley & Snert
                         case 15235, 15240 ->
                                 ops.add("Can you tell me about this copper-coloured pool?")
                                         .addPlayer(HeadE.CONFUSED, "Can you tell me about this copper-coloured pool?")
@@ -46,7 +45,6 @@ public class GenericOgre {
                                         .addNPC(npcId, HeadE.CHILD_CALM_TALK, "Oh, well, it called de 'Bandos pool' round here. It s'pposed to be special-special.")
                                         .addNPC(npcId, HeadE.CHILD_CALM_TALK, "It hard to explain to human creature like you. Maybe you need talk to auntie Seegud. She explain good about these things.");
 
-                        // Tyke & Grr'bah
                         case 15236, 15241 ->
                                 ops.add("Can you tell me about this stinky, green spring?")
                                         .addPlayer(HeadE.CONFUSED, "Can you tell me about this stinky, green pool?")
@@ -56,7 +54,6 @@ public class GenericOgre {
                                         .addPlayer(HeadE.CALM_TALK, "What do you mean?")
                                         .addNPC(npcId, HeadE.CHILD_CALM_TALK, "Well, it's a bit confusing, but mum says that taking a bath here is as good as going to the altar.");
 
-                        // Snarrl & Chomp
                         case 15237, 15242 ->
                                 ops.add("Can you tell me about this salt-water spring?")
                                         .addPlayer(HeadE.CONFUSED, "Can you tell me about this salt-water spring?")
@@ -67,7 +64,6 @@ public class GenericOgre {
                                         .addNPC(npcId, HeadE.CHILD_CALM_TALK, "Yeah, run, flow - same thing. Have a bath here, it doesn't matter how heavy you are, how much you carry - you can flow for a long time!")
                                         .addPlayer(HeadE.HAPPY_TALKING, "Thanks, that's good to know.");
 
-                        // Snarrk & Grubb
                         case 15238, 15243 ->
                                 ops.add("Can you tell me about this thermal bath?")
                                         .addPlayer(HeadE.CONFUSED, "Can you tell me about this thermal bath?")
@@ -79,7 +75,6 @@ public class GenericOgre {
                                         .addPlayer(HeadE.HAPPY_TALKING, "Ahem!")
                                         .addNPC(npcId, HeadE.CHILD_CALM_TALK, "Oo, no spread that cough to me - it sound bad! You better take a swim right now, feel better!");
 
-                        // Grunther & I'rk
                         case 15239, 15244 ->
                                 ops.add("Can you tell me about this mud pool?")
                                         .addPlayer(HeadE.CONFUSED, "Can you tell me about this mud pool?")

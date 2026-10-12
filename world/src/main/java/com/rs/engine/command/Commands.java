@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.engine.command;
 
 import com.rs.Settings;
@@ -119,7 +103,6 @@ public final class Commands {
 			NPCDefinition defs = NPCDefinitions.getDefs(Integer.valueOf(args[1]));
 			if (defs == null)
 				return true;
-			// TODO: getCompatibleAnimations() not yet available on NPCDefinition
 			p.getPackets().sendDevConsoleMessage(Integer.valueOf(args[1]) + ": renderEmote=" + defs.getRenderEmote());
 			p.sendMessage(Integer.valueOf(args[1]) + ": renderEmote=" + defs.getRenderEmote());
 			Logger.debug(Commands.class, "REFACTOR.compAnim", "renderEmote=" + defs.getRenderEmote());
@@ -167,21 +150,6 @@ public final class Commands {
 			p.setNextBodyGlow(new BodyGlow(500, Integer.valueOf(args[1]), Integer.valueOf(args[2]), Integer.valueOf(args[3]), Integer.valueOf(args[4])));
 			return true;
 
-			//		case "getaccs":
-			//			ArrayList<String> ips = Utils.getCharactersWithIP(args[1]);
-			//			p.getPackets().sendRunScriptReverse(1207, new Object[] { ips.size() });
-			//			p.getInterfaceManager().sendInterface(275);
-			//			p.getPackets().setIFText(275, 1, "Characters with IP:  " + args[1]);
-			//			int numa = 10;
-			//			for (String ip : ips) {
-			//				if (numa > 288)
-			//					break;
-			//				if (ip == null)
-			//					continue;
-			//				p.getPackets().setIFText(275, numa, ip);
-			//				numa++;
-			//			}
-			//			return true;
 
 		case "script":
 			p.getPackets().sendRunScript(Integer.valueOf(args[1]));

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.rooms.puzzles;
 
 import org.darkan.core.model.ObjectShape;
@@ -29,22 +13,15 @@ import org.darkan.core.model.Animation;
 
 public class ReturnTheFlowRoom extends PuzzleRoom {
 
-	//private static final int[] PEDESTAL = { 54110, 54111, 54112, 54113, 37202 };
 	private static final int[] PEDESTAL_FLOW = { 54114, 54115, 54116, 54117, 37203 };
-	//private static final int[] PILLAR = { 54118, 54119, 54120, 54121, 37204 };
 	private static final int[] PILLAR_BROKEN = { 54122, 54123, 54124, 54125, 37207 };
 	private static final int[] PILLAR_REPAIRED = { 54126, 54127, 54128, 54129, 37219 };
-	//Rubble pieces receiving no flow (each rooms seems to have a few of these prespawned)
 	private static final int[] RUBBLE_PIECE = { 54130, 54131, 54132, 54133, 37220 };
 	private static final int[] RUBBLE_PIECE_CLEARED = { 54134, 54135, 54136, 54137, 37229 };
-	//Cleared rubble pieces receiving flow (they still have remnants on them)
 	private static final int[] RUBBLE_PIECE_FLOW = { 54138, 54139, 54140, 54141, 37232 };
 	private static final int[] RUBBLE_PIECE_CLEARED_FLOW = { 54142, 54143, 54144, 54145, 37249 };
-	//Clean straight pieces
-	//This must also be used as a base for the rubble pieces to make a groove in the ground
 	private static final int[] STRAIGHT_PIECE_PATH = { 54146, 54147, 54148, 54149, 37250 };
 	private static final int[] STRAIGHT_PIECE_PATH_FLOW = { 54150, 54151, 54152, 54153, 37251 };
-	//Clean corner pieces
 	private static final int[] CORNER_PIECE_PATH = { 54154, 54155, 54156, 54157, 37252 };
 	private static final int[] CORNER_PIECE_PATH_FLOW = { 54158, 54159, 54160, 54161, 37253 };
 
@@ -122,7 +99,6 @@ public class ReturnTheFlowRoom extends PuzzleRoom {
 			pillarPtr++;
 			pillarPtr &= 0x3;
 		}
-		//very small chance to have it not generate anything at the start
 		if (tasks == 0) {
 			setComplete();
 			manager.spawnObject(reference, PEDESTAL_FLOW[type.ordinal()], ObjectShape.SCENERY_INTERACT, 0, 7, 7);
@@ -147,7 +123,7 @@ public class ReturnTheFlowRoom extends PuzzleRoom {
 			WorldTasks.scheduleTimer(3, (ticks) -> {
 				final int[] coords = manager.getRoomPos(object.getTile());
 				FlowPiece node = findFlowPiece(coords[0], coords[1]);
-				if (node.blocked) { //players might click in same tick
+				if (node.blocked) {
 					giveXP(player, Constants.MINING);
 					player.setNextAnimation(new Animation(-1));
 					GameObject rubble = new GameObject(object);
@@ -264,12 +240,11 @@ public class ReturnTheFlowRoom extends PuzzleRoom {
 						continue;
 					}
 				}
-				//Else can't change X
 				if (curr.y == SIZE_Y) {
 					if (!used[curr.x][curr.y - 1])
 						move(SOUTH);
 					else
-						move(EAST); //rest is impossible
+						move(EAST);
 				} else
 					move(NORTH);
 			}
@@ -305,7 +280,6 @@ public class ReturnTheFlowRoom extends PuzzleRoom {
 				if (node.corner)
 					node.rotation = 1 - node.rotation;
 				else if (node.rotation == 1)
-					//turn straight pieces in Y direction
 					node.rotation += 2;
 				node = node.next;
 			}

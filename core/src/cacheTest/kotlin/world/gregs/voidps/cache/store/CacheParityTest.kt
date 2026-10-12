@@ -23,18 +23,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
-/**
- * Proves the store layer against the real 727 cache: every reference table and every container
- * in it has to come back out of [ReferenceTable], [Container] and [ArchiveGroup] byte for byte,
- * recompression included.
- *
- * bzip2 is checked with both encoders. Every one of the 3,796 bzip2 archives and eleven of the
- * thirteen bzip2 reference tables reproduce with the libbzip2 port; the tables of index 2 and
- * index 9 were written by commons-compress and reproduce only with that, which is what
- * [BZip2Variant] exists for and what this test pins down.
- *
- * Skipped entirely when there is no cache to test against, like the other whole-cache tests.
- */
 class CacheParityTest {
 
     @Test
@@ -139,9 +127,6 @@ class CacheParityTest {
             counts.archives.incrementAndGet()
             val keys = keysByArchive[entry.id]
             try {
-                // The container's own bytes are checked without keys: encryption is symmetric,
-                // so a decode/encode round trip has to be the identity either way, and the
-                // table's crc and whirlpool cover the bytes as stored.
                 val stored = Container.decode(bytes)
                 assertEquals(
                     entry.version and 0xffff,
@@ -162,9 +147,6 @@ class CacheParityTest {
                 val group = try {
                     container.data()
                 } catch (e: Throwable) {
-                    // Eight index 5 archives are encrypted with keys nobody has - they are not
-                    // in xteaKeys.json - so their plaintext cannot be reached to check the group
-                    // or the recompression. The container's own bytes are checked above.
                     counts.undecryptable.incrementAndGet()
                     continue
                 }
@@ -195,11 +177,6 @@ class CacheParityTest {
         return counts
     }
 
-    /**
-     * Which bzip2 encoder reproduces [bytes], or null when the container does not recompress at
-     * all. A container that is not bzip2 has only one way to be written and answers with the
-     * default when that way is right.
-     */
     private fun variant(bytes: ByteArray, container: Container, data: ByteArray): BZip2Variant? {
         val variants = if (container.compression == Compression.BZIP2) {
             BZip2Variant.entries
@@ -215,10 +192,6 @@ class CacheParityTest {
         return null
     }
 
-    /**
-     * XTEA keys per index 5 archive. The keys are filed by region, and an archive's region is
-     * only recoverable from its name hash, so the `l` and `n` names are rehashed to find them.
-     */
     private fun mapKeys(table: ReferenceTable): Map<Int, IntArray> {
         val byHash = HashMap<Int, Int>(table.archiveCount)
         for (entry in table.archives) {
@@ -291,7 +264,6 @@ class CacheParityTest {
                     "the edited file should have persisted"
                 )
                 assertContentEquals(model, reopened.data(Index.MODELS, newArchive, 0), "the new archive should have persisted")
-                // Everything else in the edited archive must have survived the repack.
                 for (file in reopened.files(Index.ITEMS, itemArchive)) {
                     assertNotNull(reopened.data(Index.ITEMS, itemArchive, file), "file $file went missing")
                 }
@@ -305,7 +277,6 @@ class CacheParityTest {
                 assertEquals(1, reopened.archiveVersion(Index.MODELS, newArchive), "a new archive starts at version 1")
                 assertContentEquals(intArrayOf(0), reopened.files(Index.MODELS, newArchive))
 
-                // The reference table has to describe the containers that are actually there.
                 FileStore.open(directory).use { store ->
                     val container = Container.decode(assertNotNull(store.read(Index.ITEMS, itemArchive)))
                     assertEquals(reopened.archiveCrc(Index.ITEMS, itemArchive), container.crc())
@@ -371,16 +342,12 @@ class CacheParityTest {
         private const val THREADS = 8
         private const val EXAMPLES = 20
 
-        /** Map archives `data/map/xteaKeys.json` has no working key for. Eight, as of 727. */
         private const val UNKEYED_LIMIT = 16
 
-        /** The reference tables commons-compress produced; everything else is libbzip2. */
         private val COMMONS_TABLES = sortedSetOf(Index.CONFIGS, Index.TEXTURES)
 
-        /** How many archives in the 727 cache are bzip2; its thirteen bzip2 tables are extra. */
         private const val BZIP2_ARCHIVES = 3783
 
-        /** The two index 5 archive families the client is sent keys for. */
         private val ENCRYPTED_MAP_PREFIXES = listOf("l", "n")
     }
 }

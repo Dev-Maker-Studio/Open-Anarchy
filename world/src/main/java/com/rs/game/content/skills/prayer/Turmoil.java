@@ -9,11 +9,10 @@ import com.rs.game.model.entity.player.managers.PrayerManager;
 import java.util.Objects;
 
 public class Turmoil {
-    // Tracking last opponent to refresh boosts when changing target
     private static final String LAST_TURMOIL_TARGET_ATTR = "lastTurmoilTarget";
     private static final String LAST_TURMOIL_TIME_ATTR = "turmoilLastHitTime";
 
-    private static final long TURMOIL_TIMEOUT = 10000; // 10 seconds
+    private static final long TURMOIL_TIMEOUT = 10000;
 
     public static void applyTurmoilOnHit(Player player, Entity target) {
         if (!player.getPrayer().active(Prayer.TURMOIL))
@@ -24,14 +23,11 @@ public class Turmoil {
 
         Integer lastTargetIndex = player.getTempAttribs().getO(LAST_TURMOIL_TARGET_ATTR);
 
-        // On new target, recalculate boosts and update
         if (lastTargetIndex == null || lastTargetIndex != target.getIndex()) {
-            // New target -> recalculate boosts
             updateTurmoilBoosts(player, target);
             player.getTempAttribs().setO(LAST_TURMOIL_TARGET_ATTR, target.getIndex());
         }
 
-        // Update last hit time every time we hit
         player.getTempAttribs().setL(LAST_TURMOIL_TIME_ATTR, System.currentTimeMillis());
     }
 

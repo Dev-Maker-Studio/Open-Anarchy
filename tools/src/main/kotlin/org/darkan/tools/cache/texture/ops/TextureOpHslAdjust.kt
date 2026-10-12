@@ -5,15 +5,11 @@ import world.gregs.voidps.buffer.read.BufferReader
 import kotlin.math.max
 import kotlin.math.min
 
-/**
- * Type 17: Adjusts HSL (Hue, Saturation, Lightness) values.
- */
 class TextureOpHslAdjust : TextureOperation(1, false) {
     private var hueAdjust: Int = 0
     private var saturationAdjust: Int = 0
     private var lightnessAdjust: Int = 0
 
-    // Working variables for HSL conversion
     private var hue: Int = 0
     private var saturation: Int = 0
     private var lightness: Int = 0

@@ -92,12 +92,4 @@ fun loadVarCommands() {
     }
 }
 
-/**
- * One past the highest id the given config archive holds, the bound the `*loop` commands stop at.
- *
- * Legacy used `Cache.STORE.getIndex(IndexType.CONFIG).getValidFilesCount(archive)` (world-server
- * VarCommands.kt:22/39/61), but these archives are sparse: index 2 / archive 16 holds 2715 varps
- * with a valid-file count well under 2715, so a count would stop the loop before the highest ids.
- * `lastFileId + 1` is the id space, and matches how `Vars` sizes its varp array.
- */
 private fun varSpaceSize(archive: Int): Int = Cache.get().lastFileId(Index.CONFIGS, archive) + 1

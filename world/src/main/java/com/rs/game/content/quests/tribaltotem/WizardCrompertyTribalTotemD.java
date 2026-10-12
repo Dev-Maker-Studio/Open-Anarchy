@@ -37,7 +37,7 @@ public class WizardCrompertyTribalTotemD extends Conversation {
 				WorldTasks.schedule(new Task() {
 					@Override
 					public void run() {
-						p.tele(Tile.of(2642, 3321, 0));//Mansion in ardy
+						p.tele(Tile.of(2642, 3321, 0));
 					}
 				}, 2);
 			});
@@ -79,9 +79,9 @@ public class WizardCrompertyTribalTotemD extends Conversation {
 													@Override
 													public void run() {
 														if(p.getQuestManager().getStage(Quest.TRIBAL_TOTEM) >= GET_TOTEM)
-															p.tele(Tile.of(2642, 3321, 0)); //Mansion in ardy
+															p.tele(Tile.of(2642, 3321, 0));
 														else
-															p.tele(Tile.of(2649, 3271, 0)); //RPDT crates in ardy
+															p.tele(Tile.of(2649, 3271, 0));
 													}
 												}, 2);
 											}));

@@ -16,7 +16,6 @@ class PlayerVariableParameterDecoder : ConfigDecoder<PlayerVariableParameterDefi
 
     override fun PlayerVariableParameterDefinition.read(opcode: Int, buffer: Reader) {
         if (opcode == 1) {
-            // Nothing in 727 carries it, but reading it keeps an unexpected file from desyncing.
             typeChar = byteToChar(buffer.readByte().toByte())
         } else if (opcode == 5) {
             type = buffer.readShort()

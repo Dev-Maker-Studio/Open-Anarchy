@@ -16,8 +16,6 @@ class HitSplatDecoder : ConfigDecoder<HitSplatDefinition>(HIT_SPLATS) {
 
     override fun HitSplatDefinition.read(opcode: Int, buffer: Reader) {
         when (opcode) {
-            // The font and the four graphics are big smarts, not shorts (client HitSplatType).
-            // Read as shorts, 47 of the 48 shipped files desynced and left trailing bytes.
             1 -> font = buffer.readBigSmart()
             2 -> textColour = buffer.readUnsignedMedium()
             3 -> icon = buffer.readBigSmart()
@@ -25,8 +23,6 @@ class HitSplatDecoder : ConfigDecoder<HitSplatDefinition>(HIT_SPLATS) {
             5 -> middle = buffer.readBigSmart()
             6 -> right = buffer.readBigSmart()
             7 -> offsetX = buffer.readUnsignedShort()
-            // gjstr2 (a 0 version byte first), not a plain string: read as one the "%1"
-            // placement string swallowed its own terminator and desynced every following opcode.
             8 -> amount = buffer.readPrefixedString()
             9 -> duration = buffer.readShort()
             10 -> offsetY = buffer.readUnsignedShort()

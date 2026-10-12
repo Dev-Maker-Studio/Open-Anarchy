@@ -1,25 +1,11 @@
 package org.darkan.cs2.compile
 
-/** Token kinds the CS2 TypeScript subset needs. */
 enum class TokenKind { IDENT, NUMBER, BIGINT, STRING, PUNCT, EOF }
 
-/**
- * [start] is the offset of the token's first character in the source, which is
- * what lets a rewrite replace one identifier and copy everything around it -
- * comments and string literals included - through untouched.
- */
 data class Token(val kind: TokenKind, val text: String, val line: Int, val start: Int = -1) {
     override fun toString() = "$kind($text) at line $line"
 }
 
-/**
- * Tokeniser for the TypeScript subset the decompiler emits.
- *
- * Only what that subset actually uses is supported: identifiers, decimal and
- * hex numbers, `bigint` literals, double-quoted strings with the escapes
- * [org.darkan.cs2.Cs2Strings] produces, line comments, and the operators
- * below.
- */
 class Cs2Lexer(private val source: String) {
 
     private var at = 0
@@ -104,7 +90,7 @@ class Cs2Lexer(private val source: String) {
             at++
         }
         val body = source.substring(start, at)
-        at++ // closing quote
+        at++
         return Token(TokenKind.STRING, body, line, quote)
     }
 

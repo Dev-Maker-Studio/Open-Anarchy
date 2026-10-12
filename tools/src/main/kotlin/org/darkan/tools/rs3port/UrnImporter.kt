@@ -68,11 +68,6 @@ class UrnImporter(
         println("catalog entries added: " + added.joinToString { "${it.first} ${it.second}" })
     }
 
-    /**
-     * The tree's highest id of each type is either the ceiling the allocation assumed or, on a
-     * re-run, the last id the allocation used. Anything else means the index has grown since the
-     * spec was written and the allocation would leave a hole or land on somebody else's id.
-     */
     private fun checkCeilings() {
         for (type in listOf("obj", "seq", "struct", "model")) {
             val highest = highest(directory(type), suffix(type))

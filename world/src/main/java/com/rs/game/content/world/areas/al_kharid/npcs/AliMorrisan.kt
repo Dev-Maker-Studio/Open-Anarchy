@@ -5,7 +5,6 @@ import com.rs.engine.dialogue.startConversation
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
 
-//TODO Rouge Trader miniquest and add shops
 
 @ServerStartupEvent
 fun aliMorrisan() {

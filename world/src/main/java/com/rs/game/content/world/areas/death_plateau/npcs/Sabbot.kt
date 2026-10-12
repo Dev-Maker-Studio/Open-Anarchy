@@ -60,7 +60,7 @@ class SabbotAfterQuest(id: Int, tile: Tile) : NPC(id, tile) {
 
 @ServerStartupEvent
 fun mapSabbot() {
-    onNpcClick(15095) { (player, npc) -> SabbotD(player, npc) } // During Death Plateau
-    onNpcClick(15097) { (player, npc) -> Sabbot(player, npc) } // After Death Plateau
+    onNpcClick(15095) { (player, npc) -> SabbotD(player, npc) }
+    onNpcClick(15097) { (player, npc) -> Sabbot(player, npc) }
     instantiateNpc(15097) { id, tile -> SabbotAfterQuest(id, tile) }
 }

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.rooms.puzzles;
 
 import org.darkan.core.model.ObjectShape;
@@ -34,48 +18,34 @@ import java.util.Set;
 
 public class FlowerRootsRoom extends PuzzleRoom {
 
-	//order: blue, purple, red, yellow, big plant 7 ticks, small plants 14 ticks
-
-	//bprybpry
-	//BbpprryY
-	//pPRryybb
-	//rryYBbpp
-	//yybbpPRr
-
-
 	private static final int[] DOOR_LEAVES = { 35838, 35839, 35842, 35847, 35849 };
 
 	private static final int[][][] PLANTS = {
 		{
-			//LARGE
 			{ 35507, 35520 },
 			{ 35523, 35525 },
 			{ 35562, 35568 },
 			{ 35569, 35576 }
 		},
 		{
-			//SMALL 1
 			{ 35577, 35588 },
 			{ 35602, 35604 },
 			{ 35606, 35609 },
 			{ 35611, 35613 }
 		},
 		{
-			//SMALL 2
 			{ 35616, 35625 },
 			{ 35655, 35685 },
 			{ 35689, 35708 },
 			{ 35709, 35712 }
 		},
 		{
-			//SMALL 3
 			{ 35715, 35718 },
 			{ 35719, 35720 },
 			{ 35734, 35739 },
 			{ 35778, 35780 }
 		},
 		{
-			//SMALL 4
 			{ 35799, 35800 },
 			{ 35804, 35808 },
 			{ 35809, 35812 },
@@ -83,7 +53,6 @@ public class FlowerRootsRoom extends PuzzleRoom {
 		},
 	};
 
-	//TODO: need end animations: tested 14900-15200 14954 could be useable
 	private static final int BIG_FLOWER_DESPAWN = 14954;
 	private static final int SMALL_FLOWER_DESPAWN = 14954;
 	private static final int LEAF_DESPAWN = 14954;
@@ -121,14 +90,14 @@ public class FlowerRootsRoom extends PuzzleRoom {
 		colorTask = new ChangeColorTask();
 		objectTask = new ChangeObjectTask();
 		WorldTasks.scheduleLooping(colorTask, 0, 6);
-		WorldTasks.scheduleLooping(objectTask, 4, 6); //color animation is 3 ticks
+		WorldTasks.scheduleLooping(objectTask, 4, 6);
 	}
 
 	@Override
 	public boolean processObjectClick1(final Player player, final GameObject object) {
 		for (int type = 0; type < 5; type++)
 			for (int color = 0; color < 4; color++)
-				if (object.getId() == PLANTS[type][color][0] || object.getId() == PLANTS[type][color][1]) { //[1] is clickable for big plant aswell
+				if (object.getId() == PLANTS[type][color][0] || object.getId() == PLANTS[type][color][1]) {
 					final int[] coords = manager.getRoomPos(object.getTile());
 					if (type == 0) {
 						if (!hasRequirement(player, Constants.FARMING)) {
@@ -155,7 +124,6 @@ public class FlowerRootsRoom extends PuzzleRoom {
 						return false;
 					}
 					if (plants[coords[0]][coords[1]].locked)
-						//already being used by other player
 						return false;
 					plants[coords[0]][coords[1]].locked = true;
 					player.setNextAnimation(new Animation(defs.getEmoteId()));

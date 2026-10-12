@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.world.areas.burthorpe;
 
 import org.darkan.core.model.Item;
@@ -54,15 +38,12 @@ public class HeroesGuild  {
 	}
 
 	public static int getChargedId(int itemId) {
-		//glory
 		if ((itemId == 1704) || (itemId == 1706) || (itemId == 1708) || (itemId == 1710))
 			return 1712;
 
-		//trimmed glory
 		if ((itemId == 10356) || (itemId == 10358) || (itemId == 10360) || (itemId == 10362))
 			return 10354;
 
-		//row
 		if ((itemId == 2572) || (itemId == 20653) || (itemId == 20655) || (itemId == 20657))
 			return 20659;
 

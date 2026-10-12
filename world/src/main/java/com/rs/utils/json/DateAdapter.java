@@ -13,17 +13,6 @@ import java.lang.reflect.Type;
 import java.time.Instant;
 import java.util.Date;
 
-/**
- * Serializes {@link Date} as MongoDB extended JSON ({@code {"$date": {"$numberLong": "..."}}}) so
- * that Document.parse stores a real BSON date. That keeps dates comparable in queries and makes the
- * TTL index on the logs collection actually expire documents - a string or a bare number is ignored
- * by TTL entirely.
- *
- * Legacy documents stored dates as a locale-formatted string ("MMM dd, YYYY, h:mm:ss a", which used
- * a week-year and so misdated the turn of the year). Those are converted by the database migration
- * rather than parsed here: an unreadable value throws so the caller refuses the login instead of
- * silently dropping the field and overwriting it on the next save.
- */
 public class DateAdapter implements JsonSerializer<Date>, JsonDeserializer<Date> {
 
 	@Override
@@ -50,7 +39,6 @@ public class DateAdapter implements JsonSerializer<Date>, JsonDeserializer<Date>
 	private Date parseExtended(JsonElement date) {
 		if (date.isJsonPrimitive()) {
 			JsonPrimitive primitive = date.getAsJsonPrimitive();
-			//Relaxed extended JSON renders the date as an ISO-8601 string
 			if (primitive.isString())
 				return Date.from(Instant.parse(primitive.getAsString()));
 			return new Date(primitive.getAsLong());

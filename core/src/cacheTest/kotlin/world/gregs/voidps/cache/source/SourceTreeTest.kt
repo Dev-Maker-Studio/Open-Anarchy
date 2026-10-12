@@ -33,14 +33,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/**
- * The source tree against a cache small enough to reason about byte by byte.
- *
- * The fixture is built with the store API rather than taken from a file so it can hold one of
- * everything the real cache holds: a three chunk group, a sparse file id list, an archive with
- * file names, a whirlpool flagged table, none/gzip/bzip2 containers, an encrypted archive with a
- * key and an encrypted archive without one.
- */
 class SourceTreeTest {
 
     private lateinit var root: File
@@ -51,11 +43,6 @@ class SourceTreeTest {
     @BeforeTest
     fun setup() {
         SourceCodecs.reset()
-        // The fixture's archives are made up bytes: a chunk layout, a sparse file id list, names,
-        // keys and an archive nothing can open, none of it a real 727 format. Every index now has a
-        // typed codec, and those would (rightly) refuse to decode filler, so each index the fixture
-        // fabricates is given back the raw codec this test was written against. The typed codecs
-        // meet real data elsewhere - MapCodecParityTest, ModelCodecParityTest, DefinitionJsonCodecTest.
         SourceCodecs.register(Index.ANIMATION_FRAMES, VerbatimGroupCodec)
         SourceCodecs.register(Index.MAPS, RawArchiveCodec)
         SourceCodecs.register(Index.WORLD_MAP, RawFilesCodec.NESTED)
@@ -77,7 +64,6 @@ class SourceTreeTest {
     fun `a tree round trips a cache byte for byte`() {
         val source = unpack()
 
-        // Every codec's layout, including the archive nothing could decrypt.
         for (path in listOf(
             "cache.json",
             "anims/0.grp", "anims/1.grp", "anims/3.grp",
@@ -116,7 +102,6 @@ class SourceTreeTest {
             "a sparse file id list is recorded:\n${File(tree, "anims/index.json").readText()}"
         )
 
-        // Re-unpacking an unchanged cache must leave every file alone.
         val again = unpack()
         assertEquals(0, again.written, "nothing should have been rewritten")
         assertEquals(0, again.deleted)
@@ -141,7 +126,6 @@ class SourceTreeTest {
         Packer.pack(source, output)
         val before = containers(output)
 
-        // One edited file and one bumped version, in two different indices.
         val file = File(tree, "worldmapdata/0/1.dat")
         file.writeBytes(byteArrayOf(9, 9, 9, 9))
         val anims = source.metadata(Index.ANIMATION_FRAMES)
@@ -168,7 +152,6 @@ class SourceTreeTest {
         assertEquals(12, cache(output).archiveVersion(Index.ANIMATION_FRAMES, 1))
         assertContentEquals(byteArrayOf(9, 9, 9, 9), cache(output).data(Index.WORLD_MAP, 0, 1))
 
-        // Nothing changed, so nothing may be touched.
         val stamps = timestamps(output)
         val second = Builder.build(source, output)
         assertTrue(second.unchanged, "a second build should be a no-op: $second")
@@ -196,7 +179,6 @@ class SourceTreeTest {
         assertContentEquals(byteArrayOf(1, 2, 3), built.data(Index.WORLD_MAP, 2, 0), "archive 2 is new")
         assertEquals(1, built.archiveVersion(Index.WORLD_MAP, 2))
 
-        // And back out again: dropping the archive from the metadata removes it from the cache.
         File(tree, "worldmapdata/2/0.dat").delete()
         val without = source.metadata(Index.WORLD_MAP)
         without.archives.remove(2)
@@ -252,8 +234,6 @@ class SourceTreeTest {
         assertTrue(project.isFile, "the codec's index level file should have been written")
         assertContentEquals(intArrayOf(0, 1), codec.unpacked, "unpackIndex is told what was unpacked")
 
-        // The unpacker deletes everything no archive claimed, so a file only unpackIndex produced
-        // is the case that proves the claim works.
         val again = unpack()
         assertEquals(0, again.deleted, "an index level file must survive the prune")
         assertEquals(0, again.written, "and must not be rewritten")
@@ -267,8 +247,6 @@ class SourceTreeTest {
             "a full pack sets the codec up once, with every archive"
         )
 
-        // An edit to it repacks no archive; it is handed to the codec instead, and the manifest
-        // records it like any other input, so the build after that is a no-op again.
         codec.packs.clear()
         project.writeText("edited\n")
         val build = Builder.build(source, output) { assertFalse(it.contains("belongs to no codec"), it) }
@@ -299,8 +277,6 @@ class SourceTreeTest {
         assertEquals(0, clean.stale.size)
         assertTrue(clean.gamevals > 0, "the unpack copied the catalogs in")
 
-        // What every pristine fallback looks like: the original bytes beside the editable file,
-        // guarded by that file's hash.
         val guarded = File(tree, "worldmapdata/0/1.dat")
         File(tree, "worldmapdata/0/1.dat${SourceFiles.PRISTINE_EXTENSION}").writeBytes(byteArrayOf(1, 2))
         val metadata = source.metadata(Index.WORLD_MAP)
@@ -317,10 +293,6 @@ class SourceTreeTest {
         assertEquals("worldmapdata/0/1.dat", stale.single().path)
     }
 
-    /**
-     * A codec with a file that is a property of the index rather than of any archive - what index
-     * 12's `cs2.d.ts` and friends are - over the raw layout the fixture's bytes need.
-     */
     private class ProjectCodec : SourceCodec by RawFilesCodec.NESTED {
 
         var unpacked: IntArray = IntArray(0)
@@ -360,7 +332,6 @@ class SourceTreeTest {
 
     private fun cache(directory: File): Cache = FileCache.load(directory.absolutePath)
 
-    /** Every container in [directory], by index and archive, reference tables included. */
     private fun containers(directory: File): Map<Pair<Int, Int>, ByteArray> {
         val containers = HashMap<Pair<Int, Int>, ByteArray>()
         FileStore.open(directory).use { store ->
@@ -397,13 +368,6 @@ class SourceTreeTest {
         return stamps
     }
 
-    /**
-     * Three indices' worth of archives, covering every shape the real cache has: `anims` keeps
-     * whole groups, `maps` is named and partly encrypted, `worldmapdata` holds several files per
-     * archive and a whirlpool flagged table. All three are raw-byte indices on purpose - the
-     * typed JSON codecs decode what they are given, so a fixture of made up bytes has to stay out
-     * of their indices; `DefinitionJsonCodecTest` is where they are exercised.
-     */
     private fun fixture(directory: File) {
         FileStore.create(directory, INDEX_COUNT).use { store ->
             write(
@@ -546,10 +510,8 @@ class SourceTreeTest {
     )
 
     private companion object {
-        /** Enough idx files for the highest index the fixture uses. */
         private const val INDEX_COUNT = 24
 
-        /** Only `l50_50`'s key; `l60_60`'s is the one nobody has. */
         private val KEYS = mapOf((50 shl 8 or 50) to intArrayOf(1, 2, 3, 4))
     }
 }

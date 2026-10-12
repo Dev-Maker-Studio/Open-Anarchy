@@ -87,7 +87,6 @@ fun spawnTree() {
     val loc = nextLocation()
     currentTree = EvilTree(Type.entries.random(), loc, loc.tile)
     currentTree!!.spawn()
-    //World.sendWorldMessage("<col=FF0000><shad=000000>A an evil tree has begun to sprout near ${loc.desc}!", false)
 }
 
 private fun nextLocation(): Location {

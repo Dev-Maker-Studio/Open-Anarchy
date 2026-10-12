@@ -8,66 +8,11 @@ import java.util.Base64
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
-/**
- * Darkan's auth token system to keep player passwords secure and untransmitted via public world-servers.
- * Provides stateless, cryptographically-signed tokens that allow a login server to issue credentials that world servers can independently verify without
- * database lookups or shared session state.
- *
- * ## Token Format (v1)
- * ```
- * base64url(payload) + "." + base64url(signature)
- *
- * Payload (18 + usernameLen bytes):
- *   [0]       version     = 0x01
- *   [1..4]    issuedAt    = uint32 big-endian (unix seconds)
- *   [5..8]    expiresAt   = uint32 big-endian (unix seconds)
- *   [9]       usernameLen = uint8 (1..255)
- *   [10..]    username    = UTF-8 bytes
- *   [..]      nonce       = 8 random bytes (replay resistance)
- *
- * Signature:
- *   HMAC-SHA256(payload) truncated to 16 bytes (128 bits)
- * ```
- *
- * ## Security features
- *
- * **Integrity**:
- * HMAC-SHA256 ensures tokens cannot be forged or tampered with without knowledge of the shared secret. The truncated 128-bit signature provides adequate security for
- * short-lived tokens while saving space fitting with Jagex's login block constraints.
- *
- * **Replay Resistance**:
- * The 8-byte cryptographic nonce ensures each token is unique, preventing replay attacks even for the same user within the validity window.
- *
- * **Timing Attack Resistance**:
- * Signature verification uses constant-time comparison via [MessageDigest.isEqual] to prevent timing side-channels.
- *
- * **Freshness**:
- * Tokens include both issued-at and expires-at timestamps, enabling servers to enforce maximum token age and detect clock skew.
- *
- * ## Usage
- * ```kotlin
- * // issuing tokens from login server
- * val token = WorldLoginToken.issue(
- *     username = "trent",
- *     nowMs = System.currentTimeMillis(),
- *     ttlMs = 1800000L, //configurable valid login time
- *     secret = sharedSecret
- * )
- *
- * // verify token
- * val result = WorldLoginToken.verify(token, System.currentTimeMillis(), sharedSecret)
- *     ?: error("Failed authentication for user")
- * println("Successfully authenticated: ${result.username}")
- * ```
- *
- * Note: the ttlMs should ideally exceed the idle logout of the lobby server which we currently don't have implemented so for now probably just going to send
- * a login token expired error or something similar if that already exists as an opcode somewhere
- */
 object LoginToken {
     private const val VERSION: Byte = 1
     private const val NONCE_BYTES = 8
     private const val SIGNATURE_BYTES = 16
-    private const val HEADER_BYTES = 1 + 4 + 4 + 1  // version + issued + expires + usernameLen
+    private const val HEADER_BYTES = 1 + 4 + 4 + 1
 
     private val secureRandom = SecureRandom()
     private val base64Encoder = Base64.getUrlEncoder().withoutPadding()
@@ -127,11 +72,11 @@ object LoginToken {
 
         if (payload.isEmpty() || payload[0] != VERSION) return null
 
-        val minLength = HEADER_BYTES + 1 + NONCE_BYTES  // At least 1 byte for username
+        val minLength = HEADER_BYTES + 1 + NONCE_BYTES
         if (payload.size < minLength || signature.size != SIGNATURE_BYTES) return null
 
         val buffer = ByteBuffer.wrap(payload)
-        buffer.get() //version skip
+        buffer.get()
 
         val issuedAtSec = buffer.int.toLong() and 0xFFFFFFFFL
         val expiresAtSec = buffer.int.toLong() and 0xFFFFFFFFL

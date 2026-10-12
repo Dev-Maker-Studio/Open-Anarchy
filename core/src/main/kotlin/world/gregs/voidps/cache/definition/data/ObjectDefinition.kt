@@ -86,42 +86,18 @@ data class ObjectDefinition(
     override var params: Map<Int, Any>? = null,
     override var stringId: String = "",
     override var extras: Map<String, Any>? = null,
-    /**
-     * Opcode 24's single animation, kept even when it is -1 - which the client reads and throws away rather
-     * than storing in [animations], so the record is otherwise invisible.
-     */
     var singleAnimation: Int = -1,
-    /**
-     * Opcode 106's animation odds as the file held them, one byte each. [percents] holds them rescaled to
-     * 65535ths of their sum the way the client does, which is not reversible.
-     */
     var rawPercents: IntArray? = null,
-    /**
-     * The option records as the file held them: indices 0 to 4 are opcodes 30 to 34, indices 5 to 9 are the
-     * members only opcodes 150 to 154. Null when the file had no option record. [options] is the merged view
-     * the client builds from them, which cannot say which opcode an option came from.
-     */
     var rawOptions: Array<String?>? = null,
-    /**
-     * The opcode 249 parameter records in file order, kept only when the file listed an id more than once -
-     * [params] keeps the last value of each. Null when [params] holds every record.
-     */
     var paramRecords: List<KeyedValue>? = null
 ) : Definition, Transforms, Recolourable, ColourPalette, Parameterized, Extra, OpcodeOrdered {
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var opcodeOrder: IntArray? = null
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var shadowedPayloads: Array<ByteArray?>? = null
 
     var block: Int = PROJECTILE or ROUTE
 
-    /** The op number of [option], 1-based - op1 is 1 - or -1 when absent. */
     fun optionsIndex(option: String): Int {
         val index = options?.indexOf(option) ?: return -1
         return if (index == -1) -1 else index + 1
@@ -133,7 +109,6 @@ data class ObjectDefinition(
         false
     }
 
-    /** [op] is the op number, 1-based - op1 is 1. */
     fun hasOption(op: Int, option: String): Boolean = getOption(op) == option
 
     fun containsOptionIgnoreCase(option: String): Boolean = if (options != null) {
@@ -142,23 +117,12 @@ data class ObjectDefinition(
         false
     }
 
-    /** [op] is the op number, 1-based - op1 is 1. */
     fun getOption(op: Int): String? = if (op < 1) null else options?.getOrNull(op - 1)
 
     fun getFirstOption(): String? = getOption(1)
 
-    /**
-     * The id this object presents as for a player with the given [vars].
-     *
-     * Legacy `ObjectDefinitions.getIdForPlayer(VarManager)`.
-     */
     fun getIdForPlayer(vars: Vars?): Int = getIdForVars(id, vars)
 
-    /**
-     * The name of the definition this object transforms into for the given [vars].
-     *
-     * Legacy `ObjectDefinitions.getName(VarManager)`.
-     */
     fun getName(vars: Vars?): String {
         val realId = getIdForPlayer(vars)
         if (realId == id) {

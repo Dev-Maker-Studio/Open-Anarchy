@@ -52,12 +52,6 @@ class IfOnGroundItemHandler : PacketHandler<Player, IfOnGroundItem> {
     }
 }
 
-/**
- * Telekinetic Grab (spellbook 192, component 44).
- *
- * Ported from the legacy anonymous [PlayerAction] in
- * `com.rs.net.decoders.handlers.impl.interfaces.IFOnGroundItemHandler` (lines 70-134).
- */
 private class TelekineticGrabAction(private val packet: IfOnGroundItem, private val tile: Tile) : PlayerAction() {
 
     override fun start(player: Player): Boolean = true

@@ -13,7 +13,6 @@ import org.darkan.core.gameval.gen.Varbit;
 @PluginEventHandler
 public class Thump {
 
-    //Varbit handles all post quest content, Move to quest once implemented
     public static LoginHandler login = new LoginHandler(e -> {
         if (e.getPlayer().isQuestComplete(Quest.AS_A_FIRST_RESORT))
             e.getPlayer().getVars().setVarBit(Varbit.afr_complete, 1);

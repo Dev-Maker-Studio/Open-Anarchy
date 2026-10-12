@@ -5,9 +5,6 @@ import world.gregs.voidps.buffer.read.BufferReader
 import kotlin.math.PI
 import kotlin.math.atan2
 
-/**
- * Type 23: Creates a kaleidoscope effect by mirroring the input texture.
- */
 class TextureOpKaleidoscope : TextureOperation(1, false) {
 
     override fun getColorOutput(y: Int): Array<IntArray> {

@@ -11,20 +11,6 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 
-/**
- * Index 26 - every material in the cache - as one JSON file per material.
- *
- * The index is a single archive holding a single blob: a count, a presence byte per material, and
- * then one *column* per field carrying that field for every material at once. So a material has no
- * bytes of its own to keep, and unlike [DefinitionJsonCodec] this cannot check a file at a time:
- * the whole blob is decoded, written out as `materials/<id>.json`, and rebuilt from all of them
- * together.
- *
- * The count is the number of files - the ids are dense, `0` until the count - and a material the
- * blob's presence byte says is absent is still a file, with `"defined": false` and nothing else
- * that matters. All 2,591 of the 727 cache's materials are defined, and they are one to one with
- * index 9's textures.
- */
 object MaterialCodec : SourceCodec {
 
     private val decoder = MaterialDecoder()
@@ -38,7 +24,6 @@ object MaterialCodec : SourceCodec {
 
     override fun fileIdsFromMetadata(archive: Int): Boolean = true
 
-    /** False: the JSON is not the shipped bytes, so the unpacker packs the blob back and proves it. */
     override fun exact(archive: Int): Boolean = false
 
     override fun unpack(directory: Path, archive: SourceArchive): UnpackedArchive {
@@ -54,7 +39,6 @@ object MaterialCodec : SourceCodec {
         if (compile(files).contentEquals(archive.files[0])) {
             return UnpackedArchive(files)
         }
-        // One sidecar for the whole blob, because one file of it cannot be rebuilt on its own.
         val guard = guard(files)
         return UnpackedArchive(
             files + SourceFile(SourceFiles.pristine(PRISTINE), archive.files[0]),
@@ -103,7 +87,6 @@ object MaterialCodec : SourceCodec {
         return files
     }
 
-    /** The blob's materials, in id order; [MaterialDefinition.defined] says which the blob declares. */
     fun decode(data: ByteArray): Array<MaterialDefinition> {
         val reader = BufferReader(data)
         val materials = decoder.create(reader.readUnsignedShort())
@@ -111,7 +94,6 @@ object MaterialCodec : SourceCodec {
         return materials
     }
 
-    /** The materials back into the one blob the index holds. */
     fun encode(materials: List<MaterialDefinition>): ByteArray {
         val writer = BufferWriter(HEADER + materials.size * ENTRY)
         with(encoder) { writer.encode(materials) }
@@ -145,10 +127,8 @@ object MaterialCodec : SourceCodec {
         return encode(materials)
     }
 
-    /** Every `<id>.json` in [directory], ascending. */
     private fun ids(directory: Path): IntArray = DefinitionLayout.ids(directory)
 
-    /** The whole blob's guard, since a material's file cannot be rebuilt on its own. */
     private fun guard(files: List<SourceFile>): String {
         val out = StringBuilder()
         for (file in files) {
@@ -159,15 +139,11 @@ object MaterialCodec : SourceCodec {
 
     private const val EXTENSION = DefinitionLayout.EXTENSION
 
-    /** Index 26's one archive. */
     private const val ARCHIVE = 0
 
-    /** What the pristine sidecar guards, since no single file is the blob. */
     private const val PRISTINE = "materials$EXTENSION"
 
-    /** The count. */
     private const val HEADER = 2
 
-    /** A presence byte plus the 23 bytes of columns a defined material contributes. */
     private const val ENTRY = 24
 }

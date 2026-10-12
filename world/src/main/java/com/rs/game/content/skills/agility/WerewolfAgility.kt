@@ -70,7 +70,6 @@ fun mapWerewolfAgility() {
         }
     }
 
-    // Stepping stone
     onObjectClick(35996, checkDistance = false) { (player, obj) ->
         if (!Agility.hasLevel(player, 60) || player.tile.y > 9880) return@onObjectClick
         if (obj.tile.matches(player.tile)) return@onObjectClick
@@ -107,7 +106,6 @@ fun mapWerewolfAgility() {
         }
     }
 
-    // Hurdle
     onObjectClick(5133, 5134, 5135) { (player, obj) ->
         if (player.tile.y > obj.y) return@onObjectClick
         if (!Agility.hasLevel(player, 60)) return@onObjectClick
@@ -115,7 +113,6 @@ fun mapWerewolfAgility() {
         player.forceMove(Tile.of(obj.x + (if (obj.id == 5134) 0 else 1), obj.y + 1, 0), 1603, 0, 45)
     }
 
-    //Obstacle pipe
     onObjectClick(5152) { (player, obj) ->
         if (player.tile.y > obj.y) return@onObjectClick
         if (!Agility.hasLevel(player, 60)) return@onObjectClick
@@ -124,7 +121,6 @@ fun mapWerewolfAgility() {
         player.forceMove(toTile, 10580, 10, 60) { player.skills.addXp(Skills.AGILITY, 15.0) }
     }
 
-    // Skull slope
     onObjectClick(5136) { (player, obj) ->
         if (player.x < obj.x) return@onObjectClick
         if (!Agility.hasLevel(player, 60)) return@onObjectClick
@@ -134,7 +130,6 @@ fun mapWerewolfAgility() {
         }
     }
 
-    // Zip line
     onObjectClick(5139, 5140, 5141) { (player) ->
         if (!Agility.hasLevel(player, 60)) return@onObjectClick
         val endTile: Tile = Tile.of(3528, 9873, 0)
@@ -235,13 +230,11 @@ fun mapWerewolfAgility() {
         }
     }
 
-    // Ladder Down
     onObjectClick(5132) { (player) ->
         player.useLadder(Tile.of(3549, 9865, 0))
         player.controllerManager.startController(WerewolfAgilityController())
     }
 
-    // Ladder Up
     onObjectClick(5130) { (player) ->
         player.useLadder(Tile.of(3543, 3463, 0))
         player.controllerManager.forceStop()

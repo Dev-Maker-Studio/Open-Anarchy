@@ -3,9 +3,6 @@ package org.darkan.tools.cache.texture.ops
 import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 
-/**
- * Type 27: Generates square waveform patterns.
- */
 class TextureOpSquareWaveform : TextureOperation(0, true) {
     private var waveCount: Int = 10
     private var dutyCycle: Int = 2048

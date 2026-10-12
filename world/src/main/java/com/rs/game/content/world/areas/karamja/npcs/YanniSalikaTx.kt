@@ -9,16 +9,16 @@ import com.rs.plugin.kts.onItemOnNpc
 @ServerStartupEvent
 
     fun mapAntiques() {
-    val YANNI_ID = 515 // NPC ID
+    val YANNI_ID = 515
 
     val antiques = mapOf(
-        605 to 100,   // BONE_KEY
-        606 to 100,   // STONE_PLAQUE
-        607 to 100,   // TATTERED_SCROLL
-        608 to 100,   // CRUMPLED_SCROLL
-        624 to 100,   // BERVIRIUS_NOTES
-        611 to 500,   // LOCATING_CRYSTAL
-        616 to 1000   // BEADS_OF_THE_DEAD
+        605 to 100,
+        606 to 100,
+        607 to 100,
+        608 to 100,
+        624 to 100,
+        611 to 500,
+        616 to 1000
     )
 
     onItemOnNpc(YANNI_ID) { (player, item, npc) ->

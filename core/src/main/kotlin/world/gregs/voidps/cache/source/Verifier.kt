@@ -14,31 +14,16 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
-/** How one index compared. */
 class IndexVerification(
     val index: Int,
-    /** Containers that came out of the tree byte for byte as the packed cache holds them. */
     val identical: Int,
-    /**
-     * Containers of a [functional][world.gregs.voidps.cache.source.codec.SourceCodec.functional]
-     * index that differ from what shipped: index 12's clientscripts, which are compiled from their
-     * TypeScript on every pack. See `docs/cache-source.md`, "clientscripts".
-     */
     val recompiled: Int,
     val different: Int,
-    /** Archives the tree has and the packed cache does not. */
     val missing: Int,
-    /** Archives the packed cache has and the tree does not. */
     val extra: Int,
     val tableIdentical: Boolean,
-    /** The first few differences, as `archive: what differs`. */
     val examples: List<String>
 ) {
-    /**
-     * Whether a reference table that is not identical differs for exactly one reason: it carries
-     * the CRCs and whirlpools of this index's [recompiled] containers, and nothing else about the
-     * index diverged.
-     */
     val tableAccountedFor: Boolean
         get() = !tableIdentical && recompiled > 0 && different == 0 && missing == 0 && extra == 0
 
@@ -56,7 +41,6 @@ private fun tableState(identical: Boolean, accountedFor: Boolean) = when {
     else -> "DIFFERS"
 }
 
-/** Container level parity between a source tree and a packed cache. */
 class VerifyReport(
     val indices: List<IndexVerification>,
     val versionTablesMatch: Boolean,
@@ -80,23 +64,15 @@ class VerifyReport(
     val tables: Int
         get() = indices.count { it.tableIdentical }
 
-    /** Indices whose reference table differs only because their containers were [recompiled]. */
     val tablesRecompiled: Int
         get() = indices.count { it.tableAccountedFor }
 
     private val tablesUnexplained: Int
         get() = indices.count { !it.tableIdentical && !it.tableAccountedFor }
 
-    /** Whether the version table differs only because a recompiled index's table does. */
     val versionTableAccountedFor: Boolean
         get() = !versionTablesMatch && tablesRecompiled > 0 && tablesUnexplained == 0
 
-    /**
-     * Whether the tree reproduces the cache: every container byte for byte except a functional
-     * index's, every reference table byte for byte except the ones whose divergence those
-     * [recompiled] containers account for, and the derived version table matching unless one of
-     * those tables changed it.
-     */
     val parity: Boolean
         get() = different == 0 && missing == 0 && extra == 0 && tablesUnexplained == 0 &&
             (if (versionTablesMatch) tablesRecompiled == 0 else versionTableAccountedFor)
@@ -111,26 +87,8 @@ class VerifyReport(
             "in ${millis}ms"
 }
 
-/**
- * Proves that packing a source tree reproduces a packed cache.
- *
- * Nothing is written: each archive is rebuilt in memory and compared against the container the
- * packed cache holds, and each reference table the same way. The version table - which is derived
- * and signed rather than stored - is built from both sides and compared too, because that is the
- * one thing the client checks with a signature rather than a CRC.
- *
- * Everything is byte for byte except index 12, which is compiled from its TypeScript on every pack
- * and so hands back equivalent rather than identical bytes for the scripts the decompiler
- * normalises. Those carry their own CRCs, so index 12's reference table and the version table
- * derived from it cannot match either; [VerifyReport.parity] is exactly that allowance and nothing
- * more.
- *
- * `unpack` then `verify` against the cache that was unpacked is the parity guarantee in
- * `docs/cache-source.md`, and is what the whole-cache test runs.
- */
 object Verifier {
 
-    /** Compare a fresh pack of [tree] against the packed cache in [packed]. */
     fun verify(
         tree: SourceTree,
         packed: File,
@@ -181,7 +139,6 @@ object Verifier {
         var different = 0
         var missing = 0
         if (ids.isNotEmpty()) {
-            // A verify is a full pack that is never written, so the codec is set up the same way.
             codec.packIndex(directory, index, ids, emptyList())
         }
 
@@ -246,7 +203,6 @@ object Verifier {
         )
     }
 
-    /** What differs between two containers, in the terms the metadata is written in. */
     private fun difference(stored: ByteArray, built: ByteArray): String {
         if (stored.isEmpty() || built.isEmpty()) {
             return "one side is empty"
@@ -314,6 +270,5 @@ object Verifier {
 
     private const val EXAMPLES = 5
 
-    /** How many archives per thread may be built ahead of the comparison. */
     private const val PIPELINE = 8
 }

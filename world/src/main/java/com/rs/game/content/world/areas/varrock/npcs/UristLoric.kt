@@ -124,7 +124,6 @@ private fun stage1(player: Player, npc: NPC) {
             }
         }
     } ?: run {
-        // No floor drop present, proceed with normal conversation
         player.startConversation {
             player(HeadE.CALM_TALK, "Are you the master craftsman working on a commission for Darren Lightfinger?")
             npc(npc, HeadE.HAPPY_TALKING, "That I am. What can I do for you?")

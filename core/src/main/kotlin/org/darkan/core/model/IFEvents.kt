@@ -44,7 +44,6 @@ class IFEvents {
 
     constructor(component: Int, fromSlot: Int, toSlot: Int) : this(component shr 16, component and 0xFFFF, fromSlot, toSlot, 0)
 
-    // Right-click options (bits 1..10)
     fun clickOptionEnabled(i: Int): Boolean = ((settings shr (1 + i)) and 0x1) != 0
 
     fun enableRightClickOption(id: Int): IFEvents {
@@ -58,7 +57,6 @@ class IFEvents {
         return this
     }
 
-    // Use-options (bits 11..17)
     fun useOptionEnabled(flag: UseFlag): Boolean = ((settings shr 11) and flag.flag) != 0
 
     fun enableUseOption(flag: UseFlag): IFEvents {
@@ -73,7 +71,6 @@ class IFEvents {
 
     fun getUseOptionFlags(): Int = (settings shr 11) and 0x7f
 
-    // Drag (bit 21)
     fun dragEnabled(): Boolean = ((settings shr 21) and 0x1) != 0
 
     fun enableDrag(): IFEvents {
@@ -81,7 +78,6 @@ class IFEvents {
         return this
     }
 
-    // Continue button (bit 0)
     fun continueOptionEnabled(): Boolean = (settings and 0x1) != 0
 
     fun enableContinueButton(): IFEvents {
@@ -89,7 +85,6 @@ class IFEvents {
         return this
     }
 
-    // Depth (bits 18..20)
     fun getDepth(): Int = (settings shr 18) and 0x7
 
     fun setDepth(depth: Int): IFEvents {
@@ -97,7 +92,6 @@ class IFEvents {
         return this
     }
 
-    // Depth-flag ignoring (bit 23)
     fun ignoresDepthFlags(): Boolean = ((settings shr 23) and 0x1) != 0
 
     fun enableDepthFlagIgnoring(): IFEvents {
@@ -105,7 +99,6 @@ class IFEvents {
         return this
     }
 
-    // Use-targetability (bit 22)
     fun isTargetableByUse(): Boolean = ((settings shr 22) and 0x1) != 0
 
     fun enableUseTargetability(): IFEvents {

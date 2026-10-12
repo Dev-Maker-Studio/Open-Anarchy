@@ -12,7 +12,6 @@ import com.rs.utils.shop.ShopsHandler;
 @PluginEventHandler
 public class Arhein extends Conversation {
 
-    //Identify NPC by ID
     private static final int npcId = 563;
 
     public static NPCClickHandler Arhein = new NPCClickHandler(new Object[]{npcId}, e -> {

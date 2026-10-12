@@ -8,12 +8,6 @@ import world.gregs.voidps.cache.Index
 import world.gregs.voidps.cache.definition.data.StructDefinition
 import world.gregs.voidps.cache.definition.encoder.StructEncoder
 
-/**
- * Decodes struct definitions from the CONFIGS index (2), archive 26.
- *
- * Structs are simple key-value containers (opcode 249 params only).
- * Each struct is a single file within archive 26.
- */
 class StructDecoder : DefinitionDecoder<StructDefinition>(Index.CONFIGS) {
 
     private val encoder = StructEncoder()
@@ -33,8 +27,6 @@ class StructDecoder : DefinitionDecoder<StructDefinition>(Index.CONFIGS) {
             error("Unhandled struct definition opcode: $opcode for def $id")
         }
         val records = readParameterRecords(buffer)
-        // 37 shipped structs carry the same key twice - the client's map drops one too - so the
-        // records are kept whole whenever the map is not enough to write the file back.
         if (records.size != (params?.size ?: 0)) {
             paramRecords = records
         }

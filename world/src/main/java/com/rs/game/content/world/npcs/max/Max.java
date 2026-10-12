@@ -113,7 +113,6 @@ public class Max extends NPC {
 		this.right = weapon;
 		this.left = shield;
 		setBodyMeshModifier(new NPCBodyMeshModifier(getDefinitions())
-						 //head   body   legs   boots  gloves
 				.addModels(65291, 62746, 62743, 53327, 2301, weapon == -1 ? -1 : KtExtensionsKt.getMaleEquip1(ItemDefinitions.getDefs(weapon)), 65300, shield == -1 ? -1 : KtExtensionsKt.getMaleEquip1(ItemDefinitions.getDefs(shield)), 252));
 	}
 

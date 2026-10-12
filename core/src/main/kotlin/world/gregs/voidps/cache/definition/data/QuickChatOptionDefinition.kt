@@ -10,12 +10,6 @@ data class QuickChatOptionDefinition(
     var navigateChars: CharArray? = null,
     var dynamicData: IntArray? = null,
     var staticData: CharArray? = null,
-    /**
-     * Opcode 4, which this revision's client reads as a bare flag and does nothing with.
-     *
-     * One file has it - index 25 archive 0 file 1, the `Quick Chat` root menu - and it is first in that
-     * file, so without it the record would be lost and the file would not come back.
-     */
     var unusedFlag4: Boolean = false,
     override var opcodeOrder: IntArray? = null,
     override var shadowedPayloads: Array<ByteArray?>? = null

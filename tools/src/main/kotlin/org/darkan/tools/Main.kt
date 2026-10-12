@@ -32,16 +32,9 @@ import java.nio.file.Path
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-/**
- * Main entry point for Darkan Tools.
- * Launches the selected viewer application.
- */
 fun main(args: Array<String>) {
     val mode = args.firstOrNull() ?: "model"
 
-    // The cache source tree modes come first because most of them have no prepacked cache to
-    // open: `pack`, `build`, `verify` and `status` work from the tree alone, and `unpack` opens
-    // the directory it is pointed at rather than the one Cache.get() would.
     if (mode.lowercase() == "cache") {
         runCache(args.drop(1))
         return
@@ -73,7 +66,6 @@ fun main(args: Array<String>) {
             InterfaceViewer(cache, interfaceId, interfaceStartup(args.drop(1))).run()
         }
         "diagnose", "debug" -> {
-            // Diagnostic mode: diagnose <regionX> <regionY> <localX> <localY> [plane]
             val regionX = args.getOrNull(1)?.toIntOrNull() ?: 50
             val regionY = args.getOrNull(2)?.toIntOrNull() ?: 50
             val localX = args.getOrNull(3)?.toIntOrNull() ?: 39
@@ -82,24 +74,18 @@ fun main(args: Array<String>) {
             runDiagnostic(cache, regionX, regionY, localX, localY, plane)
         }
         "displaceprobe" -> {
-            // Audit ground-contour-1 vertex displacement for a region, headlessly.
-            // displaceprobe <regionX> <regionY> [objectId]
             val rx = args.getOrNull(1)?.toIntOrNull() ?: 52
             val ry = args.getOrNull(2)?.toIntOrNull() ?: 50
             val objectId = args.getOrNull(3)?.toIntOrNull()
             DisplaceProbe.run(cache, rx, ry, objectId)
         }
         "displacejoint" -> {
-            // Compare a region's y=63 edge against the y=0 edge of the region above.
-            // displacejoint <regionX> <regionY> <objectId>
             val rx = args.getOrNull(1)?.toIntOrNull() ?: 52
             val ry = args.getOrNull(2)?.toIntOrNull() ?: 50
             val objectId = args.getOrNull(3)?.toIntOrNull() ?: 3125
             DisplaceProbe.runJoint(cache, rx, ry, objectId)
         }
         "tiltprobe" -> {
-            // Audit contour-type-3 tilt sampling at region edges, headlessly.
-            // tiltprobe scan [maxRegions] | tiltprobe whatif <regionX> <regionY>
             when (args.getOrNull(1)?.lowercase() ?: "scan") {
                 "whatif" -> TiltProbe.whatIf(
                     cache,
@@ -167,9 +153,6 @@ fun main(args: Array<String>) {
     }
 }
 
-/**
- * Run diagnostic on a specific tile to find what objects are there and what textures they use.
- */
 private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int, localY: Int, plane: Int) {
     println("\n=== TILE DIAGNOSTIC ===")
     println("Region: ($regionX, $regionY)")
@@ -177,23 +160,19 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
     println("Plane: $plane")
     println()
 
-    // Load definitions
     TerrainLoader.loadDefinitions(cache)
     ObjectRenderer.loadDefinitions(cache)
 
-    // Load XTEA keys
     if (!MapXteas.isLoaded()) {
         MapXteas.load()
     }
 
-    // Load terrain data
     val terrainData = TerrainLoader.loadRegion(cache, regionX, regionY)
     if (terrainData == null) {
         println("ERROR: Could not load terrain data for region ($regionX, $regionY)")
         return
     }
 
-    // Get tile info
     val tile = terrainData.tiles[plane][localX][localY]
     println("--- TERRAIN TILE DATA ---")
     println("  Height: ${tile.height}")
@@ -203,7 +182,6 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
     println("  Underlay ID: ${tile.underlayId}")
     println("  Flags: 0x${tile.flags.toString(16)}")
 
-    // Get overlay definition if present
     if (tile.overlayId > 0) {
         val overlayDef = TerrainLoader.getOverlayDefinition(tile.overlayId)
         if (overlayDef != null) {
@@ -216,7 +194,6 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
         }
     }
 
-    // Get underlay definition if present
     if (tile.underlayId > 0) {
         val underlayDef = TerrainLoader.getUnderlayDefinition(tile.underlayId)
         if (underlayDef != null) {
@@ -227,7 +204,6 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
         }
     }
 
-    // Load region objects
     println("\n--- OBJECTS AT THIS TILE ---")
     val regionData = RegionLoader.loadRegion(cache, regionX, regionY)
     if (regionData == null) {
@@ -240,21 +216,17 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
     val worldX = baseWorldX + localX
     val worldY = baseWorldY + localY
 
-    // Find objects at or near this tile
     var foundObjects = 0
     for (obj in regionData.objects) {
-        // Check if object is at or overlaps this tile
         val def = ObjectRenderer.getDefinition(obj.id)
         val sizeX = def?.sizeX ?: 1
         val sizeY = def?.sizeY ?: 1
 
-        // Calculate object footprint
         val objMinX = obj.x
         val objMaxX = obj.x + sizeX - 1
         val objMinY = obj.y
         val objMaxY = obj.y + sizeY - 1
 
-        // Check if our tile is within the object's footprint
         if (worldX in objMinX..objMaxX && worldY in objMinY..objMaxY) {
             foundObjects++
             println("\nObject #$foundObjects:")
@@ -270,11 +242,9 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
                 println("    Size: ${def.sizeX} x ${def.sizeY}")
                 println("    Options: ${def.options?.toList()}")
 
-                // Get model IDs for this object
                 val modelIds = ObjectRenderer.getModelIds(def, obj.shape)
                 println("    Model IDs: $modelIds")
 
-                // Check each model for textures
                 for (modelId in modelIds) {
                     val modelDef = ModelLoader.loadDefinition(cache, modelId)
                     if (modelDef != null) {
@@ -283,7 +253,6 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
                         println("      Faces: ${modelDef.faceCount}")
                         println("      Texture Triangles: ${modelDef.textureTriangleCount}")
 
-                        // Find all textures used by this model
                         val usedTextures = mutableSetOf<Int>()
                         if (modelDef.faceTextures != null) {
                             for (f in 0 until modelDef.faceCount) {
@@ -296,11 +265,9 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
                         if (usedTextures.isNotEmpty()) {
                             println("      Textures used: $usedTextures")
 
-                            // Check if texture 928 is used
                             if (928 in usedTextures) {
                                 println("      *** TEXTURE 928 FOUND IN THIS MODEL ***")
 
-                                // Get detailed UV info for faces with texture 928
                                 println("      Faces with texture 928:")
                                 for (f in 0 until modelDef.faceCount) {
                                     val texId = modelDef.faceTextures?.get(f)?.toInt() ?: -1
@@ -334,14 +301,12 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
         println("  (No objects found at this tile)")
     }
 
-    // Also check nearby tiles (within 3 tile radius) for large objects
     println("\n--- NEARBY OBJECTS (3 tile radius) USING TEXTURE 928 ---")
     var nearbyWithTexture928 = 0
     for (obj in regionData.objects) {
         val objLocalX = obj.x - baseWorldX
         val objLocalY = obj.y - baseWorldY
 
-        // Check if object is within 3 tiles of our target
         if (abs(objLocalX - localX) <= 3 && abs(objLocalY - localY) <= 3) {
             val def = ObjectRenderer.getDefinition(obj.id) ?: continue
             val modelIds = ObjectRenderer.getModelIds(def, obj.shape)
@@ -377,7 +342,6 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
         println("  (No nearby objects using texture 928)")
     }
 
-    // Check ALL objects in the region for texture 928
     println("\n--- ALL OBJECTS IN REGION USING TEXTURE 928 ---")
     var allWithTexture928 = 0
     for (obj in regionData.objects) {
@@ -417,7 +381,6 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
         println("  (No objects in this region use texture 928)")
     }
 
-    // Print underlay/overlay info for nearby tiles to check texture continuity
     println("\n--- NEARBY TILE TEXTURES (3x3 around target) ---")
     for (dy in -1..1) {
         for (dx in -1..1) {
@@ -440,16 +403,11 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
     println("\n=== DIAGNOSTIC COMPLETE ===")
 }
 
-/**
- * Run UV debugging on a specific model to trace through the UV calculation.
- */
 private fun runUVDiagnostic(cache: Cache, modelId: Int) {
     println("\n=== UV DIAGNOSTIC: Model $modelId ===")
 
-    // Clear cache to force recomputation
     ModelLoader.clearCache()
 
-    // Load the model
     val meshDataList = ModelLoader.createMeshDataList(cache, modelId, debug = true)
     if (meshDataList == null) {
         printModelUnavailable(cache, modelId)
@@ -460,7 +418,6 @@ private fun runUVDiagnostic(cache: Cache, modelId: Int) {
     for ((i, meshData) in meshDataList.withIndex()) {
         println("  Batch $i: textureId=${meshData.textureId}, vertices=${meshData.positions.size / 3}, indices=${meshData.indices.size}")
 
-        // Print first 9 vertices (3 faces) with their UVs
         if (meshData.textureCoords != null) {
             val numVerts = minOf(9, meshData.positions.size / 3)
             println("    First $numVerts vertices:")
@@ -478,13 +435,9 @@ private fun runUVDiagnostic(cache: Cache, modelId: Int) {
     println("\n=== UV DIAGNOSTIC COMPLETE ===")
 }
 
-/**
- * Diagnose a specific object ID to dump its definition and model texture info.
- */
 private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
     println("\n=== OBJECT DIAGNOSTIC: ID $objectId ===")
 
-    // Load definitions
     ObjectRenderer.loadDefinitions(cache)
 
     val def = ObjectRenderer.getDefinition(objectId)
@@ -507,7 +460,6 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
     println("ContouredGround: ${def.contouredGround} (modifier ${def.anInt3023})")
     println("Mirrored: ${def.mirrored}")
 
-    // Check for retexturing
     if (def.originalTextureColours != null || def.modifiedTextureColours != null) {
         println("RETEXTURING: src=${def.originalTextureColours?.map { it.toInt() and 0xffff }}, dst=${def.modifiedTextureColours?.map { it.toInt() and 0xffff }}")
     }
@@ -515,7 +467,6 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
         println("RECOLORING: src=${def.originalColours?.map { it.toInt() and 0xffff }}, dst=${def.modifiedColours?.map { it.toInt() and 0xffff }}")
     }
 
-    // Get all model IDs for this object (all shapes combined)
     val allModelIds = mutableSetOf<Int>()
     def.modelIds?.forEach { modelIdArray ->
         modelIdArray.forEach { modelId -> allModelIds.add(modelId) }
@@ -535,7 +486,6 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
         println("  Faces: ${modelDef.faceCount}")
         println("  Texture Triangles: ${modelDef.textureTriangleCount}")
 
-        // Count texture mapping types
         var type0Count = 0
         var type1Count = 0
         var type2Count = 0
@@ -552,7 +502,6 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
         }
         println("  Mapping types: type0(planar)=$type0Count, type1(cylindrical)=$type1Count, type2(cube)=$type2Count, type3(spherical)=$type3Count")
 
-        // Show texture triangles details
         if (modelDef.textureTriangleCount > 0) {
             println("  Texture Triangles:")
             for (t in 0 until modelDef.textureTriangleCount) {
@@ -564,7 +513,6 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
             }
         }
 
-        // Show complex texture data if present
         if (modelDef.texturesScaleX != null) {
             println("  Complex Texture Data (indexed by complex texture index):")
             for (i in modelDef.texturesScaleX!!.indices) {
@@ -578,7 +526,6 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
             }
         }
 
-        // Show cube texture data if present
         if (modelDef.texturesUtrans != null) {
             println("  Cube Texture Data (indexed by cube texture index):")
             for (i in modelDef.texturesUtrans!!.indices) {
@@ -588,9 +535,8 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
             }
         }
 
-        // Find all textures used by faces
-        val usedTextures = mutableMapOf<Int, Int>() // textureId -> count
-        val textureMappings = mutableMapOf<Int, MutableSet<Int>>() // textureId -> set of mapping types used
+        val usedTextures = mutableMapOf<Int, Int>()
+        val textureMappings = mutableMapOf<Int, MutableSet<Int>>()
         if (modelDef.faceTextures != null) {
             for (f in 0 until modelDef.faceCount) {
                 val texId = modelDef.faceTextures!![f].toInt()
@@ -615,7 +561,6 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
             }
         }
 
-        // Detailed face analysis for first 10 textured faces
         println("  First 10 textured faces:")
         var texturedCount = 0
         for (f in 0 until modelDef.faceCount) {
@@ -637,7 +582,6 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
                 val mapping = modelDef.texturesMapping?.get(texPointer)?.toInt()?.and(0xff) ?: 0
                 println("      mapping=$mapping")
 
-                // Show vertex positions for the face
                 if (aIdx < modelDef.vertexCount && bIdx < modelDef.vertexCount && cIdx < modelDef.vertexCount) {
                     println("      A: (${modelDef.vertexX[aIdx]}, ${modelDef.vertexY[aIdx]}, ${modelDef.vertexZ[aIdx]})")
                     println("      B: (${modelDef.vertexX[bIdx]}, ${modelDef.vertexY[bIdx]}, ${modelDef.vertexZ[bIdx]})")
@@ -646,7 +590,6 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
             }
         }
 
-        // Show ALL untextured faces and their details
         println("  Untextured faces (faceTextures == -1):")
         var untexturedCount = 0
         for (f in 0 until modelDef.faceCount) {
@@ -668,7 +611,6 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
             println("    Total untextured: $untexturedCount")
         }
 
-        // Verify texture transition point - show faces around the textured/untextured boundary
         if (modelDef.faceTextures != null) {
             println("  Texture boundary analysis (faces 760-774):")
             for (f in 760 until minOf(774, modelDef.faceCount)) {
@@ -679,7 +621,6 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
             }
         }
 
-        // Check footer flags for billboard/particle effects data
         val rawModelData = cache.data(Index.MODELS, modelId)
         if (rawModelData != null && rawModelData.size >= 24) {
             val footerFlags = rawModelData[rawModelData.size - 18].toInt() and 0xff
@@ -694,12 +635,10 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
                 println("  MODEL HAS BILLBOARD DATA - these faces may be billboard anchors!")
             }
 
-            // Print decoded billboard data from ModelDefinition
             if (modelDef.billboards != null) {
                 println("  Decoded billboards (${modelDef.billboards!!.size}):")
                 for ((bi, bb) in modelDef.billboards!!.withIndex()) {
                     println("    [$bi] id=${bb.billboardId}, face=${bb.appliesOnFace}, depth=${bb.depth}, distance=${bb.distance}")
-                    // Load the BillboardType config
                     val bbType = BillboardTypeLoader.get(cache, bb.billboardId)
                     println("         type: materialId=${bbType.materialId}, size2d=${bbType.size2d}, size3d=${bbType.size3d}, shape=${bbType.shape}, blend=${bbType.blendType}, stationary=${bbType.stationary}, hasUid=${bbType.hasUid}")
                 }
@@ -708,7 +647,6 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
             }
         }
 
-        // Specific face 769 analysis (if it exists)
         if (modelDef.faceCount > 769) {
             println("  === FACE 769 DETAILED ANALYSIS ===")
             val f = 769
@@ -733,7 +671,6 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
                 println("    B pos: (${modelDef.vertexX[bIdx]}, ${modelDef.vertexY[bIdx]}, ${modelDef.vertexZ[bIdx]})")
                 println("    C pos: (${modelDef.vertexX[cIdx]}, ${modelDef.vertexY[cIdx]}, ${modelDef.vertexZ[cIdx]})")
             }
-            // Check surrounding faces for context
             println("  === FACES 765-773 (around face 769) ===")
             for (nearby in 765..773) {
                 if (nearby < 0 || nearby >= modelDef.faceCount) continue
@@ -751,15 +688,9 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
     println("\n=== DIAGNOSTIC COMPLETE ===")
 }
 
-/**
- * Run a texture diagnostic without requiring OpenGL.
- * Loads the texture type from cache, decodes its operations, loads graphics,
- * generates pixels, and prints detailed information about each step.
- */
 private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
     println("\n=== TEXTURE DIAGNOSTIC: ID $textureId ===\n")
 
-    // Step 1: Check TEXTURES index structure
     val textureArchives = cache.archives(Index.TEXTURES)
     println("TEXTURES index (${Index.TEXTURES}):")
     println("  Total archives: ${textureArchives.size}")
@@ -767,11 +698,9 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
     val filesInArchive = cache.files(Index.TEXTURES, textureId)
     println("  Files in archive $textureId: ${filesInArchive.toList()}")
 
-    // Step 2: Load raw data
     val rawData = cache.data(Index.TEXTURES, textureId)
     if (rawData == null) {
         println("  ERROR: cache.data(TEXTURES, $textureId) returned NULL")
-        // Try alternate addressing
         val altData = cache.data(Index.TEXTURES, 0, textureId)
         println("  Alternate: cache.data(TEXTURES, 0, $textureId) returned ${if (altData != null) "${altData.size} bytes" else "NULL"}")
         println("\n=== DIAGNOSTIC COMPLETE ===")
@@ -780,7 +709,6 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
     println("  Raw data: ${rawData.size} bytes")
     println("  First 32 bytes: ${rawData.take(32).map { "0x${(it.toInt() and 0xFF).toString(16).padStart(2, '0')}" }}")
 
-    // Step 3: Decode TextureType
     val textureType: TextureType
     try {
         textureType = TextureType(rawData)
@@ -818,7 +746,6 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
     println("\n  textureFileIds (graphics): ${textureType.textureFileIds.toList()}")
     println("  materialFileIds (nested textures): ${textureType.materialFileIds.toList()}")
 
-    // Step 4: Load graphics
     println("\n--- GRAPHIC LOADING ---")
     for (op in textureType.textureOperations) {
         if (op is TextureOpGraphic && op.graphicId >= 0) {
@@ -826,14 +753,12 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
             val graphicData = cache.data(Index.GRAPHICS, graphicId)
             if (graphicData == null) {
                 println("  Graphic $graphicId: cache.data(GRAPHICS, $graphicId) returned NULL")
-                // Try alternate addressing
                 val altData = cache.data(Index.GRAPHICS, 0, graphicId)
                 println("  Graphic $graphicId: alternate cache.data(GRAPHICS, 0, $graphicId) returned ${if (altData != null) "${altData.size} bytes" else "NULL"}")
                 continue
             }
             println("  Graphic $graphicId: ${graphicData.size} bytes raw data")
 
-            // Decode graphic header
             try {
                 val buf = BufferReader(graphicData)
                 buf.position(graphicData.size - 2)
@@ -848,13 +773,11 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
                     println("    biggestWidth=$biggestWidth, biggestHeight=$biggestHeight, paletteSize=$paletteSize")
 
                     val minX = IntArray(graphicCount) { buf.readShort() }
-                    // skip minY, widths, heights
                     buf.position(graphicData.size - 7 - graphicCount * 8 + 5 + graphicCount)
                     val minY = IntArray(graphicCount) { buf.readShort() }
                     val widths = IntArray(graphicCount) { buf.readShort() }
                     val heights = IntArray(graphicCount) { buf.readShort() }
 
-                    // Re-read correctly: after palette size, we have minX[N], minY[N], widths[N], heights[N]
                     buf.position(graphicData.size - 7 - graphicCount * 8 + 5)
                     for (j in 0 until graphicCount) { minX[j] = buf.readShort() }
                     for (j in 0 until graphicCount) { minY[j] = buf.readShort() }
@@ -863,7 +786,6 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
 
                     println("    sub[0]: minX=${minX[0]}, minY=${minY[0]}, width=${widths[0]}, height=${heights[0]}")
 
-                    // Read pixel flags
                     buf.position(0)
                     val flags = buf.readUnsignedByte()
                     val hasAlpha = (flags and 0x2) != 0
@@ -874,7 +796,6 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
                     val fullHeight = if (biggestHeight > 0) biggestHeight else heights[0]
                     println("    fullCanvas: ${fullWidth}x${fullHeight}")
 
-                    // Try full decode
                     val decoded = TextureLoader.decodeGraphicToDataPublic(graphicData, 0)
                     if (decoded != null) {
                         val nonZero = decoded.pixels.count { it != 0 }
@@ -892,11 +813,9 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
         }
     }
 
-    // Step 5: Generate pixels without OpenGL
     println("\n--- PIXEL GENERATION ---")
     TextureRaster.calculateTable()
 
-    // Load graphics into operations
     for (op in textureType.textureOperations) {
         if (op is TextureOpGraphic && op.graphicId >= 0) {
             val graphicRawData = cache.data(Index.GRAPHICS, op.graphicId) ?: continue
@@ -910,7 +829,6 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
         }
     }
 
-    // Load nested textures
     for (op in textureType.textureOperations) {
         if (op is TextureOpTexture && op.getMaterialId() >= 0) {
             val nestedId = op.getMaterialId()
@@ -918,7 +836,6 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
             if (nestedData != null) {
                 try {
                     val nestedType = TextureType(nestedData)
-                    // Load graphics for nested texture
                     for (nestedOp in nestedType.textureOperations) {
                         if (nestedOp is TextureOpGraphic && nestedOp.graphicId >= 0) {
                             val graphicRawData = cache.data(Index.GRAPHICS, nestedOp.graphicId) ?: continue
@@ -946,7 +863,6 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
         }
     }
 
-    // Generate pixels
     val w = 128
     val h = 128
     try {
@@ -970,14 +886,12 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
             println("\n  *** ALL PIXELS ARE BLACK/TRANSPARENT ***")
             println("  This confirms the bug. Checking intermediate operations...")
 
-            // Re-run with per-operation tracing
             val raster = TextureRaster.context(w, h)
             for (op in textureType.textureOperations) {
                 op.bindRaster(raster, 0L)
                 op.createImageCache(w, h)
             }
 
-            // Check each operation's output for row 0
             for ((i, op) in textureType.textureOperations.withIndex()) {
                 try {
                     val hasOutput: Boolean
@@ -1002,7 +916,6 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
                 }
             }
 
-            // Clean up
             for (op in textureType.textureOperations) {
                 op.clearImageCache()
             }
@@ -1015,19 +928,9 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
     println("\n=== TEXTURE DIAGNOSTIC COMPLETE ===")
 }
 
-/**
- * Print why [modelId] produced no definition, distinguishing a gap in the cache data from a
- * failure in our decoder.
- *
- * A bare "could not load model" reads like a decoder bug and sent one investigation down the
- * wrong path already: the ids it was reported for turned out to be empty placeholders that
- * the reference client cannot draw either. Anything the decoder is genuinely responsible for
- * is labelled BUG so it stands out from data that was never there.
- */
 private fun printModelUnavailable(cache: Cache, modelId: Int, indent: String = "") {
     val unavailable = ModelDecoder.describeUnavailable(cache, modelId)
     if (unavailable == null) {
-        // describeUnavailable decodes it but the caller could not, so the two disagree.
         println("${indent}ERROR: model $modelId decodes on its own but failed to load here")
         return
     }
@@ -1038,14 +941,6 @@ private fun printModelUnavailable(cache: Cache, modelId: Int, indent: String = "
     println("$indent$label [${unavailable.reason}]: model $modelId ${unavailable.message}")
 }
 
-/**
- * Decode every model archive in the cache and report which ids yield no geometry, grouped by
- * [ModelUnavailableReason].
- *
- * This exists to answer "is this a decoder gap or a data gap?" with a number instead of an
- * assumption. If the decoder ever regresses on a format variant, DECODE_ERROR and TRUNCATED
- * counts move; EMPTY_PLACEHOLDER is a property of the cache and should stay put.
- */
 private fun runModelScan(cache: Cache) {
     val total = ModelDecoder.getModelCount(cache)
     println("\n=== MODEL SCAN: $total archives in index ${Index.MODELS} ===")
@@ -1053,8 +948,6 @@ private fun runModelScan(cache: Cache) {
     val byReason = LinkedHashMap<ModelUnavailableReason, MutableList<Int>>()
     var decoded = 0
     for (modelId in 0 until total) {
-        // Decode directly rather than via ModelLoader so the sweep does not fill the
-        // definition cache with every model in the game.
         if (ModelDecoder.decode(cache, modelId) != null) {
             decoded++
             continue
@@ -1076,14 +969,8 @@ private fun runModelScan(cache: Cache) {
     }
 }
 
-/** How many ids [runModelScan] names per reason before truncating. */
 private const val MODEL_SCAN_ID_LIMIT = 32
 
-/**
- * Diagnostic to investigate face geometry for coplanarity and render-order occlusion.
- * Prints vertex positions for untextured faces and their nearby textured neighbors
- * to determine if untextured faces are hidden by depth test ordering.
- */
 private fun runFaceGeometryDiagnostic(cache: Cache, modelId: Int) {
     println("\n=== FACE GEOMETRY DIAGNOSTIC: Model $modelId ===")
 
@@ -1096,7 +983,6 @@ private fun runFaceGeometryDiagnostic(cache: Cache, modelId: Int) {
     println("Vertices: ${def.vertexCount}, Faces: ${def.faceCount}")
     println("Texture Triangles: ${def.textureTriangleCount}")
 
-    // Find untextured faces
     println("\n--- UNTEXTURED FACES ---")
     val untexturedFaces = mutableListOf<Int>()
     for (f in 0 until def.faceCount) {
@@ -1127,7 +1013,6 @@ private fun runFaceGeometryDiagnostic(cache: Cache, modelId: Int) {
         println("    B[$bIdx]: (${def.vertexX[bIdx]}, ${def.vertexY[bIdx]}, ${def.vertexZ[bIdx]})")
         println("    C[$cIdx]: (${def.vertexX[cIdx]}, ${def.vertexY[cIdx]}, ${def.vertexZ[cIdx]})")
 
-        // Compute face normal
         val dx1 = (def.vertexX[bIdx] - def.vertexX[aIdx]).toFloat()
         val dy1 = (def.vertexY[bIdx] - def.vertexY[aIdx]).toFloat()
         val dz1 = (def.vertexZ[bIdx] - def.vertexZ[aIdx]).toFloat()
@@ -1142,24 +1027,21 @@ private fun runFaceGeometryDiagnostic(cache: Cache, modelId: Int) {
             println("    Normal: (${nx/len}, ${ny/len}, ${nz/len})")
         }
 
-        // Compute face area
         val area = len / 2f
         println("    Area: $area sq units")
 
-        // Compute centroid
         val cx = (def.vertexX[aIdx] + def.vertexX[bIdx] + def.vertexX[cIdx]) / 3f
         val cy = (def.vertexY[aIdx] + def.vertexY[bIdx] + def.vertexY[cIdx]) / 3f
         val cz = (def.vertexZ[aIdx] + def.vertexZ[bIdx] + def.vertexZ[cIdx]) / 3f
         println("    Centroid: ($cx, $cy, $cz)")
 
-        // Find nearby textured faces (sharing at least one vertex)
         val faceVertices = setOf(aIdx, bIdx, cIdx)
         println("    Nearby textured faces sharing vertices:")
         var nearbyCount = 0
         for (other in 0 until def.faceCount) {
             if (other == f) continue
             val otherTexId = def.faceTextures?.get(other)?.toInt() ?: -1
-            if (otherTexId == -1) continue // Skip other untextured faces
+            if (otherTexId == -1) continue
 
             val otherVerts = setOf(def.faceA[other], def.faceB[other], def.faceC[other])
             val shared = faceVertices.intersect(otherVerts)
@@ -1180,20 +1062,7 @@ private fun runFaceGeometryDiagnostic(cache: Cache, modelId: Int) {
     println("\n=== DIAGNOSTIC COMPLETE ===")
 }
 
-/**
- * Look up cache archives and files by named hash (or by id), and compute named hashes.
- *
- * Sub-commands:
- *   lookup hash <name>                       - print the named hash for <name>
- *   lookup scan                              - report name-hash support per index
- *   lookup <index> <archiveNameOrId>         - resolve an archive and list its files
- *   lookup <index> <archiveNameOrId> <fileNameOrId> - resolve a file and report its size
- *
- * For the index/archive/file args, numeric values are treated as ids and non-numeric
- * values are resolved via the named hash. Hashes are reported in decimal and hex.
- */
 private fun runNameLookup(cache: Cache, args: Array<String>) {
-    // Sub-command: hash a name without touching the cache.
     if (args.getOrNull(1)?.lowercase() == "hash") {
         val name = args.getOrNull(2)
         if (name == null) {
@@ -1209,7 +1078,6 @@ private fun runNameLookup(cache: Cache, args: Array<String>) {
         return
     }
 
-    // Sub-command: scan every index for name-hash support.
     val sub = args.getOrNull(1)?.lowercase()
     if (sub == "scan" || sub == "indices") {
         runNameScan(cache)
@@ -1238,9 +1106,6 @@ private fun runNameLookup(cache: Cache, args: Array<String>) {
     }
 }
 
-/**
- * Resolve an archive (by id or by name) in [index] and print its file ids.
- */
 private fun runArchiveLookup(cache: Cache, index: Int, archiveArg: String) {
     println("\n=== ARCHIVE LOOKUP ===")
     println("  Index: $index")
@@ -1248,15 +1113,12 @@ private fun runArchiveLookup(cache: Cache, index: Int, archiveArg: String) {
     val numericArchive = archiveArg.toIntOrNull()
     val archiveId: Int
     if (numericArchive != null) {
-        // Treated as an id. The named hash is not reversible from an id, so we can't
-        // report a name for it - just confirm whether data exists.
         archiveId = numericArchive
         println("  Archive (id): $archiveId")
         val data = NameLookup.archive(cache, index, archiveId)
         println("  Data exists: ${data != null}${data?.let { " (${it.size} bytes)" } ?: ""}")
         println("  (Note: a name cannot be recovered from a numeric id - the named hash is one-way.)")
     } else {
-        // Treated as a name - resolve via the named hash.
         val hash = NameLookup.nameHash(archiveArg)
         println("  Archive (name): \"$archiveArg\"")
         println("  Name hash: $hash (0x${Integer.toHexString(hash)})")
@@ -1275,14 +1137,10 @@ private fun runArchiveLookup(cache: Cache, index: Int, archiveArg: String) {
     println("\n=== LOOKUP COMPLETE ===")
 }
 
-/**
- * Resolve an archive then a file (each by id or name) and print the resulting data size.
- */
 private fun runFileLookup(cache: Cache, index: Int, archiveArg: String, fileArg: String) {
     println("\n=== FILE LOOKUP ===")
     println("  Index: $index")
 
-    // Resolve archive id (by id or name).
     val numericArchive = archiveArg.toIntOrNull()
     val archiveId: Int
     if (numericArchive != null) {
@@ -1301,7 +1159,6 @@ private fun runFileLookup(cache: Cache, index: Int, archiveArg: String, fileArg:
     }
     println("  Resolved archive id: $archiveId")
 
-    // Resolve file id (by id or name).
     val numericFile = fileArg.toIntOrNull()
     val fileId: Int
     if (numericFile != null) {
@@ -1329,16 +1186,11 @@ private fun runFileLookup(cache: Cache, index: Int, archiveArg: String, fileArg:
     println("\n=== LOOKUP COMPLETE ===")
 }
 
-/**
- * Scan every cache index and print a table of its name-hash support, followed by
- * summary lines listing which indices carry archive names and which carry file names.
- */
 private fun runNameScan(cache: Cache) {
     println("\n=== INDEX NAME-HASH SCAN ===\n")
 
     val report = NameLookup.scanNames(cache)
 
-    // Aligned table. Columns: idx, name, nameFlag, archiveNames(count), fileNames(count).
     println("  %-4s %-22s %-9s %-15s %-15s".format("idx", "name", "nameFlag", "archiveNames", "fileNames"))
     println("  %-4s %-22s %-9s %-15s %-15s".format("---", "----", "--------", "------------", "---------"))
     for (entry in report) {
@@ -1362,10 +1214,6 @@ private fun runNameScan(cache: Cache) {
     println("\n=== SCAN COMPLETE ===")
 }
 
-/**
- * Human-readable label for a cache [index] id, derived from the [Index] constants.
- * Falls back to "?" for ids that have no named constant.
- */
 private fun indexLabel(index: Int): String = when (index) {
     Index.ANIMATION_FRAMES -> "animation_frames"
     Index.ANIMATION_SKELETONS -> "animation_skeletons"
@@ -1554,10 +1402,6 @@ private fun printHelp() {
     """.trimIndent())
 }
 
-/**
- * List the roof-shaped objects in a region, grouped by object id and plane, with the local
- * tile extent of each cluster. Used to aim the capture camera at a roof field.
- */
 private fun runRoofScan(cache: Cache, regionX: Int, regionY: Int) {
     if (!MapXteas.isLoaded()) MapXteas.load()
     val data = RegionLoader.loadRegion(cache, regionX, regionY)

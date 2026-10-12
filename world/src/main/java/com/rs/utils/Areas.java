@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.utils;
 
 import com.google.gson.JsonIOException;
@@ -66,35 +50,6 @@ public class Areas {
 		return false;
 	}
 
-//	public static void main(String[] args) throws JsonIOException, IOException {
-//		Logger.setupFormat();
-//		Logger.setLevel(Level.FINE); //FINER for traces
-//		JsonFileManager.setGSON(new GsonBuilder()
-//				.setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
-//				.registerTypeAdapter(Controller.class, new ControllerAdapter())
-//				.registerTypeAdapter(Date.class, new DateAdapter())
-//				.registerTypeAdapter(PacketEncoder.class, new PacketEncoderAdapter())
-//				.registerTypeAdapter(Packet.class, new PacketAdapter())
-//				.registerTypeAdapterFactory(new RecordTypeAdapterFactory())
-//				.disableHtmlEscaping()
-//				.setPrettyPrinting()
-//				.create());
-//
-//		Settings.loadConfig();
-//		if (!Settings.getConfig().isDebug())
-//			Logger.setLevel(Level.WARNING);
-//		Cache.init(Settings.getConfig().getCachePath());
-//		init();
-//		Set<Integer> area = AREAS.get("christmasevent");
-//		Set<Integer> newMulti = new HashSet<>();
-//		for (int d : area) {
-//			for (int newId : oldChunkIdToNewChunkIds(d))
-//				newMulti.add(newId);
-//		}
-//		JsonFileManager.saveJsonFile(newMulti, new File("./dumps/christmasevent.json"));
-//		Set<Integer> newOnes = JsonFileManager.loadJsonFile(new File("./dumps/christmasevent.json"), Set.class);
-//		System.out.println(newOnes);
-//	}
 
 	public static int[] oldChunkIdToNewChunkIds(int oldChunkId) {
 		int chunkX = oldChunkId >> 14 & 2047;

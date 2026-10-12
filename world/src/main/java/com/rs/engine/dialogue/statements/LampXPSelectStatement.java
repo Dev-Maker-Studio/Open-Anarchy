@@ -21,13 +21,13 @@ public class LampXPSelectStatement implements Statement {
 		if (lamp.getId() == 12628)
             lamp.setXp(500);
         player.getTempAttribs().setO("lampInstance", lamp);
-        player.getVars().setVar(Varp.poh_house_data, 1); //has house
+        player.getVars().setVar(Varp.poh_house_data, 1);
         player.getVars().setVarBit(Varbit.poh_house_location, 1);
         player.getInterfaceManager().sendInterface(1263);
         player.getPackets().sendVarcString(358, "What skill would you like XP in?");
         sendSelectedSkill(player);
         player.getPackets().sendVarc(1797, 0);
-        player.getPackets().sendVarc(1798, lamp.getReq()); //level required to use lamp
+        player.getPackets().sendVarc(1798, lamp.getReq());
         player.getPackets().sendVarc(1799, getVarCValueForLamp(lamp.getId()));
         for (int i = 13; i < 38; i++)
             player.getPackets().setIFRightClickOps(1263, i, -1, 0, 0);
@@ -58,7 +58,7 @@ public class LampXPSelectStatement implements Statement {
     
     private int getVarCValueForLamp(int id) {
         return switch (id) {
-            case 4447 ->//Shield of Arrav
+            case 4447 ->
                     23713;
             default -> id;
         };

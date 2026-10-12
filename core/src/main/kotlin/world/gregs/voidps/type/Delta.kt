@@ -1,8 +1,5 @@
 package world.gregs.voidps.type
 
-/**
- * Difference between two coordinates
- */
 @JvmInline
 value class Delta(val id: Long) : Coordinate3D<Delta> {
 

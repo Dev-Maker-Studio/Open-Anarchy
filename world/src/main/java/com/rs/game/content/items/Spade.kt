@@ -30,7 +30,6 @@ object Spade {
             player.unlock()
             if (player.treasureTrailsManager.useDig(false) || BarrowsController.digIntoGrave(player)) return@schedule
             if (
-                //mole holes
                 (player.x == 3005 && player.y == 3376) ||
                 (player.x == 2999 && player.y == 3375) ||
                 (player.x == 2996 && player.y == 3377) ||
@@ -47,14 +46,12 @@ object Spade {
                 return@schedule
             }
 
-            // Plague City Mud Patch
             if (player.tile == MUD_PATCH_DIG_TILE) {
                 if (player.questManager.getStage(Quest.PLAGUE_CITY) >= STAGE_UNCOVERED_SEWER_ENTRANCE) player.simpleDialogue("You've already uncovered the entrance to the Ardougne Sewers.")
                 else PlagueCityUtils().digAtMudPatch(player)
                 return@schedule
             }
 
-            //Ghosts Ahoy
             if (player.tile == HARICANTO_TILE && player.isQuestStarted(Quest.GHOSTS_AHOY) && !player.isQuestComplete(Quest.GHOSTS_AHOY)) {
                 if(player.inventory.containsItem(4248))
                     player.sendMessage("You find nothing.")
@@ -64,7 +61,6 @@ object Spade {
                 return@schedule
             }
 
-            //Pirate's Treasure
             if (player.questManager.getStage(Quest.PIRATES_TREASURE) == PiratesTreasure.GET_TREASURE) PiratesTreasure.findTreasure(player)
             player.sendMessage("You find nothing.")
         }

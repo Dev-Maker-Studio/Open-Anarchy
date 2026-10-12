@@ -42,7 +42,6 @@ object BossInstances {
         return "Your ${instance.def.displayName} instance now has ${instance.minutesLeft} minutes left."
     }
 
-    /** The staff potato's extension: no coins, no hour at a time. */
     fun grant(player: Player, hours: Int): String {
         val instance = owned(player.username) ?: return "You do not have an instance to extend."
         instance.renew(hours)

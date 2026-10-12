@@ -13,7 +13,7 @@ public class Straven {
     public static NPCClickHandler handleStraven = new NPCClickHandler(new Object[] { 644 }, e -> {
         Player p = e.getPlayer();
         if(p.isQuestComplete(Quest.SHIELD_OF_ARRAV )
-                && ShieldOfArrav.isPhoenixGang(p) && p.getQuestManager().getStage(Quest.HEROES_QUEST) > 0) //started
+                && ShieldOfArrav.isPhoenixGang(p) && p.getQuestManager().getStage(Quest.HEROES_QUEST) > 0)
             p.startConversation(new StravenHeroesQuestD(p).getStart());
         else
             p.startConversation(new StravenShieldOfArravD(p).getStart());

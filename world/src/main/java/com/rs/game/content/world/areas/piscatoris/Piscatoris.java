@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.world.areas.piscatoris;
 
 import com.rs.engine.quest.Quest;
@@ -87,9 +71,9 @@ public class Piscatoris {
 			p.getPackets().sendGameMessage("You need level 25 agility to use this shortcut.");
 			return;
 		}
-		if(obj.getTile().matches(Tile.of(2323, 3497, 0)))//above
+		if(obj.getTile().matches(Tile.of(2323, 3497, 0)))
 			p.forceMove(Tile.of(2322, 3502, 0), 2050, 25, 60);
-		if(obj.getTile().matches(Tile.of(2322, 3501, 0)))//below
+		if(obj.getTile().matches(Tile.of(2322, 3501, 0)))
 			p.forceMove(Tile.of(2323, 3496, 0), 2049, 25, 60);
 	});
 }

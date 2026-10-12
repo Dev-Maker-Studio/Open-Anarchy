@@ -3,82 +3,34 @@ package world.gregs.voidps.cache.source.codec
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 
-/**
- * A baseline JPEG taken apart as far as its DCT coefficients and no further.
- *
- * This exists so a JPEG can be *transcoded* rather than re-compressed: [read] undoes only the
- * entropy coding - the Huffman codes, the DC predictors, the run lengths and the byte stuffing -
- * and leaves every coefficient exactly as it was quantised, in the zigzag order it was coded in.
- * There is no dequantisation, no inverse DCT and no colour conversion anywhere here, so [write]
- * over an unmodified [BaselineJpeg] reproduces the file it came from **byte for byte**, and moving
- * a component from one file to another is lossless. That is what lets index 32's four component
- * images be stored as two ordinary JPEGs and joined back into the cache's own bytes; see
- * [JagexJpeg].
- *
- * Coefficients staying in zigzag order is the reason no zigzag table appears in this file: the
- * decoder writes `block[k]` for the coefficient it read at scan position `k` and the encoder reads
- * the same `k` back, so the permutation cancels and never has to be known. Anything that wants
- * pixels wants [JagexJpeg.decode] instead.
- *
- * **Baseline only, on purpose.** `SOF0`, 8 bit precision, Huffman coding, one sequential scan of
- * every component. Progressive (`SOF2`), arithmetic coded, 12 bit and hierarchical files are
- * rejected with a message that says which, because every JPEG in the 727 cache is baseline and a
- * half-supported progressive path would be a silent corruption rather than an error. `DRI` restart
- * intervals are handled - none of the cache's files use one, but an image editor may well write
- * one back.
- *
- * **What [write] emits**, which is Jagex's own header layout and every editor's too:
- *
- * ```
- * SOI, one DQT per table in ascending id, SOF0, DHT DC then AC per ascending id, DRI if any, SOS,
- * the entropy coded scan, EOI
- * ```
- *
- * Application and comment segments are dropped rather than carried: nothing in the cache has one,
- * a `JFIF` APP0 says only what the component ids already say, and an `Adobe` APP14 on a four
- * component file would tell a decoder to colour transform data that must not be touched. An edited
- * file that arrives with either is read and re-emitted without them.
- */
 class BaselineJpeg(
     var width: Int,
     var height: Int,
-    /** Per table id, the 64 quantisation values in zigzag order; null where the file defines none. */
     val quantisation: Array<IntArray?> = arrayOfNulls(TABLES),
     val dcTables: Array<JpegHuffmanTable?> = arrayOfNulls(TABLES),
     val acTables: Array<JpegHuffmanTable?> = arrayOfNulls(TABLES),
-    /** The frame's components in frame order, which is also the order the scan interleaves them. */
     val components: MutableList<JpegComponent> = ArrayList(TABLES),
-    /** MCUs between restart markers, or 0 for a scan with none. */
     var restartInterval: Int = 0
 ) {
 
-    /** The largest sampling factors in the frame, which set the MCU's size in blocks. */
     val maxHorizontal: Int
         get() = components.maxOf { it.horizontal }
 
     val maxVertical: Int
         get() = components.maxOf { it.vertical }
 
-    /** MCUs per row, and therefore how far a 2x2 component's block grid runs past the image. */
     val mcusAcross: Int
         get() = ceil(width, BLOCK * maxHorizontal)
 
     val mcusDown: Int
         get() = ceil(height, BLOCK * maxVertical)
 
-    /** The blocks a component actually covers, before any MCU padding. */
     fun blocksAcross(component: JpegComponent): Int =
         ceil(ceil(width * component.horizontal, maxHorizontal), BLOCK)
 
     fun blocksDown(component: JpegComponent): Int =
         ceil(ceil(height * component.vertical, maxVertical), BLOCK)
 
-    /**
-     * The file, headers and entropy coded scan and all.
-     *
-     * Byte for byte what [read] was given, for an image nothing has changed - which is the parity
-     * proof index 32 rests on.
-     */
     fun write(): ByteArray {
         require(components.isNotEmpty()) { "A JPEG frame has at least one component." }
         val out = ByteArrayOutputStream(width * height / 4 + HEADER)
@@ -136,7 +88,6 @@ class BaselineJpeg(
         return out.toByteArray()
     }
 
-    /** The entropy coded scan: every MCU, every block, in frame order. */
     private fun encode(out: ByteArrayOutputStream) {
         val writer = BitWriter(out)
         val interleaved = components.size > 1
@@ -173,7 +124,6 @@ class BaselineJpeg(
         writer.flush()
     }
 
-    /** One block's DC difference and run length coded AC coefficients. Returns the new predictor. */
     private fun block(writer: BitWriter, component: JpegComponent, predictor: Int, offset: Int): Int {
         val dc = dcTables[component.dc] ?: throw IOException("Component ${component.id} has no DC table ${component.dc}.")
         val ac = acTables[component.ac] ?: throw IOException("Component ${component.id} has no AC table ${component.ac}.")
@@ -223,20 +173,12 @@ class BaselineJpeg(
 
     companion object {
 
-        /** How many quantisation, DC and AC tables baseline JPEG allows: ids 0 to 3. */
         const val TABLES = 4
 
-        /** A DCT block is 8x8 samples. */
         const val BLOCK = 8
 
         const val BLOCK_SIZE = BLOCK * BLOCK
 
-        /**
-         * [data] with its entropy coding undone and nothing else.
-         *
-         * @throws IOException for anything that is not a baseline Huffman coded 8 bit JPEG, or a
-         *   stream that runs out or disagrees with its own headers.
-         */
         fun read(data: ByteArray): BaselineJpeg {
             if (data.size < 4 || (data[0].toInt() and 0xff) != 0xff || (data[1].toInt() and 0xff) != SOI) {
                 throw IOException("Not a JPEG: no start of image marker.")
@@ -275,7 +217,6 @@ class BaselineJpeg(
                     in UNSUPPORTED -> throw IOException(
                         "A JPEG here is baseline only; this one is ${UNSUPPORTED.getValue(marker)}."
                     )
-                    // APPn, COM and anything else that is only metadata: skipped, and not written back.
                 }
                 position = end
             }
@@ -366,7 +307,6 @@ class BaselineJpeg(
             }
         }
 
-        /** The scan header, and then the entropy coded data straight into the coefficient arrays. */
         private fun scan(image: BaselineJpeg, data: ByteArray, start: Int, end: Int) {
             if (image.components.isEmpty()) {
                 throw IOException("A JPEG's scan comes before its frame header.")
@@ -476,7 +416,6 @@ class BaselineJpeg(
             return value
         }
 
-        /** `ceil(value / divisor)` for the non negative integers this file deals in. */
         internal fun ceil(value: Int, divisor: Int): Int = (value + divisor - 1) / divisor
 
         private const val SOI = 0xd8
@@ -488,7 +427,6 @@ class BaselineJpeg(
         private const val DRI = 0xdd
         private const val RST0 = 0xd0
 
-        /** Everything a baseline decoder must not pretend to understand, and what to call it. */
         private val UNSUPPORTED = mapOf(
             0xc1 to "extended sequential",
             0xc2 to "progressive",
@@ -507,22 +445,18 @@ class BaselineJpeg(
         private const val DC_CLASS = 0
         private const val AC_CLASS = 1
 
-        /** Huffman code lengths run from 1 to 16 bits. */
         internal const val LENGTHS = 16
 
         private const val PRECISION = 8
 
-        /** The longest zero run one AC symbol can express, and the symbols that say run and stop. */
         private const val MAX_RUN = 15
         private const val ZERO_RUN = 0xf0
         private const val END_OF_BLOCK = 0x00
 
-        /** Roughly what the tables and headers cost before any entropy coded data. */
         private const val HEADER = 1024
     }
 }
 
-/** One component of a baseline JPEG frame, and its coefficients in coded order. */
 class JpegComponent(
     val id: Int,
     val horizontal: Int,
@@ -530,21 +464,14 @@ class JpegComponent(
     val quantisation: Int
 ) {
 
-    /** The scan's DC and AC Huffman table ids for this component. */
     var dc: Int = 0
     var ac: Int = 0
 
-    /**
-     * The blocks the scan actually stores, which for a subsampled component in an interleaved scan
-     * is the MCU grid and so runs past the image's right and bottom edges.
-     */
     var across: Int = 0
     var down: Int = 0
 
-    /** `across * down` blocks of 64 quantised coefficients, row major, each in zigzag order. */
     var coefficients: ShortArray = ShortArray(0)
 
-    /** A copy of this component's header with fresh table ids, for a file being rebuilt. */
     fun retable(id: Int, quantisation: Int, dc: Int, ac: Int): JpegComponent {
         val component = JpegComponent(id, horizontal, vertical, quantisation)
         component.dc = dc
@@ -556,15 +483,6 @@ class JpegComponent(
     }
 }
 
-/**
- * One Huffman table, as the file stores it and as both directions need it.
- *
- * [counts] is `BITS`, the number of codes of each length 1 to 16 indexed from 1, and [values] is
- * `HUFFVAL`, the symbols in code order. Everything else is derived from those two the way the JPEG
- * specification's `Annex C` flowcharts do, once, here - a decode side minimum and maximum code per
- * length, and an encode side code and length per symbol - because a table is shared by every block
- * that uses it.
- */
 class JpegHuffmanTable(val counts: IntArray, val values: IntArray) {
 
     internal val minimum = IntArray(BaselineJpeg.LENGTHS + 1)
@@ -623,22 +541,14 @@ class JpegHuffmanTable(val counts: IntArray, val values: IntArray) {
         }
     }
 
-    /** Whether [other] is the same table, so a rebuild can share one id between two components. */
     fun sameAs(other: JpegHuffmanTable?): Boolean =
         other != null && counts.contentEquals(other.counts) && values.contentEquals(other.values)
 
     private companion object {
-        /** A byte's worth of symbols: a run/size pair for AC, a size for DC. */
         private const val SYMBOLS = 256
     }
 }
 
-/**
- * The entropy coded scan as a bit stream: 0xff 0x00 stuffing undone, and a marker ends it.
- *
- * Not thread safe and not meant to be - one is created per [BaselineJpeg.read], which is called
- * from every core at once by the unpacker.
- */
 private class BitReader(private val data: ByteArray, start: Int) {
 
     private var position = start
@@ -657,10 +567,6 @@ private class BitReader(private val data: ByteArray, start: Int) {
                 if (next == 0x00) {
                     position++
                 } else {
-                    // A marker: the scan is over. The bits a decoder still asks for are the
-                    // encoder's 1 bit padding, so feeding zeroes here would corrupt nothing that
-                    // is read back, but a coefficient this far out means the file disagrees with
-                    // its own headers and saying so is worth more than limping on.
                     throw IOException("A JPEG's scan ended at marker ff${next.toString(16)} with blocks left to read.")
                 }
             }
@@ -679,7 +585,6 @@ private class BitReader(private val data: ByteArray, start: Int) {
         return value
     }
 
-    /** The symbol [table] codes for, by walking one bit at a time as `Annex F` does. */
     fun code(table: JpegHuffmanTable): Int {
         var code = bit()
         var length = 1
@@ -693,13 +598,11 @@ private class BitReader(private val data: ByteArray, start: Int) {
         return table.values[table.pointer[length] + code - table.minimum[length]]
     }
 
-    /** `EXTEND`: [size] magnitude bits back into a signed coefficient. */
     fun value(size: Int): Int {
         val value = bits(size)
         return if (value < (1 shl (size - 1))) value - (1 shl size) + 1 else value
     }
 
-    /** Align, consume the restart marker, and carry on. */
     fun restart() {
         count = 0
         while (position < data.size && (data[position].toInt() and 0xff) != 0xff) {
@@ -720,7 +623,6 @@ private class BitReader(private val data: ByteArray, start: Int) {
     }
 }
 
-/** The other direction: bits out, 0xff stuffed, partial bytes padded with ones as encoders do. */
 private class BitWriter(private val out: ByteArrayOutputStream) {
 
     private var buffer = 0
@@ -741,7 +643,6 @@ private class BitWriter(private val out: ByteArrayOutputStream) {
         bits(table.code[symbol], length)
     }
 
-    /** A symbol for [run] zeroes and [value]'s magnitude, then the magnitude bits themselves. */
     fun value(table: JpegHuffmanTable, run: Int, value: Int) {
         var magnitude = value
         var bits = value
@@ -784,7 +685,6 @@ private class BitWriter(private val out: ByteArrayOutputStream) {
         }
     }
 
-    /** A marker, written outside the bit stream and never stuffed. */
     fun marker(value: Int) {
         out.write(0xff)
         out.write(value)

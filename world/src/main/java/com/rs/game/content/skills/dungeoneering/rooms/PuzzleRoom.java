@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.rooms;
 
 import com.rs.game.World;
@@ -39,7 +23,6 @@ public abstract class PuzzleRoom extends VisibleRoom {
 
 	public final void giveXP(Player player, int skill) {
 		if (giveXPCount[skill] < 4) {
-			//You only gain xp for the first 4 times you do an action
 			giveXPCount[skill]++;
 			player.getSkills().addXp(skill, getRequirement(skill) * 5 +10);
 		}

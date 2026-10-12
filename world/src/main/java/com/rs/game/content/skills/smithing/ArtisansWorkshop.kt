@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.smithing
 
 import org.darkan.core.cache.ComponentType
@@ -132,7 +116,7 @@ fun mapArtisansPlugins() {
 }
 
 private var Player.selectedRewardIndex
-    get() = vars.getVarBit(8902).coerceAtLeast(1) - 1 //minimum of 1
+    get() = vars.getVarBit(8902).coerceAtLeast(1) - 1
     set(value) = vars.setVarBit(8902, clampI(value, 1, 12))
 
 private var Player.ingotQuantity
@@ -375,5 +359,4 @@ private fun Player.openCeremonialSword() {
     interfaceManager.sendInterface(1074)
     interfaceManager.sendInventoryInterface(1071)
     packets.sendRunScript(4215)
-    //packets.sendRunScript(4216, animId)
 }

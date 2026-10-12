@@ -2,51 +2,14 @@ package world.gregs.voidps.cache.audio
 
 import java.io.ByteArrayOutputStream
 
-/**
- * Jagex's compact MIDI encoding - what indices 6 and 11 hold - and the standard MIDI file it is.
- *
- * The encoding is a **column store**. A standard MIDI file interleaves everything: a delta time, a
- * status byte, then that event's data bytes, over and over. Jagex's splits the same stream into one
- * column per kind of byte - every event's opcode first, then every delta time, then every
- * controller number, then the note keys, then the note-on velocities, and so on through twenty-one
- * columns - and delta-codes each column against its own running value. Similar bytes end up
- * adjacent, which is worth a third of the file to the gzip that wraps it.
- *
- * [toStandard] expands one; [toCompact] rebuilds it. The two are exact inverses over the whole 727
- * cache (see `docs/cache-source.md`), which is what lets the source tree store index 6 and index 11
- * as `.mid` files anyone can open.
- *
- * ### The layout
- *
- * ```
- * opcodes        one byte per event, tracks back to back, each track closed by 0x07
- * deltas         one variable-length int per event, in the same order
- * controllers    one byte per controller change: the delta of the controller number
- * <18 columns>   one byte per event that uses them, in event order (see COLUMNS below)
- * tempo          three bytes per tempo event
- * trackCount     one byte
- * division       two bytes
- * ```
- *
- * An opcode's low nibble is the event type and its high nibble is the **exclusive or** of the
- * channel with the running channel, so a run of events on one channel costs a nibble of zero. Two
- * opcodes are not channel events at all: `0x07` ends a track and `0x17` is a tempo change. A status
- * byte is written into the standard file only when the opcode differs from the previous opcode's low
- * nibble, which is where the standard file's running status comes from - and is why the two
- * directions agree on it without anything being recorded.
- */
 object JagexMidi {
 
-    /** MThd. */
     private const val HEADER = 0x4d546864
 
-    /** MTrk. */
     private const val TRACK = 0x4d54726b
 
-    /** The opcode that ends a track. */
     private const val END = 0x07
 
-    /** The opcode of a tempo change: channel nibble 1, low nibble 7, and never a channel event. */
     private const val TEMPO = 0x17
 
     private const val NOTE_ON = 0
@@ -57,16 +20,8 @@ object JagexMidi {
     private const val KEY_PRESSURE = 5
     private const val PROGRAM_CHANGE = 6
 
-    /** The status byte of each event type, before the channel is added. */
     private val STATUS = intArrayOf(0x90, 0x80, 0xb0, 0xe0, 0xd0, 0xa0, 0xc0)
 
-    /**
-     * The column a controller change's value comes from, by controller number.
-     *
-     * Ten controllers have a column each because they carry continuous values that delta-code well;
-     * the five switches share one, everything else shares another, and bank select - 0 and 32 - is
-     * in with the program changes, because a bank select and a program change always come in pairs.
-     */
     private const val COLUMN_SWITCH = 0
     private const val COLUMN_KEY_PRESSURE = 1
     private const val COLUMN_CHANNEL_PRESSURE = 2
@@ -90,7 +45,6 @@ object JagexMidi {
     private const val COLUMN_TEMPO = 20
     private const val COLUMNS = 21
 
-    /** Which column a controller number's value lives in. */
     private fun column(controller: Int): Int = when (controller) {
         0, 32 -> COLUMN_PROGRAM
         1 -> COLUMN_MOD_MSB
@@ -107,9 +61,7 @@ object JagexMidi {
         else -> COLUMN_OTHER
     }
 
-    // --- compact to standard ----------------------------------------------------------------
 
-    /** [data], Jagex's compact encoding, as the standard MIDI file the client expands it into. */
     fun toStandard(data: ByteArray): ByteArray {
         val compact = Compact(data)
         val out = Output(data.size * 2 + 64)
@@ -144,7 +96,6 @@ object JagexMidi {
         return out.toArray()
     }
 
-    /** One event, expanded into [body]. */
     private fun event(compact: Compact, body: Output, state: State, opcode: Int, fresh: Boolean) {
         if (opcode == TEMPO) {
             if (fresh) {
@@ -178,7 +129,6 @@ object JagexMidi {
             CONTROLLER -> {
                 state.controller = (state.controller + compact.controller()) and 0x7f
                 body.byte(state.controller)
-                // The value is a signed delta against this controller number's own running value.
                 state.values[state.controller] += compact.signed(column(state.controller))
                 body.byte(state.values[state.controller] and 0x7f)
             }
@@ -203,7 +153,6 @@ object JagexMidi {
         }
     }
 
-    /** The running values every column is delta-coded against, shared by every track. */
     private class State {
         var channel = 0
         var key = 0
@@ -216,10 +165,6 @@ object JagexMidi {
         val values = IntArray(128)
     }
 
-    /**
-     * A compact file with its columns found: the two counting passes the client makes, and a cursor
-     * per column that the expansion walks forward.
-     */
     private class Compact(private val data: ByteArray) {
 
         val tracks: Int
@@ -253,7 +198,6 @@ object JagexMidi {
                 }
             }
             deltas = position
-            // One delta per event, the track terminators included.
             var events = tracks + counts[7]
             for (type in NOTE_ON..PROGRAM_CHANGE) {
                 events += counts[type]
@@ -263,8 +207,6 @@ object JagexMidi {
                 position = skipVarInt(position)
             }
             controllers = position
-            // The controller numbers decide how many of each controller column there are, so they
-            // are walked before any column position is known.
             val lengths = IntArray(COLUMNS)
             var controller = 0
             for (change in 0 until counts[CONTROLLER]) {
@@ -289,10 +231,8 @@ object JagexMidi {
             }
         }
 
-        /** The next opcode. */
         fun opcode(): Int = data[opcodes++].toInt() and 0xff
 
-        /** The next delta time. */
         fun delta(): Int {
             var value = 0
             while (true) {
@@ -304,35 +244,21 @@ object JagexMidi {
             }
         }
 
-        /** The next controller number delta. */
         fun controller(): Int = data[controllers++].toInt() and 0xff
 
-        /** The next unsigned byte of column [index]. */
         fun value(index: Int): Int = data[positions[index]++].toInt() and 0xff
 
-        /** The next signed byte of column [index]. */
         fun signed(index: Int): Int = data[positions[index]++].toInt()
 
         private fun skipVarInt(from: Int): Int {
             var position = from
             while (data[position++] < 0) {
-                // The continuation bit is the sign bit.
             }
             return position
         }
     }
 
-    // --- standard to compact ----------------------------------------------------------------
 
-    /**
-     * [midi], a standard MIDI file, back into Jagex's compact encoding.
-     *
-     * Every column is delta-coded the way the expansion undoes it: the difference of the value and
-     * the column's running value, taken as an unsigned byte for the columns the client accumulates
-     * unsigned and as a signed one for the controller values it accumulates signed. Every one of the
-     * 1,662 files in the 727 cache comes back byte for byte, so those are the conventions Jagex's
-     * own packer used.
-     */
     fun toCompact(midi: ByteArray): ByteArray {
         val file = Standard(midi)
         val opcodes = Output(1024)
@@ -374,7 +300,6 @@ object JagexMidi {
         return out.toArray()
     }
 
-    /** One channel event's data bytes, into the columns they belong to. */
     private fun encode(columns: Array<Output>, controllers: Output, state: State, type: Int, event: Event) {
         when (type) {
             NOTE_ON -> {
@@ -395,8 +320,6 @@ object JagexMidi {
                 state.values[controller] = event.data[1]
             }
             PITCH_BEND -> {
-                // The two halves are one fourteen bit value, so the wrap is at 0x3fff and each
-                // half still comes out inside seven bits.
                 val bend = (event.data[1] shl 7) or event.data[0]
                 val difference = (bend - state.bend) and 0x3fff
                 columns[COLUMN_PITCH_LOW].byte(difference and 0x7f)
@@ -412,30 +335,19 @@ object JagexMidi {
                 columns[COLUMN_KEY_PRESSURE].byte(delta(event.data[1], state.keyPressure))
                 state.keyPressure = event.data[1]
             }
-            // A program change is the program number itself; nothing accumulates it.
             PROGRAM_CHANGE -> columns[COLUMN_PROGRAM].byte(event.data[0])
         }
     }
 
-    /** The note key column, which note on, note off and key pressure all delta-code against. */
     private fun key(columns: Array<Output>, state: State, key: Int) {
         columns[COLUMN_NOTE_KEY].byte(delta(key, state.key))
         state.key = key
     }
 
-    /**
-     * A column's delta, in the seven bits everything in a MIDI file fits in.
-     *
-     * The expansion adds the byte to a running total and keeps the low seven bits, so any byte
-     * congruent to the difference would decode the same; Jagex's packer wrote the non-negative one,
-     * which is what makes the round trip byte exact rather than merely equivalent.
-     */
     private fun delta(value: Int, previous: Int): Int = (value - previous) and 0x7f
 
-    /** One event of a standard MIDI file. */
     private class Event(val delta: Int, val status: Int, val meta: Int, val data: IntArray)
 
-    /** A standard MIDI file, parsed into its tracks. */
     private class Standard(private val data: ByteArray) {
 
         val trackCount: Int
@@ -508,7 +420,6 @@ object JagexMidi {
         }
     }
 
-    /** A growable byte sink, because both directions write before they know how much. */
     private class Output(capacity: Int) : ByteArrayOutputStream(capacity) {
 
         fun byte(value: Int) = write(value and 0xff)
@@ -525,7 +436,6 @@ object JagexMidi {
             byte(value)
         }
 
-        /** A MIDI variable-length quantity: seven bits a byte, most significant first. */
         fun varInt(value: Int) {
             var shift = 28
             while (shift > 0 && (value ushr shift) == 0) {

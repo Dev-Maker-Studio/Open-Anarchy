@@ -4,29 +4,17 @@ import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
 import world.gregs.voidps.cache.definition.data.InterfaceComponentDefinition
 
-/** How badly a [InterfaceIssue] is likely to hurt. */
 enum class IssueSeverity {
-    /** Worth knowing, harmless. */
     INFO,
 
-    /** The interface will decode and draw, but not the way the author expects. */
     WARNING,
 
-    /** Saving or loading this will break: broken indices, or a corrupt encode. */
     ERROR
 }
 
-/**
- * One developer facing finding from [InterfaceDocument.validate].
- *
- * Structured rather than pre-formatted so the UI can group by severity, filter by
- * [code] and jump the selection to [componentIndex].
- */
 data class InterfaceIssue(
     val severity: IssueSeverity,
-    /** Component the issue is about, or -1 when it concerns the whole interface. */
     val componentIndex: Int,
-    /** Stable machine readable id, e.g. `PARENT_NOT_CONTAINER`. */
     val code: String,
     val message: String
 ) {
@@ -36,14 +24,6 @@ data class InterfaceIssue(
     }
 }
 
-/**
- * The cache-side existence questions validation needs to answer.
- *
- * Kept as lambdas so validation stays headless: the viewer's [GraphicCache] and
- * [FontCache] upload GL textures on lookup, which is exactly what a background
- * validation pass must not do. [of] answers the same questions straight from the
- * index tables, which is a map lookup per call.
- */
 class InterfaceAssets(
     val graphicExists: (Int) -> Boolean,
     val fontExists: (Int) -> Boolean,
@@ -52,15 +32,8 @@ class InterfaceAssets(
 ) {
     companion object {
 
-        /** Answers everything with "it exists", for validating without a cache. */
         val NONE = InterfaceAssets({ true }, { true }, { true }, { true })
 
-        /**
-         * Existence probes backed by the index tables read at cache load:
-         * graphic groups are archives of index 8, font metrics archives of index 13,
-         * clientscripts archives of index 12 and interfaces archives of index 3.
-         * Nothing is decompressed or decoded.
-         */
         fun of(cache: Cache) = InterfaceAssets(
             graphicExists = { id -> id >= 0 && cache.files(Index.GRAPHICS, id).isNotEmpty() },
             fontExists = { id -> id >= 0 && cache.files(Index.FONT_METRICS, id).isNotEmpty() },
@@ -70,24 +43,6 @@ class InterfaceAssets(
     }
 }
 
-/**
- * Structural and format checks over a whole component array.
- *
- * The checks fall into three groups:
- *
- * 1. **Index integrity** - out of range parents, cycles, too many components.
- *    These break the decoder or the layout outright.
- * 2. **Silent no-ops** - the client's layout only descends into components of
- *    type 0, so anything parented to another type is never positioned and never
- *    drawn, and a container with no size clips all of its children away. These
- *    are the two mistakes that make a new interface render as nothing at all.
- * 3. **Save fidelity** - fields the if3 encoder cannot represent for the
- *    component's type, and the three constructs where
- *    [world.gregs.voidps.cache.definition.encoder.InterfaceEncoder] and
- *    [world.gregs.voidps.cache.definition.decoder.InterfaceDecoder] disagree
- *    badly enough to corrupt the file. See [InterfaceStore.verifyRoundTrip] for
- *    the byte level version of this group.
- */
 object InterfaceValidator {
 
     @Suppress("LongMethod", "CyclomaticComplexMethod")
@@ -280,9 +235,6 @@ object InterfaceValidator {
         }
         val icons = component.mouseIcon
         if (icons != null && icons.count { it != -1 } > MAX_ENCODED_MOUSE_ICONS) {
-            // The format carries at most two option cursors: the decoder reads an
-            // index byte and a short, then optionally one more pair. Anything past
-            // the second set entry has nowhere to go and is dropped on save.
             issues.add(
                 InterfaceIssue(
                     IssueSeverity.WARNING, index, "MOUSE_ICON_DROPPED",
@@ -350,15 +302,11 @@ object InterfaceValidator {
         }
     }
 
-    /**
-     * Flags every component that cannot reach the root by walking `parent`.
-     * Walks each chain once with a colour marker, so the whole array costs O(n).
-     */
     private fun detectCycles(
         components: List<InterfaceComponentDefinition>,
         issues: MutableList<InterfaceIssue>
     ) {
-        val state = IntArray(components.size) // 0 unvisited, 1 on the current path, 2 settled
+        val state = IntArray(components.size)
         for (start in components.indices) {
             if (state[start] != 0) {
                 continue
@@ -392,10 +340,8 @@ object InterfaceValidator {
         }
     }
 
-    /** The only media type the if3 format can express for a type 6 component. */
     private const val MODEL_MEDIA_TYPE = 1
 
-    /** Option cursors the if3 format has room for; the rest are dropped on save. */
     private const val MAX_ENCODED_MOUSE_ICONS = 2
 
     private val COLOUR_TYPES = intArrayOf(

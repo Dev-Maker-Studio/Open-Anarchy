@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.prayer;
 
 import com.rs.game.model.entity.Entity;
@@ -97,7 +81,6 @@ public class Leech {
 		playLeechEffect(player, target, type.projAnim, type.spotAnimHit, 8109);
 	}
 
-	//called when attacker hits a target and leech applies
 	public static void handleLeechOnHit(Player attacker, Entity target, int statId) {
 		AttribMap attribs = target.getTempAttribs();
 		int attackerIndex = attacker.getIndex();
@@ -106,7 +89,6 @@ public class Leech {
 		String timerKey = LEECH_DRAIN_TIMER_PREFIX + statId;
 		String procKey = LEECH_PROC_PREFIX + statId;
 
-		// Get or init target-side maps (for drains)
 		Map<Integer, Integer> drainMap = attribs.getO(drainKey);
 		if (drainMap == null) {
 			drainMap = new HashMap<>();
@@ -128,7 +110,6 @@ public class Leech {
 		List<Long> stackTimes = timerMap.computeIfAbsent(attackerIndex, k-> new ArrayList<>());
 		int currentStacks = drainMap.getOrDefault(attackerIndex, 0);
 
-		// Drain cap check
 		int base = target instanceof Player
 				? ((Player) target).getSkills().getLevelForXp(statId)
 				: ((NPC) target).getCombatDefinitions().getLevels().get(getSkillFromId(statId));
@@ -140,7 +121,6 @@ public class Leech {
 
 		procMap.put(attackerIndex, System.currentTimeMillis());
 
-		// Apply drain
 		if (!drainCapped)
 			currentStacks++;
 		drainMap.put(attackerIndex, currentStacks);
@@ -148,7 +128,6 @@ public class Leech {
 		applyStatDrain(target, statId, currentStacks);
 
 
-		// Apply boost
 		int boostStacks = 1;
 		grantStatBoost(attacker, statId, boostStacks);
 	}
@@ -171,7 +150,7 @@ public class Leech {
 		if (target instanceof Player player) {
 			int current = player.getSkills().getLevel(statId);
 			if (base - current >= maxDrain)
-				return; // Already drained max
+				return;
 
 			if (current > newLevel)
 				player.getSkills().set(statId, newLevel);
@@ -332,7 +311,6 @@ public class Leech {
 
 			stackTimes.removeFirst();
 			int currentStacks = player.getTempAttribs().getI(boostKey, 1) - 1;
-			//System.out.println("Current Boosts on player: " + currentStacks + "/");
 			if (currentStacks <= 0 || stackTimes.isEmpty()) {
 				player.getTempAttribs().removeI(boostKey);
 				player.getTempAttribs().removeO(timerKey);

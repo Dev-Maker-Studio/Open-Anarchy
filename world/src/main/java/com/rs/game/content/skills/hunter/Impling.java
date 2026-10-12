@@ -169,9 +169,9 @@ public class Impling extends NPC {
             return Ticks.fromMinutes(2);
 
         return switch (npcId) {
-            case 6058, 6059, 7904 -> 50; //Earth, Essence, Spirit
-            case 6055, 6056, 6057, 6060 -> 7; //Baby, Young, Gourmet, Eclectic
-            default -> Ticks.fromMinutes(2); //Catch all for overworld
+            case 6058, 6059, 7904 -> 50;
+            case 6055, 6056, 6057, 6060 -> 7;
+            default -> Ticks.fromMinutes(2);
         };
     }
 

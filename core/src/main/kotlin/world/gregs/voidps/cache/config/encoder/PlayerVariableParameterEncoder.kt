@@ -5,9 +5,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.config.data.PlayerVariableParameterDefinition
 
-/**
- * Writes a player variable (`varp`, index 2 archive 16) file.
- */
 class PlayerVariableParameterEncoder : OpcodeEncoder<PlayerVariableParameterDefinition>() {
 
     override fun opcodes(definition: PlayerVariableParameterDefinition): IntArray {

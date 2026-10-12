@@ -60,7 +60,6 @@ class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var sett
         }
     }
 
-    /** A fresh payment buys more time on top of whatever is left, and wakes the arena back up. */
     @JvmOverloads
     fun renew(hours: Int = 1) {
         paidUntil = maxOf(System.currentTimeMillis(), paidUntil) + hours * LIFETIME_MILLIS
@@ -85,14 +84,12 @@ class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var sett
         npcsInside().forEach { it.setRespawnDelayOverride(settings.spawnSpeed.ticks) }
     }
 
-    /** The boss is not waiting when the door opens: it arrives on the timer the owner paid for. */
     private fun stageBoss() {
         val copied = npcsInside().filter { it.id in def.bossNpcs }
         copied.forEach { it.setRespawnTask(settings.spawnSpeed.ticks) }
         def.bossNpcs.filterNot { id -> copied.any { it.id == id } }.forEach(::spawnBoss)
     }
 
-    /** A boss its arena summons rather than spawns, like Nex, has nothing to copy: give it one. */
     private fun spawnBoss(npcId: Int) {
         World.spawnNPC(npcId, localTile(def.home), false, true).apply {
             setRespawnDelayOverride(settings.spawnSpeed.ticks)

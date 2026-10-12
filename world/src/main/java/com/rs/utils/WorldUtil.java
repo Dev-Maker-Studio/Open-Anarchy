@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.utils;
 
 import com.google.gson.internal.LinkedTreeMap;
@@ -41,10 +25,7 @@ public class WorldUtil {
 		return new Pair<>((regionId >> 8) * 8, (regionId & 0xFF) * 8);
 	}
 
-	// TODO: QCMesDefinitions has been removed. This method needs to be reimplemented
-	// using QuickChatPhraseDefinition from the modern cache system.
 	public static byte[] completeQuickMessage(Player player, int fileId, byte[] data) {
-		// Stub: return the raw data as-is until QC phrase completion is reimplemented
 		return data;
 	}
 
@@ -123,11 +104,11 @@ public class WorldUtil {
 		MemoryUsage heapMemoryUsage = memoryMXBean.getHeapMemoryUsage();
 		MemoryUsage nonHeapMemoryUsage = memoryMXBean.getNonHeapMemoryUsage();
 
-		long jvmHeapUsed = heapMemoryUsage.getUsed() / 1048576L; // in MB
-		long jvmNonHeapUsed = nonHeapMemoryUsage.getUsed() / 1048576L; // in MB
+		long jvmHeapUsed = heapMemoryUsage.getUsed() / 1048576L;
+		long jvmNonHeapUsed = nonHeapMemoryUsage.getUsed() / 1048576L;
 		long jvmTotalUsed = jvmHeapUsed + jvmNonHeapUsed;
 
-		long jvmMaxMemory = (heapMemoryUsage.getMax() + nonHeapMemoryUsage.getMax()) / 1048576L; // in MB
+		long jvmMaxMemory = (heapMemoryUsage.getMax() + nonHeapMemoryUsage.getMax()) / 1048576L;
 		double jvmMemUsedPerc = ((double) jvmTotalUsed / jvmMaxMemory) * 100.0;
 		return jvmMemUsedPerc;
 	}

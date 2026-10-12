@@ -100,7 +100,6 @@ class GunnarsGroundCutscenes (player: Player) {
             waitForDialogue()
             fadeInAndWait()
 
-            // Speech Cutscene
             player.anim(-1)
             entityTeleTo(dororan, 26, 12)
             player.appearance.transformIntoNPC(1957)
@@ -141,7 +140,6 @@ class GunnarsGroundCutscenes (player: Player) {
             waitForDialogue()
             fadeInAndWait()
 
-            // Hug Cutscene
             listOf(dororan, chieftainGunthor, haakon, kjell, gudrun).forEach { npc ->
                 npc.finish()
             }

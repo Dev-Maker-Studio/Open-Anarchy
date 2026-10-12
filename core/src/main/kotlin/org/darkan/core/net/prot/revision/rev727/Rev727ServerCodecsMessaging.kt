@@ -174,14 +174,12 @@ internal fun Codec.registerRev727MessagingPackets() {
         var maskData = 0
         if (targetDisplayName != null) {
             maskData = maskData or 0x1
-            //maskData |= 0x2;
         }
         out.writeSmart(type.value)
         out.writeInt(effectFlags)
         out.writeByte(maskData)
         if (targetDisplayName != null) {
             out.writeRSString(targetDisplayName)
-            //stream.writeRSString(target.getDisplayName());
         }
         out.writeRSString(message.take(248))
     }.decoder {

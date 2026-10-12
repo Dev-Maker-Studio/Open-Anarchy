@@ -31,7 +31,6 @@ import java.lang.management.ManagementFactory
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.CoroutineContext
 
-/** 20 ticks, matching the world's login cutoff before a system update. */
 private const val UPDATE_LOGIN_CUTOFF_MILLIS = 20 * 600L
 
 object Lobby : CoroutineScope {
@@ -53,29 +52,19 @@ object Lobby : CoroutineScope {
     private val lobbyPlayers = ConcurrentHashMap<String, LobbyPlayer>()
     private lateinit var lobbyEngineLoop: EngineLoop
 
-    /** Epoch millis of the scheduled restart, or 0 when none is pending. */
     @Volatile
     private var updateAt = 0L
     private val updateWatcher = ArtifactWatcher("lobby-server", this) { version ->
         scheduleUpdate(EnvVars.autoUpdateCountdownMinutes.minutes, "build $version")
     }
 
-    /** True inside the last moments before a scheduled restart; logins are refused so nobody lands on a dying lobby. */
     val updatingSoon: Boolean
         get() = updateAt != 0L && updateAt - System.currentTimeMillis() < UPDATE_LOGIN_CUTOFF_MILLIS
 
-    /**
-     * The lobby's equivalent of the world's `::update`: stops accepting logins near the end of
-     * [countdown], then stops cleanly. The run script restarts the process on the newest build, and
-     * the worlds' social clients reconnect on their own.
-     */
     fun scheduleUpdate(countdown: Duration, reason: String) {
         if (updateAt != 0L) return
         updateAt = System.currentTimeMillis() + countdown.inWholeMilliseconds
         logInfo("Lobby restart scheduled in $countdown ($reason)")
-        // A plain thread, not a coroutine on this scope: stop() cancels and joins the scope, which
-        // would cancel the caller itself and never reach the exit. exitProcess runs the shutdown
-        // hook from Main, which performs the clean stop() on its own thread.
         thread(name = "lobby-update", isDaemon = true) {
             Thread.sleep(countdown.inWholeMilliseconds)
             logInfo("Restarting lobby for $reason")
@@ -141,7 +130,6 @@ object Lobby : CoroutineScope {
 
     fun addLobbyPlayer(lobbyPlayer: LobbyPlayer) = lobbyPlayers.put(lobbyPlayer.account.username, lobbyPlayer)
 
-    /** Only the session that owns the entry may drop it: a stale goodbye must not evict a fresh login. */
     fun removeLobbyPlayer(lobbyPlayer: LobbyPlayer) = lobbyPlayers.remove(lobbyPlayer.account.username, lobbyPlayer)
 
     fun addAccountCreation(session: AccountCreationSession) = accountCreationSessions.add(session)
@@ -159,7 +147,6 @@ object Lobby : CoroutineScope {
     }
 
     val flushOutgoingNetworkSessions = Runnable {
-        // Only signals each session's writer coroutine, so one stalled socket can't hold the tick.
         lobbyPlayers.values.forEach { it.session.requestFlush() }
         accountCreationSessions.forEach { it.session.requestFlush() }
     }

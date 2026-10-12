@@ -23,22 +23,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * Index 5 through [MapCodec]: every one of the 7,268 map archives decoded, written as JSON, read
- * straight back and re-encoded, and the bytes compared against the ones the cache ships.
- *
- * This is the map half of the parity guarantee `docs/cache-source.md` makes. It is the same trip a
- * `cache unpack` makes and the same one `cache build` reverses, so a decoder that drops a byte, an
- * encoder that reorders a record or a JSON spelling that narrows a number shows up here as a
- * pristine sidecar rather than as a silently rewritten region in a 300 MB tree.
- *
- * Two tests, both skipped when there is no cache to read:
- *
- * 1. **Per archive**, reported per shape - files, byte identical, pristine - which is where the
- *    table in `docs/cache-source.md` comes from. The bar is every file identical and none pristine.
- * 2. **Tree level**: unpack index 5 into a real source tree and verify a fresh pack of it against
- *    the packed cache, container for container and reference table included.
- */
 class MapCodecParityTest {
 
     @Test
@@ -60,8 +44,6 @@ class MapCodecParityTest {
                     ?: error("Map archive ${entry.id}'s name hash ${entry.nameHash} is no map square's.")
                 val group = group(cache, entry.id, square, keys)
                 if (group == null) {
-                    // The eight `l<x>_<y>` archives nobody has a key for; the framework keeps their
-                    // container bytes verbatim and the codec never sees them.
                     opaque++
                     continue
                 }
@@ -154,7 +136,6 @@ class MapCodecParityTest {
             assertEquals(ARCHIVES, report.identical, "every container must come out identical")
             assertTrue(report.indices.single().tableIdentical, "index ${Index.MAPS}'s reference table must match")
 
-            // Re-unpacking an unchanged cache has to leave the tree exactly as it is.
             val stamps = timestamps(work.toPath())
             val again = FileCache.load(packed.absolutePath)
             val second = try {
@@ -172,14 +153,6 @@ class MapCodecParityTest {
         }
     }
 
-    /**
-     * Edit one tile of one region and rebuild: exactly one archive may be repacked, and the built
-     * cache has to carry the edit.
-     *
-     * This is the whole point of the codec - a map square is a file somebody changes - and it is
-     * also the only end to end check of [MapCodec.archiveOf], because mapping the changed path back
-     * onto an archive is what an incremental build does and nothing else asks for.
-     */
     private fun edit(tree: SourceTree) {
         val output = File(tree.directory.parent.toFile(), "map-build")
         try {
@@ -192,8 +165,6 @@ class MapCodecParityTest {
             val file = directory.resolve(MapCodec.path(square))
             val definition = MapJson.readTerrain(Files.readAllBytes(file), square)
             val before = definition.getTile(0, 0, 0)
-            // Whatever the tile is now, this is not it: an edit that changes nothing would leave the
-            // file untouched and the build with nothing to repack.
             val underlay = if (before.underlayId == EDITED_UNDERLAY) EDITED_UNDERLAY - 1 else EDITED_UNDERLAY
             val edited = MapTile(
                 height = before.height,
@@ -225,7 +196,6 @@ class MapCodecParityTest {
         }
     }
 
-    /** The layout is the codec's contract with the builder, so it is checked without a cache. */
     @Test
     fun `a map file names its square and maps back to its archive`() {
         val square = MapSquare.Square(MapSquare.Shape.TERRAIN, 50, 50)
@@ -241,7 +211,6 @@ class MapCodecParityTest {
             MapCodec.path(square.copy(shape = MapSquare.Shape.UNDERWATER_LOCATIONS))
         )
 
-        // The archive id lives in index.json, so the path alone can never answer.
         assertNull(MapCodec.archiveOf("50_50/terrain.json"))
 
         val directory = Files.createTempDirectory(scratch(), "map-lookup")
@@ -254,8 +223,6 @@ class MapCodecParityTest {
             assertEquals(7, MapCodec.archiveOf(directory, "50_50/terrain.json"))
             assertEquals(7, MapCodec.archiveOf(directory, "50_50/terrain.json.pristine"))
             assertEquals(9, MapCodec.archiveOf(directory, "50_50/underwater_locs.json"))
-            // A square the index does not hold, a shape that is not one of the five, and the
-            // framework's own files, none of which are this codec's.
             assertNull(MapCodec.archiveOf(directory, "50_51/terrain.json"))
             assertNull(MapCodec.archiveOf(directory, "50_50/heights.json"))
             assertNull(MapCodec.archiveOf(directory, "50_50/terrain.dat"))
@@ -272,7 +239,6 @@ class MapCodecParityTest {
         var pristine = 0
     }
 
-    /** [archive]'s decompressed group, or null when nothing can open it. */
     private fun group(cache: Cache, archive: Int, square: MapSquare.Square, keys: Map<Int, IntArray>): ByteArray? {
         val bytes = cache.container(Index.MAPS, archive) ?: return null
         return try {
@@ -282,12 +248,6 @@ class MapCodecParityTest {
         }
     }
 
-    /**
-     * The cache with every index but the maps hidden, so an unpack writes a tree of index 5 alone.
-     *
-     * [Unpacker] skips an index with no reference table, which is the whole trick; everything else
-     * is the real cache.
-     */
     private class OnlyMaps(private val cache: Cache) : Cache by cache {
         override fun referenceTable(index: Int): ReferenceTable? =
             if (index == Index.MAPS) cache.referenceTable(index) else null
@@ -319,7 +279,6 @@ class MapCodecParityTest {
         return stamps
     }
 
-    /** Hundreds of megabytes of tree do not belong in a tmpfs; the build directory is on disk. */
     private fun scratch(): Path {
         val directory = File("core/build/tmp").absoluteFile
         directory.mkdirs()
@@ -343,10 +302,8 @@ class MapCodecParityTest {
     }
 
     private companion object {
-        /** Index 5's archives in the 727 cache: 2,407 terrain, 2,407 locations, 38 npc spawns, 2,416 underwater. */
         private const val ARCHIVES = 7268
 
-        /** The `l<x>_<y>` archives `data/map/xteaKeys.json` has no working key for. */
         private const val OPAQUE = 8
 
         private const val TERRAIN = 2407
@@ -355,7 +312,6 @@ class MapCodecParityTest {
 
         private const val EXAMPLES = 5
 
-        /** Lumbridge, which is in every 727 cache, and the highest underlay an opcode can carry. */
         private const val EDITED_X = 50
         private const val EDITED_Y = 50
         private const val EDITED_UNDERLAY = 174

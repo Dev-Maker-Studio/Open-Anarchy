@@ -17,10 +17,8 @@ data class Vec2(val x: Double, val y: Double) {
         return if (l == 0.0) Vec2(0.0, 0.0) else Vec2(x / l, y / l)
     }
 
-    /** Alias for [normalize] — legacy Java compatibility. */
     fun norm(): Vec2 = normalize()
 
-    /** Converts this vector to a [Tile] by rounding to the nearest integer coordinates. */
     fun toTile(): Tile = Tile(x.roundToInt(), y.roundToInt())
 
     companion object {

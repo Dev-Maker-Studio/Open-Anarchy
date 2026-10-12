@@ -6,10 +6,6 @@ import java.util.Random
 import kotlin.math.max
 import kotlin.math.sqrt
 
-/**
- * Type 15: Procedural Voronoi noise generator.
- * Creates cellular/Worley noise patterns.
- */
 class TextureOpVoronoiNoise : TextureOperation(0, true) {
     private var randomBytes: ByteArray = ByteArray(512)
     private var pointPositions: ShortArray = ShortArray(512)

@@ -88,8 +88,6 @@ object WorldServer {
         selectorManager = ActorSelectorManager(dispatcher)
         val scope = CoroutineScope(dispatcher)
 
-        // The clan replica is only valid while the socket that filled it is up: every connection
-        // change drops it, and the lobby's connect-time resync refills it (docs/clans.md).
         socialClient = SocialClient(scope, ::onlinePresence, { ClanRegistry.clear() }) { msg -> handleSocialMessage(msg) }
         socialClient.start()
         logInfo("Starting world server...")
@@ -181,8 +179,6 @@ object WorldServer {
             is LoginDecode.Decoded -> decoded.request
         }
         val isaacKeys = request.isaacSeed
-        // A world must never hold a plaintext password, so anything that is not shaped like a token is
-        // dropped here, before it can be forwarded to the lobby or reach a log.
         val lobbyAuthToken = request.authToken
         if (!LoginToken.hasTokenShape(lobbyAuthToken)) {
             logWarn("World login from $ip presented a malformed auth token; refusing")
@@ -213,9 +209,6 @@ object WorldServer {
         if (!pendingLogins.add(username))
             return output.finish(ResponseOpcode.LOGIN_LIMIT_EXCEEDED)
 
-        // World.addPlayer overwrites its username map rather than refusing a duplicate, so this claim
-        // is the only thing serialising two logins of one account - and the client can reach the same
-        // account under its email as well as its name, which is why the lobby's name is claimed too.
         val claimed = hashSetOf(username)
         val admitted = try {
             when (val admission = admitThroughLobby(username, lobbyAuthToken) { claimed.add(it) && pendingLogins.add(it) }) {
@@ -231,16 +224,11 @@ object WorldServer {
 
         val session = initSession(output, isaacKeys, ip, codec)
 
-        // Anything that goes wrong while wiring up the player is a login failure, not a silent
-        // drop: tell the client so it can retry, and flag the player so the world tick unwinds
-        // whatever init() already registered.
         try {
-            // init() calls World.addPlayer() which assigns player.index
             player.init(session, account, displayMode, screenWidth, screenHeight, machineInfo)
             if (EnvVars.worldOwner.isNotEmpty() && player.username.equals(EnvVars.worldOwner, ignoreCase = true))
                 player.rights = Rights.OWNER
 
-            // Send WorldLoginDetails before ISAAC is active (noIsaac=true)
             session.send(
                 WorldLoginDetails(
                     rights = if (Settings.getConfig().isDebug) 2 else player.rights.crown,
@@ -262,8 +250,8 @@ object WorldServer {
                 player.disconnected = true
             }
             player.start()
-            session.flush() // Flush WorldLoginDetails + all init packets before reading client input
-            player.setStarted() // Mark started AFTER flush so the world thread cannot interleave writes
+            session.flush()
+            player.setStarted()
         } catch (e: CancellationException) {
             abortLogin(player, ip)
             throw e
@@ -304,11 +292,6 @@ object WorldServer {
         data class Refused(val response: Int) : Admission
     }
 
-    /**
-     * On the client's world-entry screen [ResponseOpcode.INVALID_CREDENTIALS] reads "Your password has
-     * been updated. Please leave the lobby and log in again." - the right instruction for a token this
-     * lobby will not honour, and a lie for anything else, which is what every refusal used to report.
-     */
     private fun responseFor(refusal: LoginRefusal?) = when (refusal) {
         LoginRefusal.BANNED -> ResponseOpcode.ACCOUNT_DISABLED
         LoginRefusal.NAME_REQUIRED -> ResponseOpcode.DISPLAY_NAME_CHANGE_REQUIRED
@@ -316,11 +299,6 @@ object WorldServer {
         LoginRefusal.TOKEN, null -> ResponseOpcode.INVALID_CREDENTIALS
     }
 
-    /**
-     * The lobby names the player, not the client: a sign-up is renamed by the name screen after its
-     * token was issued, so the name typed into the login box is only what the lobby looks the token
-     * up by. Everything past this point uses [AccountView.username].
-     */
     private suspend fun admitThroughLobby(typedName: String, lobbyAuthToken: String, claim: (String) -> Boolean): Admission {
         val verdict = socialClient.verifyLoginToken(typedName, lobbyAuthToken)
             ?: return Admission.Refused(ResponseOpcode.LOGIN_SERVER_OFFLINE)
@@ -332,8 +310,6 @@ object WorldServer {
         if (World.containsPlayer(account.username))
             return Admission.Refused(ResponseOpcode.ACCOUNT_ONLINE)
 
-        // A decode failure must not fall through to a fresh character - that would overwrite the
-        // real save on the next flush.
         val loaded = WorldDB.getPlayers().loadForLogin(account.username)
         if (loaded.loadError()) {
             logError("Failed to decode player save for ${account.username}; refusing login")
@@ -342,24 +318,15 @@ object WorldServer {
         return Admission.Admitted(account, loaded.player() ?: Player(account))
     }
 
-    /**
-     * init() has already registered the player with [World]; a login that dies after that point
-     * never starts, so the world tick will never process it and never finish it.
-     */
     private fun abortLogin(player: Player, ip: String) {
         player.disconnected = true
         if (player.hasStarted() || !World.containsPlayer(player.username)) return
-        // start() has already made this player a chunk and update-zone watcher, both keyed by the
-        // index World.removePlayer is about to hand to somebody else. Left behind, the next player
-        // to take the index inherits an update zone based on wherever this login was standing and
-        // gets every ground item in it at the wrong coordinates.
         player.setFinished(true)
         ChunkManager.updateChunks(player)
         World.removePlayer(player)
         if (!player.isBot) AccountLimiter.remove(ip)
     }
 
-    /** False when no gateway is attached (headless tools, the test harness) or it is down. */
     fun sendToGateway(msg: SocialGatewayWireMessage): Boolean {
         if (!::socialClient.isInitialized) {
             logWarn("No social gateway client attached; dropping ${msg::class.simpleName}")
@@ -376,7 +343,6 @@ object WorldServer {
         }
     }
 
-    /** Runs [block] against the named player on the next world tick, if they are still in game. */
     fun onWorldThread(username: String, block: (Player) -> Unit) {
         WorldTasks.schedule(0) {
             val player = World.getPlayerByUsername(username) ?: return@schedule
@@ -385,8 +351,6 @@ object WorldServer {
     }
 
     private fun handleSocialMessage(msg: SocialGatewayWireMessage) {
-        // Clans are their own protocol (docs/clans.md): the registry owns every clan event and
-        // builds the client packets itself, so nothing clan-shaped reaches the dispatch below.
         if (ClanRegistry.handle(msg)) return
         when (msg) {
             is SocialNotification -> msg.usernames.forEach { deliverEvent(it, msg.event) }
@@ -396,10 +360,6 @@ object WorldServer {
         }
     }
 
-    /**
-     * An announcement the lobby fanned out to the worlds. It is a game message to everybody in
-     * game here; the lobby has already decided who should get it, so the world does not filter.
-     */
     private fun announceToEveryone(msg: AnnouncementBroadcast) {
         logInfo("Received announcement: ${msg.message}")
         WorldTasks.schedule(0) {
@@ -417,11 +377,6 @@ object WorldServer {
         }
     }
 
-    /**
-     * Everyone this world currently has in game, for the presence snapshots the lobby reconciles
-     * against. The gate is the same one [onWorldThread] uses - a player still logging in or
-     * already finishing is not somebody the lobby can route events to.
-     */
     private fun onlinePresence(): List<GatewayPlayerPresence> =
         World.players.mapNotNull { player ->
             if (player == null || !player.hasStarted() || player.hasFinished()) return@mapNotNull null
@@ -434,12 +389,6 @@ object WorldServer {
             )
         }
 
-    /**
-     * Called once the player can receive packets. A world with no gateway client at all (headless
-     * tools, the test harness) is not a lobby rejection, so nobody is logged out for it; a
-     * gateway that will not take the player is, because they are not online as far as anybody's
-     * friends list is concerned.
-     */
     fun notifyPlayerOnline(account: AccountView) {
         if (!::socialClient.isInitialized) {
             logWarn("No social gateway client attached; skipping online notify for ${account.username}")

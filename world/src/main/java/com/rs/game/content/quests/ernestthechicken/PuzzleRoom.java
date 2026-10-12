@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.quests.ernestthechicken;
 
 import com.rs.game.World;
@@ -30,7 +14,6 @@ import com.rs.utils.WorldUtil;
 
 @PluginEventHandler
 public class PuzzleRoom {
-	//Object Ids
 	static int LEVER_A = 146;
 	static int LEVER_B = 147;
 	static int LEVER_C = 148;
@@ -47,7 +30,6 @@ public class PuzzleRoom {
 	static int DOOR8 = 2374;
 	static int DOOR9 = 141;
 
-	//vars
 	static int LEVER_A_V = 1788;
 	static int LEVER_B_V = 1789;
 	static int LEVER_C_V = 1790;
@@ -73,7 +55,6 @@ public class PuzzleRoom {
 		Vars vars = e.getPlayer().getVars();
 		int id = obj.getId();
 
-		//step 1/5, https://runescape.salmoneus.net/runescape-2007/quests/ernest-the-chicken.html
 		if(vars.getVar(LEVER_A_V) == 0 && id == LEVER_A) {
 			vars.setVarBit(LEVER_A_V, 1);
 			if(vars.getVarBit(LEVER_B_V) == 1) {
@@ -91,13 +72,11 @@ public class PuzzleRoom {
 			}
 		}
 
-		//step 3
 		if(vars.getVar(LEVER_D_V) == 0 && id == LEVER_D) {
 			vars.setVarBit(LEVER_D_V, 1);
 			vars.setVarBit(DOOR2_V, 1);
 			vars.setVarBit(DOOR3_V, 1);
 
-			//reset A & B
 			vars.setVarBit(LEVER_A_V, 0);
 			vars.setVarBit(LEVER_B_V, 0);
 			vars.setVarBit(DOOR1_V, 0);
@@ -105,7 +84,6 @@ public class PuzzleRoom {
 			vars.setVarBit(DOOR5_V, 0);
 		}
 
-		//Step 7//11
 		if(vars.getVar(LEVER_E_V) == 0 && id == LEVER_E) {
 			vars.setVarBit(LEVER_E_V, 1);
 			if(vars.getVarBit(LEVER_F_V) == 1) {
@@ -127,7 +105,6 @@ public class PuzzleRoom {
 			}
 		}
 
-		//step 9
 		if(vars.getVar(LEVER_C_V) == 0 && id == LEVER_C) {
 			vars.setVarBit(LEVER_C_V, 1);
 			vars.setVarBit(LEVER_E_V, 0);

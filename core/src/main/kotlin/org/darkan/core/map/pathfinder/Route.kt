@@ -55,46 +55,26 @@ public data class JavaRouteCoordinates(public val x: Int, public val y: Int) {
             return coords.map { of(it) }
         }
 
-        /**
-         * RouteCoordinates helper function to avoid memory-creation
-         * with [JavaRouteCoordinates.of].
-         */
         @JvmStatic
         public fun getX(coords: RouteCoordinates): Int {
             return coords.x
         }
 
-        /**
-         * RouteCoordinates helper function to avoid memory-creation
-         * with [JavaRouteCoordinates.of].
-         */
         @JvmStatic
         public fun getY(coords: RouteCoordinates): Int {
             return coords.y
         }
 
-        /**
-         * RouteCoordinates helper function to avoid memory-creation
-         * with [JavaRouteCoordinates.of].
-         */
         @JvmStatic
         public fun translate(coords: RouteCoordinates, xOffset: Int, yOffset: Int): RouteCoordinates {
             return coords.translate(xOffset, yOffset)
         }
 
-        /**
-         * RouteCoordinates helper function to avoid memory-creation
-         * with [JavaRouteCoordinates.of].
-         */
         @JvmStatic
         public fun translateX(coords: RouteCoordinates, offset: Int): RouteCoordinates {
             return coords.translateX(offset)
         }
 
-        /**
-         * RouteCoordinates helper function to avoid memory-creation
-         * with [JavaRouteCoordinates.of].
-         */
         @JvmStatic
         public fun translateY(coords: RouteCoordinates, offset: Int): RouteCoordinates {
             return coords.translateY(offset)

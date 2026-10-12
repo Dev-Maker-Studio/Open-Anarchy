@@ -11,7 +11,6 @@ data class QuickChatPhraseDefinition(
     var responses: IntArray? = null,
     var ids: Array<IntArray>? = null,
     var types: IntArray? = null,
-    /** Opcode 4 clears it: the phrase is hidden from the quick chat search. */
     var searchable: Boolean = true,
     override var stringId: String = "",
     override var extras: Map<String, Any>? = null,

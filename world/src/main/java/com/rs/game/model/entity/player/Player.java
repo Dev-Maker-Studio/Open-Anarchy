@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.model.entity.player;
 
 import com.rs.game.content.world.generated.GeneratedWorldRulesKt;
@@ -183,7 +167,7 @@ public class Player extends Entity {
 	private boolean slayerHelmCreation;
 	private boolean quickBlows;
 	private boolean broadFletching;
-	private boolean craftROS; //ring of slay
+	private boolean craftROS;
 	private boolean iceStrykeNoCape;
 	private boolean aquanitesUnlocked;
 
@@ -239,7 +223,6 @@ public class Player extends Entity {
 		return dyingTime > System.currentTimeMillis();
 	}
 
-	// transient stuff
 	private transient Session session;
 	private transient WorldEncoder worldEncoder;
 	private transient long clientLoadedMapRegion;
@@ -303,7 +286,6 @@ public class Player extends Entity {
 	private transient MoveType tempMoveType = moveType;
 	public transient boolean updateMovementType = true;
 
-	// player stages
 	private transient boolean started;
 	private transient boolean running;
 
@@ -373,7 +355,6 @@ public class Player extends Entity {
 
 	private ItemsContainer<Item> trawlerRewards;
 
-	// ectofuntus
 	public int boneType;
 	public boolean bonesGrinded;
 	public int unclaimedEctoTokens;
@@ -516,34 +497,27 @@ public class Player extends Entity {
 	private boolean filterGame;
 	private boolean xpLocked;
 	private boolean yellOff;
-	// game bar status
 	private int publicStatus;
 	private int clanStatus;
 	private int tradeStatus;
 	private int assistStatus;
 
-	// Recovery ques. & ans.
 	private String recovQuestion;
 	private String recovAnswer;
 
-	// Used for storing recent ips
 	private Set<String> ipList = new HashSet<>();
 
-	// honor
 	private int killCount, deathCount;
-	// barrows
 	private boolean[] killedBarrowBrothers;
 	private int hiddenBrother;
 	private int barrowsKillCount;
 	private int pestPoints;
 
-	// skill capes customizing
 	private int[] maxedCapeCustomized;
 	private int[] completionistCapeCustomized;
 
 	private int summoningLeftClickOption;
 
-	// voting
 	private int votes;
 
 	private String yellColor = "ff0000";
@@ -556,7 +530,6 @@ public class Player extends Entity {
 
 	private House house;
 
-	// creates Player and saved classes
 	public Player(AccountView account) {
 		super(TileHelper.of(Settings.getConfig().getPlayerStartTile()));
 		this.account = account;
@@ -639,7 +612,6 @@ public class Player extends Entity {
 		cutsceneManager = new CutsceneManager(this);
 		cutscenePresenter = new CutscenePresenter();
 		trade = new Trade(this);
-		// loads player on saved instances
 		appearence.setPlayer(this);
 		treasureTrailsManager.setPlayer(this);
 		questManager.setPlayer(this);
@@ -804,12 +776,6 @@ public class Player extends Entity {
 			ChunkManager.getChunk(chunkId).init(this);
 	}
 
-	/**
-	 * Loads map regions, queues all initial packets, and handles post-login
-	 * setup. Does NOT set {@code started} -- the caller must call
-	 * {@link #setStarted()} after flushing the session so the world thread
-	 * cannot interleave writes on the same channel.
-	 */
 	public void start() {
 		checkWasInDynamicRegion();
 		loadMapRegions();
@@ -819,7 +785,6 @@ public class Player extends Entity {
 			recoverInterruptedDeath();
 	}
 
-	/** A controller that takes over the death sequence may never finish it; nothing else clears 0 hitpoints. */
 	private void recoverInterruptedDeath() {
 		sendDeath(null);
 		WorldTasks.schedule(Ticks.fromSeconds(10), () -> {
@@ -832,10 +797,6 @@ public class Player extends Entity {
 		});
 	}
 
-	/**
-	 * Marks this player as started so the world thread begins processing it.
-	 * Must be called only after the session has been flushed.
-	 */
 	public void setStarted() {
 		started = true;
 		checkMultiArea();
@@ -914,9 +875,6 @@ public class Player extends Entity {
 	}
 
 	public void abortDialogue() {
-		// Tells the client to tear down whatever dialogue-ish widget is up: the enter-amount /
-		// enter-name prompt and the chat dialogue. Legacy:
-		// com.rs.game.model.entity.player.Player#abortDialogue (line 900-902).
 		getPackets().sendTriggerOnDialogAbort();
 	}
 
@@ -1012,7 +970,7 @@ public class Player extends Entity {
 			double energy = (8.0 + Math.floor(getSkills().getLevel(Constants.AGILITY) / 6.0)) / 100.0;
 			if (isResting()) {
 				energy = 1.68;
-				if (MusicianKt.isNearby(this)) //TODO optimize this with its own resting variable
+				if (MusicianKt.isNearby(this))
 					energy = 2.28;
 			}
 			restoreRunEnergy(energy);
@@ -1021,13 +979,11 @@ public class Player extends Entity {
 			if (getTickCounter() % 50 == 0)
 				getCombatDefinitions().restoreSpecialAttack();
 
-			//Restore skilling stats
 			if (getTickCounter() % 100 == 0) {
 				final int amount = (getPrayer().active(Prayer.RAPID_RESTORE) ? 2 : 1) + (isResting() ? 1 : 0);
 				Arrays.stream(Skills.SKILLING).forEach(skill -> restoreTick(skill, amount));
 			}
 
-			//Restore combat stats
 			if (getTickCounter() % (getPrayer().active(Prayer.BERSERKER) ? 115 : 100) == 0) {
 				final int amount = (getPrayer().active(Prayer.RAPID_RESTORE) ? 2 : 1) + (isResting() ? 1 : 0);
 				Arrays.stream(Skills.COMBAT).forEach(skill -> restoreTick(skill, amount));
@@ -1048,7 +1004,6 @@ public class Player extends Entity {
 						break;
 					}
 				if (item.getMetaData("combatCharges") != null) {
-					// TODO: item.drainDegradeCharge() once Player is Kotlin
 					DegradeChargesKt.drainDegradeCharge(item);
 					if (item.getMetaDataI("combatCharges") <= 0) {
 						ItemDegrade deg = null;
@@ -1248,14 +1203,14 @@ public class Player extends Entity {
 		refreshHitPoints();
 		prayer.refreshPoints();
 		getPoison().refresh();
-		getVars().setVar(Varp.tutorial, 1000); // unlock can't do this on tutorial
-		getVars().setVar(Varp.lore_incubators_var, -1); // unlock summoning orb
+		getVars().setVar(Varp.tutorial, 1000);
+		getVars().setVar(Varp.lore_incubators_var, -1);
 		getVars().setVar(Varp.varp_1159, -1);
-		getVars().setVarBit(Varbit.lore_incubator_var_2, 0); //unlock incubator
-		getVars().setVarBit(1766, 1); //unlock killerwatt portal
-		getVars().setVarBit(Varbit.ra3_quest, 45); //chaos dwarf area
-		getVars().setVarBit(Varbit.lost_tribe_quest, 4); //lumbridge underground
-		getVars().setVar(Varp._100intro, 3); //rfd chest
+		getVars().setVarBit(Varbit.lore_incubator_var_2, 0);
+		getVars().setVarBit(1766, 1);
+		getVars().setVarBit(Varbit.ra3_quest, 45);
+		getVars().setVarBit(Varbit.lost_tribe_quest, 4);
+		getVars().setVar(Varp._100intro, 3);
 
 		updateSlayerTask();
 
@@ -1285,7 +1240,6 @@ public class Player extends Entity {
 		pvpCombatLevelThreshhold = -1;
 		appearence.generateAppearanceData();
 		controllerManager.login();
-		//unlock robust glass
 		getVars().setVarBit(Varbit.afr_complete, 1);
 		notes.init();
 
@@ -1323,7 +1277,6 @@ public class Player extends Entity {
 			PlayerLook.openCharacterCustomizing(this);
 			startConversation(new GamemodeSelection(this));
 		}
-		//getPackets().write(new UpdateRichPresence("state", "Logged in as " + getDisplayName()));
 		PluginManager.handle(new LoginEvent(this));
 		PluginManager.handle(new EnterChunkEvent(this, getChunkId()));
 	}
@@ -1611,11 +1564,6 @@ public class Player extends Entity {
 		}
 	}
 
-	/**
-	 * Logs the player out.
-	 *
-	 * @param lobby: If we're logging out to the lobby.
-	 */
 	public void logout(boolean lobby) {
 		if (!running)
 			return;
@@ -1661,11 +1609,6 @@ public class Player extends Entity {
 
 	public int scPoints;
 
-	/**
-	 * Held back while the player is still in combat or mid-action, but never past the deadline. The
-	 * world tick retries this every tick, so a logout cannot depend on a scheduled task that may
-	 * never run, and no combination of combat, animation or a stuck lock can strand a player.
-	 */
 	@Override
 	public void finish() {
 		if (hasFinished())
@@ -2073,7 +2016,7 @@ public class Player extends Entity {
 		if (shieldId == 13742) {
 			if (Utils.getRandomInclusive(100) <= 70)
 				hit.soakDamage(0.25);
-		} else if (shieldId == 13740) { // divine
+		} else if (shieldId == 13740) {
 			int drain = (int) (Math.ceil(hit.getDamage() * 0.3) / 2);
 			if (prayer.getPoints() >= drain) {
 				hit.soakDamage(0.3);
@@ -2219,8 +2162,6 @@ public class Player extends Entity {
 				case 2 -> {
 					reset();
 					if (onBypassDeathController != null) {
-						//Teleport the player to respawn tile first, if user wants to override the death respawn location
-						//they can do so in the custom logic of the death controller bypass lambda
 						tele(Settings.getConfig().getPlayerRespawnTile());
 						onBypassDeathController.accept(this);
 					} else {
@@ -2334,8 +2275,6 @@ public class Player extends Entity {
 	public void sendPVPItemsOnDeath(Player killer) {
 		if (BotContainment.holdsItems(this))
 			return;
-//		if (hasRights(Rights.ADMIN) || Settings.getConfig().isDebug())
-//			return;
 		if (killer != null && !killer.getUsername().equals(getUsername()) && killer.isIronMan())
 			killer = null;
 		auraManager.removeAura();
@@ -2375,7 +2314,6 @@ public class Player extends Entity {
 		for (Item item : containedItems) {
 			if (ItemConstants.isTradeable(item) || item.getId() == 24444)
 				droppedItems.add(item);
-				//World.addGroundItem(item, getLastTile(), killer == null ? this : killer, true, 60);
 			else {
 				int baseId = DegradeStages.baseId(item.getId());
 				ItemDegrade deg = null;
@@ -2496,7 +2434,7 @@ public class Player extends Entity {
 		handleOneWayDoor(object, new GameObject(object.getId(), object.getType(), object.getRotation() + 1, object.getX(), object.getY(), object.getLevel()));
 	}
 
-	public void handleOneWayDoor(GameObject object, GameObject opened, int rotation1, int rotation2) { //TODO so broken
+	public void handleOneWayDoor(GameObject object, GameObject opened, int rotation1, int rotation2) {
 		World.spawnObjectTemporary(opened, 2);
 		lock(2);
 		stopAll();
@@ -2920,40 +2858,18 @@ public class Player extends Entity {
 		this.yellColor = yellColor;
 	}
 
-	/**
-	 * Gets the pet.
-	 *
-	 * @return The pet.
-	 */
 	public Pet getPet() {
 		return pet;
 	}
 
-	/**
-	 * Sets the pet.
-	 *
-	 * @param pet
-	 *            The pet to set.
-	 */
 	public void setPet(Pet pet) {
 		this.pet = pet;
 	}
 
-	/**
-	 * Gets the petManager.
-	 *
-	 * @return The petManager.
-	 */
 	public PetManager getPetManager() {
 		return petManager;
 	}
 
-	/**
-	 * Sets the petManager.
-	 *
-	 * @param petManager
-	 *            The petManager to set.
-	 */
 	public void setPetManager(PetManager petManager) {
 		this.petManager = petManager;
 	}
@@ -3617,8 +3533,6 @@ public class Player extends Entity {
 
 	public void markTile(Tile tile) {
 		getPackets().sendAddObject(new GameObject(21777, ObjectShape.GROUND_DECORATION, 0, tile));
-		//model 4162 = orange square
-		//model 2636 = white dot?
 
 	}
 
@@ -3709,9 +3623,6 @@ public class Player extends Entity {
 			try {
 				PacketHandlers.INSTANCE.handleBlocking(this, packet);
 			} catch (Throwable e) {
-				// Kept deliberately: one bad packet must not kill the whole tick. The message
-				// names the packet class and the player so the failure is actionable in
-				// mainlog.txt rather than an anonymous "Exception".
 				Logger.handle(Player.class, "processPackets",
 						"Packet " + packet.getClass().getSimpleName() + " failed for player "
 								+ getUsername() + " (display '" + getDisplayName() + "'): "

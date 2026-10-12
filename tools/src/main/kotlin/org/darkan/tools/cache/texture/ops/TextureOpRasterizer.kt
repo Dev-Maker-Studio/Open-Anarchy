@@ -4,10 +4,6 @@ import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 import kotlin.math.sqrt
 
-/**
- * Type 29: Shape rasterizer.
- * Draws primitive shapes (rectangles, ellipses, lines) onto the texture.
- */
 class TextureOpRasterizer : TextureOperation(0, true) {
     private var shapes: Array<RasterizerShape?>? = null
 
@@ -50,10 +46,6 @@ class TextureOpRasterizer : TextureOperation(0, true) {
         val width = currentWidth
         val height = currentHeight
 
-        // The destination and its clip bounds used to be mutable statics on this class's
-        // companion, which every shape helper read directly. Two concurrent generations
-        // therefore drew into each other's row buffers. They are now a value passed down
-        // the call chain, so a shape can only ever touch the generation that invoked it.
         val target = RasterTarget(buffer as Array<IntArray>, 0, rowEnd, 0, columnEnd)
 
         if (shapes != null) {
@@ -84,12 +76,6 @@ class TextureOpRasterizer : TextureOperation(0, true) {
     }
 }
 
-/**
- * Destination rows and clip bounds for one rasterisation pass.
- *
- * Immutable and created per pass, so it can be handed to the shape helpers without any of
- * them being able to observe another generation's target.
- */
 class RasterTarget(
     @JvmField val pixels: Array<IntArray>,
     @JvmField val clipLeft: Int,
@@ -98,19 +84,6 @@ class RasterTarget(
     @JvmField val clipBottom: Int
 )
 
-/**
- * Base class for rasterizer shapes.
- *
- * Maps to client's Class149 hierarchy. The base class has three parameters:
- * - fillColor (anInt1743): Fill color for solid shapes, -1 if not used
- * - strokeColor (anInt1741): Stroke/line color, -1 if not used
- * - strokeWidth (anInt1742): Stroke width in pixels
- *
- * The draw dispatch depends on which colors are non-negative:
- * - fillColor >= 0 && strokeColor >= 0 -> drawFilledWithBorder
- * - fillColor >= 0 only -> drawFilled
- * - strokeColor >= 0 only -> drawOutline
- */
 sealed class RasterizerShape(
     val fillColor: Int,
     val strokeColor: Int,
@@ -133,14 +106,6 @@ sealed class RasterizerShape(
     }
 }
 
-/**
- * Type 0: Line drawing shape.
- * Client: Class149_Sub3
- * Constructor: super(-1, color, lineWidth) -> fillColor=-1, strokeColor=color, strokeWidth=lineWidth
- * Draws a line from (x1,y1) to (x2,y2) using Bresenham's algorithm.
- *
- * Decode: 4 shorts (8 bytes) + UMedium (3 bytes) + UByte (1 byte) = 12 bytes total
- */
 class RasterizerLine(
     private val x1: Int,
     private val y1: Int,
@@ -158,11 +123,9 @@ class RasterizerLine(
     }
 
     override fun drawFilled(target: RasterTarget, width: Int, height: Int) {
-        // Not called (fillColor is always -1)
     }
 
     override fun drawFilledWithBorder(target: RasterTarget, width: Int, height: Int) {
-        // Not called (fillColor is always -1)
     }
 
     companion object {
@@ -176,9 +139,6 @@ class RasterizerLine(
             return RasterizerLine(x1, y1, x2, y2, color, lineWidth)
         }
 
-        /**
-         * Clipped line drawing matching the client's method6159.
-         */
         fun drawLineClipped(target: RasterTarget, x1: Int, y1: Int, x2: Int, y2: Int, color: Int) {
             val deltaX = x2 - x1
             val deltaY = y2 - y1
@@ -245,9 +205,6 @@ class RasterizerLine(
             drawBresenhamLine(target, clampedStartX, clampedStartY, clampedEndX, clampedEndY, color)
         }
 
-        /**
-         * Bresenham's line algorithm matching the client's Class149_Sub2.method11220.
-         */
         private fun drawBresenhamLine(target: RasterTarget, x1: Int, y1: Int, x2: Int, y2: Int, color: Int) {
             var ix1 = x1
             var iy1 = y1
@@ -354,14 +311,6 @@ class RasterizerLine(
     }
 }
 
-/**
- * Type 1: Bezier curve shape.
- * Client: Class149_Sub2
- * Constructor: super(-1, color, lineWidth) -> fillColor=-1, strokeColor=color, strokeWidth=lineWidth
- * Draws a cubic bezier curve with 4 control points.
- *
- * Decode: 8 shorts (16 bytes) + UMedium (3 bytes) + UByte (1 byte) = 20 bytes total
- */
 class RasterizerBezier(
     private val x1: Int, private val y1: Int,
     private val cx1: Int, private val cy1: Int,
@@ -383,11 +332,9 @@ class RasterizerBezier(
     }
 
     override fun drawFilled(target: RasterTarget, width: Int, height: Int) {
-        // Not called (fillColor is always -1)
     }
 
     override fun drawFilledWithBorder(target: RasterTarget, width: Int, height: Int) {
-        // Not called (fillColor is always -1)
     }
 
     companion object {
@@ -405,15 +352,10 @@ class RasterizerBezier(
             return RasterizerBezier(x1, y1, cx1, cy1, cx2, cy2, x2, y2, color, lineWidth)
         }
 
-        /**
-         * Draw a cubic bezier curve by subdividing into line segments.
-         * Matches client's Class149_Sub2.method12399/method12117/method4779.
-         */
         private fun drawBezierCurve(target: RasterTarget,
             x1: Int, y1: Int, cx1: Int, cy1: Int,
             cx2: Int, cy2: Int, x2: Int, y2: Int, color: Int
         ) {
-            // If control points coincide with endpoints, draw a simple line
             if (x1 == cx1 && cy1 == y1 && cx2 == x2 && cy2 == y2) {
                 RasterizerLine.drawLineClipped(target, x1, y1, x2, y2, color)
                 return
@@ -449,14 +391,6 @@ class RasterizerBezier(
     }
 }
 
-/**
- * Type 2: Rectangle with optional border.
- * Client: Class149_Sub4
- * Constructor: super(fillColor, strokeColor, strokeWidth)
- * Draws a rectangle, optionally with a border of specified width.
- *
- * Decode: 4 shorts (8 bytes) + UMedium (3 bytes) + UMedium (3 bytes) + UByte (1 byte) = 15 bytes total
- */
 class RasterizerRectangle(
     private val x1: Int,
     private val y1: Int,
@@ -517,14 +451,12 @@ class RasterizerRectangle(
 
         private fun drawRectOutlineNoClip(target: RasterTarget, x1: Int, x2: Int, y1: Int, y2: Int, color: Int) {
             val buf = target.pixels
-            // Top and bottom rows
             val topRow = buf[y1]
             val botRow = buf[y2]
             for (x in x1..x2) {
                 topRow[x] = color
                 botRow[x] = color
             }
-            // Left and right columns
             for (y in y1..y2) {
                 buf[y][x1] = color
                 buf[y][x2] = color
@@ -537,14 +469,12 @@ class RasterizerRectangle(
             val cY1 = y1.coerceIn(target.clipTop, target.clipBottom)
             val cY2 = y2.coerceIn(target.clipTop, target.clipBottom)
             val buf = target.pixels
-            // Horizontal edges
             if (y1 in target.clipTop..target.clipBottom) {
                 for (x in cX1..cX2) buf[y1][x] = color
             }
             if (y2 in target.clipTop..target.clipBottom) {
                 for (x in cX1..cX2) buf[y2][x] = color
             }
-            // Vertical edges
             if (x1 in target.clipLeft..target.clipRight) {
                 for (y in cY1..cY2) buf[y][x1] = color
             }
@@ -556,15 +486,12 @@ class RasterizerRectangle(
         private fun drawThickBorder(target: RasterTarget, x1: Int, x2: Int, y1: Int, y2: Int, color: Int, borderWidth: Int) {
             val buf = target.pixels
             val bw = borderWidth
-            // Top border rows
             for (y in y1 until (y1 + bw).coerceAtMost(y2 + 1)) {
                 for (x in x1..x2) buf[y][x] = color
             }
-            // Bottom border rows
             for (y in (y2 - bw + 1).coerceAtLeast(y1) .. y2) {
                 for (x in x1..x2) buf[y][x] = color
             }
-            // Left and right border columns (middle rows)
             for (y in (y1 + bw) until (y2 - bw + 1)) {
                 for (x in x1 until (x1 + bw).coerceAtMost(x2 + 1)) buf[y][x] = color
                 for (x in (x2 - bw + 1).coerceAtLeast(x1) .. x2) buf[y][x] = color
@@ -589,25 +516,15 @@ class RasterizerRectangle(
             val cY1 = y1.coerceIn(target.clipTop, target.clipBottom)
             val cY2 = y2.coerceIn(target.clipTop, target.clipBottom)
             val buf = target.pixels
-            // Fill entire rectangle with fill color, then draw border on top
             for (y in cY1..cY2) {
                 val row = buf[y]
                 for (x in cX1..cX2) row[x] = fillColor
             }
-            // Draw border
             drawThickBorder(target, cX1, cX2, cY1, cY2, strokeColor, borderWidth)
         }
     }
 }
 
-/**
- * Type 3: Ellipse with optional gradient fill.
- * Client: Class149_Sub1
- * Constructor: super(fillColor, strokeColor, strokeWidth)
- * Draws an ellipse, optionally filled with gradient.
- *
- * Decode: 4 shorts (8 bytes) + UMedium (3 bytes) + UMedium (3 bytes) + UByte (1 byte) = 15 bytes total
- */
 class RasterizerEllipse(
     private val x1: Int,
     private val y1: Int,
@@ -618,7 +535,6 @@ class RasterizerEllipse(
     strokeW: Int
 ) : RasterizerShape(fill, stroke, strokeW) {
     override fun drawOutline(target: RasterTarget, width: Int, height: Int) {
-        // Not called (method2561 is empty in client's Class149_Sub1)
     }
 
     override fun drawFilled(target: RasterTarget, width: Int, height: Int) {
@@ -649,10 +565,6 @@ class RasterizerEllipse(
             return RasterizerEllipse(x1, y1, x2, y2, fill, stroke, strokeW)
         }
 
-        /**
-         * Fill an ellipse. Matches client's Class149_Sub1.method2556 which calls
-         * ArrayUtils.method14584 (midpoint ellipse fill algorithm).
-         */
         private fun fillEllipse(target: RasterTarget, cx: Int, cy: Int, rx: Int, ry: Int, color: Int) {
             if (rx <= 0 || ry <= 0) return
 
@@ -676,10 +588,6 @@ class RasterizerEllipse(
             }
         }
 
-        /**
-         * Fill an ellipse with a border ring. Matches client's Class149_Sub1.method2557
-         * which calls method5316 (double-ellipse with border width).
-         */
         private fun fillEllipseWithBorder(target: RasterTarget, cx: Int, cy: Int, rx: Int, ry: Int, fillColor: Int, strokeColor: Int, borderWidth: Int) {
             if (rx <= 0 || ry <= 0) return
 
@@ -704,7 +612,6 @@ class RasterizerEllipse(
                     if (ratio > 0) sqrt(ratio * innerRxSq).toInt() else 0
                 } else 0
 
-                // Outer ring (stroke)
                 val leftOuter = (cx - outerXRange).coerceIn(target.clipLeft, target.clipRight)
                 val leftInner = (cx - innerXRange).coerceIn(target.clipLeft, target.clipRight)
                 val rightInner = (cx + innerXRange).coerceIn(target.clipLeft, target.clipRight)

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.death;
 
 import com.rs.engine.miniquest.Miniquest;
@@ -83,7 +67,6 @@ public class DeathOfficeController extends InstancedController {
 		AL_KHARID(Tile.of(3275, 3166, 0)),
 		DRAYNOR_VILLAGE(Tile.of(3079, 3250, 0)),
 		
-		//Extra unlocked hubs
 		LUMBRIDGE_CASTLE(Tile.of(3222, 3219, 0)),
 		FALADOR_CASTLE(Tile.of(2971, 3343, 0)),
 		CAMELOT(Tile.of(2758, 3486, 0)),
@@ -269,7 +252,7 @@ public class DeathOfficeController extends InstancedController {
 			player.getVars().setVarBit(9227, 1);
 			player.set("protectSlots", 1);
 		}
-		player.getVars().setVar(105, -1); //unlocks choose respawn location
+		player.getVars().setVar(105, -1);
 		player.getVars().setVarBit(9231, currentHub.ordinal());
 		player.getPackets().setIFRightClickOps(18, 9, 0, slots[0].length, 0);
 		player.getPackets().setIFRightClickOps(18, 17, 0, 100, 0);

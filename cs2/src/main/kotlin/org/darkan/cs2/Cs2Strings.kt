@@ -1,16 +1,7 @@
 package org.darkan.cs2
 
-/**
- * CS2 string constants are raw bytes on the wire. Everything in this package
- * keeps them as latin-1 strings (one char per byte) so re-encoding is
- * byte-identical; only the TypeScript literal form is escaped for display.
- *
- * The client maps bytes 0x80..0x9F through a cp1252 table when it renders text,
- * but that mapping is lossy, so it is deliberately not applied here.
- */
 object Cs2Strings {
 
-    /** Escape a raw string into the body of a TypeScript double-quoted literal. */
     fun escape(value: String): String {
         val sb = StringBuilder(value.length + 8)
         for (ch in value) {
@@ -21,9 +12,6 @@ object Cs2Strings {
                 ch == '\r' -> sb.append("\\r")
                 ch == '\t' -> sb.append("\\t")
                 ch.code in 0x20..0x7E -> sb.append(ch)
-                // A byte the client renders through its cp1252 table decodes to
-                // a character outside latin-1, so the escape has to be wide
-                // enough to carry it back unchanged.
                 ch.code <= 0xFF -> sb.append("\\x").append("%02x".format(ch.code))
                 else -> sb.append("\\u").append("%04x".format(ch.code))
             }
@@ -31,7 +19,6 @@ object Cs2Strings {
         return sb.toString()
     }
 
-    /** Inverse of [escape]. Input is the literal body, without the surrounding quotes. */
     fun unescape(value: String): String {
         val sb = StringBuilder(value.length)
         var i = 0

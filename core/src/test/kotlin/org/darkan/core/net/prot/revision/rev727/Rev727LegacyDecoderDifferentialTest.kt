@@ -60,28 +60,6 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
-/**
- * Differential test in the client -> server direction: the same bytes are handed to the legacy
- * `rs.darkan:core` decoder and to the rewritten revision 727 decoder, and the fields they recover
- * are compared.
- *
- * ### Why arbitrary bytes are the right input
- *
- * Both decoders read the *same* buffer, so the payloads here do not have to be bytes a real client
- * would send - they only have to be the right length and well formed where a decoder scans for a
- * terminator. Deliberately awkward values (high bit set, values above 32767) are used because
- * those are what separate a correct transform from a sign-extending one.
- *
- * ### Framing
- *
- * The opcode and the VarByte/VarShort length prefix are stripped before either decoder runs, on
- * both sides, so this compares payload interpretation only. ISAAC only ever touches the opcode.
- *
- * ### What is not compared
- *
- * [UNCOVERED] lists the legacy decoders with no case and why, and [KNOWN_DIVERGENCES] records the
- * places where the two decoders genuinely disagree and which one the client sides with.
- */
 class Rev727LegacyDecoderDifferentialTest {
 
     private lateinit var codec: Codec
@@ -91,7 +69,6 @@ class Rev727LegacyDecoderDifferentialTest {
         codec = register727()
     }
 
-    /** A field-by-field view of a decoded packet, so two unrelated models can be compared. */
     private typealias Fields = Map<String, Any?>
 
     private class Case(
@@ -152,7 +129,6 @@ class Rev727LegacyDecoderDifferentialTest {
 
     @Test
     fun `the harness detects a difference when there is one`() {
-        // Negative control: proves an all-green run means the fields really were compared.
         val bytes = Payload().u16(1234).u8(129).bytes()
         val legacy = (LegacyPlayerOp().decodeAndCreateInstance(LegacyStream(bytes.copyOf())) as LegacyPlayerOp).pid
         val modern = (decodeModern(66, bytes) as OpPlayer).playerIndex
@@ -171,7 +147,6 @@ class Rev727LegacyDecoderDifferentialTest {
         )
     }
 
-    // --- Decoding ------------------------------------------------------------------------------
 
     private fun decodeModern(opcode: Int, bytes: ByteArray): ClientProt {
         val entry = codec.clientProtsByOpcode[opcode] ?: error("no decoder registered for opcode $opcode")
@@ -182,17 +157,8 @@ class Rev727LegacyDecoderDifferentialTest {
 
     private fun hex(bytes: ByteArray) = bytes.joinToString(" ") { "%02x".format(it) }
 
-    /**
-     * The 16 bits a short-sized field actually occupies on the wire.
-     *
-     * Several fields are read signed by one stack and unsigned by the other. That is a modelling
-     * choice about what a value above 32767 means, not a difference in the bytes: masking to 16
-     * bits compares exactly what the client sent while staying agnostic about the convention.
-     * Fields compared this way are suffixed `(16)` so a failure says which check was loosened.
-     */
     private fun wire16(value: Int) = value and 0xFFFF
 
-    /** Builds a payload. The transforms do not matter here - both decoders read the same bytes. */
     private class Payload {
         private val out = ByteArrayOutputStream()
         fun u8(value: Int) = apply { out.write(value and 0xff) }
@@ -213,7 +179,6 @@ class Rev727LegacyDecoderDifferentialTest {
         sessionCases()
     }.cases
 
-    // --- Entity interactions -------------------------------------------------------------------
 
     private fun CaseBuilder.entityCases() {
         case(
@@ -265,7 +230,6 @@ class Rev727LegacyDecoderDifferentialTest {
         )
     }
 
-    // --- Interfaces ----------------------------------------------------------------------------
 
     private fun CaseBuilder.interfaceCases() {
         case(
@@ -352,8 +316,6 @@ class Rev727LegacyDecoderDifferentialTest {
                 }
             },
         )
-        // Both stacks collapse a 65535 component id to -1 - legacy inside this decoder, the modern
-        // one through the shared sentinel - so the case is free to use an ordinary component id.
         case(
             "IF_ON_NPC", 41,
             payload { u32(0x0BADF00D); u16(0x8f4e); u8(0x7f); u16(0x8fee); u16(0x8f4e) },
@@ -394,8 +356,6 @@ class Rev727LegacyDecoderDifferentialTest {
                 }
             },
         )
-        // Only the component hash is compared: the legacy decoder reads the slot short and then
-        // throws it away, taking the low byte of the hash instead. See KNOWN_DIVERGENCES.
         case(
             "IF_CONTINUE", 49,
             payload { u32(0x0BADF00D); u16(0x8f4e) },
@@ -430,7 +390,6 @@ class Rev727LegacyDecoderDifferentialTest {
         )
     }
 
-    // --- Input and telemetry -------------------------------------------------------------------
 
     private fun CaseBuilder.inputCases() {
         case(
@@ -443,8 +402,6 @@ class Rev727LegacyDecoderDifferentialTest {
             },
             modern = { (it as MoveCamera).let { p -> mapOf("angleX(16)" to wire16(p.angleX), "angleY(16)" to wire16(p.angleY)) } },
         )
-        // `button` is deliberately not compared: legacy shifts a sign-extended short right by 15
-        // and gets -1 for any click with the top bit set. See KNOWN_DIVERGENCES.
         case(
             "MOUSE_CLICK", 59,
             payload { u32(0x0BADF00D); u16(0x8f4e) },
@@ -455,8 +412,6 @@ class Rev727LegacyDecoderDifferentialTest {
             },
             modern = { (it as MouseClick).let { p -> mapOf("time" to p.time, "x" to p.x, "y" to p.y) } },
         )
-        // `hardware` is deliberately not compared: the two stacks read the flag's low bit with
-        // opposite polarity. See KNOWN_DIVERGENCES.
         case(
             "MOUSE_BUTTON_CLICK", 57,
             payload { u32(0x0BADF00D); u8(0x85); u16(0x8f4e) },
@@ -467,10 +422,6 @@ class Rev727LegacyDecoderDifferentialTest {
             },
             modern = { (it as MouseButtonClick).let { p -> mapOf("button" to p.mouseButton, "time" to p.time, "x" to p.x, "y" to p.y) } },
         )
-        // Only the step forms both stacks read the same way are exercised: the 128..191 form is
-        // excluded because legacy has X and Y the wrong way round, and `hardware` is excluded
-        // because neither stack reads it from a field that carries that meaning. See
-        // KNOWN_DIVERGENCES and `the client decides the mouse and clan flags`.
         case(
             "MOVE_MOUSE_2", 78,
             mouseTrailPayload(hardware = false),
@@ -539,19 +490,14 @@ class Rev727LegacyDecoderDifferentialTest {
         )
     }
 
-    /**
-     * A mouse trail with one step in each of the three forms the two stacks read identically:
-     * the packed 16-bit offset form, the 192..223 absolute form, and the 224+ absolute form.
-     * The native trail (opcode 40) carries one extra opaque byte per step.
-     */
     private fun mouseTrailPayload(hardware: Boolean) = payload {
-        u8(7)                                   // leftover milliseconds per record
-        u8(3)                                   // remainder
-        u16((3 shl 12) or (40 shl 6) or 17)     // packed offset step, leading byte < 128
+        u8(7)
+        u8(3)
+        u16((3 shl 12) or (40 shl 6) or 17)
         if (hardware) u8(0)
-        u8(192 + 5); u32(0x0BADF00D)            // absolute step, byte-framed frame count
+        u8(192 + 5); u32(0x0BADF00D)
         if (hardware) u8(0)
-        u16(57344 + 100); u32(0x0DEADBEE)       // absolute step, short-framed frame count
+        u16(57344 + 100); u32(0x0DEADBEE)
         if (hardware) u8(0)
     }
 
@@ -581,35 +527,23 @@ class Rev727LegacyDecoderDifferentialTest {
             }
         }
 
-    /**
-     * The three places the legacy decoders read a flag the wrong way round. Each is pinned here
-     * directly rather than cross-checked, because there is nothing correct to cross-check against.
-     */
     @Test
     fun `the client decides the mouse and clan flags`() {
-        // The client writes `mainCC ? 1 : 0` (`LightDetailPreference.method12790`), the same
-        // convention its clan encoders use, so a leading 1 is the main channel, not a guest one.
         val kick = decodeModern(90, payload { u8(1); u16(1337); str("Zezima") }) as ClanChannelKickUser
         assertTrue(!kick.guest, "a leading 1 means the main clan channel")
         val guestKick = decodeModern(90, payload { u8(0); u16(1337); str("Zezima") }) as ClanChannelKickUser
         assertTrue(guestKick.guest, "a leading 0 means the guest clan channel")
 
-        // The client has one trail recorder per input source and each always sends its own opcode
-        // (`MouseMovementICMP` -> 40, `MouseMovementJav` -> 78), so the opcode is what marks a
-        // trail as hardware. The extra per-step byte on opcode 40 is an opaque native value.
         val native = decodeModern(40, mouseTrailPayload(hardware = true)) as MoveMouseData
         assertTrue(native.steps.all { it.hardware }, "opcode 40 is the native mouse trail")
         val java = decodeModern(78, mouseTrailPayload(hardware = false)) as MoveMouseData
         assertTrue(java.steps.none { it.hardware }, "opcode 78 is the java mouse trail")
         assertTrue(native.steps.size == java.steps.size, "the extra native byte must not eat a step")
 
-        // Opcode 57 is only ever emitted by the native mouse hook, so it is always a hardware
-        // click; bit 0 of its flags byte is an unrelated native constant.
         val click = decodeModern(57, payload { u32(0x0BADF00D); u8(0x85); u16(0x8f4e) }) as MouseButtonClick
         assertTrue(click.hw, "opcode 57 is the native mouse click")
     }
 
-    // --- Social --------------------------------------------------------------------------------
 
     private fun CaseBuilder.socialCases() {
         case(
@@ -662,8 +596,6 @@ class Rev727LegacyDecoderDifferentialTest {
             },
             modern = { (it as FcSetRank).let { p -> mapOf("name" to p.username, "rank" to p.rank) } },
         )
-        // `guest` is deliberately not compared: the two stacks read the leading flag with opposite
-        // polarity. See KNOWN_DIVERGENCES.
         case(
             "CLANCHANNEL_KICKUSER", 90,
             payload { u8(1); u16(1337); str("Zezima") },
@@ -684,8 +616,6 @@ class Rev727LegacyDecoderDifferentialTest {
                 }
             },
         )
-        // `messageData` is deliberately not compared: the legacy decoder's remaining-bytes test is
-        // written against the whole payload rather than what is left. See KNOWN_DIVERGENCES.
         case(
             "QUICKCHAT_PRIVATE", 14,
             payload { str("Zezima"); u16(1234); raw(1, 2, 3) },
@@ -716,8 +646,6 @@ class Rev727LegacyDecoderDifferentialTest {
             legacy = { mapOf("type" to (LegacyChatType().decodeAndCreateInstance(it) as LegacyChatType).type) },
             modern = { mapOf("type" to (it as ChatType).type) },
         )
-        // The legacy decoder assigns to the prototype instance instead of the one it returns, so
-        // the fields are read back off the prototype here. See KNOWN_DIVERGENCES.
         case(
             "REPORT_ABUSE", 100,
             payload { str("Zezima"); u8(3); u8(1); str("botting") },
@@ -730,7 +658,6 @@ class Rev727LegacyDecoderDifferentialTest {
         )
     }
 
-    // --- Session and dialogs -------------------------------------------------------------------
 
     private fun CaseBuilder.sessionCases() {
         case(
@@ -812,9 +739,6 @@ class Rev727LegacyDecoderDifferentialTest {
     private companion object {
         const val MINIMUM_CASE_COUNT = 48
 
-        /**
-         * Legacy decoders with no field-equality case, and why. Keyed by the client packet name.
-         */
         val UNCOVERED: Map<String, String> = mapOf(
             "CHAT" to "Legacy decodes the body through `Cache.STORE.getHuffman()`, so it needs an initialised cache.",
             "SEND_PRIVATE_MESSAGE" to "Same: Huffman-compressed body, cache required.",
@@ -857,11 +781,6 @@ class Rev727LegacyDecoderDifferentialTest {
                 "three fields are shared, and those are already covered by WALK.",
         )
 
-        /**
-         * Places where the two decoders genuinely disagree. Each entry says which side is wrong;
-         * the affected field is excluded from its case rather than the case being dropped, so the
-         * rest of the packet is still verified.
-         */
         @Suppress("unused")
         val KNOWN_DIVERGENCES: Map<String, String> = mapOf(
             "IF_CONTINUE slotId" to

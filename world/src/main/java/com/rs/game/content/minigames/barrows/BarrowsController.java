@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.minigames.barrows;
 
 import org.darkan.core.cache.ItemDefinitions;
@@ -113,9 +97,9 @@ public final class BarrowsController extends Controller {
 
 	private void leave(boolean logout) {
 		if (target != null)
-			target.finish(); // target also calls removing hint icon at remove
+			target.finish();
 		if (!logout) {
-			player.getPackets().setBlockMinimapState(0); // unblacks minimap
+			player.getPackets().setBlockMinimapState(0);
 			if (player.getHiddenBrother() == -1)
 				player.getPackets().sendStopCameraShake();
 			else
@@ -478,7 +462,7 @@ public final class BarrowsController extends Controller {
 		for (int i = 0; i < player.getKilledBarrowBrothers().length; i++)
 			sendBrotherSlain(i, player.getKilledBarrowBrothers()[i]);
 		sendCreaturesSlainCount(player.getBarrowsKillCount());
-		player.getPackets().setBlockMinimapState(2); // blacks minimap
+		player.getPackets().setBlockMinimapState(2);
 	}
 
 	public void sendBrotherSlain(int index, boolean slain) {

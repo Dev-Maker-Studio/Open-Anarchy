@@ -2,7 +2,6 @@ package com.rs.game.content.quests.plague_city.utils
 
 import world.gregs.voidps.type.Tile
 
-// Quest Stages
 const val STAGE_UNSTARTED = 0
 const val STAGE_SPEAK_TO_ALRENA = 1
 const val STAGE_RECEIVED_GAS_MASK = 2
@@ -22,7 +21,6 @@ const val STAGE_GAVE_HANGOVER_CURE = 15
 const val STAGE_FREED_ELENA = 16
 const val STAGE_COMPLETE = 17
 
-// NPCs
 const val ALRENA = 710
 const val EDMOND_ABOVE_GROUND = 3213
 const val EDMOND_BELOW_GROUND = 3214
@@ -39,7 +37,6 @@ const val BRAVEK = 711
 const val ELENA_PRISON = 715
 const val EAST_ARDOUGNE_MOURNERS = 719
 
-// Items
 const val DWELLBERRIES = 2126
 const val ROPE = 954
 const val SPADE = 952
@@ -59,7 +56,6 @@ const val SCRUFFY_NOTE = 1508
 const val WARRANT = 1503
 const val SMALL_KEY = 1507
 
-// Objects
 const val MUD_PATCH_UNDIGGABLE = 2531
 const val MUD_PATCH_DIGGABLE = 2532
 const val MUD_PILE_SEWERS = 2533
@@ -78,12 +74,10 @@ const val ELENA_PRISON_DOOR = 2526
 const val PRISON_STAIRS_UP = 2523
 const val PRISON_STAIRS_DOWN = 2522
 
-// Sounds
 const val PULL_GRILL = 1730
 const val ATTACH_ROPE_GRILL = 1731
 const val OPEN_MANHOLE_SOUND = 75
 
-// Animations
 const val DIG_ANIM = 830
 const val PESTLE_AND_MORTAR_ANIM = 364
 const val OPEN_WARDROBE_ANIM = 536
@@ -97,13 +91,11 @@ const val POUR_BUCKET_OF_WATER_ANIM = 2283
 const val CLIMB_LADDER_ANIM = 828
 const val DRINK_HANGOVER_CURE_ANIM = 1330
 
-// Varbits
 const val EDMOND_VB = 1783
 const val ELENA_VB = 1784
 const val MUD_PATCH_VB = 1785
 const val GRILL_VB = 1787
 
-// Tiles
 val MUD_PATCH_DIG_TILE: Tile = Tile.of(2566, 3332, 0)
 val EDMOND_SEWER_TELE_LOC: Tile = Tile.of(2518, 9759, 0)
 val EDMOND_HOUSE_TELE_LOC: Tile = Tile.of(2566, 3333, 0)
@@ -113,7 +105,6 @@ val SEWER_PIPE_TELE_LOC: Tile = Tile.of(2529, 3304, 0)
 val EDMOND_SEWER_SPAWN_LOC: Tile = Tile.of(2517, 9752, 0)
 var MANHOLE_TELE_LOC: Tile = Tile.of(2514, 9739, 0)
 
-// Var Keys
 const val WATER_USED_ON_MUD = "waterUsedOnMudPatch"
 const val EDMOND_SUGGESTED_ROPE = "edmondSuggestedRope"
 const val ENTERED_CITY = "enteredCity"
@@ -126,7 +117,6 @@ const val FOUND_KEY_IN_BARREL = "foundKeyInBarrel"
 const val ENTERED_PRISON_CELL = "enteredPrisonCell"
 const val ARDOUGNE_TELEPORT_UNLOCKED = "ardougneTeleportUnlocked"
 
-// West Ardougne Area check tiles
 val WEST_ARDOUGNE_RANGES: Array<IntArray> = arrayOf(
     intArrayOf(2431, 2460, 3306, 3323),
     intArrayOf(2460, 2557, 3280, 3323),
@@ -135,6 +125,5 @@ val WEST_ARDOUGNE_RANGES: Array<IntArray> = arrayOf(
     intArrayOf(2535, 2543, 9668, 9674),
     intArrayOf(2033, 2046, 4627, 4652))
 
-// South East House Door check tiles
 val SOUTH_EAST_HOUSE_EAST_DOOR: Array<IntArray> = arrayOf(
     intArrayOf(2539, 2541, 3273, 3274))

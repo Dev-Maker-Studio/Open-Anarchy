@@ -40,7 +40,6 @@ import org.darkan.cs2.ir.VarRef
 import org.darkan.cs2.ir.While
 import org.darkan.cs2.ir.negate
 
-/** What a [Cs2DeadCode] finding describes. */
 enum class Cs2DeadCodeKind(val label: String) {
     UNREACHABLE("unreachable"),
     DEAD_STORE("dead store"),
@@ -49,51 +48,28 @@ enum class Cs2DeadCodeKind(val label: String) {
     EMPTY_BRANCH("empty branch"),
 }
 
-/**
- * Something in a script's bytecode that cannot affect what it does.
- *
- * These are reported rather than silently removed: a dead store is as likely to
- * be a bug in the original script as it is to be a compiler artefact, and only
- * a person can tell the two apart. The one exception is a dead store of a
- * constant that initialises a local before its real first assignment, which is
- * what a declaration compiles to and is folded back into one.
- */
 class Cs2DeadCode(
     val kind: Cs2DeadCodeKind,
-    /** The code itself, rendered by the caller's emitter. */
     val statements: List<Stmt> = emptyList(),
     val condition: Condition? = null,
     val note: String? = null,
-    /** Instruction range in the original script, where it is known. */
     val instructions: IntRange? = null,
 )
 
-/**
- * Liveness-driven tidying of a structured function body.
- *
- * Everything here is either a report or a change that provably cannot alter what
- * the script does: folding a dead constant initialiser into a declaration,
- * turning a call whose results go straight into locals into a destructuring
- * assignment, and swapping an `if` with an empty then-arm for its negation.
- */
 class Cs2Cleanup(
     private val cfg: Cs2Cfg,
     private val lifted: Array<LiftedBlock?>,
     private val reached: BooleanArray,
-    /** Parameters occupy the lowest slots and are declared by the signature. */
     private val intArgs: Int = 0,
     private val stringArgs: Int = 0,
     private val longArgs: Int = 0,
 ) {
     val findings = ArrayList<Cs2DeadCode>()
 
-    /** Def-initialiser stores folded away, for the round-trip's work check. */
     val eliminated = ArrayList<LocalAssign>()
 
-    /** Statements whose store is dead, by identity, with the dead target slots. */
     private val deadTargets: MutableMap<Stmt, List<Int>> = IdentityHashMap()
 
-    /** Stands in for a statement the jump pass removed, so one filter drops it. */
     private val removed: Stmt = ExprStmt(IntConst(0))
 
     fun clean(body: List<Stmt>, returnsValues: Boolean): List<Stmt> {
@@ -111,9 +87,7 @@ class Cs2Cleanup(
         return out
     }
 
-    // ------------------------------------------------------------- liveness
 
-    /** A local, as one integer: its slot and which stack it lives on. */
     private fun key(slot: Int, type: Cs2Type) = (slot shl 2) or type.ordinal
 
     private fun usesOf(statement: Stmt, into: MutableSet<Int>) {
@@ -180,7 +154,6 @@ class Cs2Cleanup(
         }
     }
 
-    /** What a block reads at its end, after its statements have run. */
     private fun terminatorUses(block: LiftedBlock): Set<Int> {
         val out = HashSet<Int>()
         block.condition?.let { reads(it, out) }
@@ -189,10 +162,6 @@ class Cs2Cleanup(
         return out
     }
 
-    /**
-     * Backward liveness over the control-flow graph, then a backward walk inside
-     * each block to find the stores nothing reads.
-     */
     private fun analyseLiveness() {
         val count = cfg.blocks.size
         val upwardUses = Array(count) { HashSet<Int>() }
@@ -256,7 +225,6 @@ class Cs2Cleanup(
         }
     }
 
-    /** Which of a statement's stored-to locals nothing reads afterwards. */
     private fun deadPositions(statement: Stmt, live: Set<Int>): List<Int> = when (statement) {
         is LocalAssign -> if (key(statement.slot, statement.type) in live) emptyList() else listOf(0)
         is ParallelAssign -> statement.targets.indices.filter { index ->
@@ -266,9 +234,7 @@ class Cs2Cleanup(
         else -> emptyList()
     }
 
-    // ------------------------------------------------- statement bookkeeping
 
-    /** Visits every statement in program order, nested ones included. */
     private fun walk(statements: List<Stmt>, depth: Int, visit: (Stmt, Int) -> Unit) {
         for (statement in statements) {
             visit(statement, depth)
@@ -287,7 +253,6 @@ class Cs2Cleanup(
         }
     }
 
-    /** Rebuilds a statement list, applying [transform] to nested lists as well. */
     private fun rewrite(statements: List<Stmt>, transform: (List<Stmt>) -> List<Stmt>): List<Stmt> =
         transform(statements).map { statement ->
             when (statement) {
@@ -307,19 +272,7 @@ class Cs2Cleanup(
     private fun isConstant(value: Expr) =
         value is IntConst || value is StrConst || value is LongConst || value is TypedConst
 
-    // -------------------------------------------------- def-initialisers
 
-    /**
-     * Drops the constant store that initialises a local before its real first
-     * assignment, where the real one can declare the local instead.
-     *
-     * That store is what a declaration with an initialiser compiles to and
-     * nothing reads its value, so moving the declaration down to the next store
-     * loses nothing - it is what turns `int1 = 0; ... [int1, ...] = f()` into
-     * `let [int1, ...] = f()`. Where the next store is nested inside a branch it
-     * cannot carry the declaration, and then the initialiser is what introduces
-     * the local, so it stays exactly as the compiler wrote it.
-     */
     private fun eliminateDefInitialisers(body: List<Stmt>): List<Stmt> {
         val candidates: MutableSet<Stmt> = Collections.newSetFromMap(IdentityHashMap())
         val introduces = HashMap<Int, LocalAssign>()
@@ -341,8 +294,6 @@ class Cs2Cleanup(
         }
         if (candidates.isEmpty()) return body
 
-        // The store that would declare the local instead: the next one, and only
-        // when it is a statement of the body itself.
         val next = HashMap<Int, Pair<Stmt, Int>>()
         walk(body, 0) { statement, depth ->
             val defs = HashSet<Int>()
@@ -358,8 +309,6 @@ class Cs2Cleanup(
             if (depth != 0) continue
             val hosts = when (successor) {
                 is LocalAssign -> true
-                // A destructuring only declares when every one of its targets is
-                // new there, so one target that is not takes the rest with it.
                 is DestructureAssign -> successor.targets.all { target ->
                     target is LocalRef && key(target.slot, target.type).let {
                         it == slot || introduces.containsKey(it)
@@ -376,15 +325,6 @@ class Cs2Cleanup(
         return rewrite(body) { list -> list.filterNot { it in drop } }
     }
 
-    /** Reports the dead stores that are kept, which is all the others. */
-    /**
-     * Reports the dead stores worth looking at.
-     *
-     * A constant written to a local before anything else writes it is the
-     * declaration the source had - `def_int $x = 0` - and saying so thousands of
-     * times over hides the handful of stores that really are a mistake, so those
-     * are left out whether they were folded into a declaration or kept.
-     */
     private fun reportDeadStores(body: List<Stmt>) {
         val stored = HashSet<Int>()
         walk(body, 0) { statement, _ ->
@@ -395,8 +335,6 @@ class Cs2Cleanup(
             stored.addAll(defs)
             val dead = deadTargets[statement] ?: return@walk
             if (initialiser) return@walk
-            // A call whose results nothing reads still runs; it is the results
-            // that are dead, which reads very differently from a plain store.
             val kind =
                 if (statement is DestructureAssign) Cs2DeadCodeKind.UNUSED_RESULT
                 else Cs2DeadCodeKind.DEAD_STORE
@@ -417,14 +355,7 @@ class Cs2Cleanup(
         else -> target.toString()
     }
 
-    // ------------------------------------------------------- destructuring
 
-    /**
-     * `const [tmp0, tmp1] = f(); [a, b] = [tmp0, tmp1];` is one statement written
-     * in two, because the lifter has to name a call's results before it knows
-     * where they go. Where every result is consumed once, in order, by the stores
-     * that follow, the pair folds back into `[a, b] = f()`.
-     */
     private fun foldDestructures(body: List<Stmt>): List<Stmt> = rewrite(body) { list ->
         val out = ArrayList<Stmt>(list.size)
         var index = 0
@@ -447,16 +378,6 @@ class Cs2Cleanup(
         out
     }
 
-    /**
-     * Splices a call whose results feed straight into another call's arguments
-     * back into that argument list.
-     *
-     * The bytecode can push some arguments, call something that leaves several
-     * results, then push the rest - and named temporaries cannot say that,
-     * because the statement that binds them has to come first, which moves the
-     * call ahead of the arguments pushed before it. `f(a, ...g(), b)` says it
-     * exactly, and is what the argument order really is.
-     */
     private fun foldSpreads(body: List<Stmt>): List<Stmt> = rewrite(body) { list ->
         val out = ArrayList<Stmt>(list.size)
         var index = 0
@@ -480,10 +401,6 @@ class Cs2Cleanup(
         out
     }
 
-    /**
-     * [consumer] with the whole of [call]'s results replaced by a spread, or null
-     * when it does not use them as one contiguous run of one call's arguments.
-     */
     private fun spliceInto(consumer: Stmt, call: MultiAssign): Stmt? {
         val names = call.names
         if (names.isEmpty()) return null
@@ -537,8 +454,6 @@ class Cs2Cleanup(
             else -> return null
         }
         if (!replaced) return null
-        // Every result has to be consumed there, or the leftovers would have
-        // nothing to name them.
         val remaining = HashSet<TempRef>()
         collectTemps(rewritten, remaining)
         if (names.any { it in remaining }) return null
@@ -597,7 +512,6 @@ class Cs2Cleanup(
         }
     }
 
-    /** The folded statement and how many statements it replaces, or null. */
     private fun foldAt(list: List<Stmt>, index: Int, call: MultiAssign): Pair<Stmt, Int>? {
         val wanted = call.names.toMutableList()
         val targets = HashMap<String, Expr>()
@@ -621,7 +535,6 @@ class Cs2Cleanup(
         return folded to (cursor - index)
     }
 
-    /** True when one of the folded statements stored to [target] and nothing read it. */
     private fun deadStore(list: List<Stmt>, from: Int, to: Int, target: LocalRef): Boolean {
         for (index in from until to) {
             val statement = list[index]
@@ -636,7 +549,6 @@ class Cs2Cleanup(
         return false
     }
 
-    /** The `target = temp` pairs a statement performs, or null when it does other work. */
     private fun consumers(statement: Stmt): List<Pair<Expr, TempRef>>? = when (statement) {
         is LocalAssign -> (statement.value as? TempRef)
             ?.let { listOf(LocalRef(statement.slot, statement.type) as Expr to it) }
@@ -649,14 +561,7 @@ class Cs2Cleanup(
         else -> null
     }
 
-    // ---------------------------------------------------- branches and tests
 
-    /**
-     * `if (c) { goto L; } L: ;` jumps to the statement after itself, which is
-     * where it was going anyway. The condition still runs - it can call
-     * something - so what is left is an `if` with an empty body, which is also
-     * what the bytecode this compiles to reads back as.
-     */
     private fun foldEmptyGotos(body: List<Stmt>): List<Stmt> = rewrite(body) { list ->
         val out = ArrayList<Stmt>(list.size)
         for ((index, statement) in list.withIndex()) {
@@ -672,14 +577,6 @@ class Cs2Cleanup(
         out
     }
 
-    /**
-     * Drops the jumps that land where control was going anyway.
-     *
-     * A `goto` in the last position of an `if` arm, or of a `switch` arm, whose
-     * label is the statement right after that `if` or `switch`, says what
-     * finishing the arm already says - a switch arm finishes with the `break`
-     * the emitter writes for it, which lands in the same place.
-     */
     private fun dropRedundantJumps(body: List<Stmt>): List<Stmt> = rewrite(body) { list ->
         val out = ArrayList(list)
         for (index in out.indices) {
@@ -697,7 +594,6 @@ class Cs2Cleanup(
 
     private fun prunedTails(statement: Stmt, label: String): Stmt = when (statement) {
         is If -> If(statement.condition, prunedTail(statement.then, label), prunedTail(statement.otherwise, label))
-        // Not a loop body: falling out of one goes back to the test, not past it.
         is Switch -> statement.copy(
             cases = statement.cases.map { SwitchCase(it.keys, prunedTail(it.body, label)) },
             default = prunedTail(statement.default, label),
@@ -711,10 +607,6 @@ class Cs2Cleanup(
         return statements.dropLast(1) + prunedTails(last, label)
     }
 
-    /**
-     * An `if` with nothing in its then-arm is the negation of its else-arm, and
-     * reads as one. Both shapes are reported either way.
-     */
     private fun normaliseBranches(body: List<Stmt>): List<Stmt> = rewrite(body) { list ->
         list.map { statement ->
             if (statement !is If) return@map statement
@@ -742,7 +634,6 @@ class Cs2Cleanup(
         }
     }
 
-    /** Reports comparisons between two constants, which always go the same way. */
     private fun reportConditions(body: List<Stmt>) {
         fun inspect(condition: Condition) {
             when (condition) {
@@ -768,7 +659,6 @@ class Cs2Cleanup(
         }
     }
 
-    /** Which way a comparison between two constants goes. */
     private fun fold(condition: Compare): String {
         val left = constantValue(condition.left)
         val right = constantValue(condition.right)
@@ -792,13 +682,7 @@ class Cs2Cleanup(
         else -> null
     }
 
-    // --------------------------------------------------------- declarations
 
-    /**
-     * Marks the store that introduces a local: its first mention anywhere, at the
-     * top level of the body, and not reading itself. Every other local is left to
-     * the header, which reserves its slot without producing any instructions.
-     */
     private fun markDeclarations(body: List<Stmt>): List<Stmt> {
         val seen = HashSet<Int>()
         val out = ArrayList<Stmt>(body.size)
@@ -814,7 +698,6 @@ class Cs2Cleanup(
         return out
     }
 
-    /** True for a store to a parameter, which the signature already declared. */
     private fun isParameter(statement: LocalAssign): Boolean = statement.slot < when (statement.type) {
         Cs2Type.INT -> intArgs
         Cs2Type.STRING -> stringArgs
@@ -844,10 +727,6 @@ class Cs2Cleanup(
         else -> statement
     }
 
-    /**
-     * A script that returns nothing ends in a bare `return;` that says nothing the
-     * closing brace does not. The code generator puts the instruction back.
-     */
     private fun dropTrailingVoidReturn(body: List<Stmt>): List<Stmt> {
         val last = body.lastOrNull()
         if (last is Return && last.values.isEmpty()) return body.dropLast(1)
@@ -855,7 +734,6 @@ class Cs2Cleanup(
     }
 }
 
-/** Statements a block would render as on its own, terminator included. */
 fun blockStatements(
     script: Cs2Script,
     cfg: Cs2Cfg,

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.model.entity.player
 
 import com.rs.game.World
@@ -113,7 +97,6 @@ class Appearance {
         return StructDefinitions.getStruct(structID).getIntValue(if (isFaceMask) HAIR_WITH_FACE_MASK_PARAM else HAIR_WITH_HAT_PARAM, -1)
     }
 
-    /** Revision encoder that owns the appearance block's wire format. */
     private val updateProtocol: UpdateProtocol
         get() = Codec.get(EnvVars.majorVersion)?.updateProtocol
             ?: error("No update protocol registered for revision ${EnvVars.majorVersion}")
@@ -162,12 +145,6 @@ class Appearance {
         mD5AppeareanceDataHash = encoded.hash
     }
 
-    /**
-     * Resolves the body/equipment slots in transmission order.
-     *
-     * Each entry is the *semantic* value for that slot; the core revision encoder decides how it
-     * is framed on the wire.
-     */
     private fun buildSlots(player: Player): List<AppearanceSlot> {
         val slots = ArrayList<AppearanceSlot>(13)
 
@@ -210,7 +187,6 @@ class Appearance {
         return slots
     }
 
-    /** Hair is hidden entirely by some helms, and remapped to a hat-compatible style by others. */
     private fun hairSlot(head: Item?): AppearanceSlot {
         if (lookI[0] == -1) return AppearanceSlot.Empty
         if (head == null) return AppearanceSlot.Body(lookI[0])

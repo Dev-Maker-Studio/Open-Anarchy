@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game
 
 import com.rs.Launcher
@@ -447,9 +431,6 @@ object World {
 
     @JvmStatic
     fun refreshObject(obj: GameObject) {
-        // Re-send the object as it currently stands to everyone watching the chunk. This is purely a
-        // visual resend - the object is already in the chunk's spawned/base bookkeeping and its clipping
-        // is untouched - so it goes out as a chunk update rather than through spawnObject().
         val chunk = ChunkManager.getChunk(obj.tile.getChunkId())
         chunk.addChunkUpdate(CreateObject(obj.tile.getXInChunk(), obj.tile.getYInChunk(), obj.id, obj.type.id, obj.rotation))
         val modifier = obj.meshModifier ?: return
@@ -626,20 +607,6 @@ object World {
         ChunkManager.getChunk(tile.getChunkId()).addSpotAnim(tile, SpotAnim(anim))
     }
 
-    /**
-     * Sends a projectile from the specified source to the target with a given graphic ID, heights, delay, speed, and optional parameters.
-     * This function calculates the speed based on the distance between the source and the target.
-     *
-     * @param from The source from which the projectile is sent. Can be any object representing a position or entity.
-     * @param to The target to which the projectile is sent. Can be any object representing a position or entity.
-     * @param spotAnimId The ID of the spotanim to use for the projectile.
-     * @param heights A pair representing the start and end heights of the projectile.
-     * @param speed The speed of the projectile. This is measured in client frames spent in the air per tile of distance. So a lower number is a faster projectile.
-     * @param angle (Optional) The angle at which the projectile is sent. Default is 0.
-     * @param offset (Optional) The offset of the projectile's trajectory. Default is 0.
-     * @param task (Optional) A task to be executed when the projectile hits the target.
-     * @return The `WorldProjectile` object representing the sent projectile.
-     */
     @JvmStatic
     @JvmOverloads
     fun sendProjectile(from: Any, to: Any, spotAnimId: Int, heights: Pair<Int, Int> = 28 to 28, delay: Int = 0, speed: Int = 10, angle: Int = 0, offset: Int = 0, task: Consumer<WorldProjectile>? = null): WorldProjectile {
@@ -648,20 +615,6 @@ object World {
         return sendProjectileAbsoluteSpeed(from, to, spotAnimId, heights, delay, Utils.getDistanceI(sourceTile, targetTile) * speed, angle, offset, task)
     }
 
-    /**
-     * Sends a projectile from the specified source to the target with a given graphic ID, heights, delay, speed, and optional parameters.
-     * This function calculates the speed based on the distance between the source and the target.
-     *
-     * @param from The source from which the projectile is sent. Can be any object representing a position or entity.
-     * @param to The target to which the projectile is sent. Can be any object representing a position or entity.
-     * @param spotAnimId The ID of the spotanim to use for the projectile.
-     * @param heights A pair representing the start and end heights of the projectile.
-     * @param speed The speed of the projectile. This is measured in client frames spent in the air per tile of distance. So a lower number is a faster projectile.
-     * @param angle (Optional) The angle at which the projectile is sent. Default is 0.
-     * @param offset (Optional) The offset of the projectile's trajectory. Default is 0.
-     * @param task (Optional) A task to be executed when the projectile hits the target.
-     * @return The `WorldProjectile` object representing the sent projectile.
-     */
     @JvmStatic
     fun sendProjectileHalfSq(from: Any, to: Any, spotAnimId: Int, startXyHalves: Pair<Int, Int> = 0 to 0, endXyHalves: Pair<Int, Int> = 0 to 0, heights: Pair<Int, Int> = 28 to 28, delay: Int = 0, speed: Int = 10, angle: Int = 0, offset: Int = 0, task: Consumer<WorldProjectile>? = null): WorldProjectile {
         val sourceTile = getTargetTile(from)
@@ -669,21 +622,6 @@ object World {
         return sendProjectileHalfSqAbsoluteSpeed(from, to, spotAnimId, startXyHalves, endXyHalves, heights, delay, Utils.getDistanceI(sourceTile, targetTile) * speed, angle, offset, task)
     }
 
-    /**
-     * Sends a projectile from the specified source to the target with a given graphic ID, heights, delay, speed, and optional parameters.
-     * This function uses an absolute speed value and includes calculations for trajectory offset.
-     *
-     * @param from The source from which the projectile is sent. Can be any object representing a position or entity.
-     * @param to The target to which the projectile is sent. Can be any object representing a position or entity.
-     * @param spotAnimId The ID of the spotanim to use for the projectile.
-     * @param heights A pair representing the start and end heights of the projectile.
-     * @param delay (Optional) The delay before the projectile is sent, in ticks. Default is 0.
-     * @param speed The absolute speed of the projectile. This is measured in client frames it will take to reach the target. So a lower number is a faster projectile.
-     * @param angle The angle at which the projectile is sent.
-     * @param offset (Optional) The offset of the projectile's trajectory. Default is 0.
-     * @param task (Optional) A task to be executed when the projectile hits the target.
-     * @return The `WorldProjectile` object representing the sent projectile.
-     */
     @JvmStatic
     @JvmOverloads
     fun sendProjectileAbsoluteSpeed(from: Any, to: Any, spotAnimId: Int, heights: Pair<Int, Int>, delay: Int = 0, speed: Int, angle: Int, offset: Int = 0, task: Consumer<WorldProjectile>? = null): WorldProjectile {
@@ -697,21 +635,6 @@ object World {
         return projectile
     }
 
-    /**
-     * Sends a projectile from the specified source to the target with a given graphic ID, heights, delay, speed, and optional parameters.
-     * This function uses an absolute speed value and includes calculations for trajectory offset.
-     *
-     * @param from The source from which the projectile is sent. Can be any object representing a position or entity.
-     * @param to The target to which the projectile is sent. Can be any object representing a position or entity.
-     * @param spotAnimId The ID of the spotanim to use for the projectile.
-     * @param heights A pair representing the start and end heights of the projectile.
-     * @param delay (Optional) The delay before the projectile is sent, in ticks. Default is 0.
-     * @param speed The absolute speed of the projectile. This is measured in client frames it will take to reach the target. So a lower number is a faster projectile.
-     * @param angle The angle at which the projectile is sent.
-     * @param offset (Optional) The offset of the projectile's trajectory. Default is 0.
-     * @param task (Optional) A task to be executed when the projectile hits the target.
-     * @return The `WorldProjectile` object representing the sent projectile.
-     */
     @JvmStatic
     @JvmOverloads
     fun sendProjectileHalfSqAbsoluteSpeed(from: Any, to: Any, spotAnimId: Int, startXYHalves: Pair<Int, Int> = 0 to 0, endXyHalves: Pair<Int, Int> = 0 to 0, heights: Pair<Int, Int> = 28 to 28, delay: Int = 0, speed: Int = 10, angle: Int = 0, offset: Int = 0, task: Consumer<WorldProjectile>? = null): WorldProjectile {
@@ -908,9 +831,6 @@ object World {
         return step.canTravel(tile.plane, tile.x, tile.y, dir.dx, dir.dy, size, 0, CollisionStrategyType.NORMAL.strategy)
     }
 
-    /**
-     * Please someone refactor this. This is beyond disgusting and definitely can be done better.
-     */
     @JvmStatic
     fun findAdjacentFreeSpace(origin: Tile, size: Int): Tile? {
         if (size == 1) return findAdjacentFreeTile(origin)
@@ -947,13 +867,9 @@ object World {
 
     @JvmStatic
     fun findClosestAdjacentFreeTile(tile: Tile, dist: Int): Tile {
-        //Checks outward - Northeast
         for (x in 0..dist) for (y in 0..dist) if (floorFree(tile.plane, tile.x + x, tile.y + y)) return tile.transform(x, y, 0)
-        //Checks outward - Southeast
         for (x in 0..dist) for (y in 0 downTo -dist) if (floorFree(tile.plane, tile.x + x, tile.y + y)) return tile.transform(x, y, 0)
-        //Checks outward - Southwest
         for (x in 0 downTo -dist) for (y in 0 downTo -dist) if (floorFree(tile.plane, tile.x + x, tile.y + y)) return tile.transform(x, y, 0)
-        //Checks outward - Northwest
         for (x in 0 downTo -dist) for (y in 0..dist) if (floorFree(tile.plane, tile.x + x, tile.y + y)) return tile.transform(x, y, 0)
         return tile.transform(0, 0, 0)
     }
@@ -992,9 +908,6 @@ object World {
         return null
     }
 
-    // ── Java interop wrappers for methods with Tile parameters ─────
-    // Kotlin inline value class Tile has mangled JVM signatures.
-    // These wrappers accept boxed Tile (as Object from Java's view) and delegate.
 
     @JvmStatic
     @JvmName("hasLineOfSight")

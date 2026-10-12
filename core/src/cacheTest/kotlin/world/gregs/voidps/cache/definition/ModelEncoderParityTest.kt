@@ -24,20 +24,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * The three indices a model is drawn from - its geometry, its particle configs and its billboard
- * configs - decoded and encoded back, against the shipped bytes.
- *
- * A model is not an opcode keyed definition: it is a dozen fixed sections and a 21 byte footer
- * that declares their lengths, so there is no opcode order to record and nothing to shadow, and
- * either the decoder reached every byte or the encoder cannot put them back. The particle and
- * billboard configs *are* opcode keyed and go through the same
- * [OpcodeOrdered]/[OpcodeEncoder] mechanism as every other config.
- *
- * This is the measurement `docs/cache-source.md`'s *models*, *billboards* and *particles*
- * sections report. Skipped when there is no cache to test against, like the other whole-cache
- * tests.
- */
 class ModelEncoderParityTest {
 
     @Test
@@ -144,14 +130,12 @@ class ModelEncoderParityTest {
         assertEquals(counts.files, counts.identical, "every particle must re-encode to its own bytes")
     }
 
-    /** How one opcode keyed archive compared, and how much metadata its files needed. */
     private class Counts(val files: Int, val identical: Int, val order: Int, val shadow: Int, val examples: List<String>) {
         override fun toString(): String =
             "$files files, $identical identical, $order with a recorded opcode order, $shadow with a shadowed payload" +
                 if (examples.isEmpty()) "" else " (${examples.joinToString("; ")})"
     }
 
-    /** Decode and re-encode every file of one archive, as the definition parity tests do. */
     private fun <T> compare(
         cache: Cache,
         index: Int,
@@ -188,7 +172,6 @@ class ModelEncoderParityTest {
         return Counts(files, identical, order, shadow, examples)
     }
 
-    /** Where two encodings first differ, and by how much, for a failure that has to be explained. */
     private fun describe(expected: ByteArray, actual: ByteArray): String {
         if (expected.size != actual.size) {
             return "${expected.size} bytes became ${actual.size}"
@@ -214,13 +197,10 @@ class ModelEncoderParityTest {
     private companion object {
         private const val EXAMPLES = 12
 
-        /** The archives that declare no geometry at all; see [ModelDecoder]. */
         private const val EMPTY_PLACEHOLDERS = 8
 
-        /** Only model 73412 declares a texture index section with no texture triangle behind it. */
         private const val ORPHAN_TEXTURE_INDICES = 1
 
-        /** What vanilla 727 shipped; the cache only ever grows, so these are floors. */
         private const val VANILLA_MODELS = 73_417
         private const val VANILLA_BILLBOARDS = 360
         private const val VANILLA_PRODUCERS = 741

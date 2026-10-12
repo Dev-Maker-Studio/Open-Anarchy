@@ -26,13 +26,11 @@ class Camera(
     var orthographic: Boolean = false
     var orthoSize: Float = 10f
 
-    // Cached matrices to reduce allocations
     private val cachedViewMatrix = Matrix4f()
     private val cachedProjectionMatrix = Matrix4f()
     private val cachedViewProjectionMatrix = Matrix4f()
     private val tempTarget = Vector3f()
 
-    // Frustum for culling
     private val frustum = Frustum()
     private var frustumDirty = true
     private var lastAspectRatio = 0f
@@ -48,10 +46,6 @@ class Camera(
         return cachedViewMatrix
     }
 
-    /**
-     * Get a cached copy of the view matrix (avoids allocation).
-     * Use this when you don't need to modify the matrix.
-     */
     fun getViewMatrixCached(): Matrix4f {
         tempTarget.set(position).add(front)
         return cachedViewMatrix.identity().lookAt(position, tempTarget, up)
@@ -72,10 +66,6 @@ class Camera(
         }
     }
 
-    /**
-     * Get the cached frustum for culling.
-     * Automatically updates if the camera has moved.
-     */
     fun getFrustum(aspectRatio: Float): Frustum {
         if (frustumDirty) {
             updateFrustum(aspectRatio)
@@ -83,9 +73,6 @@ class Camera(
         return frustum
     }
 
-    /**
-     * Force update the frustum.
-     */
     fun updateFrustum(aspectRatio: Float) {
         getViewMatrixCached()
         getProjectionMatrix(aspectRatio)
@@ -94,16 +81,10 @@ class Camera(
         frustumDirty = false
     }
 
-    /**
-     * Mark frustum as needing update (call after any camera parameter changes).
-     */
     fun invalidateFrustum() {
         frustumDirty = true
     }
 
-    /**
-     * Get the combined view-projection matrix.
-     */
     fun getViewProjectionMatrix(aspectRatio: Float): Matrix4f {
         getViewMatrixCached()
         getProjectionMatrix(aspectRatio)

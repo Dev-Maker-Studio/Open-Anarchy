@@ -37,10 +37,6 @@ import java.util.function.Consumer
     completedStage = 6
 )
 class TrollWarzone : MiniquestOutline() {
-    //9 - troll general comes down from the mountain
-    //10 - ambushing trolls with archers
-    //11 - intro to burthorpe tutorial
-    //12 - player shoots cannon to close off the troll invasion
     override fun getJournalLines(player: Player, stage: Int) = when (stage) {
         0 -> listOf("I can start this miniquest by speaking to Major Nigel Corothers in northern Burthorpe.")
         1 -> listOf("I can start this miniquest by speaking to Major Nigel Corothers in northern Burthorpe.")
@@ -68,7 +64,6 @@ class TrollWarzone : MiniquestOutline() {
 
     override fun updateStage(player: Player) {
         if (player.miniquestManager.getStage(Miniquest.TROLL_WARZONE) >= 5) player.vars.setVarBit(10683, player.miniquestManager.getStage(Miniquest.TROLL_WARZONE))
-        //varbit 10683 updates corporal keymans to claim the baby troll
     }
 
     companion object {
@@ -96,7 +91,6 @@ class TrollWarzone : MiniquestOutline() {
 
 @ServerStartupEvent
 fun mapTrollWarzone() {
-    //Troll General combat script
     npcCombat(14991, 14992) { npc, target ->
         if (npc.inMeleeRange(target)) {
             npc.anim(1932)

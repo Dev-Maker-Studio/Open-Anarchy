@@ -9,16 +9,6 @@ import world.gregs.voidps.cache.definition.data.InputSubscriberRecord
 import world.gregs.voidps.cache.definition.data.RecolourRecord
 import world.gregs.voidps.cache.definition.encoder.DefaultsEncoder
 
-/**
- * Index 28's archives, except equipment, which is [BodyDecoder].
- *
- * Opcode keyed like a config type, but the same opcode means a different thing in each archive - a `1`
- * is six cube textures in archive 1, the hitsplat offsets in archive 3, a music archive in archive 4 and
- * an input binding in archive 8 - so the read dispatches on the definition's id, which *is* the archive.
- *
- * Nothing the client derives is stored: the four default hitsplat offsets it fills in when the file has
- * none, and the enum objects it turns anchors and subscriber types into, are all runtime.
- */
 class DefaultsDecoder : DefinitionDecoder<DefaultsDefinition>(DEFAULTS) {
 
     override fun create(size: Int) = Array(size) { DefaultsDefinition(it) }
@@ -47,7 +37,6 @@ class DefaultsDecoder : DefinitionDecoder<DefaultsDefinition>(DEFAULTS) {
 
     private fun DefaultsDefinition.entity(opcode: Int, buffer: Reader) {
         when (opcode) {
-            // Sized by opcode 3 when the file wrote one first, which 727's does, and by four otherwise.
             1 -> {
                 val count = maximumHits ?: DefaultsDefinition.DEFAULT_MAXIMUM_HITS
                 val x = IntArray(count)
@@ -101,9 +90,7 @@ class DefaultsDecoder : DefinitionDecoder<DefaultsDefinition>(DEFAULTS) {
 
     private fun DefaultsDefinition.interactions(opcode: Int, buffer: Reader) {
         when (opcode) {
-            // 8, 9 and 10 are decoded and dropped by the client; they are still records in the file.
             1, 2, 3, 4, 8, 9, 10 -> input(subscriber(opcode, buffer))
-            // The three key bindings are a key hold body with no type byte of its own.
             5, 6, 7 -> input(InputSubscriberRecord(opcode = opcode, keys = keys(buffer)))
             11 -> minimenuCursor = true
             12 -> tooltipColourMembers = buffer.readInt()
@@ -119,7 +106,6 @@ class DefaultsDecoder : DefinitionDecoder<DefaultsDefinition>(DEFAULTS) {
         }
     }
 
-    /** A type byte and the body it names. */
     private fun subscriber(opcode: Int, buffer: Reader): InputSubscriberRecord {
         val type = buffer.readUnsignedByte()
         return when (type) {
@@ -141,7 +127,6 @@ class DefaultsDecoder : DefinitionDecoder<DefaultsDefinition>(DEFAULTS) {
                 type = type,
                 keys = keys(buffer)
             )
-            // The client returns null and reads nothing, which desyncs the rest of the file.
             else -> error("Unknown input subscriber type $type under opcode $opcode.")
         }
     }
@@ -153,18 +138,15 @@ class DefaultsDecoder : DefinitionDecoder<DefaultsDefinition>(DEFAULTS) {
         records.add(record)
     }
 
-    /** A colour short, where the file's `65535` is the client's -1: no colour. */
     private fun colour(buffer: Reader): Int {
         val value = buffer.readUnsignedShort()
         return if (value == NO_COLOUR) -1 else value
     }
 
-    /** The order [DefaultsEncoder] writes on its own; see [OpcodeOrdered.opcodeOrder]. */
     override fun canonicalOpcodes(definition: DefaultsDefinition): IntArray =
         DefaultsEncoder.opcodesOf(definition)
 
     private companion object {
-        /** A skybox is six faces. */
         private const val CUBE_FACES = 6
 
         private const val NO_COLOUR = 65535

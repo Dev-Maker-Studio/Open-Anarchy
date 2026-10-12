@@ -15,7 +15,6 @@ class NPCDecoder(val members: Boolean = true) : DefinitionDecoder<NPCDefinition>
 
     override fun canonicalOpcodes(definition: NPCDefinition): IntArray = encoder.opcodes(definition)
 
-    // Index 18 packs 128 npcs per archive (id ushr 7 below); the base class assumes 256.
     override fun size(cache: Cache): Int {
         return cache.lastArchiveId(index) * 128 + (cache.fileCount(index, cache.lastArchiveId(index)))
     }
@@ -53,7 +52,6 @@ class NPCDecoder(val members: Boolean = true) : DefinitionDecoder<NPCDefinition>
             101 -> shadowModifier = 5 * buffer.readByte()
             102 -> headIcon = buffer.readUnsignedShort()
             103 -> rotation = buffer.readUnsignedShort()
-            // NPC transforms use unsigned short for IDs (not bigSmart like objects)
             106, 118 -> {
                 varbit = buffer.readUnsignedShort()
                 if (varbit == 65535) varbit = -1
@@ -102,7 +100,6 @@ class NPCDecoder(val members: Boolean = true) : DefinitionDecoder<NPCDefinition>
             127 -> renderEmote = buffer.readUnsignedShort()
             128 -> moveSpeed = buffer.readUnsignedByte()
             134 -> {
-                // Order per client: walk, crawl(teleport), idle, run
                 walkSound = buffer.readUnsignedShort()
                 if (walkSound == 65535) {
                     walkSound = -1
@@ -130,7 +127,6 @@ class NPCDecoder(val members: Boolean = true) : DefinitionDecoder<NPCDefinition>
                 secondaryCursor = buffer.readUnsignedShort()
             }
             137 -> attackCursor = buffer.readUnsignedShort()
-            // Opcode 138: overhead graphic (bigSmart for rev 727)
             138 -> armyIcon = buffer.readBigSmart()
             139 -> graphicId = buffer.readUnsignedShort()
             140 -> ambientSoundVolume = buffer.readUnsignedByte()
@@ -165,8 +161,7 @@ class NPCDecoder(val members: Boolean = true) : DefinitionDecoder<NPCDefinition>
             }
             165 -> anInt2831 = buffer.readUnsignedByte()
             168 -> anInt2862 = buffer.readUnsignedByte()
-            // Opcode 169: hasTint = false (boolean flag, no data bytes)
-            169 -> { /* hasTint = false */ }
+            169 -> { }
             249 -> {
                 val records = readParameterRecords(buffer)
                 if (records.size != (params?.size ?: 0)) {
@@ -177,7 +172,6 @@ class NPCDecoder(val members: Boolean = true) : DefinitionDecoder<NPCDefinition>
         }
     }
 
-    /** Keeps an option record as the file held it; [NPCDefinition.options] merges 30 to 34 with 150 to 154. */
     private fun NPCDefinition.rawOption(index: Int, option: String) {
         val raw = rawOptions ?: arrayOfNulls<String>(10).also { rawOptions = it }
         raw[index] = option

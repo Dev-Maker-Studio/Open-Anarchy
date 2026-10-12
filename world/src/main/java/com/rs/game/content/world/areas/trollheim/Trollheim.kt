@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.world.areas.trollheim
 import com.rs.utils.isAt
 
@@ -163,7 +147,7 @@ fun mapTrollheim() {
                 }
             }
 
-            67569 -> { // EXIT SABBOT CAVE ONTO DEATH PLATEAU
+            67569 -> {
                 val foundOrAngeredTroll = player.getQuestStage(Quest.DEATH_PLATEAU) == STAGE_FOUND_TROLL || player.getQuestStage(Quest.DEATH_PLATEAU) == STAGE_ANGERED_TROLL
                 if (player.getQuestStage(Quest.DEATH_PLATEAU) in STAGE_MINED_TUNNEL..STAGE_ANGERED_TROLL) {
                     if (!foundOrAngeredTroll)
@@ -177,7 +161,7 @@ fun mapTrollheim() {
                 }
             }
 
-            67676 -> { //squeeze gaps
+            67676 -> {
                 val deltaX = if (obj.tile.isAt(3421, 4280)) if (player.x > obj.x) -2 else 2 else 0
                 val deltaY = if (obj.tile.isAt(3421, 4280)) 0 else if (player.y > obj.y) -2 else 2
                 player.lock()

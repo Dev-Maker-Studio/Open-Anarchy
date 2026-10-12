@@ -118,9 +118,6 @@ fun mapGunnarsGround() {
     }
 }
 
-/*
- * Function called to engrave ring.
- */
 fun engraveRing(player: Player) {
     if (player.questManager.getStage(Quest.GUNNARS_GROUND) == STAGE_NEED_TO_CHISEL_RING) {
         player.schedule {
@@ -143,9 +140,6 @@ fun engraveRing(player: Player) {
     }
 }
 
-/*
- * Functions used to determine if player has item, in inventory or bank, or not at all.
- */
 fun setHasItem(player: Player, item: Item, hasOrNot: Boolean) {
     if (!hasOrNot)
         player.questManager.getAttribs(Quest.GUNNARS_GROUND).removeB("has"+item.name)
@@ -157,11 +151,6 @@ fun getHasItem(player: Player, item: Item): Boolean {
     return player.questManager.getAttribs(Quest.GUNNARS_GROUND).getB("has"+item.name)
 }
 
-/*
- * Functions used to determine what phase of writing the Gunnar's Ground poem the player is on.
- * 0 - 3 is writing.
- * 4 is complete, so remove attribute.
- */
 fun setPoemStage(player: Player, stage: Int) {
     if (stage == 4)
         player.questManager.getAttribs(Quest.GUNNARS_GROUND).removeI("poemStage")
@@ -173,9 +162,6 @@ fun getPoemStage(player: Player): Int {
     return player.questManager.getAttribs(Quest.GUNNARS_GROUND).getI("poemStage")
 }
 
-/*
- * Sets various VarBits relating to Gunnar's Ground quest.
- */
 fun setGunnarsGroundVarBits(player: Player) {
     val isPostCutscenes = player.questManager.getStage(Quest.GUNNARS_GROUND) == STAGE_POST_CUTSCENES
     val isQuestComplete = player.questManager.isComplete(Quest.GUNNARS_GROUND)
@@ -194,9 +180,6 @@ fun setGunnarsGroundVarBits(player: Player) {
     }
 }
 
-/*
- * Fades screen & completes quest
- */
 fun completeGunnarsGround(player: Player) {
     player.fadeScreen {
         player.packets.setIFGraphic(1244, 18, 3797)

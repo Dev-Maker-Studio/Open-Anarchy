@@ -35,7 +35,6 @@ public class PiratesTreasure extends QuestOutline {
 	public final static int GET_TREASURE = 2;
 	public final static int QUEST_COMPLETE = 3;
 
-	//items
 	protected final static int SPADE = 952;
 	protected final static int RUM = 431;
 	protected final static int BANANA = 1963;
@@ -44,7 +43,6 @@ public class PiratesTreasure extends QuestOutline {
 	protected final static int CASKET = 7956;
 	protected final static int APRON = 1005;
 
-	//NPCs
 	protected final static int REDBEARD = 375;
 	protected final static int LUTHAS = 379;
 	protected final static int WYDIN = 557;
@@ -52,7 +50,6 @@ public class PiratesTreasure extends QuestOutline {
 	protected final static int HOSTILE_GARDENER = 1217;
 	protected final static int CUSTOMS_OFFICER = 380;
 
-	//Objects
 	protected final static int BLUE_MOON_INN_CHEST = 2079;
 
 	@Override
@@ -135,12 +132,12 @@ public class PiratesTreasure extends QuestOutline {
 
 	public static ItemClickHandler openCasket = new ItemClickHandler(new Object[] { CASKET }, new String[] { "Open" }, e -> {
 		e.getPlayer().getInventory().removeItems(new Item(CASKET, 1));
-		e.getPlayer().getInventory().addItem(new Item(1605, 1), true);//gold ring
-		e.getPlayer().getInventory().addItem(new Item(1635, 1), true);//cut emerald
+		e.getPlayer().getInventory().addItem(new Item(1605, 1), true);
+		e.getPlayer().getInventory().addItem(new Item(1635, 1), true);
 	});
 
 	public static ItemClickHandler readMessage = new ItemClickHandler(new Object[] { PIRATE_MESSAGE }, new String[] { "Read" }, e -> {
-		e.getPlayer().getInterfaceManager().sendInterface(220);//Message interface
+		e.getPlayer().getInterfaceManager().sendInterface(220);
 		e.getPlayer().getPackets().setIFText(220, 8, "Visit the city of the White Knights. In the park,");
 		e.getPlayer().getPackets().setIFText(220, 9, "Saradomin points to the X which marks the spot.");
 		e.getPlayer().getQuestManager().getAttribs(Quest.PIRATES_TREASURE).setB("TREASURE_LOC_KNOWN", true);

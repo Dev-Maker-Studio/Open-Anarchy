@@ -7,20 +7,8 @@ import world.gregs.voidps.cache.definition.data.ShaderProgramDefinition
 import world.gregs.voidps.cache.definition.data.ShaderProgramMapping
 import world.gregs.voidps.cache.definition.data.ShaderProgramVariable
 
-/**
- * Index 31's program definitions, read exactly as the client's `ShaderLoader` reads them.
- *
- * Two things about the format are worth stating because nothing else in the cache does them:
- * every scalar is **little endian** and **signed** (the client accumulates two bytes into a
- * `Short` and widens it), and a string is one of those as a length - so `-1` is null and `0` is
- * the empty string, and both occur.
- *
- * The three counts are read one after the other before any of the three lists, because the client
- * builds all three arrays first and only then decodes into them.
- */
 class ShaderProgramDecoder {
 
-    /** Whether [data] is a program definition rather than a shader source. */
     fun isProgram(data: ByteArray): Boolean =
         data.size >= 2 && short(data, 0) == ShaderProgramDefinition.HEADER
 
@@ -67,7 +55,6 @@ class ShaderProgramDecoder {
         val name = string(buffer)
         val vertex = string(buffer)
         val fragment = string(buffer)
-        // Both counts come before either list, as the client reads them.
         val vertexDefines = buffer.readShortLittle()
         val fragmentDefines = buffer.readShortLittle()
         return ShaderProgramMapping(
@@ -81,13 +68,6 @@ class ShaderProgramDecoder {
 
     private fun define(buffer: Reader) = ShaderProgramDefine(string(buffer), string(buffer))
 
-    /**
-     * A length prefixed string, or null for a length of -1.
-     *
-     * ISO-8859-1 rather than the cache's usual cp1252 because the bytes are a shader identifier and
-     * a round trip that cannot change a byte matters more than a spelling for the 0x80..0x9f range
-     * that no file uses.
-     */
     private fun string(buffer: Reader): String? {
         val length = buffer.readShortLittle()
         if (length == NULL) {
@@ -105,7 +85,6 @@ class ShaderProgramDecoder {
     private companion object {
         private const val NULL = -1
 
-        /** The client throws above 256, so a longer string is not a program definition. */
         private const val LIMIT = 256
     }
 }

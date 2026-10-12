@@ -4,12 +4,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.BodyDefinition
 
-/**
- * The equipment defaults - index 28 archive 6 - byte for byte.
- *
- * The one 727 file lists its records as 1, 3, 5, 4, 6, which is not the order these values derive, so it
- * carries its own; see [world.gregs.voidps.cache.definition.OpcodeOrdered].
- */
 class BodyEncoder : OpcodeEncoder<BodyDefinition>() {
 
     override fun opcodes(definition: BodyDefinition): IntArray = opcodesOf(definition)
@@ -40,12 +34,6 @@ class BodyEncoder : OpcodeEncoder<BodyDefinition>() {
 
     companion object {
 
-        /**
-         * The opcodes a file with these values carries when it was packed canonically.
-         *
-         * Opcode 1 is always written: the client refuses to start without it, so a definition with no
-         * customisable slots still has to say so.
-         */
         fun opcodesOf(definition: BodyDefinition): IntArray {
             val opcodes = ArrayList<Int>(5)
             opcodes.add(1)

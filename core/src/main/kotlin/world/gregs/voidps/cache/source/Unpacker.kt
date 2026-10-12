@@ -25,22 +25,15 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.io.path.name
 
-/** What one [Unpacker.unpack] did. */
 class UnpackReport(
     val indices: Int,
     val archives: Int,
     val files: Int,
-    /** Files whose contents differed from what was on disk, so had to be written. */
     val written: Int,
-    /** Files left over from archives that no longer exist. */
     val deleted: Int,
-    /** Archives kept as container bytes because nothing could open them. */
     val opaque: Int,
-    /** Archives whose codec did not reproduce the group and fell back to pristine bytes. */
     val inexact: Int,
-    /** Editable files whose codec could not reproduce the shipped bytes, so a sidecar carries them. */
     val pristine: Int,
-    /** Archives listed in a reference table with no container behind them. */
     val missing: Int,
     val bytes: Long,
     val millis: Long
@@ -50,32 +43,8 @@ class UnpackReport(
             "$opaque opaque, $pristine pristine, $inexact inexact, $missing missing, in ${millis}ms"
 }
 
-/**
- * Turns a packed cache into a source tree.
- *
- * Every index with a reference table gets a directory, an `index.json` holding what its files
- * cannot say, its archives laid out by the index's codec, and whatever that codec writes for the
- * index as a whole ([SourceCodec.unpackIndex]). Nothing derivable is written down:
- * CRCs, whirlpools, sizes and the file ids a codec spells out in its own layout are all recomputed
- * when the tree is packed, so they cannot rot.
- *
- * Unpacking the same cache twice writes nothing the second time. Files are compared before they
- * are written and files belonging to archives that no longer exist are deleted, so the tree is a
- * function of the cache and git sees a diff only where the cache actually changed.
- */
 object Unpacker {
 
-    /**
-     * Unpack [cache] into [tree].
-     *
-     * @param xteas the map region keys, by region id (`regionX shl 8 or regionY`), which is how
-     *   `data/map/xteaKeys.json` files them - see [mapKeys]. The `l` and `n` archives of index 5
-     *   are stored decrypted with their key in the metadata; the eight whose key nobody has are
-     *   kept as their container bytes instead.
-     * @param threads how many archives to unpack at once. Every core by default, which is what a
-     *   whole cache wants; a caller unpacking on a machine that is busy doing something else can
-     *   ask for fewer.
-     */
     fun unpack(
         cache: Cache,
         tree: SourceTree,
@@ -105,7 +74,6 @@ object Unpacker {
         return counts.report(System.nanoTime() - start)
     }
 
-    /** Every map region key `data/map/xteaKeys.json` holds, by region id, ready for [unpack]. */
     fun mapKeys(): Map<Int, IntArray> {
         if (!MapXteas.isLoaded()) {
             MapXteas.load()
@@ -161,9 +129,6 @@ object Unpacker {
         }
         metadata.archives.putAll(archives)
 
-        // The index's own files, if it has any: a corpus-wide answer no single archive can give.
-        // They are claimed here exactly as an archive's files are, which is what keeps [prune] from
-        // deleting them again a moment later.
         for (file in codec.unpackIndex(directory, index, archives.keys.sorted().toIntArray())) {
             expected.add(file.path)
             counts.files.incrementAndGet()
@@ -220,8 +185,6 @@ object Unpacker {
             metadata.fileNames = fileNames.associate { it.id to it.nameHash }
         }
 
-        // A container that will not open at all, and one whose payload no encoder here can
-        // reproduce, are the same problem: the bytes have to be kept as they are or parity goes.
         val group = try {
             container.data()
         } catch (e: Exception) {
@@ -255,11 +218,6 @@ object Unpacker {
         return metadata
     }
 
-    /**
-     * An archive nothing can open - eight `l<x>_<y>` map archives are encrypted with keys that
-     * were never published - is kept as the container itself, minus the version trailer the
-     * metadata already holds, and packed straight back out.
-     */
     private fun opaque(
         directory: Path,
         entry: ArchiveEntry,
@@ -269,8 +227,6 @@ object Unpacker {
         expected: MutableSet<String>
     ): ArchiveMetadata {
         metadata.opaque = true
-        // The container was never opened, so everything read out of its payload - the gzip OS
-        // byte sits inside the encrypted region - is noise, and the key is not ours to record.
         metadata.xtea = null
         metadata.gzipOs = 0
         metadata.fileIds(entry.fileIds)
@@ -289,7 +245,6 @@ object Unpacker {
         return metadata
     }
 
-    /** Which bzip2 encoder reproduces [container]'s payload, or null when neither does. */
     private fun variant(container: Container, data: ByteArray): BZip2Variant? {
         if (container.compression != Compression.BZIP2) {
             return BZip2Variant.LIBBZIP2
@@ -303,11 +258,6 @@ object Unpacker {
         return null
     }
 
-    /**
-     * Index 5's archive names, which are the only ones in the cache that are a formula rather
-     * than a catalogue - see [MapSquare] - and the only way back from an archive to the region
-     * whose XTEA key opens it.
-     */
     private fun mapNames(cache: Cache, table: ReferenceTable): Map<Int, String> {
         val byHash = HashMap<Int, Int>(table.archiveCount * 2)
         for (entry in table.archives) {
@@ -325,7 +275,6 @@ object Unpacker {
         return names
     }
 
-    /** `l73_72` and `n50_50` back to the region id their key is filed under. */
     private fun regionOf(name: String): Int {
         val separator = name.indexOf('_')
         val regionX = name.substring(1, separator).toInt()
@@ -333,7 +282,6 @@ object Unpacker {
         return (regionX shl 8) or regionY
     }
 
-    /** Delete everything under [directory] that is not in [expected], and any directory it empties. */
     private fun prune(directory: Path, expected: Set<String>): Int {
         var deleted = 0
         val stale = ArrayList<Path>()
@@ -355,7 +303,6 @@ object Unpacker {
         return deleted
     }
 
-    /** Copy the gameval catalogs in; they are cache assets and belong in the tree, not beside it. */
     private fun copyGamevals(tree: SourceTree): Int {
         val source = File(EnvVars.gamevalPath)
         if (!source.isDirectory) {
@@ -374,7 +321,6 @@ object Unpacker {
 
     private const val CONTRACT = "CONTRACT.md"
 
-    /** Region coordinates are a byte each. */
     private const val REGIONS = 256
 
     private class Counts {

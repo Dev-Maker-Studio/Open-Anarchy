@@ -60,7 +60,6 @@ class TheDigSite : QuestOutline() {
             list.add(Utils.strikeThroughIf("I need to study for my first exam. Perhaps the students on the") { spokeToGreen || spokeToPurple || spokeToBrown })
             list.add(Utils.strikeThroughIf("site can help?") { spokeToGreen || spokeToPurple || spokeToBrown })
 
-            // Green Student
             if (!gotGreenAnswer) list.add(Utils.strikeThroughIf("I need to speak to the student in the <col=008000>green</col> top about the exams.") { spokeToGreen })
             if (!gotGreenAnswer && spokeToGreen) {
                 list.add(Utils.strikeThroughIf("I have agreed to help the student in the <col=008000>green</col> top. He has lost his") { gotAnimalSkull })
@@ -75,7 +74,6 @@ class TheDigSite : QuestOutline() {
                 list.add(Utils.strikeThroughIf("questions on the first exam.") { gotAllAnswers })
             }
 
-            // Purple Student
             if (!gotPurpleAnswer) list.add(Utils.strikeThroughIf("I need to speak to the student in the <col=800080>purple</col> top with pigtails about") { spokeToPurple })
             if (!gotPurpleAnswer) list.add(Utils.strikeThroughIf("the exams.") { spokeToPurple })
             if (!gotPurpleAnswer && spokeToPurple) {
@@ -90,7 +88,6 @@ class TheDigSite : QuestOutline() {
                 list.add(Utils.strikeThroughIf("one of the questions on the first exam.") { gotAllAnswers })
             }
 
-            // Brown Student
             if (!gotBrownAnswer) list.add(Utils.strikeThroughIf("I need to speak to the student in the <col=A52A2A>brown</col> top about the exams.") { spokeToBrown })
             if (!gotBrownAnswer && spokeToBrown) {
                 list.add(Utils.strikeThroughIf("I agreed to help the student in the <col=A52A2A>brown</col> top. He has lost his") { gotSpecialCup })
@@ -121,7 +118,6 @@ class TheDigSite : QuestOutline() {
             list.add(Utils.strikeThroughIf("I have passed my first Earth Science exam.") { gotAllAnswers })
             list.add(Utils.strikeThroughIf("Perhaps the three students on the site can help me again?") { gotAllAnswers })
 
-            // Green Student
             if (gotGreenAnswer) {
                 list.add(Utils.strikeThroughIf("The student with the <col=008000>green</col> top gave me an answer to one of the") { gotAllAnswers })
                 list.add(Utils.strikeThroughIf("questions on the second exam.") { gotAllAnswers })
@@ -129,7 +125,6 @@ class TheDigSite : QuestOutline() {
                 list.add("I need to speak to the student in the <col=008000>green</col> top about the exams.")
             }
 
-            // Purple Student
             if (gotPurpleAnswer) {
                 list.add(Utils.strikeThroughIf("The student with the <col=800080>purple</col> top with pigtails gave me an answer to") { gotAllAnswers })
                 list.add(Utils.strikeThroughIf("one of the questions on the second exam.") { gotAllAnswers })
@@ -137,7 +132,6 @@ class TheDigSite : QuestOutline() {
                 list.add("I need to speak to the student in the <col=800080>purple</col> top with pigtails about the exams.")
             }
 
-            // Brown Student
             if (gotBrownAnswer) {
                 list.add(Utils.strikeThroughIf("The student with the <col=A52A2A>brown</col> top gave me an answer to one of the") { gotAllAnswers })
                 list.add(Utils.strikeThroughIf("questions on the second exam.") { gotAllAnswers })
@@ -164,14 +158,12 @@ class TheDigSite : QuestOutline() {
             list.add(Utils.strikeThroughIf("I should research for my third exam. Perhaps the three students") { gotAllAnswers })
             list.add(Utils.strikeThroughIf("on the site can help me again?") { gotAllAnswers })
 
-            // Green Student
             if (gotGreenAnswer) {
                 list.add(Utils.strikeThroughIf("The student with the <col=008000>green</col> top gave me an answer to one of the") { gotAllAnswers })
                 list.add(Utils.strikeThroughIf("questions on the third exam.") { gotAllAnswers })
             } else {
                 list.add("I need to speak to the student in the <col=008000>green</col> top about the exams.")
             }
-            // Purple Student
             if (!spokeToPurple) list.add("I need to speak to the student in the <col=800080>purple</col> top with pigtails about the exams.")
             if (!gotPurpleAnswer && spokeToPurple) {
                 list.add(Utils.strikeThroughIf("I need to bring the student in the <col=800080>purple</col> top with pigtails an opal.") { gotOpal })
@@ -183,7 +175,6 @@ class TheDigSite : QuestOutline() {
                 list.add(Utils.strikeThroughIf("The student with the <col=800080>purple</col> top with pigtails gave me an answer to") { gotAllAnswers })
                 list.add(Utils.strikeThroughIf("one of the questions on the third exam.") { gotAllAnswers })
             }
-            // Brown Student
             if (gotBrownAnswer) {
                 list.add(Utils.strikeThroughIf("The student with the <col=A52A2A>brown</col> top gave me an answer to one of the") { gotAllAnswers })
                 list.add(Utils.strikeThroughIf("questions on the third exam.") { gotAllAnswers })

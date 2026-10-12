@@ -11,12 +11,6 @@ import org.darkan.core.model.Clan
 import org.darkan.core.mongo.MongoDB.database
 import org.darkan.core.mongo.dropIndexIfPresent
 
-/**
- * The clan reads and writes the lobby performs, behind an interface so a test can put an
- * in-memory store (`org.darkan.core.clan.InMemoryClanStore`) in front of [Clans] instead of a
- * Mongo connection. Production code always goes through [Clans]; only the store underneath it is
- * swappable.
- */
 interface ClanStore {
     suspend fun find(name: String): Clan?
     suspend fun save(clan: Clan)
@@ -33,7 +27,6 @@ private val clanCollection by lazy {
     col
 }
 
-/** The real store: the Mongo `clans` collection. */
 private object MongoClans : ClanStore {
     override suspend fun find(name: String): Clan? =
         clanCollection.find(eq(Clan::name.name, name)).firstOrNull()
@@ -51,7 +44,6 @@ private object MongoClans : ClanStore {
 
 object Clans : ClanStore {
 
-    /** Swapped by tests for an in-memory store; never reassigned by production code. */
     @Volatile
     var store: ClanStore = MongoClans
 

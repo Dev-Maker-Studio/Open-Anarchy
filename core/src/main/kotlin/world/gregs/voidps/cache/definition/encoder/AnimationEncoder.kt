@@ -5,12 +5,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.AnimationDefinition
 
-/**
- * Writes an index 20 seq file.
- *
- * Frame ids are split over two shorts, the low half first for every frame and the high half after, and the
- * decoder adds them as signed values, so the halves are recovered by rounding rather than by masking.
- */
 class AnimationEncoder : OpcodeEncoder<AnimationDefinition>() {
 
     override fun opcodes(definition: AnimationDefinition): IntArray {
@@ -155,10 +149,5 @@ class AnimationEncoder : OpcodeEncoder<AnimationDefinition>() {
         }
     }
 
-    /**
-     * The high half of a frame id, shifted back up. The decoder builds a frame as `(high shl 16) + low` with
-     * both halves read as signed shorts, so a low half of 0x8000 or over carried into the high half and the
-     * split is recovered by rounding to the nearest multiple of 65536 rather than by masking.
-     */
     private fun high(frame: Int): Int = (frame + 32768) and 0xffff0000.toInt()
 }

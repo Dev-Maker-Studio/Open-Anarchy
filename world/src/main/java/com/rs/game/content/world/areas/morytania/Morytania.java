@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.world.areas.morytania;
 
 import com.rs.engine.dialogue.Conversation;
@@ -211,7 +195,6 @@ public class Morytania  {
 		});
 	});
 
-	//Fenkenstraincastle
 	public static ObjectClickHandler handleFenkenstraincastlestairs = new ObjectClickHandler(new Object[] { 5206, 5207 }, e -> {
 		if (e.getObjectId() == 5206)
 			e.getPlayer().tele(e.getPlayer().transform(e.getObj().getRotation() == 0 ? -0 : e.getObj().getRotation() == 1 ? -0 : 0, e.getObj().getRotation() == 0 ? 4 : e.getObj().getRotation() == 1 ? -0 : 0,  1));
@@ -221,7 +204,6 @@ public class Morytania  {
 	public static ObjectClickHandler experimentcavegraveentrance = new ObjectClickHandler(new Object[] { 5167 }, e ->
 			e.getPlayer().useLadder(e.getPlayer().transform(0, 6400)));
 
-	//TakenTemple
 	public static ObjectClickHandler handleTemplespiralstairsup = new ObjectClickHandler(new Object[] { 30722 }, e -> e.getPlayer().tele(Tile.of(3415, 3485, 1)));
 
 	public static ObjectClickHandler handleTemplespiralstairsdown = new ObjectClickHandler(new Object[] { 30723 }, e -> e.getPlayer().tele(Tile.of(3414, 3486, 0)));

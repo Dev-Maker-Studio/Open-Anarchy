@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs;
 
 import world.gregs.voidps.cache.Cache;
@@ -53,7 +37,7 @@ public final class Launcher {
 
     public static void main(String[] args) throws Exception {
 		Logger.setupFormat();
-		Logger.setLevel(Level.FINE); //FINER for traces
+		Logger.setLevel(Level.FINE);
 		JsonFileManager.setGSON(WorldGson.create());
 
 		Settings.loadConfig();
@@ -101,7 +85,6 @@ public final class Launcher {
 				Logger.handle(Launcher.class, "addCleanMemoryTask", e);
 			}
 		}, 0, Ticks.fromMinutes(10));
-		//}, 0, Ticks.fromSeconds(10));
 	}
 
 	private static final int AUTOSAVE_PERIOD_TICKS = Ticks.fromSeconds(30);
@@ -115,7 +98,6 @@ public final class Launcher {
 		WorldPersistentData.save();
 	}
 
-	/** Each player saves on the one tick in the period that matches their index, so no tick serializes everybody. */
 	public static void autosaveSlice() {
 		long thisTick = World.getServerTicks() % AUTOSAVE_PERIOD_TICKS;
 		for (Player player : World.getPlayers()) {
@@ -145,10 +127,6 @@ public final class Launcher {
 		}
 	}
 
-	/**
-	 * Safe to call from a shutdown hook, so it must never call {@link System#exit}. Everything that
-	 * ends the process routes through here, so it runs at most once.
-	 */
 	public static void gracefulShutdown() {
 		if (!SHUTTING_DOWN.compareAndSet(false, true))
 			return;
@@ -169,10 +147,6 @@ public final class Launcher {
 		shutdownLog("drained " + saved + " player(s) in " + (System.currentTimeMillis() - start) + "ms");
 	}
 
-	/**
-	 * The logger is gone by now: java.util.logging closes its handlers from its own shutdown hook,
-	 * concurrently with this one, so anything logged here is silently dropped.
-	 */
 	private static void shutdownLog(String message) {
 		System.out.println("[shutdown] " + message);
 		System.out.flush();

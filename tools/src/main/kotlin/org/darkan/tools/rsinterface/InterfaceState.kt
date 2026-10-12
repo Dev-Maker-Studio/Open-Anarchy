@@ -3,17 +3,6 @@ package org.darkan.tools.rsinterface
 import org.darkan.cs2.Cs2Names
 import org.darkan.cs2.ir.VarSpace
 
-/**
- * The game state an interface is previewed against, and the scripts that drive it.
- *
- * Most interfaces draw nothing on their own: the skill guide builds its list from
- * `varbit_skill_guide_skill_v2` and a stat level, and a tab only fills in once the script the
- * client would have called has run. Neither exists in an editor with no player attached, so this
- * is where a developer says what to pretend - by gameval name, the same one the TypeScript uses.
- *
- * [runs] are re-applied after every load-script pass, because a reload re-seeds every component
- * and would otherwise throw away everything the driving script did.
- */
 class InterfaceState(private val host: InterfaceCs2Host) {
 
     class Variable(val space: VarSpace, val id: Int, val label: String, val value: Int, val text: String)

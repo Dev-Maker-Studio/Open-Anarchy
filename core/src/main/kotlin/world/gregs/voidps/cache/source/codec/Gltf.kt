@@ -12,35 +12,10 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-/**
- * The glTF 2.0 binary container, shared by every codec that stores an asset as a `.glb`.
- *
- * Two codecs speak glTF - [ModelGltf] for index 7's models and [AnimationGltf] for index 0's frame
- * sets - and everything they have in common is here: the `.glb` framing, the accessor reader, the
- * handful of glTF enum values, and the small writers that keep the JSON chunk deterministic.
- *
- * ```
- * glb
- *   header      "glTF", version 2, total length
- *   JSON chunk  the glTF asset, compact, fixed key order, padded with spaces
- *   BIN chunk   the accessors' bytes, little endian, padded with zeroes
- * ```
- *
- * **A `.glb` written through here is deterministic to the byte.** The JSON is built by hand in a
- * fixed key order with no whitespace and with every number an integer, the chunks are padded the
- * way the specification requires - spaces after the JSON, zeroes after the binary - and
- * [GENERATOR] is a constant, so re-unpacking an unchanged cache rewrites nothing.
- *
- * **Reading goes through the accessors properly** - byte offsets, strides and all six component
- * types - rather than assuming this writer's layout, so a file that has been through Blender or
- * another glTF tool still reads.
- */
 object Gltf {
 
-    /** Fixed, because a generator string that moved would rewrite every `.glb` in the tree. */
     const val GENERATOR = "darkan cache-source"
 
-    // --- component types -----------------------------------------------------------------------
 
     const val BYTE = 5120
     const val UNSIGNED_BYTE = 5121
@@ -49,47 +24,36 @@ object Gltf {
     const val UNSIGNED_INT = 5125
     const val FLOAT = 5126
 
-    // --- buffer view targets -------------------------------------------------------------------
 
     const val ARRAY_BUFFER = 34962
     const val ELEMENT_ARRAY_BUFFER = 34963
 
-    // --- primitive modes -----------------------------------------------------------------------
 
-    /** Triangles; the mode a model with faces is drawn in. */
     const val TRIANGLES = 4
 
-    /** Points; the mode a model with vertices but no faces is drawn in. */
     const val POINTS = 0
 
-    /** The largest index `UNSIGNED_SHORT` may carry: 65535 is reserved for primitive restart. */
     const val MAX_SHORT_INDEX = 65534
 
-    /** `glTF`, little endian. */
     private const val MAGIC = 0x46546C67
 
     private const val VERSION = 2
 
-    /** `JSON`, little endian. */
     private const val CHUNK_JSON = 0x4E4F534A
 
-    /** `BIN ` , little endian. */
     private const val CHUNK_BIN = 0x004E4942
 
     private const val HEADER_BYTES = 12
 
     private const val CHUNK_HEADER_BYTES = 8
 
-    /** The JSON chunk is padded with spaces; the binary chunk with [ZERO]. */
     private const val SPACE: Byte = 0x20
 
     private const val ZERO: Byte = 0
 
     private val parser = Json { ignoreUnknownKeys = true }
 
-    // --- writing -------------------------------------------------------------------------------
 
-    /** The 12 byte header, [asset] padded with spaces, and [binary] padded with zeroes. */
     fun assemble(asset: String, binary: ByteArray): ByteArray {
         val text = asset.toByteArray(Charsets.UTF_8)
         val jsonPadding = padding(text.size)
@@ -121,7 +85,6 @@ object Gltf {
 
     private fun padding(size: Int): Int = (4 - (size and 3)) and 3
 
-    /** `,"<name>":[a,b,c]`, integers and nothing else, for a fixed-order JSON chunk. */
     inline fun scalars(out: StringBuilder, name: String, count: Int, value: (Int) -> Int) {
         out.append(",\"").append(name).append("\":[")
         for (index in 0 until count) {
@@ -133,7 +96,6 @@ object Gltf {
         out.append(']')
     }
 
-    /** `,"<name>":[[a,b],[c,d]]` - [count] tuples of [arity] integers each. */
     inline fun tuples(out: StringBuilder, name: String, count: Int, arity: Int, value: (Int, Int) -> Int) {
         out.append(",\"").append(name).append("\":[")
         for (index in 0 until count) {
@@ -152,9 +114,7 @@ object Gltf {
         out.append(']')
     }
 
-    // --- reading -------------------------------------------------------------------------------
 
-    /** The JSON chunk and the binary chunk, which is empty when the file has none. */
     fun chunks(bytes: ByteArray): Pair<ByteArray, ByteArray> {
         val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
         require(bytes.size >= HEADER_BYTES && buffer.getInt(0) == MAGIC) { "Not a glb: bad magic." }
@@ -177,19 +137,10 @@ object Gltf {
         return (text ?: throw IllegalArgumentException("glb has no JSON chunk.")) to binary
     }
 
-    /** The `.glb`'s JSON chunk as text, for a report or a test that shows what a file says. */
     fun text(bytes: ByteArray): String = String(chunks(bytes).first, Charsets.UTF_8)
 
-    /** The glTF asset object of [text]. */
     fun root(text: ByteArray): JsonObject = parser.parseToJsonElement(String(text, Charsets.UTF_8)).jsonObject
 
-    /**
-     * One accessor's values, [components] per element, read through its buffer view.
-     *
-     * General rather than an assumption about this writer's layout - byte offsets, strides and all
-     * six integer and float component types - so a file that has been through another glTF tool
-     * still reads. A sparse accessor is refused rather than silently read wrong.
-     */
     fun accessor(root: JsonObject, binary: ByteArray, index: Int, components: Int): IntArray {
         val accessor = root["accessors"]!!.jsonArray[index].jsonObject
         require(accessor["sparse"] == null) { "Sparse accessor $index is not supported." }
@@ -217,8 +168,6 @@ object Gltf {
         SHORT -> buffer.getShort(offset).toInt()
         UNSIGNED_SHORT -> buffer.getShort(offset).toInt() and 0xffff
         UNSIGNED_INT -> buffer.getInt(offset)
-        // Rounded rather than truncated: our own files hold exact integers, and one that has been
-        // through another tool's float maths should not lose a unit to 82.99999.
         FLOAT -> Math.round(buffer.getFloat(offset))
         else -> throw IllegalArgumentException("Unknown glTF component type $componentType.")
     }
@@ -230,7 +179,6 @@ object Gltf {
         else -> throw IllegalArgumentException("Unknown glTF component type $componentType.")
     }
 
-    // --- JSON values ---------------------------------------------------------------------------
 
     fun tuples(element: JsonElement?): List<IntArray> {
         if (element == null || element is JsonNull) {

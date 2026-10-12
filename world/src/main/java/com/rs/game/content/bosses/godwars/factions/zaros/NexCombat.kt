@@ -43,7 +43,6 @@ class NexCombat : CombatScript() {
         return autoAttack(nex, target)
     }
 
-    /** The scripted attacks each phase mixes into its rotation, on the attack counts Nex uses them. */
     private fun specialAttack(nex: Nex): NexAttack? {
         val count = nex.attackCount
         return when (nex.phase) {
@@ -141,7 +140,6 @@ class NexCombat : CombatScript() {
             if (impact) target.spotAnim(Spotanim.zaros_magic_impact_spotanim)
         }.taskDelay
 
-    /** Nex's ancient mages fall back to her smoke attack when one of them is fought without her. */
     private fun minionAttack(npc: NPC, target: Entity): Int {
         npc.anim(Seq.godwars2_zaros_cast_attack)
         npc.spotAnim(Spotanim.zaros_magic_launch_spotanim)

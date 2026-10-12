@@ -18,15 +18,6 @@ import org.darkan.core.net.prot.packet.RunScript
 import org.darkan.lobby.web.model.LobbyPlayer
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * The lobby's "choose a character name" screen. A client sign-up only gives the lobby an email, so
- * an account holds no name of its own until this screen takes one; a moderator can also send an
- * account back through it. Until it is answered the player is held in the lobby - no social, no
- * world login - so a name nobody has approved can never reach a world.
- *
- * A name is confirmed twice, as it was in the legacy lobby: the first entry only reports whether
- * the name is free, and the same name entered or the continue button pressed again takes it.
- */
 object LobbyNameScreen {
 
     private val emptyXteas = IntArray(4)
@@ -52,7 +43,6 @@ object LobbyNameScreen {
         player.session.send(IfSetText(Interface.interface_890, PROMPT, prompt(account)))
     }
 
-    /** The continue button; confirms a name the player has already been told is free. */
     suspend fun confirm(player: LobbyPlayer) {
         val pending = pendingConfirmation[player.account.username]
         if (pending == null) {

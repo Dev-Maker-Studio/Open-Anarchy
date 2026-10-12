@@ -51,15 +51,15 @@ public class CombinationItems {
         SKULL_SCEPTRE_SCEPTRE(9010, 9011, 9012),
         SKULL_SCEPTRE_SKULL_SCEPTRE(9012, 9009, 9013),
         CRYSTAL_KEY(985, 987, 989),
-        TEA_BOWL_TO_MILKY_TEA_BOWL(4239, 1927, 4240, 1925),         // Tea bowl + milk bucket -> Milky tea bowl + empty bucket
-        TEA_BOWL_TO_CUP(4239, 1981, 4242, 1923),                    // Tea bowl + empty cup -> Tea cup + empty bowl
-        TEA_BOWL_TO_PORCELAIN_CUP(4239, 4244, 4245, 1923),          // Tea bowl + empty porcelain cup -> Porcelain cup + empty bowl
-        TEA_BOWL_MILKY_TO_CUP(4240, 1981, 4243, 1923),              // Milky tea bowl + empty cup -> Milky tea cup + empty bowl
-        TEA_BOWL_MILKY_TO_PORCELAIN_CUP(4240, 4244, 4246, 1923),    // Milky tea bowl + empty porcelain cup -> Milky porcelain cup + empty bowl
-        TEA_CUP_TO_MILKY_TEA_CUP(4242, 1927, 4243, 1925),           // Tea cup + milk bucket -> Milky tea cup + empty bucket
-        TEA_CUP_TO_PORCELAIN_CUP(4242, 4244, 4245, 1981),           // Tea cup + empty porcelain cup -> Porcelain tea cup + empty cup
-        TEA_CUP_MILKY_TO_PORCELAIN_CUP(4243, 4244, 4246, 1981),     // Milky tea cup + empty porcelain cup -> Milky porcelain cup + empty cup
-        TEA_PORCELAIN_TO_MILKY_PORCELAIN(4245, 1927, 4246, 1925);   // Porcelain cup + milk bucket -> Milky porcelain cup + empty bucket
+        TEA_BOWL_TO_MILKY_TEA_BOWL(4239, 1927, 4240, 1925),
+        TEA_BOWL_TO_CUP(4239, 1981, 4242, 1923),
+        TEA_BOWL_TO_PORCELAIN_CUP(4239, 4244, 4245, 1923),
+        TEA_BOWL_MILKY_TO_CUP(4240, 1981, 4243, 1923),
+        TEA_BOWL_MILKY_TO_PORCELAIN_CUP(4240, 4244, 4246, 1923),
+        TEA_CUP_TO_MILKY_TEA_CUP(4242, 1927, 4243, 1925),
+        TEA_CUP_TO_PORCELAIN_CUP(4242, 4244, 4245, 1981),
+        TEA_CUP_MILKY_TO_PORCELAIN_CUP(4243, 4244, 4246, 1981),
+        TEA_PORCELAIN_TO_MILKY_PORCELAIN(4245, 1927, 4246, 1925);
 
 
         private static final Map<Integer, Combineable> BY_PRODUCT = new HashMap<>();
@@ -119,16 +119,4 @@ public class CombinationItems {
     });
 }
 
-    /**
-     * if (itemUsed == 21358 && usedWith == 21359 || usedWith == 21358 && itemUsed == 21359) {
-     * 			if (player.getInventory().containsItem(21359, 2) && player.getSkills().getLevel(Constants.FLETCHING) >= 72) {
-     * 				player.getInventory().deleteItem(21358, 1);
-     * 				player.getInventory().deleteItem(21359, 2); // BOLAS
-     * 				player.getInventory().addItem(21365, 1);
-     * 				player.getSkills().addXp(Constants.FLETCHING, 25);
-     *                        } else
-     * 				player.sendMessage("You need 2 excressence, 1 mutated vine, and 72 fletching to create bolas.");
-     * 			return true;* 		}
-     * 		//spotanim 450 sagie
-     */
 

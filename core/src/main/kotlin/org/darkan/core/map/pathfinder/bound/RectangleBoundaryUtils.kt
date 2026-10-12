@@ -7,9 +7,6 @@ import org.darkan.core.map.pathfinder.zoneAt
 import kotlin.math.max
 import kotlin.math.min
 
-/**
- * @author Kris | 12/09/2021
- */
 public object RectangleBoundaryUtils {
     public fun collides(
         srcX: Int,

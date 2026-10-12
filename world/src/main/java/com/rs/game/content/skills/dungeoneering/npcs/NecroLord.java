@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.npcs;
 
 import com.rs.game.World;
@@ -39,8 +23,8 @@ public class NecroLord extends DungeonBoss {
 
 	public NecroLord(Tile tile, DungeonManager manager, RoomReference reference) {
 		super(DungeonUtils.getClosestToCombatLevel(Utils.range(11737, 11751), manager.getBossLevel()), tile, manager, reference);
-		setCantFollowUnderCombat(true); //force can't walk
-		setLureDelay(Integer.MAX_VALUE);//doesn't stop focusing on target
+		setCantFollowUnderCombat(true);
+		setLureDelay(Integer.MAX_VALUE);
 		skeletons = new CopyOnWriteArrayList<>();
 	}
 
@@ -62,7 +46,7 @@ public class NecroLord extends DungeonBoss {
 	}
 
 	public void addSkeleton(Tile tile) {
-		SkeletalMinion npc = new SkeletalMinion(this, 11722, tile, getManager()); //TODO scale to level
+		SkeletalMinion npc = new SkeletalMinion(this, 11722, tile, getManager());
 		npc.setForceAgressive(true);
 		skeletons.add(npc);
 		World.sendSpotAnim(tile, new SpotAnim(2399));
@@ -78,12 +62,8 @@ public class NecroLord extends DungeonBoss {
 		skeletons.remove(sk);
 	}
 
-	/*
-	 * because necrolord room has a safespot which shouldnt
-	 */
 	@Override
 	public boolean lineOfSightTo(Object tile, boolean checkClose) {
-		//because npc is under cliped data
 		return getManager().isAtBossRoom(WorldUtil.targetToTile(tile));
 	}
 

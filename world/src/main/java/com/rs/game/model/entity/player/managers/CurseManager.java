@@ -33,7 +33,6 @@ public class CurseManager {
         if (!player.getPrayer().isCurses())
             return;
 
-        // === Always give utility curses a chance to proc ===
         if (player.getPrayer().active(Prayer.LEECH_SPECIAL) && Math.random() <= LEECH_PROC_CHANCE) {
             Leech.applyLeechSpecial(player, target, LeechType.SPECIAL);
         }
@@ -44,9 +43,7 @@ public class CurseManager {
             Sap.applySapSpirit(player, target, SapCurse.SPIRIT);
         }
 
-        // === Combat Curses (only one may apply per hit) ===
 
-        // Try Leech curses first
         for (LeechType type : LEECH_PRIORITY) {
             if (type.skillId == -1)
                 return;
@@ -55,11 +52,10 @@ public class CurseManager {
 
             if (Math.random() <= LEECH_PROC_CHANCE) {
                 Leech.applyLeechCurse(player, target, type);
-                return; // Block further curse procs this hit
+                return;
             }
         }
 
-        // Try Sap curses next
         for (SapCurse curse : SAP_PRIORITY) {
             if (!isSapCurseActive(player, curse))
                 continue;

@@ -5,12 +5,6 @@ import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.config.data.WorldMapInfoDefinition
 import world.gregs.voidps.cache.definition.encoder.writeExtras
 
-/**
- * Writes a map element (`mapelement`, index 2 archive 36) file.
- *
- * The two graphic ids (opcodes 1, 2) and the label graphic (opcode 18) are big smarts. The min/max
- * offset bounds the decoder derives from opcode 15 are not written; they are recomputed on decode.
- */
 class WorldMapInfoEncoder : OpcodeEncoder<WorldMapInfoDefinition>() {
 
     override fun opcodes(definition: WorldMapInfoDefinition): IntArray {
@@ -101,8 +95,6 @@ class WorldMapInfoEncoder : OpcodeEncoder<WorldMapInfoDefinition>() {
             }
             in 10..14 -> writeString(definition.aStringArray1065[opcode - 10])
             15 -> {
-                // The area outline: one x/y pair per vertex, the outline colour, the fill colour
-                // table, then one colour table index per vertex.
                 val offsets = definition.anIntArray1049 ?: IntArray(0)
                 val colours = definition.anIntArray1066 ?: IntArray(0)
                 val pointers = definition.aByteArray1057 ?: ByteArray(0)

@@ -13,10 +13,6 @@ import org.darkan.core.social.SocialAction
 import org.darkan.core.social.SocialEvent
 import org.darkan.core.social.SocialJson
 
-/**
- * A websocket on one player, for the website: the player's [SocialEvent]s go out as they happen,
- * starting with a snapshot, and every frame in is a [SocialAction] by that player.
- */
 object PlayerSocket {
     private const val CLOSE_REASON_LIMIT = 100
 

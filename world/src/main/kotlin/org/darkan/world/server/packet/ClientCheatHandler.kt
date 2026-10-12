@@ -14,7 +14,6 @@ class ClientCheatHandler : PacketHandler<Player, ClientCheat> {
         val logged = packet.command.redactedCommand()
         logInfo("ClientCheat: user=${player.username} client=${packet.client} save=${packet.save} command='$logged' rights=${player.rights}")
         try {
-            // console = true (came from the client console), clientCommand = packet.client
             val handled = Commands.processCommand(player, packet.command, true, packet.client)
             if (!handled) {
                 logInfo("ClientCheat: no matching command '$logged' for rights ${player.rights}")

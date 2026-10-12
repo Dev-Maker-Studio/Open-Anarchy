@@ -15,7 +15,6 @@ private const val GIANT_LOBSTER = 1693
 private const val CHEST_KEY = 4273
 @ServerStartupEvent
 fun mapGhostAhoyMapParts() {
-    //Chests
     onItemOnObject(arrayOf(5270, 5271, 5272, 5273), arrayOf(CHEST_KEY)) { (player, obj) ->
         if (!player.isQuestStarted(Quest.GHOSTS_AHOY) || player.isQuestComplete(Quest.GHOSTS_AHOY)) {
             openFakeChest(player, obj)
@@ -67,12 +66,10 @@ fun mapGhostAhoyMapParts() {
                 openFakeChest(player, obj)
         }
     }
-    //Key on Captain's Chest
     onItemOnObject(arrayOf(5270), arrayOf(4273)) { (player, obj) ->
         val mapFragment = 4274
         openRewardChest(player, obj, mapFragment)
     }
-    //Combine fragments into map
     onItemOnItem(intArrayOf(4274, 4275, 4276), intArrayOf(4274, 4275, 4276)) { e ->
         if (e.player.inventory.containsItems(intArrayOf(4274, 4275, 4276), intArrayOf(1, 1, 1))) {
             e.player.inventory.removeItems(intArrayOf(4274, 4275, 4276), intArrayOf(1, 1, 1))
@@ -81,7 +78,6 @@ fun mapGhostAhoyMapParts() {
         } else
             e.player.itemDialogue(e.item1.id, "You attempt to combine the scraps but there is clearly a piece missing.")
     }
-    //Using the treasure map
     onItemClick(4277, options = arrayOf("Read", "Follow")) { (player, item, event) ->
         if (event.equals("Read"))
             player.interfaceManager.sendInterface(8)
@@ -89,11 +85,11 @@ fun mapGhostAhoyMapParts() {
             if (player.tile == Tile.of(3791, 3556, 0)) {
                 player.lock()
                 val steps = listOf(
-                    Pair(0, -6), // South 6
-                    Pair(8, 0),  // East 8
-                    Pair(0, 2),  // North 2
-                    Pair(4, 0),  // East 4
-                    Pair(0, -22) // South 22
+                    Pair(0, -6),
+                    Pair(8, 0),
+                    Pair(0, 2),
+                    Pair(4, 0),
+                    Pair(0, -22)
                 )
                 player.schedule {
                     var wasRunning = false

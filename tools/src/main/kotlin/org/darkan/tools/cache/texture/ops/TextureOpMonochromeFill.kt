@@ -3,11 +3,7 @@ package org.darkan.tools.cache.texture.ops
 import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 
-/**
- * Type 0: Fills the texture with a solid grayscale value.
- */
 class TextureOpMonochromeFill : TextureOperation(0, true) {
-    /** Fill value (12-bit fixed-point, 0-4096) */
     private var fillValue: Int = 4096
 
     override fun getMonochromeOutput(y: Int): IntArray {

@@ -1,12 +1,8 @@
-/**
- * Session, preference and account packets sent by the client.
- */
 package org.darkan.core.net.prot.packet
 
 import org.darkan.core.model.Preference
 import org.darkan.core.net.prot.ClientProt
 
-// Game State
 @JvmInline value class RegionLoadedConfirm(val dummy: Int = 0) : ClientProt
 
 @JvmInline value class SoundEffectMusicEnded(val musicId: Int) : ClientProt
@@ -25,7 +21,6 @@ import org.darkan.core.net.prot.ClientProt
 
 data class BugReport(val category: Int, val body: String, val reproSteps: String) : ClientProt
 
-// Account/Login
 @JvmInline value class EmailValidationSubmitCode(val code: String) : ClientProt
 
 data class EmailValidationAddNewAddress(val email: String, val flags: Int) : ClientProt
@@ -40,5 +35,4 @@ data class EmailValidationChangeAddress(val email: String, val email2: String) :
 
 data class LobbyHyperlink(val service: String, val page: String, val query: String, val flags: Int) : ClientProt
 
-// Unknown/Misc
 @JvmInline value class PlayVorbis(val fileId: Int) : ClientProt

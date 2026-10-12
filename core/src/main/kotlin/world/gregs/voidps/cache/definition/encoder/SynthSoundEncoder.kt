@@ -7,15 +7,6 @@ import world.gregs.voidps.cache.definition.data.SynthInstrument
 import world.gregs.voidps.cache.definition.data.SynthShape
 import world.gregs.voidps.cache.definition.data.SynthSoundDefinition
 
-/**
- * The exact inverse of [world.gregs.voidps.cache.definition.decoder.SynthSoundDecoder].
- *
- * The format is a fixed sequence rather than an opcode list, so there is no order to replay and no
- * presence rule to get wrong: every branch the encoder takes is one the decoder recorded. The two
- * that are worth naming are the empty slot, written as the single zero byte the client peeks for,
- * and the filter's sweep envelope, whose presence the client derives from the mask and the gains -
- * so it is written when and only when those say it is there.
- */
 class SynthSoundEncoder {
 
     fun Writer.encode(definition: SynthSoundDefinition) {
@@ -35,8 +26,6 @@ class SynthSoundEncoder {
     }
 
     private fun Writer.encode(instrument: SynthInstrument) {
-        // The pitch envelope's form is the instrument's first byte, and a zero there is the empty
-        // slot marker, so a present instrument's is never zero. Every other form may be.
         marker(instrument.pitch, "instrument")
         encode(instrument.pitch)
         encode(instrument.volume)
@@ -57,8 +46,6 @@ class SynthSoundEncoder {
             writeSignedSmart(instrument.oscillatorPitch[oscillator])
             writeSmart(instrument.oscillatorDelay[oscillator])
         }
-        // The list is always terminated: the client reads the terminator before it indexes its
-        // five-long arrays, so even an instrument with five oscillators carries one.
         writeSmart(0)
         writeSmart(instrument.delayTime)
         writeSmart(instrument.delayDecay)
@@ -67,7 +54,6 @@ class SynthSoundEncoder {
         encode(instrument.filter)
     }
 
-    /** An optional envelope pair, or the zero byte that stands in for both of them. */
     private fun Writer.pair(first: SynthEnvelope?, second: SynthEnvelope?) {
         if (first == null || second == null) {
             require(first == null && second == null) { "A synth envelope pair is present or absent, not half." }
@@ -79,7 +65,6 @@ class SynthSoundEncoder {
         encode(second)
     }
 
-    /** An envelope whose form byte doubles as "something is here", so it must not be zero. */
     private fun marker(envelope: SynthEnvelope, what: String) {
         require(envelope.form != 0) {
             "A present $what's first envelope has a non-zero form; zero is what says it is absent."

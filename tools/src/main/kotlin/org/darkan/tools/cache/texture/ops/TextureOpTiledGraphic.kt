@@ -1,10 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 
-/**
- * Type 18: Tiled graphic rendering.
- * Similar to TextureOpGraphic but tiles the graphic across the texture.
- */
 class TextureOpTiledGraphic : TextureOpGraphic() {
 
     override fun getColorOutput(y: Int): Array<IntArray> {

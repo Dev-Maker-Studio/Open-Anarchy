@@ -20,7 +20,6 @@ object DiscordWebhook {
                     formData = formData { append("content", content) }
                 )
             } catch (_: Exception) {
-                // Silently fail, as it's only for logging
             }
         }
     }

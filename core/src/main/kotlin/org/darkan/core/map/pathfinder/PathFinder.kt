@@ -12,7 +12,7 @@ import org.darkan.core.map.pathfinder.reach.ReachStrategy
 private const val DEFAULT_RESET_ON_SEARCH = true
 const val DEFAULT_SEARCH_MAP_SIZE = 128
 private const val DEFAULT_RING_BUFFER_SIZE = 4096
-private const val DEFAULT_DISTANCE_VALUE = 999 // Default is 99_999_999 but it is unnecessary and we bitpack
+private const val DEFAULT_DISTANCE_VALUE = 999
 private const val DEFAULT_SRC_DIRECTION_VALUE = 99
 private const val MAX_ALTERNATIVE_ROUTE_LOWEST_COST = 1000
 private const val MAX_ALTERNATIVE_ROUTE_SEEK_RANGE = 100
@@ -255,7 +255,6 @@ public class PathFinder(
 
             val nextDistance = getDistance(currLocalX, currLocalY) + 1
 
-            /* east to west */
             x = currLocalX - 1
             y = currLocalY
             clipFlag = CollisionFlag.BLOCK_WEST
@@ -268,7 +267,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* west to east */
             x = currLocalX + 1
             y = currLocalY
             clipFlag = CollisionFlag.BLOCK_EAST
@@ -279,7 +277,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* north to south  */
             x = currLocalX
             y = currLocalY - 1
             clipFlag = CollisionFlag.BLOCK_SOUTH
@@ -292,7 +289,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* south to north */
             x = currLocalX
             y = currLocalY + 1
             clipFlag = CollisionFlag.BLOCK_NORTH
@@ -303,7 +299,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* north-east to south-west */
             x = currLocalX - 1
             y = currLocalY - 1
             dirFlag = DirectionFlag.NORTH_EAST
@@ -318,7 +313,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* north-west to south-east */
             x = currLocalX + 1
             y = currLocalY - 1
             dirFlag = DirectionFlag.NORTH_WEST
@@ -333,7 +327,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* south-east to north-west */
             x = currLocalX - 1
             y = currLocalY + 1
             dirFlag = DirectionFlag.SOUTH_EAST
@@ -348,7 +341,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* south-west to north-east */
             x = currLocalX + 1
             y = currLocalY + 1
             dirFlag = DirectionFlag.SOUTH_WEST
@@ -413,7 +405,6 @@ public class PathFinder(
 
             val nextDistance = getDistance(currLocalX, currLocalY) + 1
 
-            /* east to west */
             x = currLocalX - 1
             y = currLocalY
             dirFlag = DirectionFlag.EAST
@@ -427,7 +418,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* west to east */
             x = currLocalX + 1
             y = currLocalY
             dirFlag = DirectionFlag.WEST
@@ -444,7 +434,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* north to south  */
             x = currLocalX
             y = currLocalY - 1
             dirFlag = DirectionFlag.NORTH
@@ -458,7 +447,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* south to north */
             x = currLocalX
             y = currLocalY + 1
             dirFlag = DirectionFlag.SOUTH
@@ -475,7 +463,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* north-east to south-west */
             x = currLocalX - 1
             y = currLocalY - 1
             dirFlag = DirectionFlag.NORTH_EAST
@@ -493,7 +480,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* north-west to south-east */
             x = currLocalX + 1
             y = currLocalY - 1
             dirFlag = DirectionFlag.NORTH_WEST
@@ -514,7 +500,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* south-east to north-west */
             x = currLocalX - 1
             y = currLocalY + 1
             dirFlag = DirectionFlag.SOUTH_EAST
@@ -535,7 +520,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* south-west to north-east */
             x = currLocalX + 1
             y = currLocalY + 1
             dirFlag = DirectionFlag.SOUTH_WEST
@@ -606,7 +590,6 @@ public class PathFinder(
 
             val nextDistance = getDistance(currLocalX, currLocalY) + 1
 
-            /* east to west */
             x = currLocalX - 1
             y = currLocalY
             dirFlag = DirectionFlag.EAST
@@ -629,7 +612,6 @@ public class PathFinder(
                 }
             }
 
-            /* west to east */
             x = currLocalX + 1
             y = currLocalY
             dirFlag = DirectionFlag.WEST
@@ -652,7 +634,6 @@ public class PathFinder(
                 }
             }
 
-            /* north to south  */
             x = currLocalX
             y = currLocalY - 1
             dirFlag = DirectionFlag.NORTH
@@ -675,7 +656,6 @@ public class PathFinder(
                 }
             }
 
-            /* south to north */
             x = currLocalX
             y = currLocalY + 1
             dirFlag = DirectionFlag.SOUTH
@@ -702,7 +682,6 @@ public class PathFinder(
                 }
             }
 
-            /* north-east to south-west */
             x = currLocalX - 1
             y = currLocalY - 1
             dirFlag = DirectionFlag.NORTH_EAST
@@ -720,7 +699,6 @@ public class PathFinder(
                 }
             }
 
-            /* north-west to south-east */
             x = currLocalX + 1
             y = currLocalY - 1
             dirFlag = DirectionFlag.NORTH_WEST
@@ -741,7 +719,6 @@ public class PathFinder(
                 }
             }
 
-            /* south-east to north-west */
             x = currLocalX - 1
             y = currLocalY + 1
             dirFlag = DirectionFlag.SOUTH_EAST
@@ -762,7 +739,6 @@ public class PathFinder(
                 }
             }
 
-            /* south-west to north-east */
             x = currLocalX + 1
             y = currLocalY + 1
             dirFlag = DirectionFlag.SOUTH_WEST
@@ -834,7 +810,6 @@ public class PathFinder(
 
             val nextDistance = getDistance(currLocalX, currLocalY) + 1
 
-            /* east to west */
             x = currLocalX - 1
             y = currLocalY
             clipFlag = CollisionFlag.BLOCK_WEST_ROUTE_BLOCKER
@@ -847,7 +822,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* west to east */
             x = currLocalX + 1
             y = currLocalY
             clipFlag = CollisionFlag.BLOCK_EAST_ROUTE_BLOCKER
@@ -858,7 +832,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* north to south  */
             x = currLocalX
             y = currLocalY - 1
             clipFlag = CollisionFlag.BLOCK_SOUTH_ROUTE_BLOCKER
@@ -871,7 +844,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* south to north */
             x = currLocalX
             y = currLocalY + 1
             clipFlag = CollisionFlag.BLOCK_NORTH_ROUTE_BLOCKER
@@ -882,7 +854,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* north-east to south-west */
             x = currLocalX - 1
             y = currLocalY - 1
             dirFlag = DirectionFlag.NORTH_EAST
@@ -903,7 +874,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* north-west to south-east */
             x = currLocalX + 1
             y = currLocalY - 1
             dirFlag = DirectionFlag.NORTH_WEST
@@ -924,7 +894,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* south-east to north-west */
             x = currLocalX - 1
             y = currLocalY + 1
             dirFlag = DirectionFlag.SOUTH_EAST
@@ -945,7 +914,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* south-west to north-east */
             x = currLocalX + 1
             y = currLocalY + 1
             dirFlag = DirectionFlag.SOUTH_WEST
@@ -1016,7 +984,6 @@ public class PathFinder(
 
             val nextDistance = getDistance(currLocalX, currLocalY) + 1
 
-            /* east to west */
             x = currLocalX - 1
             y = currLocalY
             dirFlag = DirectionFlag.EAST
@@ -1033,7 +1000,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* west to east */
             x = currLocalX + 1
             y = currLocalY
             dirFlag = DirectionFlag.WEST
@@ -1050,7 +1016,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* north to south  */
             x = currLocalX
             y = currLocalY - 1
             dirFlag = DirectionFlag.NORTH
@@ -1067,7 +1032,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* south to north */
             x = currLocalX
             y = currLocalY + 1
             dirFlag = DirectionFlag.SOUTH
@@ -1084,7 +1048,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* north-east to south-west */
             x = currLocalX - 1
             y = currLocalY - 1
             dirFlag = DirectionFlag.NORTH_EAST
@@ -1105,7 +1068,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* north-west to south-east */
             x = currLocalX + 1
             y = currLocalY - 1
             dirFlag = DirectionFlag.NORTH_WEST
@@ -1126,7 +1088,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* south-east to north-west */
             x = currLocalX - 1
             y = currLocalY + 1
             dirFlag = DirectionFlag.SOUTH_EAST
@@ -1147,7 +1108,6 @@ public class PathFinder(
                 setNextValidLocalCoords(x, y, dirFlag, nextDistance)
             }
 
-            /* south-west to north-east */
             x = currLocalX + 1
             y = currLocalY + 1
             dirFlag = DirectionFlag.SOUTH_WEST
@@ -1218,7 +1178,6 @@ public class PathFinder(
 
             val nextDistance = getDistance(currLocalX, currLocalY) + 1
 
-            /* east to west */
             x = currLocalX - 1
             y = currLocalY
             dirFlag = DirectionFlag.EAST
@@ -1244,7 +1203,6 @@ public class PathFinder(
                 }
             }
 
-            /* west to east */
             x = currLocalX + 1
             y = currLocalY
             dirFlag = DirectionFlag.WEST
@@ -1267,7 +1225,6 @@ public class PathFinder(
                 }
             }
 
-            /* north to south  */
             x = currLocalX
             y = currLocalY - 1
             dirFlag = DirectionFlag.NORTH
@@ -1293,7 +1250,6 @@ public class PathFinder(
                 }
             }
 
-            /* south to north */
             x = currLocalX
             y = currLocalY + 1
             dirFlag = DirectionFlag.SOUTH
@@ -1320,7 +1276,6 @@ public class PathFinder(
                 }
             }
 
-            /* north-east to south-west */
             x = currLocalX - 1
             y = currLocalY - 1
             dirFlag = DirectionFlag.NORTH_EAST
@@ -1341,7 +1296,6 @@ public class PathFinder(
                 }
             }
 
-            /* north-west to south-east */
             x = currLocalX + 1
             y = currLocalY - 1
             dirFlag = DirectionFlag.NORTH_WEST
@@ -1362,7 +1316,6 @@ public class PathFinder(
                 }
             }
 
-            /* south-east to north-west */
             x = currLocalX - 1
             y = currLocalY + 1
             dirFlag = DirectionFlag.SOUTH_EAST
@@ -1383,7 +1336,6 @@ public class PathFinder(
                 }
             }
 
-            /* south-west to north-east */
             x = currLocalX + 1
             y = currLocalY + 1
             dirFlag = DirectionFlag.SOUTH_WEST

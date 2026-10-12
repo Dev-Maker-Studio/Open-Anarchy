@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.world.areas.draynor;
 
 import com.rs.engine.dialogue.Conversation;
@@ -219,9 +203,9 @@ public class Draynor {
     public static ObjectClickHandler handleEnterDraynorSewers = new ObjectClickHandler(new Object[]{6435}, e -> {
         Player p = e.getPlayer();
         GameObject obj = e.getObj();
-        if (obj.getTile().matches(Tile.of(3118, 3244, 0)))//south entrance
+        if (obj.getTile().matches(Tile.of(3118, 3244, 0)))
             p.useStairs(827, Tile.of(3118, 9643, 0), 1, 1);
-        if (obj.getTile().matches(Tile.of(3084, 3272, 0)))//north entrance
+        if (obj.getTile().matches(Tile.of(3084, 3272, 0)))
             p.useStairs(827, Tile.of(3085, 9672, 0), 1, 1);
     });
 
@@ -230,9 +214,9 @@ public class Draynor {
     public static ObjectClickHandler handleExitsDraynorSewers = new ObjectClickHandler(new Object[]{26518, 32015}, e -> {
         Player p = e.getPlayer();
         GameObject obj = e.getObj();
-        if (obj.getTile().matches(Tile.of(3118, 9643, 0)))//north
+        if (obj.getTile().matches(Tile.of(3118, 9643, 0)))
             p.ladder(Tile.of(3118, 3245, 0));
-        if (obj.getTile().matches(Tile.of(3084, 9672, 0)))//south
+        if (obj.getTile().matches(Tile.of(3084, 9672, 0)))
             p.ladder(Tile.of(3084, 3273, 0));
     });
 

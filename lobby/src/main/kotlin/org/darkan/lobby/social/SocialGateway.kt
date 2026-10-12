@@ -66,19 +66,10 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicLong
 
-/** Somewhere a player's social events are delivered: a world, a lobby-screen session, a website socket. */
 interface SocialSink {
     suspend fun deliver(usernames: List<String>, event: SocialEvent)
 }
 
-/**
- * The lobby's social service. A player has any number of attachments - one per world they are
- * on, per lobby-screen session, per website socket - and every attachment gets the same
- * [SocialEvent]s and may send [SocialAction]s. Presence is derived from the attachments that
- * carry a world: a player is online while any of those exists, and reads as being on the newest
- * game world, else the lobby screen. Per-player work is serialised so a late goodbye from one
- * connection can never undo a fresh hello from another.
- */
 object SocialGateway {
     const val LOBBY_WORLD_ID = 1115
     private const val LISTENER_WORLD_NAME = "Web"
@@ -120,7 +111,6 @@ object SocialGateway {
 
     internal var communityWorlds = CommunityWorlds()
 
-    // ─── Attachments ─────────────────────────────────────────────────
 
     suspend fun registerLobbyPlayerSession(account: Account, session: Session) =
         attach(Attachment(account.username, account.displayName, LOBBY_WORLD_ID, LobbySink(session, account.username), attachmentOrder.incrementAndGet()))
@@ -232,7 +222,6 @@ object SocialGateway {
 
     private suspend fun notice(username: String, kind: NoticeKind, text: String) = emit(username, SocialEvent.Notice(kind, text))
 
-    // ─── Friends ─────────────────────────────────────────────────────
 
     private fun registerFriendWatcher(username: String, friends: Collection<String>) {
         for (friend in friends) {
@@ -337,7 +326,6 @@ object SocialGateway {
         notifyWatchers(username, account)
     }
 
-    // ─── Friends chat ────────────────────────────────────────────────
 
     private fun fcRankOf(owner: Account, member: Account): FriendsChatRank = when {
         member.hasRights(Rights.ADMIN) -> FriendsChatRank.JMOD
@@ -521,7 +509,6 @@ object SocialGateway {
         speakInFriendsChat(username, ownerUsername, message, requireMembership = true)
     }
 
-    /** The website's way of saying a line into [ownerUsername]'s channel without being a member of it. */
     suspend fun sayInFriendsChat(fromUsername: String, ownerUsername: String, message: String) =
         speakInFriendsChat(
             fromUsername.formatPlayerNameForProtocol(),
@@ -546,7 +533,6 @@ object SocialGateway {
 
     private fun speakerOf(account: Account) = Speaker(account.username, account.displayName, account.rights.crown)
 
-    // ─── Private messages ────────────────────────────────────────────
 
     private suspend fun sendPrivateMessage(username: String, to: String, message: ChatMessage) {
         val from = Accounts.find(username) ?: return
@@ -559,7 +545,6 @@ object SocialGateway {
         emit(target.username, SocialEvent.PrivateMessageReceived(speakerOf(from), message))
     }
 
-    // ─── Actions ─────────────────────────────────────────────────────
 
     suspend fun act(username: String, action: SocialAction) = locked(username) { apply(username, action) }
 
@@ -580,7 +565,6 @@ object SocialGateway {
         }
     }
 
-    // ─── Worlds ──────────────────────────────────────────────────────
 
     suspend fun handleWorldSocket(socket: DefaultWebSocketServerSession) = coroutineScope {
         var worldSession: WorldSession? = null
@@ -622,7 +606,6 @@ object SocialGateway {
                 world.post { handleWorldMessage(world, msg) }
             }
         } catch (_: CancellationException) {
-            // ignore
         } catch (e: Exception) {
             Logger.logError("SocialGateway socket error", e)
         } finally {
@@ -731,12 +714,6 @@ object SocialGateway {
         }
     }
 
-    /**
-     * The world is the authority for who is on it: anybody it lists is attached through it,
-     * anybody it does not list is detached. On [PresenceSyncReason.CONNECT] every listed player is
-     * re-sent their whole state, because a world that outlived a lobby restart is full of players
-     * whose client still shows an empty friend list.
-     */
     private suspend fun reconcileWorldPresence(session: WorldSession, msg: WorldPresenceSnapshot) {
         val listed = LinkedHashMap<String, GatewayPlayerPresence>()
         for (player in msg.players) listed[player.username.formatPlayerNameForProtocol()] = player
@@ -784,7 +761,6 @@ object SocialGateway {
         }
     }
 
-    // ─── Seams for ClanService ───────────────────────────────────────
 
     internal fun worldIdOf(username: String): Int? = locationOf(username)?.worldId
 
@@ -802,7 +778,6 @@ object SocialGateway {
         return sessions.isNotEmpty()
     }
 
-    // ─── Accounts ────────────────────────────────────────────────────
 
     private suspend fun handleAccountCommand(session: WorldSession, msg: AccountCommand) {
         val actorName = msg.username.formatPlayerNameForProtocol()
@@ -829,7 +804,6 @@ object SocialGateway {
         return target.takeIf { it.username == actor.username || !it.hasRights(actor.rights) || actor.hasRights(Rights.OWNER) }
     }
 
-    // ─── Announcements ───────────────────────────────────────────────
 
     private suspend fun deliverAnnouncementToLobby(msg: AnnouncementBroadcast) {
         val recipients: Collection<String> = when (val target = msg.target) {

@@ -9,7 +9,6 @@ import com.rs.plugin.kts.onObjectClick
 @ServerStartupEvent
 fun POHClickHAndlers() {
     val intObjectIds = EntranceLocations.entries.map { it.objectId }
-    //Portal click event
     onObjectClick(*intObjectIds.toTypedArray()) { e ->
         e.player.startConversation {
             options {
@@ -43,7 +42,6 @@ fun POHClickHAndlers() {
             }
         }
     }
-    //House controls in settings tab
     onButtonClick(398) { (player, _, componentId) ->
         when (componentId) {
             19 -> player.interfaceManager.sendSubDefault(InterfaceManager.Sub.TAB_SETTINGS)
@@ -53,16 +51,9 @@ fun POHClickHAndlers() {
             29 -> House.leaveHouse(player)
         }
     }
-    //Room Creation menu
     onButtonClick(402) { (player, _, componentId) ->
         if (componentId in 93..115) {
             player.house.createRoom(componentId - 93)
         }
     }
-////394 is a subscription promo interface, 396 Catering - Gielinor Games.
-//    onButtonClick(394, 396) { (player, _, componentId, slotId) ->
-//        if (componentId == 11) {
-//            player.house.build(slotId)
-//        }
-//    }
 }

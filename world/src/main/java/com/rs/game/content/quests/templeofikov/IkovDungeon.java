@@ -40,7 +40,6 @@ public class IkovDungeon {
 	});
 
 	public static ObjectClickHandler handleIceLever = new ObjectClickHandler(new Object[]{ 87 }, e -> {
-		//e.getObject().setId(36);
 		e.getPlayer().sendMessage("You pull the lever and hear a click.");
 		if(e.getPlayer().getQuestManager().getStage(Quest.TEMPLE_OF_IKOV) == TempleOfIkov.HELP_LUCIEN)
 			e.getPlayer().getQuestManager().getAttribs(Quest.TEMPLE_OF_IKOV).setB("LeverIcePulled", true);
@@ -97,7 +96,7 @@ public class IkovDungeon {
 	});
 
 	public static NPCClickHandler handleGaurdianTalk = new NPCClickHandler(new Object[]{274, 275}, new String[]{"Talk-to"}, e -> {
-		if(e.getPlayer().getEquipment().getAmuletId() == 86) {//Lucien amulet
+		if(e.getPlayer().getEquipment().getAmuletId() == 86) {
 			e.getPlayer().startConversation(new Dialogue().addNPC(e.getNPCId(), HeadE.FRUSTRATED, "Thou art a foul agent of Lucien! Such an agent must die!"));
 			WorldTasks.delay(3, () -> e.getNPC().setCombatTarget(e.getPlayer()));
 			return;

@@ -26,12 +26,6 @@ import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import kotlin.io.use
 
-/**
- * Port the client assumes for a world unless the world list marks it as custom.
- *
- * A world on this port omits its port from the list entry; anything else sets the custom-port
- * flag and appends the real port.
- */
 private const val DEFAULT_WORLD_PORT = 43595
 
 private const val WORLD_FLAG_CUSTOM_CACHE = 0x20
@@ -48,7 +42,6 @@ private val reflectionParamFilter = ObjectInputFilter.Config.createFilter(
 )
 
 internal fun Codec.registerRev727MiscPackets() {
-    // Reflection/clientwatch
     serverProt<ReflectionRequest>(opcode = 98, size = ProtSize.VarShort) { out ->
         out.writeByte(checks.size)
         out.writeInt(id)
@@ -58,16 +51,12 @@ internal fun Codec.registerRev727MiscPackets() {
                 ReflectionCheckType.GET_INT, ReflectionCheckType.SET_INT, ReflectionCheckType.GET_FIELD_MODIFIERS -> {
                     out.writeRSString(check.className)
                     out.writeRSString(check.methodName)
-                    // The client reads this int unconditionally for SET_INT, so it
-                    // must always be written or the rest of the packet desyncs.
                     if (check.type == ReflectionCheckType.SET_INT)
                         out.writeInt(check.fieldValue ?: 0)
                 }
                 ReflectionCheckType.GET_METHOD_RETURN_VALUE, ReflectionCheckType.GET_METHOD_MODIFIERS -> {
                     out.writeRSString(check.className)
                     out.writeRSString(check.methodName)
-                    // The client reads exactly this many argument blobs back, so the
-                    // two arrays must agree in length.
                     require(check.paramValues.size == check.paramTypes.size || check.type != ReflectionCheckType.GET_METHOD_RETURN_VALUE) {
                         "ReflectionCheck ${check.className}#${check.methodName}: paramValues (${check.paramValues.size}) must match paramTypes (${check.paramTypes.size})"
                     }
@@ -95,7 +84,6 @@ internal fun Codec.registerRev727MiscPackets() {
         ReflectionRequest(id, Array(count) { readReflectionCheck() })
     }
 
-    // Region/map building
     serverProt<BuildRegion>(opcode = 85, size = ProtSize.VarShort) { out ->
         if (localPlayerPid != null && localPlayerBaseTileHash != null && otherPlayerRegionIds != null) {
             out.bitAccess {
@@ -154,7 +142,6 @@ internal fun Codec.registerRev727MiscPackets() {
             ?: error("BuildInstancedRegion payload of ${bytes.size} bytes matches neither the in-game nor the login layout")
     }
 
-    // Camera protocols
     serverProt<CamLookAt>(opcode = 24, size = 6) { out ->
         out.writeByte(viewLocalX)
         out.writeShortAdd(viewZ shr 2)
@@ -217,7 +204,6 @@ internal fun Codec.registerRev727MiscPackets() {
         CamForceAngle(readUShortAddLittle(), angleY)
     }
 
-    // Login and system protocols
     serverProt<LogoutLobby>(opcode = 9)
 
     serverProt<LogoutFull>(opcode = 62)
@@ -235,14 +221,12 @@ internal fun Codec.registerRev727MiscPackets() {
         OpenUrl(url, if (hasDisplayUrl) readRSString() else null)
     }
 
-    // OPEN_SOCIAL_NETWORK_URL: raw, un-terminated url; the packet length is the string length.
     serverProt<OpenSocialNetworkUrl>(opcode = 86, size = ProtSize.VarShort) { out ->
         out.writeBytes(Cp1252.encode(url))
     }.decoder {
         OpenSocialNetworkUrl(readRawString())
     }
 
-    // WINDOW_CALL_WITH_ARGS: raw, un-terminated argument string; length comes from the packet length.
     serverProt<WindowCallWithArgs>(opcode = 156, size = ProtSize.VarShort) { out ->
         out.writeBytes(Cp1252.encode(args))
     }.decoder {
@@ -257,9 +241,6 @@ internal fun Codec.registerRev727MiscPackets() {
 
     serverProt<WorldListPacket>(opcode = 103, size = ProtSize.VarShort) { out ->
         val entries = worlds.entries
-        // Byte 0 is the client's "decode now" flag - when 0 the client only buffers
-        // the chunk. Byte 1 is a decode-mode constant: the client bails out of
-        // WorldDescriptor.decodeWorldList unless it is exactly 2.
         out.writeByte(if (refreshOnClient) 1 else 0)
         out.writeByte(2)
         if (!refreshOnlyPlayerCounts) {
@@ -337,13 +318,11 @@ internal fun Codec.registerRev727MiscPackets() {
     }
 
     serverProt<UpdateSitesettingsCookie>(opcode = 91, size = ProtSize.VarByte) { out ->
-        // Client no-ops this packet on non-applet builds. Send empty payload by default.
     }.decoder {
         readByteArray()
         UpdateSitesettingsCookie()
     }
 
-    // Account protocols
     serverProt<CreateCheckEmailReply>(opcode = 1, size = 1) { out ->
         out.writeByte(code.value)
     }.decoder {
@@ -358,7 +337,6 @@ internal fun Codec.registerRev727MiscPackets() {
         CreateAccountReply(CreateAccountReplyOpcode.entries.firstOrNull { it.value == value } ?: error("Unknown CreateAccountReply code $value"))
     }
 
-    // Miscellaneous protocols
     serverProt<ProcessDevConsoleCommand>(opcode = 2, size = ProtSize.VarByte) { out ->
         out.writeRSString(command)
     }.decoder {
@@ -497,7 +475,7 @@ internal fun Codec.registerRev727MiscPackets() {
         if (targetType == 1 || targetType == 10) {
             out.writeShort(targetIndex)
             out.writeShort(denominator)
-            out.writeInt(0) // unused 4 bytes
+            out.writeInt(0)
         } else {
             out.writeByte(plane)
             out.writeShort(x)
@@ -554,7 +532,6 @@ internal fun Codec.registerRev727MiscPackets() {
 
     serverProt<ResetAllAnimations>(opcode = 122)
 
-    // Audio protocols (non-zone)
     serverProt<VorbisSound>(opcode = 18, size = 8) { out ->
         out.writeShort(if (soundId == -1) 65535 else soundId)
         out.writeByte(repeat)
@@ -640,36 +617,35 @@ internal fun Codec.registerRev727MiscPackets() {
 
     serverProt<ResetSounds>(opcode = 120)
 
-    // Login details
     loginResponse<LobbyLoginDetails>(opcode = 2, size = ProtSize.VarByte) { out ->
         out.writeByte(crown)
-        out.writeByte(0) // PLAYER_MOD_LEVEL
-        out.writeByte(0) // USERDETAIL_QUICKCHAT_ONLY
+        out.writeByte(0)
+        out.writeByte(0)
         out.writeMedium(0)
-        out.writeByte(0) // Gender.
-        out.writeByte(0) // VERIFIED_EMAIL_ADDRESS
+        out.writeByte(0)
+        out.writeByte(0)
         out.writeByte(1)
-        out.writeLong(Long.MAX_VALUE) // members subscription end
+        out.writeLong(Long.MAX_VALUE)
         out.write5(12L)
-        out.writeByte(0x1) // 0x1 - if members, 0x2 - subscription
-        out.writeInt(1) // jcoins?
-        out.writeByte(1) // is loyalty member?
-        out.writeInt(1) // loyalty points?
-        out.writeShort(592) // recovery questions set date
-        out.writeShort(0) // Messages add support for forum integration
-        out.writeShort(0) // last logged in date
+        out.writeByte(0x1)
+        out.writeInt(1)
+        out.writeByte(1)
+        out.writeInt(1)
+        out.writeShort(592)
+        out.writeShort(0)
+        out.writeShort(0)
         out.writeInt(lastIpHash)
         out.writeRSString(worldLoginToken)
-        out.writeByte(2) // email status (0 - no email, 1 - pending parental confirmation, 2 - pending confirmation, 3 - registered)
+        out.writeByte(2)
         out.writeShort(302)
         out.writeShort(1)
         out.writeByte(1)
         out.writeJagString(displayName)
         out.writeByte(1)
         out.writeInt(1)
-        out.writeByte(0) // Removed on EOC revisions for some reason. idk
-        out.writeShort(defaultWorldId) // default world id
-        out.writeJagString(defaultWorldAddress) // default world address
+        out.writeByte(0)
+        out.writeShort(defaultWorldId)
+        out.writeJagString(defaultWorldAddress)
     }.decoder {
         val crown = readUByte()
         skip(1 + 1 + 3 + 1 + 1 + 1 + 8 + 5 + 1 + 4 + 1 + 4 + 2 + 2 + 2)
@@ -682,8 +658,6 @@ internal fun Codec.registerRev727MiscPackets() {
         LobbyLoginDetails(crown, displayName, lastIpHash, worldLoginToken, defaultWorldId, readJagString())
     }
 
-    // World-login details blob (LobbyStage.LOBBY_TO_WORLD).
-    // This intentionally uses opcode=2 (success) + VarByte length, matching the client's world-login handshake.
     loginResponse<WorldLoginDetails>(opcode = 2, size = ProtSize.VarByte) { out ->
         out.writeByte(rights)
         out.writeByte(modLevel)

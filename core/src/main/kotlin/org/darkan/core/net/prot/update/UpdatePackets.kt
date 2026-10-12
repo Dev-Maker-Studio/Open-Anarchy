@@ -5,9 +5,6 @@ import org.darkan.core.update.NpcUpdateBlocks
 import org.darkan.core.update.PlayerUpdateBlocks
 import java.security.MessageDigest
 
-/**
- * Per-tick player update snapshot (semantic, created fresh each tick).
- */
 class PlayerUpdateSnapshot(
     val localIndex: Int,
     val largeSceneView: Boolean,
@@ -15,10 +12,6 @@ class PlayerUpdateSnapshot(
     val playersByIndex: Array<PlayerUpdatePlayer?>,
 )
 
-/**
- * Player update tracking state (persists across ticks for a player session).
- * Manages local/out player lists, slot flags, cached appearance hashes, etc.
- */
 class PlayerUpdateTrackingState {
     val slotFlags: ByteArray = ByteArray(2048)
     val localPlayers: Array<PlayerUpdatePlayer?> = arrayOfNulls(2048)
@@ -56,18 +49,12 @@ data class PlayerUpdatePlayer(
     val zeroDisplacementWalk: Boolean = false,
 )
 
-/**
- * Per-tick NPC update snapshot.
- */
 class NpcUpdateSnapshot(
     val largeSceneView: Boolean,
     var localTileHash30: Int,
     val nearbyNpcs: List<NpcUpdateNpc>,
 )
 
-/**
- * NPC update tracking state (persists across ticks).
- */
 class NpcUpdateTrackingState {
     val localIndexes: IntArray = IntArray(1024)
     var localCount: Int = 0

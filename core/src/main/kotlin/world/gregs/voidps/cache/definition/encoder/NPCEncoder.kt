@@ -5,14 +5,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.NPCDefinition
 
-/**
- * Writes an index 18 npc file.
- *
- * Transform ids are plain shorts here rather than the bigSmarts a loc uses, 65535 standing in for -1.
- * Options come from [NPCDefinition.rawOptions] so that a file holding both a public (30 to 34) and a members
- * (150 to 154) record for the same slot writes both back; [members] supplies the members half for a
- * definition built by hand, which is what the two argument encode form is for.
- */
 class NPCEncoder : OpcodeEncoder<NPCDefinition>() {
 
     override fun opcodes(definition: NPCDefinition): IntArray {

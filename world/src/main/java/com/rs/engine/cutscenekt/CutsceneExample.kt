@@ -13,7 +13,6 @@ fun mapCommand() {
     Commands.add(Rights.DEVELOPER, "examplecutscene", "starts the example kotlin cutscene") { p, _ ->
         p.cutscene {
 
-            //Prepare and set up the scene
             fadeInAndWait()
             dynamicRegion(player.tile, 178, 554, 4, 4)
             entityTeleTo(player, 15, 20)
@@ -21,7 +20,6 @@ fun mapCommand() {
             val wereKbd = npcCreate(MAN, 14, 20, 0)
             fadeOutAndWait()
 
-            //Play the content of the scene
             dialogue {
                 npc(MAN, HeadE.SAD, "Sir, I don't feel so good..")
                 player(HeadE.CONFUSED, "What's wrong?")

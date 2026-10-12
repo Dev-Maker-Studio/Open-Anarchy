@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.runecrafting
 
 import com.rs.game.content.minigames.fistofguthix.FogGloves
@@ -41,7 +25,6 @@ import org.darkan.core.gameval.gen.Spotanim
 import org.darkan.core.gameval.gen.Varp
 import world.gregs.voidps.type.Tile
 
-// TODO: top-level and Player extension functions once RunecraftingAltar and the Runespan code are Kotlin
 object Runecrafting {
     const val RUNE_ESS = Obj.blankrune
     const val PURE_ESS = Obj.blankrune_high

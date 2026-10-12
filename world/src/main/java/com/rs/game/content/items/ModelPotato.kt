@@ -16,10 +16,6 @@ private const val PENDING_KEY = "modelPotatoPending"
 private const val LAST_KEY = "modelPotatoLast"
 private val DEFAULT_SHAPE = ObjectShape.SCENERY_INTERACT
 
-/**
- * A potato Jawarrior1 always carries, to look at object models: use a hammer on it, enter an object number, and click the
- * ground to put that object there. A new object replaces the one placed before it.
- */
 @ServerStartupEvent
 fun mapModelPotato() {
     onLogin { (player) ->
@@ -36,7 +32,6 @@ fun mapModelPotato() {
     }
 }
 
-/** Places the object chosen with the potato on the clicked tile. Returns whether the click was used. */
 fun handleModelPotatoClick(player: Player, tile: Tile): Boolean {
     val id = player.tempAttribs.getI(PENDING_KEY, -1)
     if (id < 0) return false
