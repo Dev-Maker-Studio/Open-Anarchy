@@ -16,8 +16,10 @@ private const val WANDER_STEPS = 8
 private const val UNSCALED = 1.0
 private const val RESTORE_TICKS = 100
 private const val RESTORE_STEP = 1
+private const val HAMMER_MAX_LEVEL = 10
+private const val HAMMER_CHANCE = 0.2
 
-open class HostileNPC(id: Int, tile: Tile, val scale: Double, level: Int) : NPC(id, tile, null, true) {
+open class HostileNPC(id: Int, tile: Tile, val scale: Double, private val level: Int) : NPC(id, tile, null, true) {
 
     private val scaledLevels: Map<NPCCombatDefinitions.Skill, Int> =
         NPCCombatDefinitions.getDefs(id).levels.mapValues { (_, value) -> maxOf(1, (value * scale).toInt()) }
@@ -52,6 +54,11 @@ open class HostileNPC(id: Int, tile: Tile, val scale: Double, level: Int) : NPC(
         resetWalkSteps()
         DumbRouteFinder.addDumbPathfinderSteps(this, target, WANDER_STEPS, collisionStrategy)
         setRespawnTile(tile)
+    }
+
+    override fun drop(killer: Player, verifyCombatDefs: Boolean) {
+        super.drop(killer, verifyCombatDefs)
+        if (level < HAMMER_MAX_LEVEL && Math.random() < HAMMER_CHANCE) sendDrop(killer, Item(Obj.hammer, 1))
     }
 
     override fun sendDrop(player: Player, item: Item) {
