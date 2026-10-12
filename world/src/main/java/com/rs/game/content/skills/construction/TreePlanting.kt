@@ -24,6 +24,8 @@ enum class TreeRoot(val root: Int, val stump: Int, val tree: Int, val treeName: 
     ;
 
     companion object {
+        const val ROOTS_PER_TREE = 2
+
         fun forTreeName(name: String): TreeRoot = entries.firstOrNull { it.treeName == name } ?: REGULAR
     }
 }

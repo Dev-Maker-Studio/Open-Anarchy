@@ -69,7 +69,7 @@ private class TreePunch(private val tree: GameObject) : Action() {
         if (++punches < PUNCHES_TO_FELL) return PUNCH_DELAY_TICKS
         val player = entity as Player
         player.inventory.addItem(Obj.logs)
-        player.inventory.addItem(TreeRoot.forTreeName(tree.definitions.name).root)
+        player.inventory.addItem(TreeRoot.forTreeName(tree.definitions.name).root, TreeRoot.ROOTS_PER_TREE)
         player.skills.addXp(Constants.WOODCUTTING, TreeType.NORMAL.xp)
         destroyTree(tree)
         player.sendMessage("You punch the tree down completely and find tree roots.")
