@@ -196,6 +196,8 @@ class WorldGenerator(
 
     private val dryRows: String by lazy { rows { _ -> row { _ -> VOID_TILE } } }
 
+    private val road = RoadNetwork(originX, originY, WorldWindow.WINDOW_TILES, ORIGIN_X, ORIGIN_Y, ::roadProbe) { a, b -> noise(a, b, ROAD_SALT) }
+
     private val sites = ConcurrentHashMap<Long, Site>()
 
     private val grids = ConcurrentHashMap<Long, Grid>()
@@ -309,19 +311,30 @@ class WorldGenerator(
     fun roadTouches(minX: Int, minY: Int, maxX: Int, maxY: Int): Boolean =
         roadTouchesGlobal(minX + originX, minY + originY, maxX + originX, maxY + originY)
 
+    fun roadArms(): List<RoadNetwork.Arm> = road.arms
+
+    fun roadHazard(x: Int, y: Int): Boolean = roadProbe(x + originX, y + originY) and RoadNetwork.HAZARD != 0
+
     private fun roadAt(x: Int, y: Int): Boolean = roadTouchesGlobal(x, y, x, y)
 
-    private fun roadTouchesGlobal(minX: Int, minY: Int, maxX: Int, maxY: Int): Boolean {
-        val insideSector = maxX >= originX && minX < originX + WorldWindow.WINDOW_TILES && maxY >= originY && minY < originY + WorldWindow.WINDOW_TILES
-        val crossesColumn = maxX >= ORIGIN_X && minX < ORIGIN_X + ROAD_WIDTH
-        val crossesRow = maxY >= ORIGIN_Y && minY < ORIGIN_Y + ROAD_WIDTH
-        return insideSector && (crossesColumn || crossesRow)
+    private fun roadTouchesGlobal(minX: Int, minY: Int, maxX: Int, maxY: Int): Boolean = road.touches(minX, minY, maxX, maxY)
+
+    private fun roadProbe(x: Int, y: Int): Int {
+        val site = nearestSite(x, y)
+        val biome = site.biome
+        val lake = lake(x, y)
+        val pond = pond(x, y)
+        val basin = if (biome in DRY_BIOMES) 0.0 else maxOf(
+            (lake - BANK_START) / (lakeLevel(biome) - BANK_START),
+            if (biome == Biome.DESERT) (pond - POND_BANK_START) / (POND_LEVEL - POND_BANK_START) else 0.0
+        )
+        val wet = biome == Biome.OCEAN || liquid(biome, lake, pond, false, craterField(x, y, site)) != null || basin >= ROAD_SHORE_BASIN ||
+            biome == Biome.VOLCANO && craterField(x, y, site) + CRATER_BANK > 0 || fieldOf(distances(x, y), Biome.OCEAN) > -SHORE_BLEND
+        return biome.ordinal or (if (wet) RoadNetwork.HAZARD else 0) or (if (ranged(biome) || biome == Biome.RUNE_ESSENCE) RoadNetwork.ROUGH else 0)
     }
 
     private fun inSector(minX: Int, minY: Int, maxX: Int, maxY: Int): Boolean =
         minX >= originX && minY >= originY && maxX < originX + WorldWindow.WINDOW_TILES && maxY < originY + WorldWindow.WINDOW_TILES
-
-    private fun roadVerge(x: Int, y: Int): Boolean = roadTouchesGlobal(x - 1, y - 1, x, y)
 
     fun biomeAt(x: Int, y: Int): Biome = biomeAtGlobal(x + originX, y + originY)
 
@@ -362,7 +375,7 @@ class WorldGenerator(
         }
         val points = Array(SIZE + 1) { dx ->
             Array(SIZE + 1) { dy ->
-                if (roadVerge(baseX + dx, baseY + dy)) null else liquid(biomes[dx][dy], lake[dx][dy], pond[dx][dy], island[dx][dy] > 0, crater[dx][dy])
+                liquid(biomes[dx][dy], lake[dx][dy], pond[dx][dy], island[dx][dy] > 0, crater[dx][dy])
             }
         }
         val liquids = Array(SIZE) { dx -> Array(SIZE) { dy -> tileLiquid(points, dx, dy) } }
@@ -386,7 +399,6 @@ class WorldGenerator(
 
     private fun height(x: Int, y: Int, site: Site, lake: Double, pond: Double, island: Double, crater: Double, mass: Double, pathGap: Double): Int {
         val biome = site.biome
-        val verge = roadVerge(x, y)
         val distances = distances(x, y)
         var terrain = land(x, y)
         if (mass > 0) {
@@ -403,14 +415,12 @@ class WorldGenerator(
         if (biome == Biome.RUNE_ESSENCE) {
             terrain = mineHeight(terrain, site, x, y)
         }
-        val basin = if (verge || biome in DRY_BIOMES) 0.0 else maxOf(
+        val basin = if (biome in DRY_BIOMES) 0.0 else maxOf(
             ((lake - BANK_START) / (lakeLevel(biome) - BANK_START)).coerceIn(0.0, 1.0),
             if (biome == Biome.DESERT) ((pond - POND_BANK_START) / (POND_LEVEL - POND_BANK_START)).coerceIn(0.0, 1.0) else 0.0
         )
         terrain = lerp(terrain, WATER_HEIGHT.toDouble(), basin)
-        if (!verge) {
-            terrain = lerp(terrain, WATER_HEIGHT.toDouble(), ramp(fieldOf(distances, Biome.OCEAN) + SHORE_BLEND, SHORE_BLEND))
-        }
+        terrain = lerp(terrain, WATER_HEIGHT.toDouble(), ramp(fieldOf(distances, Biome.OCEAN) + SHORE_BLEND, SHORE_BLEND))
         if (island > 0) {
             val peak = ISLAND_PEAK + (noise(x / ISLAND_BUMP_WAVELENGTH, y / ISLAND_BUMP_WAVELENGTH, HEIGHT_SALT) - 0.5) * 2 * ISLAND_BUMP
             terrain = lerp(WATER_HEIGHT.toDouble(), peak, smooth((island / ISLAND_SLOPE).coerceIn(0.0, 1.0)))
@@ -498,11 +508,7 @@ class WorldGenerator(
         return if (bytes < MIN_DEPTH) 0 else minOf(bytes, MAX_DEPTH)
     }
 
-    private fun roadGap(x: Int, y: Int): Double {
-        val column = if (x < ORIGIN_X) ORIGIN_X - x else x - (ORIGIN_X + ROAD_WIDTH - 1)
-        val row = if (y < ORIGIN_Y) ORIGIN_Y - y else y - (ORIGIN_Y + ROAD_WIDTH - 1)
-        return minOf(column, row).toDouble()
-    }
+    private fun roadGap(x: Int, y: Int): Double = road.gap(x, y)
 
     private fun islandGap(x: Int, y: Int, site: Site): Double {
         var gap = Double.MAX_VALUE
@@ -1086,7 +1092,6 @@ class WorldGenerator(
     }
 
     private fun pointCode(x: Int, y: Int): Int {
-        if (roadVerge(x, y)) return LAND_CODE
         return when (liquidAtGlobal(x, y)) {
             Liquid.WATER -> WATER_CODE
             Liquid.LAVA -> LAVA_CODE
@@ -1431,7 +1436,7 @@ class WorldGenerator(
         if (cellX == ORIGIN_CELL_X && cellY == ORIGIN_CELL_Y) return Biome.PLAINS
         if ((hash shr WINTER_PICK_SHIFT) % WINTER_SITE_ODDS == 0L) return Biome.WINTER
         val extra = hash(cellX, cellY, EXTRA_BIOME_SALT)
-        val onRoadCell = cellX == ORIGIN_CELL_X || cellY == ORIGIN_CELL_Y
+        val onRoadCell = abs(cellX - ORIGIN_CELL_X) <= ROAD_CELL_REACH || abs(cellY - ORIGIN_CELL_Y) <= ROAD_CELL_REACH
         return when {
             !onRoadCell && extra % OCEAN_SITE_ODDS == 0L -> Biome.OCEAN
             (extra shr MOUNTAIN_PICK_SHIFT) % MOUNTAIN_SITE_ODDS == 0L -> Biome.MOUNTAIN
@@ -1446,10 +1451,16 @@ class WorldGenerator(
     private fun fraction(hash: Long, index: Int): Double = (hash shr index * FRACTION_BITS and FRACTION_MASK) / (FRACTION_MASK + 1).toDouble()
 
     private fun lake(x: Int, y: Int): Double =
-        noise(x.toDouble() / LAKE_WAVELENGTH, y.toDouble() / LAKE_WAVELENGTH, LAKE_SALT) * LAKE_MAIN +
-            noise(x.toDouble() / LAKE_DETAIL, y.toDouble() / LAKE_DETAIL, LAKE_SALT + 1) * (1 - LAKE_MAIN)
+        (noise(x.toDouble() / LAKE_WAVELENGTH, y.toDouble() / LAKE_WAVELENGTH, LAKE_SALT) * LAKE_MAIN +
+            noise(x.toDouble() / LAKE_DETAIL, y.toDouble() / LAKE_DETAIL, LAKE_SALT + 1) * (1 - LAKE_MAIN)) * originDry(x, y)
 
-    private fun pond(x: Int, y: Int): Double = noise(x.toDouble() / POND_WAVELENGTH, y.toDouble() / POND_WAVELENGTH, POND_SALT)
+    private fun pond(x: Int, y: Int): Double = noise(x.toDouble() / POND_WAVELENGTH, y.toDouble() / POND_WAVELENGTH, POND_SALT) * originDry(x, y)
+
+    private fun originDry(x: Int, y: Int): Double {
+        val dx = (x - ORIGIN_X).toDouble()
+        val dy = (y - ORIGIN_Y).toDouble()
+        return if (dx * dx + dy * dy >= ORIGIN_DRY * ORIGIN_DRY) 1.0 else smooth(hypot(dx, dy) / ORIGIN_DRY)
+    }
 
     private fun land(x: Int, y: Int): Double {
         var total = BASE_HEIGHT.toDouble()
@@ -1538,7 +1549,7 @@ class WorldGenerator(
         private const val RUNE_PICK_SHIFT = 10
         private val BIOMES = Biome.entries.size
         const val ROAD_OVERLAY = Overlay.overlay_102
-        const val ROAD_WIDTH = 2
+        const val ROAD_WIDTH = RoadNetwork.WIDTH
         const val WATER_OVERLAY = Overlay.overlay_112
         const val WATER_UNDERLAY = Underlay.underlay_37
         const val LAVA_OVERLAY = Overlay.overlay_19
@@ -1794,6 +1805,10 @@ class WorldGenerator(
         private const val ASH_SALT = 0x415348L
         private const val OBSIDIAN_SHARE = 0.3
         private const val ROAD_FLAT = 12.0
+        private const val ORIGIN_DRY = 100.0
+        private const val ROAD_CELL_REACH = 1
+        private const val ROAD_SALT = 0x524F4144L
+        private const val ROAD_SHORE_BASIN = 0.4
         private const val ISLAND_BUMP = 4.0
         private const val ISLAND_BUMP_WAVELENGTH = 14.0
         private const val BED_WAVELENGTH = 30.0
