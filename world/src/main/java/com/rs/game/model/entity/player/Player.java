@@ -65,7 +65,6 @@ import com.rs.game.content.skills.slayer.TaskMonster;
 import com.rs.game.content.skills.summoning.Familiar;
 import com.rs.game.content.skills.summoning.Pouch;
 import com.rs.game.content.transportation.FadingScreen;
-import com.rs.game.content.tutorialisland.GamemodeSelection;
 import com.rs.game.content.tutorialisland.TutorialIslandController;
 import com.rs.game.content.world.MusicianKt;
 import com.rs.game.ge.GE;
@@ -1275,7 +1274,11 @@ public class Player extends Entity {
 			else
 				setStarter(1);
 			PlayerLook.openCharacterCustomizing(this);
-			startConversation(new GamemodeSelection(this));
+			setChosenAccountType(true);
+		}
+		if (ironMan) {
+			ironMan = false;
+			clearTitle();
 		}
 		PluginManager.handle(new LoginEvent(this));
 		PluginManager.handle(new EnterChunkEvent(this, getChunkId()));
