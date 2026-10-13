@@ -20,7 +20,7 @@ fun mapFullToolbelt() {
 
 fun Player.fillToolbelt() {
     Toolbelt.Tools.entries.forEach { tool ->
-        if (tool in withheld) toolbelt.remove(tool) else toolbelt[tool] = WORST_TIER
+        if (tool !in withheld && (toolbelt[tool] ?: 0) < WORST_TIER) toolbelt[tool] = WORST_TIER
     }
     refreshToolbelt()
 }
