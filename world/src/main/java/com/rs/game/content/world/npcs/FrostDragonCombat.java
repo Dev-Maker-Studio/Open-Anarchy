@@ -13,6 +13,7 @@ import org.darkan.core.model.SpotAnim;
 import org.darkan.core.Utils;
 import com.rs.utils.WorldUtil;
 import kotlin.Pair;
+import com.rs.rsps.Power.SpecialItems;
 
 public class FrostDragonCombat extends CombatScript {
 
@@ -33,7 +34,7 @@ public class FrostDragonCombat extends CombatScript {
 				damage = Utils.getRandomInclusive(500);
 				int protection = PlayerCombatKt.getAntifireLevel(target, true);
 				if (protection == 1)
-					damage = Utils.getRandomInclusive(40);
+					damage = SpecialItems.reduceDragonFire(target, Utils.getRandomInclusive(40));
 				else if (protection == 2)
 					damage = 0;
 				npc.setNextAnimation(new Animation(13152));
@@ -43,7 +44,7 @@ public class FrostDragonCombat extends CombatScript {
 				damage = Utils.getRandomInclusive(500);
 				int protection = PlayerCombatKt.getAntifireLevel(target, true);
 				if (protection == 1)
-					damage = Utils.getRandomInclusive(50);
+					damage = SpecialItems.reduceDragonFire(target, Utils.getRandomInclusive(50));
 				else if (protection == 2)
 					damage = 0;
 				npc.setNextAnimation(new Animation(13155));

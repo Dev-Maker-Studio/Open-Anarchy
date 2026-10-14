@@ -22,6 +22,7 @@ import com.rs.plugin.kts.instantiateNpc
 import com.rs.plugin.kts.npcCombat
 import com.rs.plugin.kts.onButtonClick
 import com.rs.utils.WorldUtil
+import com.rs.rsps.Power.Power
 
 @ServerStartupEvent
 fun mapCorporealBeastPlugins() {
@@ -122,7 +123,7 @@ class CorporealBeast(id: Int, tile: Tile?, spawned: Boolean) : NPC(id, tile, spa
     }
 
     init {
-        capDamage = 1000
+        capDamage = Power.INF_CAP_DAMAGE
         lureDelay = 3000
         setForceAggroDistance(64)
         isIntelligentRouteFinder = true

@@ -14,6 +14,7 @@ import com.rs.utils.spawns.NPCSpawns
 import com.rs.utils.spawns.ObjectSpawn
 import com.rs.utils.spawns.ObjectSpawns
 import java.util.*
+import com.rs.rsps.Power.Power
 
 private const val ACTIVE = false
 private val TRADEABLE_REWARDS = setOf(1050, 1053, 1055, 1057, 1959)
@@ -67,7 +68,7 @@ fun initObjects() {
     n.setPermName("Yule-cien")
     n.hitpoints = Int.MAX_VALUE / 2
     n.combatDefinitions.hitpoints = Int.MAX_VALUE / 2
-    n.capDamage = 750
+    n.capDamage = Power.INF_CAP_DAMAGE
     n.setForceMultiArea(true)
     n.isForceMultiAttacked = true
 }

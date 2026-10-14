@@ -13,6 +13,7 @@ import org.darkan.core.model.Animation;
 import org.darkan.core.model.SpotAnim;
 import org.darkan.core.Utils;
 import kotlin.Pair;
+import com.rs.rsps.Power.SpecialItems;
 
 public class MithrilDragonCombat extends CombatScript {
 
@@ -35,7 +36,7 @@ public class MithrilDragonCombat extends CombatScript {
 				damage = Utils.getRandomInclusive(500);
 				int protection = PlayerCombatKt.getAntifireLevel(target, true);
 				if (protection == 1)
-					damage = Utils.getRandomInclusive(50);
+					SpecialItems.reduceDragonFire(target, Utils.getRandomInclusive(50));
 				else if (protection == 2)
 					damage = 0;
 				npc.setNextAnimation(new Animation(14252));
@@ -48,7 +49,7 @@ public class MithrilDragonCombat extends CombatScript {
 				damage = Utils.getRandomInclusive(650);
 				int protection = PlayerCombatKt.getAntifireLevel(target, true);
 				if (protection == 1)
-					damage = Utils.getRandomInclusive(300);
+					damage = SpecialItems.reduceDragonFire(target, Utils.getRandomInclusive(300));
 				else if (protection == 2)
 					damage = 0;
 				npc.setNextAnimation(new Animation(14252));
@@ -58,7 +59,7 @@ public class MithrilDragonCombat extends CombatScript {
 				damage = Utils.getRandomInclusive(650);
 				int protection = PlayerCombatKt.getAntifireLevel(target, true);
 				if (protection == 1)
-					damage = Utils.getRandomInclusive(40);
+					damage = SpecialItems.reduceDragonFire(target, Utils.getRandomInclusive(40));
 				else if (protection == 2)
 					damage = 0;
 				npc.setNextAnimation(new Animation(14252));

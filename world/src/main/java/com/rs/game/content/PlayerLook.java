@@ -7,6 +7,8 @@ import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.model.entity.player.Player;
 import org.darkan.core.model.Animation;
+import com.rs.rsps.tileman.StartTilemanCutscene;
+import com.rs.game.content.world.generated.StartLodestone;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import org.darkan.core.gameval.gen.Varbit;
@@ -29,6 +31,7 @@ public final class PlayerLook {
 			e.getPlayer().getTempAttribs().removeI("ViewWearDesign");
 			e.getPlayer().getTempAttribs().removeI("ViewWearDesignD");
 			e.getPlayer().getAppearance().generateAppearanceData();
+			e.getPlayer().getCutsceneManager().play(new StartTilemanCutscene(StartLodestone.INSTANCE.getTile()));
 		} else if (e.getComponentId() >= 68 && e.getComponentId() <= 74) {
 			e.getPlayer().getTempAttribs().setI("ViewWearDesign", (e.getComponentId() - 68));
 			e.getPlayer().getTempAttribs().setI("ViewWearDesignD", 0);

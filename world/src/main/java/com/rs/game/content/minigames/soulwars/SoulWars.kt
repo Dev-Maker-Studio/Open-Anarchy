@@ -42,6 +42,7 @@ import world.gregs.voidps.type.Tile
 import kotlin.math.ceil
 import kotlin.math.min
 import kotlin.math.sign
+import com.rs.rsps.Power.Power
 
 private const val ZEAL_COUNTER = "Soul Wars Zeal earned"
 private const val PLAYED_COUNTER = "Soul Wars games played"
@@ -65,7 +66,6 @@ private const val RED_CONTROL = 25
 private const val BLUE_CONTROL = 5
 private const val MAX_AVATAR_LEVEL = 100
 private const val MIN_AVATAR_LEVEL = 80
-private const val AVATAR_DAMAGE_CAP = 700
 private const val MAX_ACTIVITY = 1000
 private const val DEATH_JINGLE = 90
 
@@ -286,7 +286,7 @@ internal class SoulAvatar(val team: Team, private val game: SoulWars) : NPC(team
     var level = MAX_AVATAR_LEVEL
 
     init {
-        capDamage = AVATAR_DAMAGE_CAP
+        capDamage = Power.INF_CAP_DAMAGE
     }
 
     override fun sendDeath(source: Entity?) {
