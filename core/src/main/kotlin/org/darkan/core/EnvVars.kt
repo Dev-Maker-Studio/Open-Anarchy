@@ -124,6 +124,7 @@ object EnvVars {
     val worldCountry: String = dotenv.get("WORLD_COUNTRY", "USA")
     val worldHighlighted: Boolean = dotenv.get("WORLD_HIGHLIGHTED", "false").toBooleanStrict()
     val worldXpRate: Int = dotenv.get("WORLD_XP_RATE", "1").toInt()
+    val itemScalingCost: Long = dotenv.get("ITEM_SCALING_COST", "5").toLong()
     val worldDropModifier: Double = dotenv.get("WORLD_DROP_MODIFIER", "1.0").toDouble()
     val worldToken: String = dotenv.get("WORLD_TOKEN", js5ServerToken)
 }
