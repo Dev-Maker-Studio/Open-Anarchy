@@ -24,6 +24,9 @@ import org.darkan.core.gameval.gen.Spotanim
 import org.darkan.core.model.Animation
 import org.darkan.core.model.SpotAnim
 import world.gregs.voidps.type.Tile
+import com.rs.rsps.Power.Power
+import com.rs.game.model.entity.player.Player
+import com.rs.rsps.Power.SpecialItems
 
 enum class NexPhase { SMOKE, SHADOW, BLOOD, ICE, ZAROS }
 
@@ -118,7 +121,7 @@ class Nex(id: Int, tile: Tile, spawned: Boolean) : MinionHost(id, tile, spawned,
         phase = NexPhase.SMOKE
         minionStage = 0
         attackCount = 1
-        capDamage = 500
+        capDamage = Power.INF_CAP_DAMAGE
         setCantInteract(true)
         summon()
     }
@@ -169,6 +172,11 @@ class Nex(id: Int, tile: Tile, spawned: Boolean) : MinionHost(id, tile, spawned,
             if (tick == 0) anim(defs.deathEmote)
             else if (tick >= defs.deathDelay) {
                 drop()
+                (source as? Player)?.let { killer ->
+                    SpecialItems.dropCodex(killer, this, "Health")
+                    SpecialItems.dropCodex(killer, this, "Alchemy")
+                    SpecialItems.dropCodex(killer, this, "Agility")
+                }
                 restoreForm()
                 reset()
                 val war = arena
@@ -200,7 +208,7 @@ class Nex(id: Int, tile: Tile, spawned: Boolean) : MinionHost(id, tile, spawned,
     fun nextPhase() {
         val step = PHASE_STEPS.firstOrNull { it.from == phase } ?: return
         if (minionStage != PHASE_STEPS.indexOf(step) + 1) return
-        capDamage = 500
+        capDamage = Power.INF_CAP_DAMAGE
         forceTalk(step.shout)
         step.drawsFrom?.let { id -> nexMinion(id)?.let { World.sendProjectile(it, this, Spotanim.mah4_reward_spot_leech_proj_4, 18 to 18, 60, 5, 0) } }
         if (step.drawsFrom == null) {

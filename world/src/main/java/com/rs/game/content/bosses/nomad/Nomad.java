@@ -18,6 +18,7 @@ import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCInstanceHandler;
 import java.util.ArrayList;
 import org.darkan.core.gameval.gen.Varbit;
+import com.rs.rsps.Power.Power;
 
 @PluginEventHandler
 public class Nomad extends NPC {
@@ -34,7 +35,7 @@ public class Nomad extends NPC {
 		super(id, tile, spawned);
 		setForceMultiArea(true);
 		setRun(true);
-		setCapDamage(750);
+		setCapDamage(Power.INF_CAP_DAMAGE);
 		setForceAggroDistance(5);
 		setNextMovePerform();
 		setRandomWalk(true);

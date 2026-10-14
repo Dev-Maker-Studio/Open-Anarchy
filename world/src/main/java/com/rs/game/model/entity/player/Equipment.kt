@@ -36,6 +36,8 @@ import org.darkan.core.model.Bonus
 import org.darkan.core.model.IFEvents
 import org.darkan.core.model.Item
 import org.darkan.core.model.UseFlag
+import com.rs.rsps.Power.Power
+import com.rs.rsps.Power.SpecialItems
 
 class Equipment {
     private val items = ItemsContainer<Item>(SIZE, false)
@@ -129,7 +131,7 @@ class Equipment {
     }
 
     fun refreshConfigs(init: Boolean) {
-        var hpIncrease = items.array().sumOf { item -> item?.let { HP_BOOSTS[it.id] } ?: 0 }.toDouble()
+        var hpIncrease = items.array().sumOf { item -> item?.let { Power.ampedHPByPower(player, it) } ?: 0 }.toDouble() + SpecialItems.hpCodex(player)
         val maxHp = player.skills.getLevel(Constants.HITPOINTS) * 10
         if (player.hasEffect(Effect.BONFIRE))
             hpIncrease += (maxHp + hpIncrease.toInt()) * getBonfireBoostMultiplier(player)
@@ -141,7 +143,7 @@ class Equipment {
             equipmentHpIncrease = hpIncrease.toInt()
             if (!init) player.refreshHitPoints()
         }
-        equipmentWeight = items.array().sumOf { if (it == null) 0.0 else ItemConfig.get(it.id).getWeight(true) }
+        equipmentWeight = items.array().sumOf { if (it == null) 0.0 else Power.ampedWeight(player, it.id, ItemConfig.get(it.id).getWeight(true)) } - Power.weightReduction(player)
         player.packets.refreshWeight(player.weight)
     }
 
@@ -437,7 +439,10 @@ class Equipment {
 
         @JvmStatic
         fun getBonus(player: Player, item: Item, bonus: Bonus): Int {
-            val value = getBonus(item, bonus)
+            val slot = player.equipment.items.getThisItemSlot(item)
+            var value = Power.itemBonus(player, slot, item.id, getBonus(item, bonus))
+            if (slot == AMMO && bonus == Bonus.RANGE_STR)
+                value = Power.rangedStr(player, player.equipment.weaponId, value)
             return when (item.id) {
                 in GOD_ARROWS -> if (bonus == Bonus.RANGE_STR) value + Utils.clampI((player.skills.getLevelForXp(Constants.RANGE) * 0.7).toInt(), 0, 49) else value
                 in DOMINION_GLOVES -> when {
@@ -458,29 +463,6 @@ class Equipment {
         }
     }
 }
-
-private val HP_BOOSTS: Map<Int, Int> = listOf(
-    66 to intArrayOf(
-        Obj.godwars2_helm_melee_100, Obj.godwars2_helm_melee_50, Obj.godwars2_helm_range_100,
-        Obj.godwars2_helm_range_50, Obj.godwars2_helm_magic_100, Obj.godwars2_helm_magic_50,
-    ),
-    200 to intArrayOf(
-        Obj.godwars2_body_melee_100, Obj.godwars2_body_melee_50, Obj.godwars2_body_range_100,
-        Obj.godwars2_body_range_50, Obj.godwars2_body_magic_100, Obj.godwars2_body_magic_50,
-    ),
-    134 to intArrayOf(
-        Obj.godwars2_legs_melee_100, Obj.godwars2_legs_melee_50, Obj.godwars2_legs_range_100,
-        Obj.godwars2_legs_range_50, Obj.godwars2_legs_magic_100, Obj.godwars2_legs_magic_50,
-    ),
-    25 to intArrayOf(
-        Obj.godwars2_gloves_range_100, Obj.godwars2_gloves_range_50, Obj.godwars2_gloves_melee_100,
-        Obj.godwars2_gloves_melee_50, Obj.godwars2_gloves_magic_100, Obj.godwars2_gloves_magic_50,
-        Obj.godwars2_boots_melee_100, Obj.godwars2_boots_melee_50, Obj.godwars2_boots_magic_100,
-        Obj.godwars2_boots_magic_50, Obj.godwars2_boots_range_100, Obj.godwars2_boots_range_50,
-        Obj.godwars2_gloves_range_100_new, Obj.godwars2_gloves_melee_100_new, Obj.godwars2_gloves_magic_100_new,
-        Obj.godwars2_boots_melee_100_new, Obj.godwars2_boots_magic_100_new, Obj.godwars2_boots_range_100_new,
-    ),
-).flatMap { (hp, ids) -> ids.map { it to hp } }.toMap()
 
 private val ARMOUR_SLOTS = intArrayOf(
     Equipment.HEAD, Equipment.CAPE, Equipment.NECK, Equipment.WEAPON, Equipment.CHEST,
