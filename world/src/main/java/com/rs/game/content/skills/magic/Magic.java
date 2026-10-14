@@ -21,7 +21,6 @@ import org.darkan.core.model.GroundItem;
 import org.darkan.core.model.WorldObject;
 import org.darkan.core.model.HintIcon;
 import org.darkan.core.model.Projectile;
-import com.rs.game.content.world.generated.WildernessLodestones;
 
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
@@ -158,9 +157,6 @@ public class Magic {
 			case 47:
 				sendAncientTeleportSpell(player, 96, 106, Tile.of(2977, 3873, 0), new RuneSet(Rune.LAW, 2, Rune.WATER, 8));
 				break;
-			case 48:
-				useHomeTele(player);
-				break;
 		}
 	}
 
@@ -179,9 +175,6 @@ public class Magic {
 				}
 				player.stopAll();
 				player.getInterfaceManager().sendInterface(432);
-				break;
-			case 24:
-				useHomeTele(player);
 				break;
 			case 37:
 				sendNormalTeleportSpell(player, 10, 19, Tile.of(2413, 2848, 0), new RuneSet(Rune.LAW, 1, Rune.WATER, 1, Rune.AIR, 1));
@@ -255,11 +248,6 @@ public class Magic {
 			if (combatSpell != null)
 				setCombatSpell(player, combatSpell);
 		}
-	}
-
-	private static void useHomeTele(Player player) {
-		player.stopAll();
-		WildernessLodestones.INSTANCE.open(player);
 	}
 
 	public static boolean checkSpellLevel(Player player, int level) {
