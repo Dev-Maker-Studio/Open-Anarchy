@@ -30,13 +30,17 @@ object WildernessLodestones {
     private val originX get() = WorldWindow.origin(GeneratedWorld.windowX) - WorldGenerator.ORIGIN_X
     private val originY get() = WorldWindow.origin(GeneratedWorld.windowY) - WorldGenerator.ORIGIN_Y
 
-    fun unlocked(player: Player): List<Pair<Int, Int>> =
-        player.getO<String>(SAVE_KEY).orEmpty().split(ENTRY_SEPARATOR).mapNotNull { entry ->
+    private val spawnEntry get() = (StartLodestone.tile.x + originX) to (StartLodestone.tile.y + originY)
+
+    fun unlocked(player: Player): List<Pair<Int, Int>> {
+        val saved = player.getO<String>(SAVE_KEY).orEmpty().split(ENTRY_SEPARATOR).mapNotNull { entry ->
             val parts = entry.split(COORD_SEPARATOR)
             val x = parts.getOrNull(0)?.toIntOrNull() ?: return@mapNotNull null
             val y = parts.getOrNull(1)?.toIntOrNull() ?: return@mapNotNull null
             x to y
         }
+        return listOf(spawnEntry) + saved.filter { it != spawnEntry }
+    }
 
     private fun save(player: Player, entries: List<Pair<Int, Int>>) {
         player.set(SAVE_KEY, entries.joinToString(ENTRY_SEPARATOR) { "${it.first}$COORD_SEPARATOR${it.second}" })

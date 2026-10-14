@@ -21,6 +21,7 @@ import org.darkan.core.model.GroundItem;
 import org.darkan.core.model.WorldObject;
 import org.darkan.core.model.HintIcon;
 import org.darkan.core.model.Projectile;
+import com.rs.game.content.world.generated.WildernessLodestones;
 
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
@@ -258,7 +259,7 @@ public class Magic {
 
 	private static void useHomeTele(Player player) {
 		player.stopAll();
-		player.getInterfaceManager().sendInterface(1092);
+		WildernessLodestones.INSTANCE.open(player);
 	}
 
 	public static boolean checkSpellLevel(Player player, int level) {
