@@ -27,6 +27,7 @@ import com.rs.utils.Ticks
 import com.rs.utils.closestOrNull
 import java.util.*
 import java.util.stream.Stream
+import com.rs.rsps.Power.SpecialItems
 
 private val specialAttacks: MutableMap<Int, SpecialAttack> = HashMap()
 
@@ -694,5 +695,6 @@ fun execute(type: SpecialAttack.Type, player: Player, target: Entity?): Int {
         return 3
     }
     player.combatDefinitions.drainSpec(cost.toInt())
+    SpecialItems.castCodexSpecials(player, target)
     return spec.execute?.apply(player, target!!) ?: 0
 }

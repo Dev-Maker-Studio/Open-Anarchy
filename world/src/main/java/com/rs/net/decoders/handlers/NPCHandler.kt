@@ -25,6 +25,7 @@ import org.darkan.core.Logger
 import org.darkan.core.gameval.gen.Npc
 import org.darkan.core.gameval.gen.Seq
 import org.darkan.core.model.Rights
+import com.rs.rsps.Power.ItemScaling
 
 private const val EXAMINE_COLOUR = 0xFFFFFF
 private const val CURE_SPECIAL_COST = 2
@@ -36,6 +37,7 @@ object NPCHandler {
         if (player.hasRights(Rights.DEVELOPER)) {
             player.sendMessage("NPC - [id=${npc.id}, loc=[${npc.x}, ${npc.y}, ${npc.plane}]]. respawnDir=${npc.definitions.respawnDirection}")
             player.sendMessage("HP: ${npc.maxHitpoints}")
+            ItemScaling.printCombatLevelsOnExamine(player, npc)
             player.sendMessage("Spawn tile [${npc.respawnTile.x}, ${npc.respawnTile.y}, ${npc.respawnTile.plane}]]. ")
         }
         player.packets.sendNPCMessage(0, EXAMINE_COLOUR, npc, "${NPCExamines.getExamine(npc, player)} (${npc.id})")

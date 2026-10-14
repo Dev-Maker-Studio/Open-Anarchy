@@ -22,6 +22,7 @@ import org.darkan.core.model.Animation;
 import org.darkan.core.model.SpotAnim;
 import world.gregs.voidps.type.Tile;
 import org.darkan.core.Utils;
+import com.rs.rsps.Power.Power;
 
 import java.util.List;
 
@@ -45,7 +46,7 @@ public class KalGerWarmonger extends DungeonBoss {
 
 	public KalGerWarmonger(Tile tile, final DungeonManager manager, final RoomReference reference) {
 		super(DungeonUtils.getClosestToCombatLevel(Utils.range(12752, 12766), manager.getBossLevel()), tile, manager, reference);
-		setCapDamage(5000);
+		setCapDamage(Power.INF_CAP_DAMAGE);
 		setCantInteract(true);
 		typeTicks = -1;
 		WorldTasks.scheduleTimer(3, (ticks) -> {

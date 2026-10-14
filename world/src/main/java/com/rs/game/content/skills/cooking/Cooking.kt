@@ -14,6 +14,7 @@ import org.darkan.core.model.Item
 import org.darkan.core.model.Sound
 import org.darkan.core.model.SoundType
 import org.darkan.core.gameval.gen.Sound as SoundId
+import com.rs.rsps.Power.Power
 
 private const val COOK_TICKS = 3
 private const val BURN_LEVEL_REDUCTION = 6
@@ -156,6 +157,7 @@ class Cooking(private val option: Int, private val gameObject: GameObject, priva
             val bonfire = gameObject.attribs.getI("bonfire_participants") > 0
             player.skills.addXp(Constants.COOKING, if (product == Obj.xbows_sinew) SINEW_XP else if (bonfire) cookable.xp * (1 + BONFIRE_XP_BONUS) else cookable.xp)
             player.sendMessage("You successfully cook ${if (cookable == Cookables.RAW_SHRIMP || cookable == Cookables.RAW_ANCHOVIES) "some" else "a"} $name.", true)
+            Power.incrementPowerCooking(player, product)
         }
         player.packets.sendSound(Sound(SoundId.sound_2577, 0, SoundType.EFFECT))
         return if (quantity > 0) COOK_TICKS else -1

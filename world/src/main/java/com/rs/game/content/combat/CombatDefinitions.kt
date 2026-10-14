@@ -12,6 +12,8 @@ import org.darkan.core.Utils
 import org.darkan.core.Logger
 import org.darkan.core.gameval.gen.Varbit
 import org.darkan.core.gameval.gen.Varp
+import com.rs.rsps.Power.Power
+import com.rs.rsps.Power.SpecialItems
 
 class CombatDefinitions {
     enum class Spellbook(@JvmField val interfaceId: Int) {
@@ -275,6 +277,10 @@ class CombatDefinitions {
                 bonuses[bonus.ordinal] = Utils.satAdd(bonuses[bonus.ordinal], Equipment.getBonus(player, item, bonus))
             }
         }
+        for (bonus in Bonus.entries)
+            bonuses[bonus.ordinal] += SpecialItems.codexBonuses(player, bonus)
+        for (bonus in Bonus.entries)
+            bonuses[bonus.ordinal] = SpecialItems.limitAbsorbBonuses(bonus, bonuses[bonus.ordinal])
     }
 
     fun resetSpecialAttack() {
@@ -370,6 +376,7 @@ class CombatDefinitions {
         var finalAmount = amount
         isUsingSpecialAttack = false
         refreshUsingSpecialAttack()
+        finalAmount = Power.specialAttackCost(player, player.equipment.weaponId, finalAmount)
         if (player.nsv.getB("infSpecialAttack")) finalAmount = 0
         if (finalAmount > 0) {
             specialAttackPercentage = (specialAttackPercentage - finalAmount).toByte()

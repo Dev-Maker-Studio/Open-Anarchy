@@ -2,6 +2,7 @@ package com.rs.game.model.entity.player;
 
 import com.rs.game.content.world.generated.GeneratedWorldRulesKt;
 import com.rs.game.content.world.generated.WindowRulesKt;
+import com.rs.rsps.Power.Power;
 
 import com.rs.Settings;
 import org.darkan.core.model.Bonus;
@@ -666,7 +667,7 @@ public class Player extends Entity {
 	}
 
 	public void setWildernessSkull() {
-		addEffect(Effect.SKULL, Ticks.fromMinutes(30));
+		addEffect(Effect.SKULL, Ticks.fromMinutes(Power.SKULL_MINUTES));
 		skullId = 0;
 		appearence.generateAppearanceData();
 	}
@@ -1146,8 +1147,9 @@ public class Player extends Entity {
 	}
 
 	public void restoreRunEnergy(double energy) {
-		if (runEnergy + energy > getMaxRunEnergy())
-			runEnergy = getMaxRunEnergy();
+		double energyBoost = Math.min(Power.weightReduction(this), 149.99);
+		if (runEnergy + energy > getMaxRunEnergy() + energyBoost)
+			runEnergy = getMaxRunEnergy() + energyBoost;
 		else
 			runEnergy += energy;
 		getPackets().sendRunEnergy(runEnergy);
@@ -1674,7 +1676,7 @@ public class Player extends Entity {
 		if (getPrayer().active(Prayer.RAPID_RENEWAL))
 			toRegen += 4;
 		if (getEquipment().getGlovesId() == 11133)
-			toRegen *= 2;
+			toRegen = Utils.satInt((long) toRegen * Power.regenBraceletRegenBonus(this));
 		if (getAuraManager().isActivated(AuraManager.Aura.REGENERATION))
 			toRegen *= 2;
 		if ((getHitpoints() + toRegen) > getMaxHitpoints())
@@ -1943,7 +1945,7 @@ public class Player extends Entity {
 
 	@Override
 	public void handlePreHit(Hit hit) {
-
+		Power.incrementDefence(this);
 
 		if (hit.getLook() != HitLook.MELEE_DAMAGE && hit.getLook() != HitLook.RANGE_DAMAGE && hit.getLook() != HitLook.MAGIC_DAMAGE)
 			return;

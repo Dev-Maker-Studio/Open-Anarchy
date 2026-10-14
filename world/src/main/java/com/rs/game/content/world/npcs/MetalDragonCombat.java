@@ -13,6 +13,7 @@ import org.darkan.core.model.Animation;
 import org.darkan.core.Utils;
 import com.rs.utils.WorldUtil;
 import kotlin.Pair;
+import com.rs.rsps.Power.SpecialItems;
 
 public class MetalDragonCombat extends CombatScript {
 
@@ -33,7 +34,7 @@ public class MetalDragonCombat extends CombatScript {
 			if (player != null) {
 				int protection = PlayerCombatKt.getAntifireLevel(target, false);
 				if (protection == 1)
-					damage = Utils.getRandomInclusive(50);
+					damage = SpecialItems.reduceDragonFire(target, Utils.getRandomInclusive(50));
 				else if (protection == 2)
 					damage = 0;
 			}
