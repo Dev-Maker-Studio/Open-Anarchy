@@ -11,15 +11,13 @@ import com.rs.game.model.entity.player.Player
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.events.ItemOnItemEvent
 import com.rs.plugin.kts.onItemOnItem
+import org.darkan.core.EnvVars
 import org.darkan.core.Utils
 import org.darkan.core.cache.ItemDefinitions
 import org.darkan.core.gameval.gen.Obj
 import org.darkan.core.model.Item
 import java.util.Random
 
-private const val COST_PER_UP_ONE = 2750L
-private const val MEGA_PER_UP_ONE = 200L
-private const val TOP_PER_UP_ONE = 500L
 private const val MEGA_UP_AMOUNT = 18L
 private const val TOP_UP_AMOUNT = 9L
 private const val UPPER_NORMIE = 5.0
@@ -335,12 +333,7 @@ private fun siphonOf(item: Item): Siphon? {
     val targetId = hammerTarget(item) ?: return null
     val scale = item.getMetaDataI(POWER_KEY, 1)
     val power = ItemScaling.scaleToItem(targetId, Utils.satMul(Power.CONSUME_INCREASE.toLong(), scale.toLong()))
-    val costPerPower = when (targetId) {
-        in SCALED_MEGA_ITEMS -> MEGA_PER_UP_ONE
-        in SCALED_TOP_ITEMS -> TOP_PER_UP_ONE
-        else -> COST_PER_UP_ONE
-    }
-    return Siphon(item, scale, targetId, power, Utils.satMul(power, costPerPower))
+    return Siphon(item, scale, targetId, power, EnvVars.itemScalingCost)
 }
 
 private fun Player.holds(item: Item) = inventory.items[item.slot] === item
