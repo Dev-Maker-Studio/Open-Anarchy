@@ -8,6 +8,7 @@ import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.Hit;
 import world.gregs.voidps.type.Tile;
 import org.darkan.core.Utils;
+import com.rs.rsps.Power.Power;
 
 public class WorldGorgerShukarhazh extends DungeonBoss {
 
@@ -45,7 +46,7 @@ public class WorldGorgerShukarhazh extends DungeonBoss {
 			if (inactive)
 				inactiveCounter++;
 		}
-		setCapDamage(inactiveCounter == 0 ? 500 : inactiveCounter == 1 ? 1500 : -1);
+		setCapDamage(inactiveCounter == 0 || inactiveCounter == 1 ? Power.INF_CAP_DAMAGE : -1);
 	}
 
 	@Override

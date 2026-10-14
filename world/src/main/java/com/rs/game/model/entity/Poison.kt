@@ -8,6 +8,7 @@ import org.darkan.core.Utils
 import org.darkan.core.gameval.gen.Obj
 import org.darkan.core.gameval.gen.Varp
 import kotlin.jvm.Transient
+import com.rs.rsps.Power.SpecialItems
 
 class Poison {
 
@@ -52,6 +53,7 @@ class Poison {
             if (entity.interfaceManager.containsScreenInter()) return
             if (entity.auraManager.isActivated(Aura.POISON_PURGE, Aura.GREATER_POISON_PURGE, Aura.MASTER_POISON_PURGE, Aura.SUPREME_POISON_PURGE))
                 heal = true
+            if (SpecialItems.healsPoison(entity)) heal = true
             if (!heal) entity.incrementCount("Poison damage taken", poisonDamage)
         }
         entity.applyHit(Hit(entity, poisonDamage, if (heal) HitLook.HEALED_DAMAGE else HitLook.POISON_DAMAGE))

@@ -13,6 +13,7 @@ import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
+import com.rs.rsps.Power.Power;
 
 @PluginEventHandler
 public final class DominionTower {
@@ -341,9 +342,9 @@ public final class DominionTower {
 			if (progress > maxFloorEndurance)
 				maxFloorEndurance = progress;
 
-		killedBossesCount++;
-		dominionFactor += factor;
-		totalScore += factor;
+		killedBossesCount += Power.DOM_TOWER_BOSS_KILL_MULTIPLIER;
+		dominionFactor += factor * Power.DOM_TOWER_BOSS_KILL_MULTIPLIER;
+		totalScore += factor * Power.DOM_TOWER_BOSS_KILL_MULTIPLIER;
 		if (dominionFactor > MAX_FACTOR) {
 			dominionFactor = MAX_FACTOR;
 			player.sendMessage("You've reached the maximum Dominion Factor you can get so you should spend it!");

@@ -65,6 +65,7 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import kotlin.Pair;
+import com.rs.rsps.Power.Power;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -751,7 +752,7 @@ public abstract class Entity {
 			}
 			if (player != null)
 				if (nextRunDirection != null) {
-					player.drainRunEnergyForRunning((Math.min(player.getWeight(), 64) / 100.0) + 0.64);
+					player.drainRunEnergyForRunning((Math.min(player.getWeight(), Power.RUN_DRAIN_WEIGHT_LIMIT) / 100.0) + 0.64);
 					if (player.getRunEnergy() == 0.0)
 						player.setRun(false);
 				}

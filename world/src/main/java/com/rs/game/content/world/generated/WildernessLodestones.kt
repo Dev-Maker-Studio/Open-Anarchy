@@ -73,7 +73,7 @@ object WildernessLodestones {
     fun teleport(player: Player, row: Int) {
         val entry = unlocked(player).getOrNull(row) ?: return
         val local = (entry.first - originX) to (entry.second - originY)
-        if (local !in GeneratedWorld.lodestoneSites) {
+        if (local !in GeneratedWorld.lodestoneSites && local != (StartLodestone.tile.x to StartLodestone.tile.y)) {
             player.sendMessage("That lodestone is in another sector.")
             return
         }

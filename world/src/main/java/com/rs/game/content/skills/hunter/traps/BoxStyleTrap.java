@@ -17,6 +17,8 @@ import org.darkan.core.Constants;
 import org.darkan.core.model.Animation;
 import org.darkan.core.model.Item;
 import world.gregs.voidps.type.Tile;
+import com.rs.rsps.Power.ItemScaling;
+import org.darkan.core.gameval.gen.Obj;
 
 import java.util.Arrays;
 
@@ -116,6 +118,8 @@ public class BoxStyleTrap extends OwnedObject {
 			if (i == null || GlobalNPCDropPluginsKt.bonecrush(player, i) || GlobalNPCDropPluginsKt.herbicide(player, i))
 				continue;
 			player.getInventory().addItemDrop(i);
+			if (i.getId() == Obj.chinchompa_big_captured)
+				ItemScaling.chinGiveMore(player);
 		}
 		if (getTrapType() != BoxTrapType.MAGIC_BOX && getTrapType() != BoxTrapType.DEAD_FALL)
 			player.getInventory().addItemDrop(getTrapType().getId(), 1);

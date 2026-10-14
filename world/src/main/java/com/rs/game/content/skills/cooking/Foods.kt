@@ -17,6 +17,7 @@ import org.darkan.core.gameval.gen.Sound
 import org.darkan.core.model.Animation
 import org.darkan.core.model.Item
 import kotlin.math.roundToInt
+import com.rs.rsps.Power.Power
 
 private const val MEDIC_BASE = 1.2
 private const val MEDIC_PER_TIER = 0.03
@@ -45,9 +46,10 @@ object Foods {
         val hitpoints = player.hitpoints
         if (ItemConstants.isDungItem(item.id)) {
             val medic = givenFrom?.dungManager?.takeIf { it.activePerk == KinshipPerk.MEDIC }
-            val healed = if (medic == null) food.heal else (food.heal * (MEDIC_BASE + medic.getKinshipTier(KinshipPerk.MEDIC) * MEDIC_PER_TIER)).toInt()
+            val amplified = Power.foodAmplification(player, food.heal, item.id)
+            val healed = if (medic == null) amplified else (amplified * (MEDIC_BASE + medic.getKinshipTier(KinshipPerk.MEDIC) * MEDIC_PER_TIER)).toInt()
             player.applyHit(Hit(player, healed, HitLook.HEALED_DAMAGE))
-        } else player.heal(food.heal)
+        } else player.heal(Power.foodAmplification(player, food.heal, item.id))
         if (player.hitpoints > hitpoints) player.sendMessage("It heals some health.")
         player.inventory.refresh()
         food.effect?.invoke(player)
@@ -337,7 +339,7 @@ object Foods {
         ROAST_FROG(Obj.dorgesh_whole_roasted_frog, 50),
         ROAST_POTATOES(Obj.obj_15429, 100),
         ROAST_RABBIT(Obj.spit_roasted_rabbit_meat, 70),
-        ROCKTAIL(Obj.lrc_rocktail_cooked, 0, { it.heal(230, 100) }),
+        ROCKTAIL(Obj.lrc_rocktail_cooked, 0, { it.heal(230, Power.foodAmplification(it, 100, Obj.lrc_rocktail_cooked)) }),
         BANDAGE(Obj.castlewars_bandages, 0, { it.heal(230, 100) }),
         ROE(Obj.brut_roe, 30),
         ROLL(Obj.roll, 20),

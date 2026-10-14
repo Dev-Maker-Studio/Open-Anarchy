@@ -41,6 +41,7 @@ import org.darkan.core.model.IFEvents
 import org.darkan.core.model.Item
 import org.darkan.core.model.UseFlag
 import world.gregs.voidps.type.Tile
+import com.rs.rsps.Power.Power
 
 class Inventory {
     private var coins: Long = 0
@@ -291,6 +292,8 @@ class Inventory {
             player.sendMessage("<col=FF0000>It looks like it will last another " + Utils.ticksToTime(item.getMetaDataI("combatCharges").toDouble()))
         else if (item.getMetaData("brawlerCharges") != null)
             player.sendMessage("These gloves have " + item.getMetaDataI("brawlerCharges") + " charges left.")
+        val power = "%.2f".format(Power.getCombatAmplificationPercentage(player, item.id))
+        player.sendMessage("<col=00FF00>Your bonuses with your ${Power.getArmourFromNumber(item.definitions.getEquipSlot()).lowercase()} item is $power%...")
     }
 
     fun refreshConfigs() {

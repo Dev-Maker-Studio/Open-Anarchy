@@ -1,5 +1,7 @@
 package com.rs.game.content.bosses.qbd
 import com.rs.utils.isAt
+import com.rs.rsps.Power.Power
+import com.rs.rsps.Power.SpecialItems
 
 import com.rs.Settings
 import org.darkan.core.model.Bonus
@@ -152,7 +154,7 @@ class QBD(npcId: Int, tile: Tile) : NPC(npcId, tile, Direction.SOUTH, true) {
         isCantFollowUnderCombat = true
         isIgnoreDocile = true
         isCantInteract = true
-        capDamage = 1000
+        capDamage = Power.INF_CAP_DAMAGE
     }
 
     fun wake() {
@@ -163,7 +165,7 @@ class QBD(npcId: Int, tile: Tile) : NPC(npcId, tile, Direction.SOUTH, true) {
             wait(28)
             isCantInteract = false
             transformIntoNPC(15454)
-            capDamage = 1000
+            capDamage = Power.INF_CAP_DAMAGE
             hitpoints = maxHitpoints
         }
     }
@@ -221,7 +223,7 @@ class QBD(npcId: Int, tile: Tile) : NPC(npcId, tile, Direction.SOUTH, true) {
         transformIntoNPC(15454)
         World.spawnObject(GameObject(70822, ObjectShape.SCENERY_INTERACT, 0, middleTile.transform(-12, -3, -1)))
         World.spawnObject(GameObject(70818, ObjectShape.SCENERY_INTERACT, 0, middleTile.transform(6, -3, -1)))
-        capDamage = 1000
+        capDamage = Power.INF_CAP_DAMAGE
         isCantInteract = true
         val newArtefact = when(phase) {
             0 -> {
@@ -381,6 +383,12 @@ private fun genDrop(killer: Player): MutableList<Item> {
     val drops = mutableListOf<Item>()
     drops.addAll(DropTable.calculateDrops(killer, DropSets.getDropSet("QBDMain")))
     drops.addAll(DropTable.calculateDrops(killer, DropSets.getDropSet("QBDSupply")))
+    if (random(64) == 0)
+        drops.add(SpecialItems.getQBDCodex("Agility"))
+    if (random(64) == 0)
+        drops.add(SpecialItems.getQBDCodex("Dragon Fire"))
+    if (random(64) == 0)
+        drops.add(SpecialItems.getQBDCodex("Health"))
     if (random(128) == 0)
         repeat(2) { drops.addAll(DropTable.calculateDrops(killer, DropSets.getDropSet("rdt_standard"))) }
     return drops
@@ -547,9 +555,9 @@ enum class QBDAttack(val func: (QBD, Player) -> Int) {
         qbd.schedule {
             wait(1)
             player.applyHit(Hit.flat(qbd, when(getAntifireLevel(player, false)) {
-                2 -> random(190, 210)
-                1 -> random(250, 300)
-                else -> random(750, 950)
+                2 -> SpecialItems.reduceDragonFire(player, random(190, 210))
+                1 -> SpecialItems.reduceDragonFire(player, random(250, 300))
+                else -> SpecialItems.reduceDragonFire(player, random(750, 950))
             }))
         }
         6
@@ -600,14 +608,14 @@ enum class QBDAttack(val func: (QBD, Player) -> Int) {
             qbd.transformIntoNPC(15506)
             World.spawnObject(GameObject(70823, ObjectShape.SCENERY_INTERACT, 0, qbd.middleTile.transform(-12, -3, -1)))
             World.spawnObject(GameObject(70819, ObjectShape.SCENERY_INTERACT, 0, qbd.middleTile.transform(6, -3, -1)))
-            qbd.capDamage = 1000
+            qbd.capDamage = Power.INF_CAP_DAMAGE
         } else {
             targets.forEach { it.sendMessage("<col=669900>The Queen Black Dragon hardens her carapace; she is more resistant to physical</col>") }
             targets.forEach { it.sendMessage("<col=669900>damage, but more vulnerable to magic.</col>") }
             qbd.transformIntoNPC(15507)
             World.spawnObject(GameObject(70824, ObjectShape.SCENERY_INTERACT, 0, qbd.middleTile.transform(-12, -3, -1)))
             World.spawnObject(GameObject(70820, ObjectShape.SCENERY_INTERACT, 0, qbd.middleTile.transform(6, -3, -1)))
-            qbd.capDamage = 1000
+            qbd.capDamage = Power.INF_CAP_DAMAGE
         }
         qbd.schedule {
             wait(40)
@@ -638,9 +646,9 @@ enum class QBDAttack(val func: (QBD, Player) -> Int) {
             repeat(3) { num ->
                 qbd.possibleTargets.filter { it is Player && !it.isDead }.forEach {
                     it.applyHit(Hit.flat(qbd, when (getAntifireLevel(it, false)) {
-                        1 -> qbd.baseDamage(it) / 2
-                        2 -> qbd.baseDamage(it) / 3
-                        else -> qbd.baseDamage(it)
+                        1 -> SpecialItems.reduceDragonFire(it, qbd.baseDamage(it) / 2)
+                        2 -> SpecialItems.reduceDragonFire(it, qbd.baseDamage(it) / 3)
+                        else -> SpecialItems.reduceDragonFire(it, qbd.baseDamage(it))
                     }))
                     if (num == 2) it.tempAttribs.removeB("canBrandish")
                 }
@@ -693,9 +701,9 @@ private fun QBD.sendFirewall(variant: Int) {
                         val danger2 = baseTile.transform(x, -1)
                         targets.filter { !it.isDead && (it.isAt(danger1.x, danger1.y) || it.isAt(danger2.x, danger2.y)) }.forEach {
                             it.applyHit(Hit.flat(this, when(getAntifireLevel(it, false)) {
-                                2 -> random(190, 210)
-                                1 -> random(250, 300)
-                                else -> random(450, 550)
+                                2 -> SpecialItems.reduceDragonFire(it, random(190, 210))
+                                1 -> SpecialItems.reduceDragonFire(it, random(250, 300))
+                                else -> SpecialItems.reduceDragonFire(it, random(450, 550))
                             }))
                         }
                     }
