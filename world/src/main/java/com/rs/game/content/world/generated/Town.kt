@@ -4,6 +4,7 @@ import com.rs.game.map.Chunk
 import com.rs.game.model.gameobject.GameObject
 import org.darkan.core.EnvVars
 import org.darkan.core.Logger
+import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.map.GeneratedWorld
 import org.darkan.core.model.ObjectShape
 import java.util.Random
@@ -25,7 +26,7 @@ private const val SIDE_SPREAD = 4
 private const val GROUND = 0
 private const val WALL = 5240
 private const val WINDOW = 5241
-private const val DOOR = 1530
+private const val DOOR = Loc.built_wooden_door
 private const val TABLE = 602
 private const val CHAIR = 1088
 private const val BED = 417

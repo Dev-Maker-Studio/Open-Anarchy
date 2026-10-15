@@ -17,9 +17,13 @@ import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnObject
 import com.rs.plugin.kts.onObjectClick
 
+private const val SMELT_OPTION = "Smelt"
+
 @ServerStartupEvent
 fun mapFurnaces() {
-    onObjectClick("Furnace", "Small furnace", "Clay forge", "Lava Furnace", 11666) { e -> if (!BuiltFurniture.handle(e.player, e.obj, e.option)) use(e.player, e.obj) }
+    onObjectClick("Furnace", "Small furnace", "Clay forge", "Lava Furnace", 11666) { e ->
+        if (e.option == SMELT_OPTION || !BuiltFurniture.handle(e.player, e.obj, e.option)) use(e.player, e.obj)
+    }
     onItemOnObject(arrayOf("Furnace", "Small furnace", "Clay forge", "Lava Furnace", 11666), arrayOf(GOLD_BAR, SILVER_BAR)) { e -> useItem(e.player, e.`object`, e.item) }
     onItemOnObject(arrayOf("Furnace", "Small furnace", "Clay forge", "Lava Furnace", 11666), arrayOf(PERFECT_ORE, PERFECT_BAR)) { e -> familyCrestItemOnFurnace(e.player, e.item) }
 }

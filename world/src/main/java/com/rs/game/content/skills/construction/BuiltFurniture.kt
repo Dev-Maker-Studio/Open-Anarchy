@@ -31,6 +31,8 @@ private const val DESTROY_OPTION = "Destroy"
 private const val REPAIR_OPTION = "Repair"
 internal const val OPEN_OPTION = "Open"
 internal const val CLOSE_OPTION = "Close"
+private const val LOCK_OPTION = "Lock"
+private const val UNLOCK_OPTION = "Unlock"
 private const val REPAIR_HP_PER_TICK = 6
 private const val REPAIR_XP_PER_TICK = 3.0
 private const val REPAIR_ANIM_INTERVAL = 3
@@ -49,6 +51,7 @@ object BuiltFurniture {
             PICK_UP_OPTION -> pickUpPiece(player, obj, piece)
             REPAIR_OPTION -> player.actionManager.setAction(RepairFurniture(obj, piece))
             OPEN_OPTION, CLOSE_OPTION -> openPiece(player, obj, piece, option == OPEN_OPTION)
+            LOCK_OPTION, UNLOCK_OPTION -> lockPiece(player, obj, piece, option == LOCK_OPTION)
             else -> return false
         }
         return true
@@ -109,12 +112,37 @@ private fun openPiece(player: Player, obj: GameObject, piece: ConstructionPiece,
         return
     }
     if (piece.openLoc == -1 || !isStanding(obj)) return
+    if (obj.id == piece.lockedLoc) {
+        player.sendMessage("The ${piece.name.lowercase()} is locked.")
+        return
+    }
     val swung = swungDoor(obj, opening, piece.loc, piece.openLoc)
     swung.attribs.setI(HP_ATTRIB, hitPoints(obj, piece))
     val owner = WorldDelta.ownerOf(obj)
     World.removeObject(obj)
     World.spawnObject(swung)
     WorldDelta.setOwner(swung, owner)
+}
+
+private fun lockPiece(player: Player, obj: GameObject, piece: ConstructionPiece, locking: Boolean) {
+    if (piece.lockedLoc == -1 || !isStanding(obj)) return
+    val claim = ClaimManager.claimAt(obj.tile)
+    when {
+        claim == null -> player.sendMessage("You can only ${if (locking) "lock" else "unlock"} doors on land you have claimed.")
+        claim.owner != player.username -> player.sendMessage("Only ${claim.owner} can ${if (locking) "lock" else "unlock"} this ${piece.name.lowercase()}.")
+        locking && obj.id == piece.lockedLoc -> player.sendMessage("The ${piece.name.lowercase()} is already locked.")
+        !locking && obj.id != piece.lockedLoc -> player.sendMessage("The ${piece.name.lowercase()} is already unlocked.")
+        else -> {
+            val closed = if (obj.id == piece.openLoc) swungDoor(obj, false, piece.loc, piece.openLoc) else obj
+            val turned = GameObject(if (locking) piece.lockedLoc else piece.loc, closed.type, closed.rotation, closed.tile)
+            turned.attribs.setI(HP_ATTRIB, hitPoints(obj, piece))
+            val owner = WorldDelta.ownerOf(obj)
+            World.removeObject(obj)
+            World.spawnObject(turned)
+            WorldDelta.setOwner(turned, owner)
+            player.sendMessage("You ${if (locking) "lock" else "unlock"} the ${piece.name.lowercase()}.")
+        }
+    }
 }
 
 internal fun swungDoor(door: GameObject, opening: Boolean, closedLoc: Int, openLoc: Int): GameObject =
