@@ -77,9 +77,10 @@ class ConstructionPiece(
     val cost: List<Pair<Int, Int>>,
     val openLoc: Int = -1,
     val onOpen: ((Player) -> Unit)? = null,
+    val lockedLoc: Int = -1,
 ) {
     val name: String get() = ItemDefinitions.getDefs(item).name
-    val placedLocs: IntArray get() = if (openLoc == -1) intArrayOf(loc) else intArrayOf(loc, openLoc)
+    val placedLocs: IntArray get() = intArrayOf(loc, openLoc, lockedLoc).filter { it != -1 }.toIntArray()
     val materialValue: Int = cost.sumOf { (material, amount) -> ItemDefinitions.getDefs(material).getValue() * amount }
     val hitPoints: Int = (materialValue / ConstructionCatalogue.VALUE_PER_HIT_POINT).coerceIn(ConstructionCatalogue.MIN_HIT_POINTS, ConstructionCatalogue.MAX_HIT_POINTS)
     val material: Material get() = Material.forHitPoints(hitPoints)
@@ -108,6 +109,10 @@ object ConstructionCatalogue {
     private const val FURNACE_DEPTH = 3
     private const val FURNACE_ORE = 10
     private const val FURNACE_COAL = 2
+    private const val ANVIL_XP = 40.0
+    private const val ANVIL_WIDTH = 1
+    private const val ANVIL_DEPTH = 1
+    private const val ANVIL_BARS = 5
 
     private val STARTS = linkedMapOf(
         HouseObjects.EXIT_PORTAL to ConstructionCategory.TELEPORTS,
@@ -185,27 +190,28 @@ object ConstructionCatalogue {
 
     fun forCategory(category: ConstructionCategory): List<ConstructionPiece> = byCategory[category] ?: emptyList()
 
-    private fun sized(item: Int, built: Int, ghost: Int, source: Int, category: ConstructionCategory, cost: List<Pair<Int, Int>>, xp: Double, openLoc: Int = -1, onOpen: ((Player) -> Unit)? = null, type: Int? = null): ConstructionPiece {
+    private fun sized(item: Int, built: Int, ghost: Int, source: Int, category: ConstructionCategory, cost: List<Pair<Int, Int>>, xp: Double, openLoc: Int = -1, onOpen: ((Player) -> Unit)? = null, type: Int? = null, lockedLoc: Int = -1): ConstructionPiece {
         val def = ObjectDefinitions.getDefs(source)
         val shape = ObjectShape.forId(type ?: def.modelTypes?.firstOrNull()?.toInt() ?: DEFAULT_MODEL_TYPE) ?: ObjectShape.SCENERY_INTERACT
         val quarterTurn = if (shape == ObjectShape.WALL_STRAIGHT) WALL_QUARTER_TURN else 0
-        return ConstructionPiece(item, built, ghost, shape, quarterTurn, xp, def.sizeX, def.sizeY, category, cost, openLoc, onOpen)
+        return ConstructionPiece(item, built, ghost, shape, quarterTurn, xp, def.sizeX, def.sizeY, category, cost, openLoc, onOpen, lockedLoc)
     }
 
-    private fun piece(item: Int, built: Int, ghost: Int, category: ConstructionCategory, vararg cost: Pair<Int, Int>, xp: Double = cost.sumOf { it.second } * XP_PER_MATERIAL, openLoc: Int = -1, onOpen: ((Player) -> Unit)? = null): ConstructionPiece =
-        sized(item, built, ghost, built, category, cost.toList(), xp, openLoc, onOpen)
+    private fun piece(item: Int, built: Int, ghost: Int, category: ConstructionCategory, vararg cost: Pair<Int, Int>, xp: Double = cost.sumOf { it.second } * XP_PER_MATERIAL, openLoc: Int = -1, onOpen: ((Player) -> Unit)? = null, lockedLoc: Int = -1): ConstructionPiece =
+        sized(item, built, ghost, built, category, cost.toList(), xp, openLoc, onOpen, lockedLoc = lockedLoc)
 
     private fun planks(amount: Int = PLANKS_REQUIRED) = Obj.woodplank to amount
 
     private fun crafted(): List<ConstructionPiece> = listOf(
         piece(Obj.poh_armchair_1, Loc.built_wooden_chair, Loc.poh_chair1_placement_ghost, ConstructionCategory.FURNISHINGS, planks(), xp = CHAIR_XP),
-        piece(Obj.wooden_door_furniture_item, Loc.built_wooden_door, Loc.timberwall_doorl_placement_ghost, ConstructionCategory.FUNCTIONAL, planks(), xp = DOOR_XP, openLoc = Loc.built_wooden_door_open),
+        piece(Obj.wooden_door_furniture_item, Loc.built_wooden_door, Loc.timberwall_doorl_placement_ghost, ConstructionCategory.FUNCTIONAL, planks(), xp = DOOR_XP, openLoc = Loc.built_wooden_door_open, lockedLoc = Loc.built_wooden_door_locked),
         piece(Obj.wooden_wall_furniture_item, Loc.built_wooden_wall, Loc.placeable_wooden_wall_ghost, ConstructionCategory.DECOR, planks(), xp = WALL_XP),
         ConstructionPiece(Obj.furnace_item, Loc.built_furnace, Loc.poh_furnace_placement_ghost, ObjectShape.SCENERY_INTERACT, 0, FURNACE_XP, FURNACE_WIDTH, FURNACE_DEPTH, ConstructionCategory.FUNCTIONAL, listOf(Obj.iron_ore to FURNACE_ORE, Obj.coal to FURNACE_COAL)),
-        piece(Obj.placeable_door_3, Loc.placeable_door_3_built, Loc.placeable_door_3_ghost, ConstructionCategory.FUNCTIONAL, Obj.woodplank to 3, openLoc = Loc.placeable_door_3_built_open),
-        piece(Obj.placeable_iron_gate_37, Loc.placeable_iron_gate_37_built, Loc.placeable_iron_gate_37_ghost, ConstructionCategory.FUNCTIONAL, Obj.iron_bar to 3, Obj.nails to 10, openLoc = Loc.placeable_iron_gate_37_built_open),
-        piece(Obj.placeable_steel_door_59, Loc.placeable_steel_door_59_built, Loc.placeable_steel_door_59_ghost, ConstructionCategory.FUNCTIONAL, Obj.steel_bar to 3, Obj.nails to 10, openLoc = Loc.placeable_steel_door_59_built_open),
-        piece(Obj.placeable_wooden_gate_37, Loc.placeable_wooden_gate_37_built, Loc.placeable_wooden_gate_37_ghost, ConstructionCategory.GARDEN, Obj.woodplank to 4, openLoc = Loc.placeable_wooden_gate_37_built_open),
+        ConstructionPiece(Obj.anvil_item, Loc.loc_2783, Loc.anvil_placement_ghost, ObjectShape.SCENERY_INTERACT, 0, ANVIL_XP, ANVIL_WIDTH, ANVIL_DEPTH, ConstructionCategory.FUNCTIONAL, listOf(Obj.iron_bar to ANVIL_BARS)),
+        piece(Obj.placeable_door_3, Loc.placeable_door_3_built, Loc.placeable_door_3_ghost, ConstructionCategory.FUNCTIONAL, Obj.woodplank to 3, openLoc = Loc.placeable_door_3_built_open, lockedLoc = Loc.placeable_door_3_built_locked),
+        piece(Obj.placeable_iron_gate_37, Loc.placeable_iron_gate_37_built, Loc.placeable_iron_gate_37_ghost, ConstructionCategory.FUNCTIONAL, Obj.iron_bar to 3, Obj.nails to 10, openLoc = Loc.placeable_iron_gate_37_built_open, lockedLoc = Loc.placeable_iron_gate_37_built_locked),
+        piece(Obj.placeable_steel_door_59, Loc.placeable_steel_door_59_built, Loc.placeable_steel_door_59_ghost, ConstructionCategory.FUNCTIONAL, Obj.steel_bar to 3, Obj.nails to 10, openLoc = Loc.placeable_steel_door_59_built_open, lockedLoc = Loc.placeable_steel_door_59_built_locked),
+        piece(Obj.placeable_wooden_gate_37, Loc.placeable_wooden_gate_37_built, Loc.placeable_wooden_gate_37_ghost, ConstructionCategory.GARDEN, Obj.woodplank to 4, openLoc = Loc.placeable_wooden_gate_37_built_open, lockedLoc = Loc.placeable_wooden_gate_37_built_locked),
         piece(Obj.placeable_lever_33, Loc.placeable_lever_33_built, Loc.placeable_lever_33_ghost, ConstructionCategory.FUNCTIONAL, Obj.iron_bar to 1),
         piece(Obj.placeable_chest_375, Loc.placeable_chest_375_built, Loc.placeable_chest_375_ghost, ConstructionCategory.FUNCTIONAL, Obj.woodplank to CHEST_PLANKS, onOpen = StorageChest::open),
         piece(Obj.placeable_bar_131, Loc.placeable_bar_131_built, Loc.placeable_bar_131_ghost, ConstructionCategory.FURNISHINGS, Obj.woodplank to 5),
