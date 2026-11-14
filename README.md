@@ -1,56 +1,59 @@
-## Running
+# Open Anarchy
 
-### Lobby (includes SocialGateway + HTTP API + lobby login server)
+An open-world sandbox set in the look and feel of 2011 RuneScape. You start at the center of an endless, procedurally generated world, walk out into the unknown, build a base, grow stronger and get rich, then go further.
 
-```bash
-./gradlew :lobby:run
-```
+**Play now:** https://devmakerstudio.com/open-anarchy/play
+**Guide:** https://devmakerstudio.com/open-anarchy/wiki
 
-### World
+Open Anarchy is in beta. The world and its features are still growing.
 
-```bash
-./gradlew :world:run
-```
+## The loop
 
-### Smoke test
+Leave the center of the world, build a base, level up, gather wealth, explore further, repeat.
 
-`./smoke-test.sh` builds both servers, boots them against the database in `.env`, waits for the
-world to register with the lobby gateway and checks `/health`. See the script header for running
-it alongside the legacy servers on other ports.
+## The world
 
-### Migrating a legacy database
+- **A world that is different every time.** Hills, lakes, shores and oceans are generated, so no two places look the same.
+- **Nine biomes:** plains, winter, wilderness, forest, desert, ocean, mountain, volcano and rune essence. Each has its own trees, ores, creatures and music.
+- **Roads.** Two-wide roads run north, south, east and west out of the center. They are safe: no fighting and no building on them. Use them to travel, and to catch your breath.
+- **Fishing spots** line the shores of lakes and seas. Each spot gives a few fish and then comes back after a while.
+- **Mountains and volcanoes** have a climbable path up and a different way down.
+- **Lodestones** are hidden in the wilderness. Find one and activate it, and it joins your teleport list.
 
-See `src/engine/migration.md` (`migration/` module: `inspect`, `migrate --dry-run`, `migrate`, `verify`).
+## The further you go, the harder it gets
 
-## SocialGateway (world <-> lobby)
+Danger grows with distance from the center. Every 200 tiles you walk out raises the level of the creatures you meet, and wilderness biomes are tougher still. Better ores appear farther out, so the riskiest places hold the best rewards.
 
-The lobby HTTP server exposes a persistent WebSocket endpoint for world-servers:
+Slayer masters live in the wilderness. Talk to one and a pack of creatures near your level gathers around you. Defeating them earns Slayer experience and points.
 
-- `ws://<lobby-host>:<LOBBY_API_PORT>/social/ws`
+## Gather, build, own
 
-World-servers connect and authenticate with `SOCIAL_GATEWAY_TOKEN`, then send presence + social events.
-With no configuration a world joins the dev lobby at `dev.darkan.org` as a community world; see
-`src/engine/community-worlds.md` to run your own.
+- **Everything starts with your hands.** Punch trees for logs and roots to replant them. Gather copper and tin by hand.
+- **Make it, then build it.** Use a hammer with planks, nails, candles and metal bars to open the construction menu. Furnishings, teleports, lighting, trophies, gardens and more are all there.
+- **Claim your land.** Everyone begins with 100 tiles of land claim. Inside your claim only you can break or pick up your builds, and you can pick them up as items. Buy more with Estate Deeds.
+- **Store your things.** Build a chest to get your own 28-slot bank.
 
-### Environment variables
+## Wealth and trade
 
-```bash
-# Existing
-MONGO_URI=mongodb://localhost:27017/darkan-server?retryWrites=true&w=majority
-LOBBY_API_PORT=4040
-API_KEY=TEST_API_KEY
-SERVER_NAME=Darkan
+Merchants wander the world. They buy your items at the cache price, sell theirs at a 20% markup, and carry only the coins they have. Stronger merchants out in the world carry more, and they fight back if you attack them. Each merchant also sells a few Estate Deeds for 100 coins each.
 
-# World <-> lobby (defaults shown)
-SOCIAL_GATEWAY_URL=ws://dev.darkan.org:4040/social/ws
-SOCIAL_GATEWAY_TOKEN=darkan-community-world
-WORLD_ID=100
-```
+Creatures never drop coins, so money comes from work and trade.
 
-### Admin announcements API
+## Skills
 
-- `POST /admin/announcements`
-- Auth: `Authorization: Bearer <API_KEY>` or `X-API-Key: <API_KEY>`
-- Body: JSON `AnnouncementBroadcast` (`type` discriminator required)
+- Every skill goes up to 120, with a maximum of 200 million experience each, at the standard experience rate.
+- Agility trains by running: every point of run energy you spend earns experience, and each level raises your maximum run energy.
+- Thieving is removed.
+- A Sailing skill for lakes and oceans is planned.
 
-See `src/engine/social-gateway.md` for routing behavior and rollout steps.
+## Your progress
+
+Your character is saved like normal, and so is everything you add to or take from the world.
+
+## Credits
+
+Open Anarchy is built on the Darkan RuneScape server project. It is a fan project and is not affiliated with Jagex.
+
+## License
+
+Released under the GNU General Public License v3. See [LICENSE](LICENSE).

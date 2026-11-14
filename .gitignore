@@ -97,3 +97,8 @@ world-server.jar
 .env.unit
 .jar.version
 /data/cache-*/
+
+# Local world data
+/data/world-delta/
+/data/backup-reset-*/
+/logs/
