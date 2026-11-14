@@ -52,9 +52,10 @@ class Rev727ClientEncoderTest {
         codec.assertClientRoundTrip(ClientFocus(false))
         codec.assertClientRoundTrip(ClientScreenSize(displayMode = 255, width = 1920, height = 65535, switchDisplayMode = true))
         codec.assertClientRoundTrip(MoveCamera(angleX = 2047, angleY = 65535))
+        codec.assertClientRoundTrip(MoveCamera(angleX = 257, angleY = 128, zoom = -40, zoomMin = 256, zoomMax = 320))
         codec.assertClientRoundTrip(SendFps(key1 = -123456789, key2 = Int.MIN_VALUE, fps = 60))
         codec.assertClientRoundTrip(SendFps(key1 = 0, key2 = -1, fps = -1))
-        codec.assertClientRoundTrip(MouseClick(mouseButton = 1, time = 0x7FFF, x = 65535, y = 65535))
+        codec.assertClientRoundTrip(MouseClick(mouseButton = 1, time = 0xFFFF, x = 65535, y = 65535))
         codec.assertClientRoundTrip(MouseClick(mouseButton = 0, time = 0, x = 0, y = 0))
         codec.assertClientRoundTrip(MouseButtonClick(mouseButton = 2, time = 65535, x = 765, y = 65535, hw = true))
         codec.assertClientRoundTrip(

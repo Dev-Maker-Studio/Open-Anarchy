@@ -30,7 +30,7 @@ data class ReflectionResponse(val id: Int, val data: ByteArray) : ClientProt {
 
 data class ClientScreenSize(val displayMode: Int, val width: Int, val height: Int, val switchDisplayMode: Boolean) : ClientProt
 
-data class MoveCamera(val angleX: Int, val angleY: Int) : ClientProt
+data class MoveCamera(val angleX: Int, val angleY: Int, val zoom: Int = 0, val zoomMin: Int = 0, val zoomMax: Int = 0) : ClientProt
 
 data class SendFps(val key1: Int, val key2: Int, val fps: Int) : ClientProt
 

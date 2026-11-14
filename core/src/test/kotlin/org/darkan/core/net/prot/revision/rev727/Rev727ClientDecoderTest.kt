@@ -15,6 +15,7 @@ import org.darkan.core.net.prot.packet.IfOnNpc
 import org.darkan.core.net.prot.packet.IfOnObject
 import org.darkan.core.net.prot.packet.IfOnPlayer
 import org.darkan.core.net.prot.packet.IfOnTile
+import org.darkan.core.net.prot.packet.MouseClick
 import org.darkan.core.net.prot.packet.MoveCamera
 import org.darkan.core.net.prot.packet.OpNpc
 import org.darkan.core.net.prot.packet.OpPlayer
@@ -61,6 +62,9 @@ class Rev727ClientDecoderTest {
             put(value shr 16); put(value ushr 24); put(value); put(value shr 8)
         }
     }
+
+    private fun hexBytes(hex: String): ByteArray =
+        hex.filterNot { it.isWhitespace() }.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
 
     private fun write(block: ClientWriter.() -> Unit): ByteArray = ClientWriter().apply(block).bytes()
 
@@ -158,9 +162,24 @@ class Rev727ClientDecoderTest {
         val packet: MoveCamera = decode(83, write {
             writeShortAddLittle(40000)
             writeShortAdd(50000)
+            writeShort(0)
+            writeShort(0)
+            writeShort(0)
         })
         assertEquals(40000, packet.angleX)
         assertEquals(50000, packet.angleY)
+    }
+
+    @Test
+    fun `lakan camera packet carries zoom and its limits in 10 bytes`() {
+        val packet: MoveCamera = decode(83, hexBytes("8101 0000 ffd8 0100 0140"))
+        assertEquals(MoveCamera(angleX = 257, angleY = 128, zoom = -40, zoomMin = 256, zoomMax = 320), packet)
+    }
+
+    @Test
+    fun `lakan mouse click packet carries the button as its own byte in 7 bytes`() {
+        val packet: MouseClick = decode(59, hexBytes("2c01c800 0f28 02"))
+        assertEquals(MouseClick(mouseButton = 2, time = 0x0f28, x = 300, y = 200), packet)
     }
 
     @Test

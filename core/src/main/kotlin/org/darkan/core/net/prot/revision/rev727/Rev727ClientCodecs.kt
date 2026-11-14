@@ -84,11 +84,21 @@ internal fun Codec.registerRev727ClientProts() {
         out.writeBoolean(switchDisplayMode)
     }
 
-    clientProt(opcode = 83, size = 4) {
-        MoveCamera(angleX = readUShortAddLittle(), angleY = readUShortAdd())
+    // Lakan's layout: both angles, then the zoom and its two limits (10 bytes).
+    clientProt(opcode = 83, size = 10) {
+        MoveCamera(
+            angleX = readUShortAddLittle(),
+            angleY = readUShortAdd(),
+            zoom = readShort().toInt(),
+            zoomMin = readUShort().toInt(),
+            zoomMax = readUShort().toInt()
+        )
     }.encoder { out ->
         out.writeShortAddLittle(angleX)
         out.writeShortAdd(angleY)
+        out.writeShort(zoom)
+        out.writeShort(zoomMin)
+        out.writeShort(zoomMax)
     }
 
     clientProt(opcode = 44, size = 9) {
@@ -103,18 +113,20 @@ internal fun Codec.registerRev727ClientProts() {
         out.writeByteSubtract(fps)
     }
 
-    clientProt(opcode = 59, size = 6) {
+    // Lakan's layout: position hash, time delta, then the button as its own byte (7 bytes).
+    clientProt(opcode = 59, size = 7) {
         val positionHash = readUIntLittle()
-        val mouseHash = readUShort().toInt()
+        val time = readUShort().toInt()
         MouseClick(
-            mouseButton = mouseHash ushr 15,
-            time = mouseHash and 0x7FFF,
+            mouseButton = readUByte().toInt(),
+            time = time,
             x = positionHash and 0xFFFF,
             y = positionHash ushr 16
         )
     }.encoder { out ->
         out.writeIntLittle((x and 0xFFFF) or (y shl 16))
-        out.writeShort((time and 0x7FFF) or (mouseButton shl 15))
+        out.writeShort(time)
+        out.writeByte(mouseButton)
     }
 
     clientProt(opcode = 57, size = 7) {

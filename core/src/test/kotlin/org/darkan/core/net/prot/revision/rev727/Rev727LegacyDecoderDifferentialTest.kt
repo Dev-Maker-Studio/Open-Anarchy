@@ -394,7 +394,7 @@ class Rev727LegacyDecoderDifferentialTest {
     private fun CaseBuilder.inputCases() {
         case(
             "MOVE_CAMERA", 83,
-            payload { u16(0x8f4e); u16(0x8fee) },
+            payload { u16(0x8f4e); u16(0x8fee); u16(0xffd8); u16(0x0100); u16(0x0140) },
             legacy = {
                 (LegacyMoveCamera().decodeAndCreateInstance(it) as LegacyMoveCamera).let { p ->
                     mapOf("angleX(16)" to wire16(p.angleX), "angleY(16)" to wire16(p.angleY))
@@ -404,7 +404,7 @@ class Rev727LegacyDecoderDifferentialTest {
         )
         case(
             "MOUSE_CLICK", 59,
-            payload { u32(0x0BADF00D); u16(0x8f4e) },
+            payload { u32(0x0BADF00D); u16(0x8f4e); u8(0) },
             legacy = {
                 (LegacyMouseClickJav().decodeAndCreateInstance(it) as LegacyMouseClickJav).let { p ->
                     mapOf("time" to p.time, "x" to p.x, "y" to p.y)
