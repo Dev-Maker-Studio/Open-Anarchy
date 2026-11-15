@@ -100,6 +100,10 @@ private fun pickUpPiece(player: Player, obj: GameObject, piece: ConstructionPiec
         player.sendMessage("You don't have enough inventory space to pick that up.")
         return
     }
+    if (piece.onOpen != null && !StorageChest.isEmpty(obj)) {
+        player.sendMessage("Empty the ${piece.name.lowercase()} before picking it up.")
+        return
+    }
     World.removeObject(obj)
     player.inventory.addItem(piece.item, 1)
     player.sendMessage("You pick up the ${piece.name.lowercase()}.")
@@ -108,7 +112,7 @@ private fun pickUpPiece(player: Player, obj: GameObject, piece: ConstructionPiec
 private fun openPiece(player: Player, obj: GameObject, piece: ConstructionPiece, opening: Boolean) {
     val onOpen = piece.onOpen
     if (onOpen != null) {
-        onOpen(player)
+        onOpen(player, obj)
         return
     }
     if (piece.openLoc == -1 || !isStanding(obj)) return
@@ -160,6 +164,7 @@ private fun Tile.doorSwingTile(rotation: Int, opening: Boolean): Tile {
 }
 
 private fun destroy(obj: GameObject) {
+    if (ConstructionCatalogue.forLoc(obj.id)?.onOpen != null) StorageChest.spill(obj)
     World.removeObject(obj)
 }
 

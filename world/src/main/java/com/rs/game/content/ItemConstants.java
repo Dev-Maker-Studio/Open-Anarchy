@@ -423,6 +423,8 @@ public class ItemConstants {
 			case 759:
 				return true;
 		}
+		if (com.rs.game.content.skills.construction.ConstructionCatalogue.isBuildItem(item.getId()))
+			return true;
 		if ((!item.getDefinitions().isStackable() && item.getDefinitions().getCertId() == -1) || item.getDefinitions().isDestroyItem() || item.getDefinitions().isLended())
 			return false;
 		return item.getDefinitions().canExchange();
