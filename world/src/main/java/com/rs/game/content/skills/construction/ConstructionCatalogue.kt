@@ -2,6 +2,7 @@ package com.rs.game.content.skills.construction
 
 import com.rs.game.content.skills.construction.playerOwnedHouse.HouseObjects
 import com.rs.game.model.entity.player.Player
+import com.rs.game.model.gameobject.GameObject
 import org.darkan.core.cache.ItemDefinitions
 import org.darkan.core.cache.ObjectDefinitions
 import org.darkan.core.gameval.Gameval
@@ -76,7 +77,7 @@ class ConstructionPiece(
     val category: ConstructionCategory,
     val cost: List<Pair<Int, Int>>,
     val openLoc: Int = -1,
-    val onOpen: ((Player) -> Unit)? = null,
+    val onOpen: ((Player, GameObject) -> Unit)? = null,
     val lockedLoc: Int = -1,
 ) {
     val name: String get() = ItemDefinitions.getDefs(item).name
@@ -186,18 +187,21 @@ object ConstructionCatalogue {
 
     fun forItem(item: Int): ConstructionPiece? = byItem[item]
 
+    @JvmStatic
+    fun isBuildItem(item: Int): Boolean = item == Obj.estate_deed || byItem.containsKey(item)
+
     fun forLoc(loc: Int): ConstructionPiece? = byLoc[loc]
 
     fun forCategory(category: ConstructionCategory): List<ConstructionPiece> = byCategory[category] ?: emptyList()
 
-    private fun sized(item: Int, built: Int, ghost: Int, source: Int, category: ConstructionCategory, cost: List<Pair<Int, Int>>, xp: Double, openLoc: Int = -1, onOpen: ((Player) -> Unit)? = null, type: Int? = null, lockedLoc: Int = -1): ConstructionPiece {
+    private fun sized(item: Int, built: Int, ghost: Int, source: Int, category: ConstructionCategory, cost: List<Pair<Int, Int>>, xp: Double, openLoc: Int = -1, onOpen: ((Player, GameObject) -> Unit)? = null, type: Int? = null, lockedLoc: Int = -1): ConstructionPiece {
         val def = ObjectDefinitions.getDefs(source)
         val shape = ObjectShape.forId(type ?: def.modelTypes?.firstOrNull()?.toInt() ?: DEFAULT_MODEL_TYPE) ?: ObjectShape.SCENERY_INTERACT
         val quarterTurn = if (shape == ObjectShape.WALL_STRAIGHT) WALL_QUARTER_TURN else 0
         return ConstructionPiece(item, built, ghost, shape, quarterTurn, xp, def.sizeX, def.sizeY, category, cost, openLoc, onOpen, lockedLoc)
     }
 
-    private fun piece(item: Int, built: Int, ghost: Int, category: ConstructionCategory, vararg cost: Pair<Int, Int>, xp: Double = cost.sumOf { it.second } * XP_PER_MATERIAL, openLoc: Int = -1, onOpen: ((Player) -> Unit)? = null, lockedLoc: Int = -1): ConstructionPiece =
+    private fun piece(item: Int, built: Int, ghost: Int, category: ConstructionCategory, vararg cost: Pair<Int, Int>, xp: Double = cost.sumOf { it.second } * XP_PER_MATERIAL, openLoc: Int = -1, onOpen: ((Player, GameObject) -> Unit)? = null, lockedLoc: Int = -1): ConstructionPiece =
         sized(item, built, ghost, built, category, cost.toList(), xp, openLoc, onOpen, lockedLoc = lockedLoc)
 
     private fun planks(amount: Int = PLANKS_REQUIRED) = Obj.woodplank to amount

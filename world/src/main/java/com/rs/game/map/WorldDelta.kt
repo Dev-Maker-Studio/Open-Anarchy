@@ -7,6 +7,7 @@ import com.rs.game.tasks.WorldTasks
 import org.darkan.core.EnvVars
 import org.darkan.core.JsonFileManager
 import org.darkan.core.Logger
+import org.darkan.core.model.Item
 import org.darkan.core.model.ObjectShape
 import org.darkan.core.util.MapUtils
 import org.darkan.core.util.Structure
@@ -34,7 +35,8 @@ object WorldDelta {
 
     class Added(
         var x: Int = 0, var y: Int = 0, var plane: Int = 0, var id: Int = 0, var shape: Int = 0, var rotation: Int = 0,
-        var owner: String? = null, var hp: Int = MISSING, var growAt: Long = 0, var growId: Int = MISSING
+        var owner: String? = null, var hp: Int = MISSING, var growAt: Long = 0, var growId: Int = MISSING,
+        var items: List<Item?>? = null
     )
 
     class Removed(
@@ -120,7 +122,7 @@ object WorldDelta {
             val previous = added.remove(k)
             previous?.let { byChunk[chunkOf(it.x, it.y, it.plane)]?.remove(k) }
             if (obj.id in tracked) {
-                added[k] = addedEntry(obj, previous?.owner)
+                added[k] = addedEntry(obj, previous?.owner).also { it.items = previous?.items }
                 byChunk.getOrPut(chunkOf(obj.x, obj.y, obj.plane)) { HashSet() }.add(k)
                 scheduleSave()
             } else if (cleared || previous != null)
@@ -259,6 +261,20 @@ object WorldDelta {
         synchronized(this) {
             val entry = added[key(obj)]?.takeIf { it.id == obj.id } ?: return
             entry.owner = owner
+            scheduleSave()
+        }
+    }
+
+    @JvmStatic
+    fun contentsOf(obj: GameObject): List<Item?>? = synchronized(this) { added[key(obj)]?.takeIf { it.id == obj.id }?.items }
+
+    @JvmStatic
+    fun setContents(obj: GameObject, items: List<Item?>?) {
+        if (!EnvVars.generateMaps) return
+        ensureLoaded()
+        synchronized(this) {
+            val entry = added[key(obj)]?.takeIf { it.id == obj.id } ?: return
+            entry.items = items
             scheduleSave()
         }
     }
