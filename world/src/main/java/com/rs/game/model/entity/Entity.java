@@ -998,7 +998,6 @@ public abstract class Entity {
 	public void loadMapRegions(RegionSize oldSize) {
 		Player player = this instanceof Player p ? p : null;
 		NPC npc = this instanceof NPC n ? n : null;
-		Set<Integer> old = player != null && mapChunkIds != null ? IntSets.synchronize(new IntOpenHashSet(mapChunkIds)) : null;
 		if (player != null)
 			ChunkManager.getUpdateZone(sceneBaseChunkId, oldSize).removePlayerWatcher(player.getIndex());
 		if (npc != null && npc.isLoadsUpdateZones())
@@ -1025,11 +1024,8 @@ public abstract class Entity {
 					if (chunk instanceof InstancedChunk)
 						hasNearbyInstancedChunks = true;
 					mapChunkIds.add(chunkId);
-					if (old != null) {
-						if (!old.contains(chunkId))
-							player.getMapChunksNeedInit().add(chunkId);
-						old.remove(chunkId);
-					}
+					if (player != null)
+						player.getMapChunksNeedInit().add(chunkId);
 				}
 			}
 		}
