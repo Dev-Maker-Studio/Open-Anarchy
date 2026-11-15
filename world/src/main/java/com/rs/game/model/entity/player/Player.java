@@ -1275,7 +1275,7 @@ public class Player extends Entity {
 				getControllerManager().startController(new TutorialIslandController());
 			else
 				setStarter(1);
-			PlayerLook.openCharacterCustomizing(this);
+			PlayerLook.startFirstLogin(this);
 			setChosenAccountType(true);
 		}
 		if (ironMan) {

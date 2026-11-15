@@ -16,12 +16,9 @@ import org.darkan.core.gameval.gen.Varbit;
 @PluginEventHandler
 public final class PlayerLook {
 
-	public static void openCharacterCustomizing(Player player) {
-		player.getInterfaceManager().setTopInterface(1028, false);
-		player.getPackets().setIFRightClickOps(1028, 65, 0, 11, 0);
-		player.getPackets().setIFRightClickOps(1028, 128, 0, 50, 0);
-		player.getPackets().setIFRightClickOps(1028, 132, 0, 250, 0);
-		player.getVars().setVarBit(8093, player.getAppearance().isMale() ? 0 : 1);
+	public static void startFirstLogin(Player player) {
+		player.getAppearance().generateAppearanceData();
+		player.getCutsceneManager().play(new StartTilemanCutscene(StartLodestone.INSTANCE.getTile()));
 	}
 
 	public static ButtonClickHandler handleCharacterCustomizingButtons = new ButtonClickHandler(1028, e -> {
