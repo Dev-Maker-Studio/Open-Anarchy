@@ -88,6 +88,7 @@ public class Chunk {
 
     protected volatile boolean loadedSpawnData = false;
     protected volatile boolean loadedMapData = false;
+    protected volatile boolean appliedWorldContent = false;
 
     private int[] musicIds;
     private boolean multicombat;
@@ -345,6 +346,9 @@ public class Chunk {
             loadedMapData = true;
             MapMaterializer.explored(getRegionX(), getRegionY());
             ChunkManager.loadRegionMapDataByChunkId(id);
+        }
+        if (!appliedWorldContent) {
+            appliedWorldContent = true;
             GeneratedScenery.spawn(this);
             WorldDelta.apply(this);
         }
@@ -834,6 +838,7 @@ public class Chunk {
     public void destroy(boolean reloadPlayers) {
         clearCollisionData();
         loadedMapData = false;
+        appliedWorldContent = false;
         loadedSpawnData = false;
         if (getAllGroundItems() != null)
             getAllGroundItems().clear();

@@ -14,6 +14,8 @@ public class Hairdresser extends Conversation {
     private static final int npcId = 598;
 
     public static NPCClickHandler Hairdresser = new NPCClickHandler(new Object[]{ npcId }, e -> {
+        if (e.getNPC() instanceof com.rs.game.content.world.generated.BarberNPC)
+            return;
         switch (e.getOption()) {
             
             case "Talk-to" -> e.getPlayer().startConversation(new Hairdresser(e.getPlayer()));
