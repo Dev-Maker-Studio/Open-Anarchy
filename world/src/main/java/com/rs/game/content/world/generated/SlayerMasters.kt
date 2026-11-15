@@ -16,6 +16,8 @@ import java.util.concurrent.CompletableFuture
 
 private const val TALK_OPTION = "Talk-to"
 private const val SPAWN_CHECK_TICKS = 10
+private const val SPAWN_EVERY_TICK = 1
+private const val SPAWN_BUDGET_NANOS = 50_000_000L
 private const val MASTER_OFFSET_X = 1
 private const val GROUND_LEVEL = 0
 
@@ -67,9 +69,19 @@ fun startSlayerMasters() {
     onNpcClick(Npc.slayer_master_unkillable, options = arrayOf(TALK_OPTION)) { (player, _) -> talkToSlayerMaster(player) }
     if (!EnvVars.generateMaps) return
     val sites = CompletableFuture.supplyAsync { GeneratedWorld.lodestoneSites }
-    WorldTasks.scheduleTimer(SPAWN_CHECK_TICKS, SPAWN_CHECK_TICKS) {
-        if (!sites.isDone) return@scheduleTimer true
-        sites.get().forEach { (x, y) -> SlayerMasterNPC(Tile.of(x + MASTER_OFFSET_X, y, GROUND_LEVEL)) }
-        false
+    val queue = ArrayDeque<Pair<Int, Int>>()
+    var queued = false
+    WorldTasks.scheduleTimer(SPAWN_CHECK_TICKS, SPAWN_EVERY_TICK) {
+        if (!queued) {
+            if (!sites.isDone) return@scheduleTimer true
+            queue.addAll(sites.get())
+            queued = true
+        }
+        val deadline = System.nanoTime() + SPAWN_BUDGET_NANOS
+        while (queue.isNotEmpty() && System.nanoTime() < deadline) {
+            val (x, y) = queue.removeFirst()
+            SlayerMasterNPC(Tile.of(x + MASTER_OFFSET_X, y, GROUND_LEVEL))
+        }
+        queue.isNotEmpty()
     }
 }
