@@ -1,5 +1,7 @@
 package com.rs.game.content.world.generated
 
+import com.rs.engine.dialogue.HeadE
+import com.rs.engine.dialogue.startConversation
 import com.rs.game.content.PlayerLook
 import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.npc.NPC
@@ -32,10 +34,30 @@ class BarberNPC(tile: Tile) : NPC(HAIRDRESSER_NPC, tile, null, true) {
     override fun canAggroPlayer(target: Player): Boolean = false
 }
 
+private fun talkToBarber(player: Player) {
+    player.startConversation {
+        npc(HAIRDRESSER_NPC, HeadE.HAPPY_TALKING, "Welcome! What would you like changed today?")
+        options {
+            op("Hair and beard.") {
+                exec { PlayerLook.openHairdresserSalon(player) }
+            }
+            op("Clothes.") {
+                exec { PlayerLook.openThessaliasMakeOver(player) }
+            }
+            op("Skin colour and gender.") {
+                exec { PlayerLook.openMageMakeOver(player) }
+            }
+            op("Nothing, thanks.") {
+                player(HeadE.CALM_TALK, "Nothing, thanks.")
+            }
+        }
+    }
+}
+
 @ServerStartupEvent
 fun startBarber() {
     onNpcClick(HAIRDRESSER_NPC) { (player, npc) ->
-        if (npc is BarberNPC) PlayerLook.openMageMakeOver(player)
+        if (npc is BarberNPC) talkToBarber(player)
     }
     if (!EnvVars.generateMaps) return
     WorldTasks.schedule(SPAWN_DELAY_TICKS) { BarberNPC(StartLodestone.tile.transform(BARBER_OFFSET_X, 0, 0)) }
