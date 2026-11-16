@@ -25,7 +25,7 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
 object ClaimManager {
-    const val STARTING_TILES = 100
+    const val STARTING_TILES = 0
 
     private const val NORTH = 1
     private const val EAST = 2
@@ -130,7 +130,15 @@ object ClaimManager {
 
     @JvmStatic
     fun allowObjectOption(player: Player, obj: GameObject, opNum: Int): Boolean {
-        val option = obj.getDefinitions(player).getOption(opNum)?.lowercase() ?: return true
+        val definitions = obj.getDefinitions(player)
+        if (definitions.name?.contains("chest", ignoreCase = true) == true) {
+            val claim = claimAt(obj.tile)
+            if (claim != null && claim.owner != player.username) {
+                player.sendMessage("This chest is protected by the land claim of ${claim.owner}.")
+                return false
+            }
+        }
+        val option = definitions.getOption(opNum)?.lowercase() ?: return true
         return option !in DESTROY_OPTIONS || canDestroy(player, obj.tile)
     }
 
@@ -235,10 +243,6 @@ object ClaimManager {
             allowDestroy = editing?.allowDestroy ?: false,
             allowPvp = editing?.allowPvp ?: false
         )
-        if (ownedTiles(player.username, editing) + candidate.tileCount > player.claimTileAllowance) {
-            player.sendMessage("You can claim at most ${player.claimTileAllowance} tiles; that would make ${ownedTiles(player.username, editing) + candidate.tileCount}.")
-            return
-        }
         if (GeneratedWorld.roadTouches(candidate.minX, candidate.minY, candidate.maxX, candidate.maxY)) {
             player.sendMessage("Roads can't be claimed; that claim would cover one.")
             return
