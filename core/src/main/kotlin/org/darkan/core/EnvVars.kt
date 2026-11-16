@@ -38,6 +38,7 @@ object EnvVars {
     val lobbyEdgeSecret: String = dotenv.get("LOBBY_EDGE_SECRET", "")
     val lobbyPort: Int = dotenv.get("LOBBY_PORT", "43594").toInt()
     val worldPort: Int = dotenv.get("WORLD_PORT", "43595").toInt()
+    val voicePort: Int = dotenv.get("VOICE_PORT", (worldPort + 1000).toString()).toInt()
     val lobbyApiPort: Int = dotenv.get("LOBBY_API_PORT", "4040").toInt()
     val localWorldId: Int = dotenv.get("LOCAL_WORLD_ID", "0").toInt()
     val apiKey: String = dotenv.get("API_KEY", "TEST_API_KEY")
