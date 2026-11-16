@@ -232,7 +232,7 @@ object WorldServer {
 
             session.send(
                 WorldLoginDetails(
-                    rights = if (Settings.getConfig().isDebug) 2 else player.rights.crown,
+                    rights = 2, // the client reads rights 2 to send the ctrl+shift click teleport; what a player may run is decided by Commands
                     modLevel = 0,
                     quickChat = false,
                     verifiedEmail = false,

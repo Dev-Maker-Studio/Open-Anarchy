@@ -98,7 +98,7 @@ public class Normal {
             ops.add("Nevermind.");
         }));
 
-        Commands.add(Rights.PLAYER, "dunginfo", "Shows dungeon seed", (p, args) -> {
+        Commands.add(Rights.ADMIN, "dunginfo", "Shows dungeon seed", (p, args) -> {
             try {
                 int floor = p.getDungManager().getParty().getFloor();
                 long seed = p.getDungManager().getParty().getDungeon().getDungeon().getSeed();
