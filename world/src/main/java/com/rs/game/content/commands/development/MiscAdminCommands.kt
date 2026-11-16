@@ -185,7 +185,7 @@ fun loadAdminCommands() {
         p.skills.init()
     }
 
-    Commands.add(Rights.ADMIN, "tele,tp [x y (z)] or [tileHash] or [z,regionX,regionY,localX,localY]", "Teleports the player to a coordinate.") { p, args ->
+    Commands.add(Rights.PLAYER, "tele,tp [x y (z)] or [tileHash] or [z,regionX,regionY,localX,localY]", "Teleports the player to a coordinate.") { p, args ->
         p.resetWalkSteps()
         when {
             args[0].contains(",") -> {

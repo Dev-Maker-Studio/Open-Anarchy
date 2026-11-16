@@ -180,7 +180,7 @@ object SailColorManager {
 
 @ServerStartupEvent
 fun resetGhostsAhoy() {
-    Commands.add(Rights.PLAYER, "resetghostsahoy", "Reset Ghosts Ahoy Quest.", ) { p, args ->
+    Commands.add(Rights.ADMIN, "resetghostsahoy", "Reset Ghosts Ahoy Quest.", ) { p, args ->
         if (p.isQuestComplete(Quest.GHOSTS_AHOY)) return@add
         p.questManager.resetQuest(Quest.GHOSTS_AHOY)
         p.questManager.setStage(Quest.GHOSTS_AHOY, 1)
