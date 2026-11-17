@@ -6,7 +6,7 @@ import org.darkan.core.net.prot.dto.WorldListSnapshot
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 
-class WorldList(val maxWorlds: Int, private val localWorldId: Int = EnvVars.localWorldId, private val offlineTtl: Duration = OFFLINE_TTL) {
+class WorldList(val maxWorlds: Int, private val localWorldId: Int = EnvVars.localWorldId, private val offlineTtl: Duration = OFFLINE_TTL, private val defaultWorldId: Int = EnvVars.defaultWorldId) {
     private val worlds = sortedMapOf<Int, World>()
     private var _revision = 10
 
@@ -101,7 +101,7 @@ class WorldList(val maxWorlds: Int, private val localWorldId: Int = EnvVars.loca
     }
 
     fun getDefault(): World? = synchronized(worlds) {
-        worlds.firstEntry()?.value
+        worlds[defaultWorldId]?.takeIf { !it.offline } ?: worlds.firstEntry()?.value
     }
 
     private fun updateIndices() {

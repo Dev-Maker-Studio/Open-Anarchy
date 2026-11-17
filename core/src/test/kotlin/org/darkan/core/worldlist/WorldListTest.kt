@@ -89,4 +89,21 @@ class WorldListTest {
 
         assertEquals(999, list.snapshot().maxWorlds)
     }
+
+    @Test
+    fun `the configured default world wins over a lower numbered world`() {
+        val list = WorldList(300, localWorldId = 300, defaultWorldId = 123)
+        list.put(World(metadata(22, "a.example")))
+        list.put(World(metadata(123, "b.example")))
+        assertEquals(123, assertNotNull(list.getDefault()).metadata.number)
+    }
+
+    @Test
+    fun `the default falls back to the lowest world while the configured one is offline`() {
+        val list = WorldList(300, localWorldId = 300, defaultWorldId = 123)
+        list.put(World(metadata(22, "a.example")))
+        list.put(World(metadata(123, "b.example")))
+        list.markOffline(123)
+        assertEquals(22, assertNotNull(list.getDefault()).metadata.number)
+    }
 }

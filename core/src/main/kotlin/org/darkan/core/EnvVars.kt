@@ -123,6 +123,7 @@ object EnvVars {
     val worldBotsAllowed: Boolean = dotenv.get("WORLD_BOTS_ALLOWED", "false").toBooleanStrict()
     val worldLootShare: Boolean = dotenv.get("WORLD_LOOTSHARE", "true").toBooleanStrict()
     val worldCountry: String = dotenv.get("WORLD_COUNTRY", "USA")
+    val defaultWorldId: Int = dotenv.get("DEFAULT_WORLD_ID", "0").toInt()
     val worldHighlighted: Boolean = dotenv.get("WORLD_HIGHLIGHTED", "false").toBooleanStrict()
     val worldXpRate: Int = dotenv.get("WORLD_XP_RATE", "1").toInt()
     val itemScalingCost: Long = dotenv.get("ITEM_SCALING_COST", "5").toLong()
