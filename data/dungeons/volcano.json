@@ -1,0 +1,10 @@
+{
+  "id": "volcano",
+  "name": "Cinder Maw",
+  "theme": "cave",
+  "seed": 3016846784809471910,
+  "slot": 11,
+  "entranceX": 8523,
+  "entranceY": 5644,
+  "origin": "biome:volcano"
+}

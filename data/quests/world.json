@@ -1,0 +1,705 @@
+{
+  "areas": [
+    {
+      "id": "aldmere",
+      "name": "Aldmere",
+      "tier": 9,
+      "x": 7671,
+      "y": 9125,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "aldmere",
+      "wildDungeons": [
+        "winter",
+        "forest"
+      ],
+      "neighbours": [
+        "brackenholt",
+        "velneir",
+        "dunhollow",
+        "sarnwick"
+      ],
+      "localMobs": [
+        "spider",
+        "snake",
+        "giant spider",
+        "bat",
+        "earth warrior"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 2,
+          "coins": 900,
+          "xp": 4050
+        },
+        "medium": {
+          "questPoints": 3,
+          "coins": 2700,
+          "xp": 12150
+        },
+        "long": {
+          "questPoints": 4,
+          "coins": 6300,
+          "xp": 28350
+        }
+      }
+    },
+    {
+      "id": "brackenholt",
+      "name": "Brackenholt",
+      "tier": 9,
+      "x": 9225,
+      "y": 7669,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "realtor"
+      ],
+      "sewer": "brackenholt",
+      "wildDungeons": [
+        "forest",
+        "winter"
+      ],
+      "neighbours": [
+        "sarnwick",
+        "aldmere",
+        "velneir",
+        "dunhollow"
+      ],
+      "localMobs": [
+        "spider",
+        "zombie",
+        "ghost",
+        "giant spider",
+        "giant rat",
+        "bat",
+        "snake"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 2,
+          "coins": 900,
+          "xp": 4050
+        },
+        "medium": {
+          "questPoints": 3,
+          "coins": 2700,
+          "xp": 12150
+        },
+        "long": {
+          "questPoints": 4,
+          "coins": 6300,
+          "xp": 28350
+        }
+      }
+    },
+    {
+      "id": "dunhollow",
+      "name": "Dunhollow",
+      "tier": 8,
+      "x": 6026,
+      "y": 7363,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "realtor"
+      ],
+      "sewer": "dunhollow",
+      "wildDungeons": [
+        "mountain",
+        "wilderness"
+      ],
+      "neighbours": [
+        "velneir",
+        "sarnwick",
+        "aldmere",
+        "brackenholt"
+      ],
+      "localMobs": [
+        "zombie",
+        "ghost",
+        "bat",
+        "earth warrior"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 2,
+          "coins": 800,
+          "xp": 3300
+        },
+        "medium": {
+          "questPoints": 3,
+          "coins": 2400,
+          "xp": 9900
+        },
+        "long": {
+          "questPoints": 4,
+          "coins": 5600,
+          "xp": 23100
+        }
+      }
+    },
+    {
+      "id": "sarnwick",
+      "name": "Sarnwick",
+      "tier": 7,
+      "x": 7687,
+      "y": 6151,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "realtor"
+      ],
+      "sewer": "sarnwick",
+      "wildDungeons": [
+        "mountain",
+        "desert"
+      ],
+      "neighbours": [
+        "velneir",
+        "brackenholt",
+        "dunhollow",
+        "aldmere"
+      ],
+      "localMobs": [
+        "bat",
+        "zombie",
+        "ghost",
+        "spider",
+        "giant rat"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 2,
+          "coins": 700,
+          "xp": 2625
+        },
+        "medium": {
+          "questPoints": 3,
+          "coins": 2100,
+          "xp": 7875
+        },
+        "long": {
+          "questPoints": 4,
+          "coins": 4900,
+          "xp": 18375
+        }
+      }
+    },
+    {
+      "id": "velneir",
+      "name": "Velneir",
+      "tier": 1,
+      "x": 7500,
+      "y": 7500,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "velneir",
+      "wildDungeons": [
+        "winter",
+        "mountain"
+      ],
+      "neighbours": [
+        "sarnwick",
+        "dunhollow",
+        "aldmere",
+        "brackenholt"
+      ],
+      "localMobs": [
+        "spider",
+        "giant spider",
+        "giant rat"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 1,
+          "coins": 100,
+          "xp": 150
+        },
+        "medium": {
+          "questPoints": 2,
+          "coins": 300,
+          "xp": 450
+        },
+        "long": {
+          "questPoints": 3,
+          "coins": 700,
+          "xp": 1050
+        }
+      }
+    }
+  ],
+  "dungeons": [
+    {
+      "id": "aldmere",
+      "name": "Aldmere Sewers",
+      "origin": "city:aldmere",
+      "x": 7664,
+      "y": 9100,
+      "level": 9,
+      "boss": "The Rat King",
+      "mobs": [
+        "giant rat",
+        "rat",
+        "king scorpion",
+        "crawling hand",
+        "giant spider",
+        "cave slime",
+        "spider",
+        "snake",
+        "zombie",
+        "rogue",
+        "pyrefiend",
+        "moss giant",
+        "bat"
+      ]
+    },
+    {
+      "id": "brackenholt",
+      "name": "Brackenholt Sewers",
+      "origin": "city:brackenholt",
+      "x": 9206,
+      "y": 7656,
+      "level": 9,
+      "boss": "The Rat King",
+      "mobs": [
+        "giant spider",
+        "snake",
+        "giant rat",
+        "cave slime",
+        "pyrefiend",
+        "rat",
+        "zombie",
+        "moss giant",
+        "rogue",
+        "spider",
+        "bat"
+      ]
+    },
+    {
+      "id": "desert",
+      "name": "Sunken Bastion",
+      "origin": "biome:desert",
+      "x": 8014,
+      "y": 5541,
+      "level": 10,
+      "boss": "The Fallen Warden",
+      "mobs": [
+        "skeleton",
+        "zombie",
+        "rogue",
+        "mugger",
+        "guard dog",
+        "black knight",
+        "hill giant",
+        "chaos druid",
+        "fire giant",
+        "ghost"
+      ]
+    },
+    {
+      "id": "dunhollow",
+      "name": "Dunhollow Sewers",
+      "origin": "city:dunhollow",
+      "x": 6031,
+      "y": 7356,
+      "level": 8,
+      "boss": "The Rat King",
+      "mobs": [
+        "giant spider",
+        "rat",
+        "giant rat",
+        "rogue",
+        "snake",
+        "cave slime",
+        "crawling hand",
+        "pyrefiend",
+        "zombie",
+        "bat",
+        "king scorpion"
+      ]
+    },
+    {
+      "id": "forest",
+      "name": "Rootbound Hollow",
+      "origin": "biome:forest",
+      "x": 9259,
+      "y": 7847,
+      "level": 9,
+      "boss": "The Broodmother",
+      "mobs": [
+        "bat",
+        "giant spider",
+        "giant bat",
+        "cave slime",
+        "spider",
+        "cave crawler",
+        "baby blue dragon",
+        "black bear",
+        "hobgoblin",
+        "cave goblin",
+        "moss giant"
+      ]
+    },
+    {
+      "id": "mountain",
+      "name": "Stonejaw Depths",
+      "origin": "biome:mountain",
+      "x": 7100,
+      "y": 6271,
+      "level": 7,
+      "boss": "The Broodmother",
+      "mobs": [
+        "hobgoblin",
+        "earth warrior",
+        "cave crawler",
+        "bat",
+        "giant bat",
+        "black bear",
+        "giant spider",
+        "spider",
+        "moss giant",
+        "cave slime",
+        "cave goblin"
+      ]
+    },
+    {
+      "id": "plains",
+      "name": "Meadow Keep",
+      "origin": "biome:plains",
+      "x": 8304,
+      "y": 6181,
+      "level": 7,
+      "boss": "The Fallen Warden",
+      "mobs": [
+        "skeleton",
+        "ghost",
+        "guard dog",
+        "mugger",
+        "rogue",
+        "fire giant",
+        "black knight",
+        "chaos druid",
+        "zombie"
+      ]
+    },
+    {
+      "id": "sarnwick",
+      "name": "Sarnwick Sewers",
+      "origin": "city:sarnwick",
+      "x": 7673,
+      "y": 6168,
+      "level": 7,
+      "boss": "The Rat King",
+      "mobs": [
+        "giant spider",
+        "giant rat",
+        "snake",
+        "spider",
+        "bat",
+        "king scorpion",
+        "zombie",
+        "rogue",
+        "pyrefiend"
+      ]
+    },
+    {
+      "id": "velneir",
+      "name": "Velneir Sewers",
+      "origin": "city:velneir",
+      "x": 7483,
+      "y": 7475,
+      "level": 1,
+      "boss": "The Rat King",
+      "mobs": [
+        "rat",
+        "giant spider",
+        "snake",
+        "rogue",
+        "spider",
+        "bat",
+        "giant rat"
+      ]
+    },
+    {
+      "id": "volcano",
+      "name": "Cinder Maw",
+      "origin": "biome:volcano",
+      "x": 8523,
+      "y": 5644,
+      "level": 10,
+      "boss": "The Broodmother",
+      "mobs": [
+        "cave crawler",
+        "giant bat",
+        "bat",
+        "baby blue dragon",
+        "hobgoblin",
+        "cave goblin",
+        "giant spider",
+        "moss giant",
+        "spider",
+        "black bear",
+        "cave slime"
+      ]
+    },
+    {
+      "id": "wilderness",
+      "name": "Ashen Redoubt",
+      "origin": "biome:wilderness",
+      "x": 6705,
+      "y": 6020,
+      "level": 8,
+      "boss": "The Fallen Warden",
+      "mobs": [
+        "mugger",
+        "ghost",
+        "black knight",
+        "fire giant",
+        "zombie",
+        "skeleton",
+        "guard dog",
+        "rogue",
+        "chaos druid",
+        "hill giant"
+      ]
+    },
+    {
+      "id": "winter",
+      "name": "Frostbite Cavern",
+      "origin": "biome:winter",
+      "x": 8482,
+      "y": 7911,
+      "level": 5,
+      "boss": "The Broodmother",
+      "mobs": [
+        "giant spider",
+        "bat",
+        "black bear",
+        "cave goblin",
+        "giant bat",
+        "spider",
+        "cave crawler",
+        "cave slime",
+        "earth warrior"
+      ]
+    }
+  ],
+  "biomes": [
+    "plains",
+    "desert",
+    "forest",
+    "wilderness",
+    "winter",
+    "ocean",
+    "mountain",
+    "volcano",
+    "rune_essence"
+  ],
+  "gatherItems": [
+    {
+      "item": "logs",
+      "skill": "woodcutting",
+      "minTier": 1
+    },
+    {
+      "item": "oak_logs",
+      "skill": "woodcutting",
+      "minTier": 2
+    },
+    {
+      "item": "willow_logs",
+      "skill": "woodcutting",
+      "minTier": 4
+    },
+    {
+      "item": "maple_logs",
+      "skill": "woodcutting",
+      "minTier": 8
+    },
+    {
+      "item": "yew_logs",
+      "skill": "woodcutting",
+      "minTier": 10
+    },
+    {
+      "item": "magic_logs",
+      "skill": "woodcutting",
+      "minTier": 14
+    },
+    {
+      "item": "copper_ore",
+      "skill": "mining",
+      "minTier": 1
+    },
+    {
+      "item": "tin_ore",
+      "skill": "mining",
+      "minTier": 1
+    },
+    {
+      "item": "clay",
+      "skill": "mining",
+      "minTier": 1
+    },
+    {
+      "item": "iron_ore",
+      "skill": "mining",
+      "minTier": 3
+    },
+    {
+      "item": "coal",
+      "skill": "mining",
+      "minTier": 5
+    },
+    {
+      "item": "mithril_ore",
+      "skill": "mining",
+      "minTier": 9
+    },
+    {
+      "item": "adamantite_ore",
+      "skill": "mining",
+      "minTier": 12
+    },
+    {
+      "item": "runite_ore",
+      "skill": "mining",
+      "minTier": 15
+    },
+    {
+      "item": "bones",
+      "skill": "prayer",
+      "minTier": 1
+    },
+    {
+      "item": "big_bones",
+      "skill": "prayer",
+      "minTier": 4
+    },
+    {
+      "item": "raw_trout",
+      "skill": "fishing",
+      "minTier": 3
+    },
+    {
+      "item": "raw_salmon",
+      "skill": "fishing",
+      "minTier": 5
+    },
+    {
+      "item": "raw_tuna",
+      "skill": "fishing",
+      "minTier": 7
+    },
+    {
+      "item": "raw_lobster",
+      "skill": "fishing",
+      "minTier": 8
+    },
+    {
+      "item": "raw_swordfish",
+      "skill": "fishing",
+      "minTier": 10
+    },
+    {
+      "item": "raw_shark",
+      "skill": "fishing",
+      "minTier": 13
+    },
+    {
+      "item": "bronze_bar",
+      "skill": "smithing",
+      "minTier": 1
+    },
+    {
+      "item": "iron_bar",
+      "skill": "smithing",
+      "minTier": 4
+    },
+    {
+      "item": "steel_bar",
+      "skill": "smithing",
+      "minTier": 7
+    }
+  ],
+  "parcels": [
+    "ra3_package",
+    "sailing_courier_crate",
+    "royal_letter",
+    "burgh_generalstore_crate"
+  ],
+  "skills": [
+    "attack",
+    "defence",
+    "strength",
+    "constitution",
+    "ranged",
+    "prayer",
+    "magic",
+    "cooking",
+    "woodcutting",
+    "fletching",
+    "fishing",
+    "firemaking",
+    "crafting",
+    "smithing",
+    "mining",
+    "herblore",
+    "agility",
+    "sailing",
+    "slayer",
+    "farming",
+    "runecrafting",
+    "hunter",
+    "construction",
+    "summoning",
+    "dungeoneering"
+  ]
+}

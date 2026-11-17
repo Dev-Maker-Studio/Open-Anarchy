@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__TITLE__ - Quest Decision Tree</title>
+<style>
+:root{--bg:#10131a;--panel:#171c26;--line:#2a3242;--text:#e6e9f0;--dim:#8d97ab;--accent:#f5c451}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/1.45 system-ui,sans-serif;overflow:hidden}
+#view{position:absolute;inset:0}
+canvas{display:block}
+#head{position:absolute;left:12px;top:12px;width:340px;max-height:calc(100% - 24px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px}
+#head h1{margin:0 0 4px;font-size:17px}
+#head p{margin:4px 0;color:var(--dim)}
+#head h3{margin:10px 0 2px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+#head ul{margin:0;padding-left:18px}
+#head input{width:100%;margin-top:8px;padding:6px 8px;background:var(--bg);border:1px solid var(--line);border-radius:5px;color:var(--text)}
+#btns{display:flex;gap:6px;margin-top:8px}
+button{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:5px;padding:4px 9px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+#legend{position:absolute;left:12px;bottom:12px;max-width:340px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px;display:flex;flex-wrap:wrap;gap:4px}
+.chip{display:flex;align-items:center;gap:4px;padding:2px 7px;border-radius:99px;border:1px solid var(--line);cursor:pointer;font-size:11px;user-select:none}
+.chip.off{opacity:.35}
+#detail{position:absolute;right:12px;top:12px;width:380px;max-height:calc(100% - 24px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;display:none}
+#detail h2{margin:0 0 2px;font-size:16px}
+#detail .meta{color:var(--dim);font-size:12px;margin-bottom:6px}
+#detail .tr{margin:8px 0;padding:8px;background:var(--bg);border-radius:6px;font-size:12px}
+#detail .tr b{color:var(--accent)}
+#detail .opt{display:block;width:100%;text-align:left;margin:3px 0}
+#detail small{color:var(--dim)}
+#explorer{position:absolute;inset:16px;background:var(--panel);border:1px solid var(--accent);border-radius:10px;display:none;flex-direction:column;z-index:20;box-shadow:0 10px 40px #000a}
+#xhead{padding:12px 16px;border-bottom:1px solid var(--line);position:relative}
+#xhead h2{margin:0 0 2px;font-size:18px}
+#xhead p{margin:2px 0;color:var(--dim)}
+#xclose{position:absolute;right:12px;top:10px}
+#xbody{display:flex;flex:1;min-height:0}
+#xlist{width:280px;border-right:1px solid var(--line);overflow:auto;padding:8px}
+#xlist button{display:block;width:100%;text-align:left;margin:0 0 6px;padding:7px 9px}
+#xlist button.on{border-color:var(--accent);background:#2a2f3d}
+#xlist .st{display:block;font-size:11px;color:var(--accent);margin-top:2px}
+#xtree{flex:1;overflow:auto;padding:12px 18px}
+#xtree .line{margin:4px 0}
+#xtree .spk{margin-right:4px}
+#xtree .spk.pl{color:#7fd1b9}
+#xtree .spk.np{color:#e8b86a}
+#xtree .eff{margin:6px 0;padding:4px 8px;background:#1f2937;border-left:3px solid #5aa9e6;border-radius:4px;color:#9fc7ee;font-size:12px}
+#xtree .loop,#xtree .endx{margin:6px 0;color:var(--dim);font-size:12px;font-style:italic}
+#xtree .chc{margin:8px 0;padding:6px 8px;border:1px dashed #e08fd166;border-radius:6px}
+#xtree .chh{color:#e08fd1;font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+#xtree details{margin:3px 0}
+#xtree summary{cursor:pointer;color:#e6e9f0;font-weight:600;padding:2px 0}
+#xtree details.cond>summary{color:#f5c451}
+#xtree .ind{margin-left:8px;padding-left:12px;border-left:2px solid var(--line)}
+#xtree h3{margin:0 0 8px;font-size:14px;color:var(--accent)}
+#xtree .tools{margin-bottom:10px}
+#npclist button{display:block;width:100%;text-align:left;margin:2px 0}
+#ptoggle{position:absolute;left:358px;top:12px;z-index:6;padding:4px 8px}
+#tip{position:absolute;pointer-events:none;max-width:340px;background:#05070bf2;border:1px solid var(--accent);border-radius:6px;padding:8px 10px;display:none;z-index:5}
+#tip b{display:block;margin-bottom:2px}
+#tip span{color:var(--dim);font-size:11px}
+#warn{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:40px}
+</style>
+</head>
+<body>
+<div id="view"></div>
+<div id="head"></div>
+<div id="legend"></div>
+<div id="detail"></div>
+<div id="explorer"><div id="xhead"></div><div id="xbody"><div id="xlist"></div><div id="xtree"></div></div></div>
+<div id="tip"></div>
+<button id="ptoggle" title="Show or hide the panels (p)">&#9776;</button>
+<div id="warn">three.js failed to initialise in this viewer.</div>
+<script src="../_tree_viz/three.min.js"></script>
+<script id="tree-data" type="application/json">__DATA__</script>
+<script>
+(function () {
+  var data = JSON.parse(document.getElementById('tree-data').textContent);
+  if (typeof THREE === 'undefined') { document.getElementById('warn').style.display = 'flex'; return; }
+
+  var META = {
+    requirement: ['\u{1F512}', '#c0836a', 'Requirement'],
+    quest_start: ['\u{1F4DC}', '#f5c451', 'Quest start'],
+    started: ['\u{1F6A9}', '#6cc070', 'Started'],
+    stage: ['\u{1F4CD}', '#5aa9e6', 'Stage change'],
+    talk_to_npc: ['\u{1F4AC}', '#7fb3d5', 'Talk to NPC'],
+    transcript: ['\u{1F4D6}', '#a79adf', 'Transcript'],
+    choice: ['❓', '#e08fd1', 'Dialogue choice'],
+    travel: ['\u{1F9ED}', '#4dc9b0', 'Travel'],
+    object_interact: ['\u{1F6AA}', '#c9a46a', 'Object'],
+    item: ['\u{1F392}', '#d9b24c', 'Item'],
+    use_item: ['\u{1F527}', '#e0905a', 'Use item'],
+    skill_action: ['⚒️', '#8bc06a', 'Skill action'],
+    kill_npc: ['⚔️', '#e05a5a', 'Kill NPC'],
+    player_death: ['\u{1F480}', '#b0b0b8', 'Player death'],
+    cutscene: ['\u{1F3AC}', '#e0709a', 'Cutscene'],
+    puzzle: ['\u{1F9E9}', '#7a8de0', 'Puzzle'],
+    detour: ['↩️', '#7a8394', 'Detour / failure'],
+    reward: ['\u{1F381}', '#f0a030', 'Reward'],
+    quest_complete: ['\u{1F3C6}', '#ffd54a', 'Quest complete']
+  };
+  var EDGE = { progress: 0x8fd18f, choice: 0xe08fd1, detour: 0x7a8394, alt: 0x5aa9e6 };
+  var GOLD = 0xf5c451;
+
+  var nodes = data.nodes, edges = data.edges, byId = {}, out = {}, inn = {};
+  nodes.forEach(function (n) { byId[n.id] = n; out[n.id] = []; inn[n.id] = []; });
+  edges.forEach(function (e) { out[e.from].push(e); inn[e.to].push(e); });
+
+  var color = 0, mark = {}, back = {};
+  (function dfs(id) {
+    mark[id] = 1;
+    out[id].forEach(function (e, i) {
+      if (mark[e.to] === 1) back[e.from + '>' + e.to + '>' + e.label] = true;
+      else if (!mark[e.to]) dfs(e.to);
+    });
+    mark[id] = 2;
+  })(nodes[0].id);
+  function isBack(e) { return back[e.from + '>' + e.to + '>' + e.label]; }
+
+  var stagesData = (data.stages || []).slice().sort(function (a, b) { return a.stage - b.stage; });
+  var stageInfo = {};
+  stagesData.forEach(function (s) { stageInfo[s.stage] = s; });
+
+  var topo = [], indeg = {}, queue = [];
+  nodes.forEach(function (n) { indeg[n.id] = 0; });
+  edges.forEach(function (e) { if (!isBack(e)) indeg[e.to]++; });
+  nodes.forEach(function (n) { if (!indeg[n.id]) queue.push(n.id); });
+  while (queue.length) {
+    var qid = queue.shift();
+    topo.push(qid);
+    out[qid].forEach(function (e) { if (!isBack(e) && --indeg[e.to] === 0) queue.push(e.to); });
+  }
+  nodes.forEach(function (n) { if (topo.indexOf(n.id) < 0) topo.push(n.id); });
+
+  var lane = {};
+  topo.forEach(function (id) {
+    var n = byId[id];
+    if (typeof n.stage === 'number') { lane[id] = n.stage; return; }
+    var best = null;
+    inn[id].forEach(function (e) {
+      if (isBack(e) || lane[e.from] === undefined) return;
+      if (best === null || lane[e.from] > best) best = lane[e.from];
+    });
+    lane[id] = best === null ? (stagesData.length ? stagesData[0].stage : 0) : best;
+  });
+  var laneSet = {};
+  nodes.forEach(function (n) { laneSet[lane[n.id]] = 1; });
+  var laneKeys = Object.keys(laneSet).map(Number).sort(function (a, b) { return a - b; });
+
+  var ld = {};
+  topo.forEach(function (id) {
+    var d0 = 0;
+    inn[id].forEach(function (e) {
+      if (isBack(e) || lane[e.from] !== lane[id]) return;
+      d0 = Math.max(d0, ld[e.from] + 1);
+    });
+    ld[id] = d0;
+  });
+
+  var laneCols = {}, order = {};
+  laneKeys.forEach(function (lk) { laneCols[lk] = {}; });
+  topo.forEach(function (id) {
+    var cols = laneCols[lane[id]];
+    (cols[ld[id]] = cols[ld[id]] || []).push(id);
+  });
+  laneKeys.forEach(function (lk) {
+    var cols = laneCols[lk], maxc = Math.max.apply(null, Object.keys(cols).map(Number));
+    Object.keys(cols).forEach(function (c) { cols[c].forEach(function (id, i) { order[id] = i; }); });
+    for (var pass = 0; pass < 4; pass++) {
+      for (var ci = 1; ci <= maxc; ci++) {
+        if (!cols[ci]) continue;
+        var key = {};
+        cols[ci].forEach(function (id, i) {
+          var ps = inn[id].filter(function (e) { return !isBack(e) && lane[e.from] === lk; }), s = 0;
+          ps.forEach(function (e) { s += order[e.from]; });
+          key[id] = (ps.length ? s / ps.length : order[id]) + i * 1e-4;
+        });
+        cols[ci].sort(function (a, b) { return key[a] - key[b]; });
+        cols[ci].forEach(function (id, i) { order[id] = i; });
+      }
+    }
+  });
+
+  var DX = 250, DY = 125, LANE_GAP = 70, pos = {}, laneBox = {}, cursor = 0, maxX = 0;
+  laneKeys.forEach(function (lk) {
+    var cols = laneCols[lk], rows = 1, cmax = 0;
+    Object.keys(cols).forEach(function (c) { rows = Math.max(rows, cols[c].length); cmax = Math.max(cmax, Number(c)); });
+    var h = Math.max(rows * DY, 170), center = cursor - h / 2;
+    Object.keys(cols).forEach(function (c) {
+      cols[c].forEach(function (id, i) { pos[id] = { x: Number(c) * DX, y: center - (i - (cols[c].length - 1) / 2) * DY }; });
+    });
+    laneBox[lk] = { top: cursor, bottom: cursor - h, center: center };
+    maxX = Math.max(maxX, cmax * DX);
+    cursor -= h + LANE_GAP;
+  });
+  var treeBottom = cursor + LANE_GAP;
+
+  var npcs = data.npcs || [], npcById = {};
+  npcs.forEach(function (p) { npcById[p.id] = p; });
+  var dots = [], dcols = Math.min(Math.max(Math.ceil(maxX / 130) + 1, 4), 14), dotRows = 0;
+  npcs.filter(function (p) { return !p.onPath; }).forEach(function (p, i) {
+    dots.push({ npc: p, x: (i % dcols) * 130, y: treeBottom - 190 - Math.floor(i / dcols) * 120 });
+    dotRows = Math.floor(i / dcols) + 1;
+  });
+
+  var view = document.getElementById('view');
+  function Canvas2DRenderer() {
+    var canvas = document.createElement('canvas'), ctx = canvas.getContext('2d'), dpr = 1, W = 1, H = 1, bg = '#10131a';
+    this.domElement = canvas;
+    this.setPixelRatio = function (r) { dpr = r; };
+    this.setClearColor = function (c) { bg = '#' + ('000000' + c.toString(16)).slice(-6); };
+    this.setSize = function (w, h) { W = w; H = h; canvas.width = w * dpr; canvas.height = h * dpr; canvas.style.width = w + 'px'; canvas.style.height = h + 'px'; };
+    this.render = function (scene, camera) {
+      var k = W / (camera.right - camera.left);
+      function sx(x) { return (x - camera.position.x) * k + W / 2; }
+      function sy(y) { return H / 2 - (y - camera.position.y) * k; }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+      var kids = scene.children, i;
+      for (i = 0; i < kids.length; i++) {
+        var o = kids[i];
+        if (o.isLine) {
+          var a = o.geometry.getAttribute('position');
+          ctx.globalAlpha = o.material.opacity; ctx.strokeStyle = '#' + o.material.color.getHexString();
+          ctx.lineWidth = 1.5; ctx.setLineDash(o.material.isLineDashedMaterial ? [7 * k, 5 * k] : []);
+          ctx.beginPath();
+          for (var j = 0; j < a.count; j++) { if (j) ctx.lineTo(sx(a.getX(j)), sy(a.getY(j))); else ctx.moveTo(sx(a.getX(j)), sy(a.getY(j))); }
+          ctx.stroke();
+        } else if (o.isMesh) {
+          var g = o.geometry.getAttribute('position'), c = Math.cos(o.rotation.z), s = Math.sin(o.rotation.z);
+          ctx.globalAlpha = o.material.opacity; ctx.fillStyle = '#' + o.material.color.getHexString(); ctx.setLineDash([]);
+          ctx.beginPath();
+          for (var m = 0; m < g.count; m++) {
+            var x = g.getX(m), y = g.getY(m), wx = o.position.x + x * c - y * s, wy = o.position.y + x * s + y * c;
+            if (m) ctx.lineTo(sx(wx), sy(wy)); else ctx.moveTo(sx(wx), sy(wy));
+          }
+          ctx.fill();
+        }
+      }
+      for (i = 0; i < kids.length; i++) {
+        var sp = kids[i];
+        if (!sp.isSprite) continue;
+        var w = sp.scale.x * k, h = sp.scale.y * k;
+        ctx.globalAlpha = sp.material.opacity;
+        ctx.drawImage(sp.material.map.image, sx(sp.position.x) - w / 2, sy(sp.position.y) - h / 2, w, h);
+      }
+      ctx.globalAlpha = 1;
+    };
+  }
+  var renderer;
+  try { renderer = new THREE.WebGLRenderer({ antialias: true }); }
+  catch (err) { renderer = new Canvas2DRenderer(); }
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setClearColor(0x10131a);
+  view.appendChild(renderer.domElement);
+  var scene = new THREE.Scene();
+  var cam = new THREE.OrthographicCamera(-1, 1, 1, -1, -10, 10);
+  var zoom = 1, cx = 0, cy = 0;
+
+  function resize() {
+    var w = view.clientWidth, h = view.clientHeight;
+    renderer.setSize(w, h);
+    cam.left = -w / 2 / zoom; cam.right = w / 2 / zoom; cam.top = h / 2 / zoom; cam.bottom = -h / 2 / zoom;
+    cam.position.set(cx, cy, 5);
+    cam.updateProjectionMatrix();
+    draw();
+  }
+  function draw() { renderer.render(scene, cam); }
+
+  function iconTexture(type) {
+    var m = META[type], c = document.createElement('canvas');
+    c.width = c.height = 128;
+    var g = c.getContext('2d');
+    g.fillStyle = '#10131a';
+    g.beginPath(); g.arc(64, 64, 60, 0, 7); g.fill();
+    g.fillStyle = m[1] + '33';
+    g.beginPath(); g.arc(64, 64, 58, 0, 7); g.fill();
+    g.lineWidth = 6; g.strokeStyle = m[1];
+    g.beginPath(); g.arc(64, 64, 58, 0, 7); g.stroke();
+    g.font = '60px "Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = '#fff';
+    g.fillText(m[0], 64, 70);
+    var t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }
+  function labelTexture(text, stage) {
+    var c = document.createElement('canvas'), g = c.getContext('2d');
+    c.width = 512; c.height = 96;
+    g.font = '600 30px system-ui,sans-serif';
+    var words = text.split(' '), lines = [], cur = '';
+    words.forEach(function (w) {
+      if (g.measureText(cur + ' ' + w).width > 480 && cur) { lines.push(cur); cur = w; } else cur = cur ? cur + ' ' + w : w;
+    });
+    lines.push(cur);
+    lines = lines.slice(0, 2);
+    g.textAlign = 'center'; g.fillStyle = '#e6e9f0';
+    lines.forEach(function (l, i) { g.fillText(l, 256, 30 + i * 34); });
+    if (stage !== null && stage !== undefined) {
+      g.font = '600 22px system-ui,sans-serif'; g.fillStyle = '#f5c451';
+      g.fillText('stage ' + stage, 256, 90);
+    }
+    var t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }
+
+  function wrapLines(g, text, maxW) {
+    var words = String(text).split(/\s+/), ls = [], cur = '';
+    words.forEach(function (w) {
+      var tl = cur ? cur + ' ' + w : w;
+      if (g.measureText(tl).width > maxW && cur) { ls.push(cur); cur = w; } else cur = tl;
+    });
+    if (cur) ls.push(cur);
+    return ls;
+  }
+  function laneLabelTexture(lk) {
+    var s = stageInfo[lk] || {}, c = document.createElement('canvas'), g = c.getContext('2d'), W = 720, H = 300;
+    c.width = W; c.height = H;
+    g.textBaseline = 'alphabetic';
+    g.font = '700 46px system-ui,sans-serif'; g.fillStyle = '#f5c451';
+    g.fillText('STAGE ' + lk, 6, 48);
+    var y = 48;
+    if (s.title) {
+      g.font = '700 32px system-ui,sans-serif'; g.fillStyle = '#ffffff';
+      wrapLines(g, s.title, 700).slice(0, 2).forEach(function (l) { y += 38; g.fillText(l, 6, y); });
+    }
+    if (s.journal) {
+      g.font = '500 25px system-ui,sans-serif'; g.fillStyle = '#9aa4b8';
+      var js = wrapLines(g, s.journal, 700), cap = Math.floor((H - y - 8) / 31);
+      if (js.length > cap) { js = js.slice(0, cap); js[cap - 1] = js[cap - 1].replace(/\s*\S{0,3}$/, '') + '…'; }
+      js.forEach(function (l) { y += 31; g.fillText(l, 6, y); });
+    }
+    var tx = new THREE.CanvasTexture(c);
+    tx.colorSpace = THREE.SRGBColorSpace;
+    return tx;
+  }
+  function dotTexture(name) {
+    var c = document.createElement('canvas'), g = c.getContext('2d');
+    c.width = c.height = 96;
+    g.fillStyle = '#7fb3d533'; g.beginPath(); g.arc(48, 48, 44, 0, 7); g.fill();
+    g.lineWidth = 6; g.strokeStyle = '#7fb3d5'; g.beginPath(); g.arc(48, 48, 44, 0, 7); g.stroke();
+    var ini = name.split(/\s+/).map(function (w) { return w.charAt(0); }).join('').slice(0, 2).toUpperCase();
+    g.font = '700 38px system-ui,sans-serif'; g.fillStyle = '#e6e9f0'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(ini, 48, 51);
+    var tx = new THREE.CanvasTexture(c);
+    tx.colorSpace = THREE.SRGBColorSpace;
+    return tx;
+  }
+  function bandMesh(x0, x1, yTop, yBot, opacity) {
+    var pts = [V0(x0, yBot), V0(x1, yBot), V0(x1, yTop), V0(x0, yBot), V0(x1, yTop), V0(x0, yTop)];
+    var m = new THREE.Mesh(new THREE.BufferGeometry().setFromPoints(pts),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: opacity, side: THREE.DoubleSide, depthWrite: false }));
+    m.position.z = -1;
+    scene.add(m);
+  }
+  function V0(x, y) { return new THREE.Vector3(x, y, 0); }
+
+  var GUTTER = -450;
+  laneKeys.forEach(function (lk, i) {
+    var b = laneBox[lk];
+    bandMesh(GUTTER, maxX + 170, b.top + 6, b.bottom - 6, i % 2 ? 0.02 : 0.045);
+    var ls = new THREE.Sprite(new THREE.SpriteMaterial({ map: laneLabelTexture(lk), transparent: true }));
+    ls.scale.set(360, 150, 1);
+    ls.position.set(GUTTER + 190, b.center, 2);
+    scene.add(ls);
+  });
+  if (dots.length) {
+    var hc = document.createElement('canvas'), hg = hc.getContext('2d');
+    hc.width = 1400; hc.height = 70;
+    hg.font = '700 40px system-ui,sans-serif'; hg.fillStyle = '#7fb3d5';
+    hg.fillText('NPCs whose dialogue changes with this quest (not on the path) – click a dot', 6, 48);
+    var ht = new THREE.CanvasTexture(hc);
+    ht.colorSpace = THREE.SRGBColorSpace;
+    var hs = new THREE.Sprite(new THREE.SpriteMaterial({ map: ht, transparent: true }));
+    hs.scale.set(700, 35, 1);
+    hs.position.set(GUTTER + 360, treeBottom - 100, 2);
+    scene.add(hs);
+    dots.forEach(function (d) {
+      var ds = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTexture(d.npc.name), transparent: true }));
+      ds.scale.set(46, 46, 1);
+      ds.position.set(d.x, d.y, 2);
+      scene.add(ds);
+      var dl = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTexture(d.npc.name, null), transparent: true }));
+      dl.scale.set(160, 30, 1);
+      dl.position.set(d.x, d.y - 40, 2);
+      scene.add(dl);
+    });
+  }
+
+  var iconCache = {}, sprites = {}, labels = {}, ICON = 62;
+  nodes.forEach(function (n) {
+    iconCache[n.type] = iconCache[n.type] || iconTexture(n.type);
+    var s = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconCache[n.type], transparent: true }));
+    s.scale.set(ICON, ICON, 1);
+    s.position.set(pos[n.id].x, pos[n.id].y, 2);
+    scene.add(s); sprites[n.id] = s;
+    var l = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTexture(n.label, n.stage), transparent: true }));
+    l.scale.set(160, 30, 1);
+    l.position.set(pos[n.id].x, pos[n.id].y - 52, 2);
+    scene.add(l); labels[n.id] = l;
+  });
+
+  var lines = [];
+  edges.forEach(function (e) {
+    var a = pos[e.from], b = pos[e.to];
+    var A = new THREE.Vector3(a.x + ICON / 2, a.y, 0), B = new THREE.Vector3(b.x - ICON / 2 - 6, b.y, 0);
+    var bk = isBack(e);
+    var p0 = bk ? new THREE.Vector3(a.x, a.y + ICON / 2, 0) : A;
+    var p3 = bk ? new THREE.Vector3(b.x, b.y + ICON / 2 + 6, 0) : B;
+    var lift = bk ? 90 + Math.abs(a.x - b.x) * 0.08 : 0;
+    var cross = !bk && lane[e.from] !== lane[e.to] && a.y - b.y > ICON;
+    if (cross) { p0 = new THREE.Vector3(a.x + ICON / 2, a.y, 0); p3 = new THREE.Vector3(b.x, b.y + ICON / 2 + 6, 0); }
+    var drop = Math.min((a.y - b.y) * 0.6, 150);
+    var curve = cross ? new THREE.CubicBezierCurve3(p0, new THREE.Vector3(p0.x + 80, p0.y, 0), new THREE.Vector3(p3.x, p3.y + drop, 0), p3) : new THREE.CubicBezierCurve3(
+      p0,
+      new THREE.Vector3(bk ? p0.x : p0.x + DX * 0.45, bk ? p0.y + lift : p0.y, 0),
+      new THREE.Vector3(bk ? p3.x : p3.x - DX * 0.45, bk ? p3.y + lift : p3.y, 0),
+      p3);
+    var pts = curve.getPoints(24);
+    var geo = new THREE.BufferGeometry().setFromPoints(pts);
+    var dashed = e.kind === 'detour';
+    var mat = dashed ? new THREE.LineDashedMaterial({ color: EDGE[e.kind], dashSize: 7, gapSize: 5, transparent: true })
+                     : new THREE.LineBasicMaterial({ color: EDGE[e.kind], transparent: true });
+    var line = new THREE.Line(geo, mat);
+    if (dashed) line.computeLineDistances();
+    line.position.z = 0;
+    scene.add(line);
+    var tip = pts[pts.length - 1], prev = pts[pts.length - 3];
+    var ang = Math.atan2(tip.y - prev.y, tip.x - prev.x);
+    var ag = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, 0), new THREE.Vector3(-11, 5, 0), new THREE.Vector3(-11, -5, 0)]);
+    var arrow = new THREE.Mesh(ag, new THREE.MeshBasicMaterial({ color: EDGE[e.kind], transparent: true, side: THREE.DoubleSide }));
+    arrow.position.set(tip.x, tip.y, 0); arrow.rotation.z = ang;
+    scene.add(arrow);
+    var mid = pts[12];
+    lines.push({ e: e, line: line, arrow: arrow, base: EDGE[e.kind], mid: mid });
+  });
+
+  var edgeTipEl = null;
+  var selected = null, hidden = {};
+
+  function refreshStyles() {
+    var onPath = {}, onEdge = {};
+    if (selected) {
+      var stack = [selected]; onPath[selected] = true;
+      while (stack.length) {
+        var id = stack.pop();
+        inn[id].forEach(function (e) {
+          onEdge[e.from + '>' + e.to + '>' + e.label] = true;
+          if (!onPath[e.from]) { onPath[e.from] = true; stack.push(e.from); }
+        });
+      }
+    }
+    nodes.forEach(function (n) {
+      var dim = hidden[n.type] || (selected && !onPath[n.id]);
+      sprites[n.id].material.opacity = hidden[n.type] ? 0.08 : dim ? 0.3 : 1;
+      labels[n.id].material.opacity = hidden[n.type] ? 0.05 : dim ? 0.3 : 1;
+      var sc = n.id === selected ? ICON * 1.25 : ICON;
+      sprites[n.id].scale.set(sc, sc, 1);
+    });
+    lines.forEach(function (o) {
+      var k = o.e.from + '>' + o.e.to + '>' + o.e.label;
+      var hot = selected && onEdge[k];
+      var faded = hidden[byId[o.e.from].type] || hidden[byId[o.e.to].type];
+      var c = hot ? GOLD : o.base;
+      o.line.material.color.setHex(c); o.arrow.material.color.setHex(c);
+      var op = faded ? 0.06 : (selected && !hot ? 0.18 : 1);
+      o.line.material.opacity = op; o.arrow.material.opacity = op;
+    });
+    draw();
+  }
+
+  function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+  function list(title, arr) {
+    return arr && arr.length ? '<h3>' + title + '</h3><ul>' + arr.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '';
+  }
+
+  var head = document.getElementById('head');
+  head.innerHTML = '<h1>' + esc(data.name) + (data.enabled === false ? ' <small style="color:#e05a5a">(handler disabled)</small>' : '') + '</h1>' +
+    '<p>' + esc(data.summary) + '</p>' +
+    '<p>' + [data.startNpc && ('Start: ' + data.startNpc), data.startLocation, data.questPoints != null && (data.questPoints + ' quest point(s)'), nodes.length + ' nodes'].filter(Boolean).map(esc).join(' · ') + '</p>' +
+    list('Requirements', data.requirements) + list('Rewards', data.rewards) +
+    (npcs.length ? '<details id="npclist"><summary style="cursor:pointer;color:#f5c451;font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-top:10px">NPC dialogue (' + npcs.length + ')</summary>' + npcs.map(function (p) { return '<button data-npc="' + esc(p.id) + '">' + esc(p.name) + ' <small style="color:#8d97ab">' + p.variants.length + ' variant' + (p.variants.length > 1 ? 's' : '') + (p.onPath ? '' : ' \u00B7 off path') + '</small></button>'; }).join('') + '</details>' : '') +
+    '<input id="q" placeholder="Search nodes…"><div id="btns"><button id="home">Start</button><button id="fit">Fit all</button><button id="clr">Clear selection</button></div>' +
+    '<p style="font-size:11px">Drag to pan, wheel to zoom, hover for tooltip, click a node for its transcript and the route from the start.</p>';
+
+  Array.prototype.forEach.call(head.querySelectorAll('#npclist button'), function (b) { b.onclick = function () { openExplorer(b.dataset.npc); }; });
+
+  var legend = document.getElementById('legend');
+  var present = {};
+  nodes.forEach(function (n) { present[n.type] = (present[n.type] || 0) + 1; });
+  Object.keys(META).forEach(function (t) {
+    if (!present[t]) return;
+    var chip = document.createElement('div');
+    chip.className = 'chip'; chip.style.borderColor = META[t][1];
+    chip.textContent = META[t][0] + ' ' + META[t][2] + ' ' + present[t];
+    chip.onclick = function () { hidden[t] = !hidden[t]; chip.classList.toggle('off', !!hidden[t]); refreshStyles(); };
+    legend.appendChild(chip);
+  });
+
+  function stepHtml(steps) {
+    return steps.map(function (st) {
+      if (st.say !== undefined) return '<div class="line"><b class="spk ' + (st.say === 'Player' ? 'pl' : 'np') + '">' + esc(st.say) + ':</b>' + esc(st.text) + '</div>';
+      if (st.effect !== undefined) return '<div class="eff">⚙ ' + esc(st.effect) + '</div>';
+      if (st.loop !== undefined) return '<div class="loop">↩ ' + esc(st.loop) + '</div>';
+      if (st.end !== undefined) return '<div class="endx">■ ' + esc(st.end) + '</div>';
+      if (st.choice) {
+        return '<div class="chc"><div class="chh">❓ Choices</div>' + st.choice.map(function (o) {
+          return '<details open' + (o.condition ? ' class="cond"' : '') + '><summary>' + esc(o.option) + '</summary><div class="ind">' + stepHtml(o.steps) + '</div></details>';
+        }).join('') + '</div>';
+      }
+      return '';
+    }).join('');
+  }
+  var explorer = document.getElementById('explorer'), xlist = document.getElementById('xlist'), xtree = document.getElementById('xtree');
+  function showVariant(p, vi) {
+    var v = p.variants[vi];
+    Array.prototype.forEach.call(xlist.children, function (b, i) { b.classList.toggle('on', i === vi); });
+    xtree.innerHTML = '<div class="tools"><button id="xexp">Expand all</button> <button id="xcol">Collapse all</button></div><h3>' + esc(v.when) +
+      (v.stages.length ? ' <small style="color:#8d97ab">(stage ' + v.stages.join(', ') + ')</small>' : '') + '</h3>' + stepHtml(v.steps);
+    document.getElementById('xexp').onclick = function () { Array.prototype.forEach.call(xtree.querySelectorAll('details'), function (d) { d.open = true; }); };
+    document.getElementById('xcol').onclick = function () { Array.prototype.forEach.call(xtree.querySelectorAll('details'), function (d) { d.open = false; }); };
+    xtree.scrollTop = 0;
+  }
+  function openExplorer(id, stage) {
+    var p = npcById[id];
+    if (!p) return;
+    document.getElementById('xhead').innerHTML = '<button id="xclose">Close (Esc)</button><h2>' + esc(p.name) + '</h2><p>' +
+      [p.location, p.onPath ? 'on the quest path' : 'not on the quest path', p.stageDependent ? 'dialogue changes with the quest stage' : ''].filter(Boolean).map(esc).join(' · ') + '</p>' +
+      (p.summary ? '<p>' + esc(p.summary) + '</p>' : '') + (p.sourceFiles && p.sourceFiles.length ? '<p><small>' + p.sourceFiles.map(esc).join(', ') + '</small></p>' : '');
+    document.getElementById('xclose').onclick = closeExplorer;
+    xlist.innerHTML = '';
+    var first = 0, found = false;
+    p.variants.forEach(function (v, i) {
+      var b = document.createElement('button');
+      b.innerHTML = esc(v.when) + (v.stages.length ? '<span class="st">stage ' + v.stages.join(', ') + '</span>' : '<span class="st">any stage</span>');
+      b.onclick = function () { showVariant(p, i); };
+      xlist.appendChild(b);
+      if (!found && typeof stage === 'number' && v.stages.indexOf(stage) >= 0) { first = i; found = true; }
+    });
+    explorer.style.display = 'flex';
+    showVariant(p, first);
+  }
+  function closeExplorer() { explorer.style.display = 'none'; }
+
+  var detail = document.getElementById('detail');
+  function showDetail(id) {
+    var n = byId[id], m = META[n.type];
+    var h = '<h2>' + m[0] + ' ' + esc(n.label) + '</h2><div class="meta">' + esc(m[2]) +
+      (n.stage != null ? ' · stage ' + n.stage : '') + (n.npc ? ' · NPC: ' + esc(n.npc) : '') +
+      (n.location ? ' · ' + esc(n.location) : '') + '</div><p>' + esc(n.description) + '</p>';
+    if (n.transcript && n.transcript.length) {
+      h += '<div class="tr">' + n.transcript.map(function (l) { return '<div><b>' + esc(l.speaker) + ':</b> ' + esc(l.text) + '</div>'; }).join('') + '</div>';
+    }
+    if (out[id].length) {
+      h += '<h3 style="font-size:11px;color:#f5c451;text-transform:uppercase">Next</h3>';
+      out[id].forEach(function (e) {
+        h += '<button class="opt" data-to="' + esc(e.to) + '">' + esc(e.label) + ' <small>(' + esc(e.kind) + ') → ' + esc(byId[e.to].label) + '</small></button>';
+      });
+    }
+    if (n.npcRef && npcById[n.npcRef]) {
+      h += '<button class="opt" id="opennpc">Open full dialogue tree: ' + esc(npcById[n.npcRef].name) + ' <small>(' + npcById[n.npcRef].variants.length + ' variants)</small></button>';
+    }
+    if (n.source) h += '<p><small>' + esc(n.source) + '</small></p>';
+    detail.innerHTML = h; detail.style.display = 'block';
+    Array.prototype.forEach.call(detail.querySelectorAll('.opt[data-to]'), function (b) { b.onclick = function () { select(b.dataset.to, true); }; });
+    var on = document.getElementById('opennpc');
+    if (on) on.onclick = function () { openExplorer(n.npcRef, n.stage); };
+  }
+
+  function select(id, center) {
+    selected = id;
+    if (id) { showDetail(id); if (center) { cx = pos[id].x; cy = pos[id].y; resize(); } }
+    else detail.style.display = 'none';
+    refreshStyles();
+  }
+
+  function fit() {
+    var minx = GUTTER - 20, maxx = maxX + 190, maxy = 90;
+    var miny = treeBottom - (dots.length ? 190 + dotRows * 120 : 40);
+    zoom = Math.min(view.clientWidth / (maxx - minx), view.clientHeight / (maxy - miny), 1.2);
+    cx = (minx + maxx) / 2; cy = (miny + maxy) / 2;
+    resize();
+  }
+  document.getElementById('fit').onclick = fit;
+  document.getElementById('clr').onclick = function () { select(null); };
+  document.getElementById('q').oninput = function () {
+    var q = this.value.trim().toLowerCase();
+    var hit = q && nodes.filter(function (n) {
+      return (n.label + ' ' + n.description + ' ' + (n.npc || '') + ' ' + (n.location || '')).toLowerCase().indexOf(q) >= 0;
+    })[0];
+    if (hit) select(hit.id, true);
+  };
+
+  var tip = document.getElementById('tip');
+  function worldAt(ev) {
+    var r = view.getBoundingClientRect();
+    return { x: cx + (ev.clientX - r.left - r.width / 2) / zoom, y: cy - (ev.clientY - r.top - r.height / 2) / zoom };
+  }
+  function pick(w) {
+    var best = null, bd = (ICON / 2 + 6) * (ICON / 2 + 6);
+    nodes.forEach(function (n) {
+      if (hidden[n.type]) return;
+      var dx = pos[n.id].x - w.x, dy = pos[n.id].y - w.y, dd = dx * dx + dy * dy;
+      if (dd < bd) { bd = dd; best = n; }
+    });
+    return best;
+  }
+  function pickEdge(w) {
+    var best = null, bd = 14 / zoom;
+    lines.forEach(function (o) {
+      var dx = o.mid.x - w.x, dy = o.mid.y - w.y, dd = Math.sqrt(dx * dx + dy * dy);
+      if (dd < bd) { bd = dd; best = o; }
+    });
+    return best;
+  }
+
+  function pickDot(w) {
+    var best = null;
+    dots.forEach(function (d) {
+      var dx = d.x - w.x, dy = d.y - w.y;
+      if (dx * dx + dy * dy < 28 * 28) best = d;
+    });
+    return best;
+  }
+
+  var drag = null, moved = false;
+  renderer.domElement.addEventListener('mousedown', function (e) { drag = { x: e.clientX, y: e.clientY, cx: cx, cy: cy }; moved = false; });
+  window.addEventListener('mouseup', function (e) {
+    if (drag && !moved) {
+      var w0 = worldAt(e), dt = pickDot(w0);
+      if (dt) openExplorer(dt.npc.id);
+      else { var n = pick(w0); select(n ? n.id : null, false); }
+    }
+    drag = null;
+  });
+  window.addEventListener('mousemove', function (e) {
+    if (drag) {
+      var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
+      cx = drag.cx - dx / zoom; cy = drag.cy + dy / zoom; resize(); tip.style.display = 'none'; return;
+    }
+    if (e.target !== renderer.domElement) { tip.style.display = 'none'; return; }
+    var w = worldAt(e), n = pick(w), html = null, dt2 = pickDot(w);
+    if (dt2) {
+      html = '<b>' + esc(dt2.npc.name) + '</b>' + esc(dt2.npc.summary || '') + '<br><span>' + dt2.npc.variants.map(function (v) { return esc(v.when); }).join('<br>') + '</span>';
+      n = null;
+    } else if (n) {
+      html = '<b>' + META[n.type][0] + ' ' + esc(n.label) + '</b>' + esc(n.description) +
+        '<br><span>' + [META[n.type][2], n.stage != null && 'stage ' + n.stage, n.npc, n.location].filter(Boolean).map(esc).join(' · ') + '</span>';
+    } else {
+      var o = pickEdge(w);
+      if (o) html = '<b>' + esc(o.e.label) + '</b><span>' + esc(o.e.kind) + ': ' + esc(byId[o.e.from].label) + ' → ' + esc(byId[o.e.to].label) + '</span>';
+    }
+    if (html) {
+      tip.innerHTML = html; tip.style.display = 'block';
+      var tx = e.clientX + 16, ty = e.clientY + 16;
+      if (tx + 350 > window.innerWidth) tx = e.clientX - 356;
+      if (ty + tip.offsetHeight > window.innerHeight) ty = window.innerHeight - tip.offsetHeight - 8;
+      tip.style.left = tx + 'px'; tip.style.top = ty + 'px';
+    } else tip.style.display = 'none';
+    renderer.domElement.style.cursor = n || dt2 ? 'pointer' : drag ? 'grabbing' : 'grab';
+  });
+  renderer.domElement.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    var before = worldAt(e), f = Math.exp(-e.deltaY * 0.0015);
+    zoom = Math.max(0.08, Math.min(4, zoom * f));
+    var r = view.getBoundingClientRect();
+    cx = before.x - (e.clientX - r.left - r.width / 2) / zoom;
+    cy = before.y + (e.clientY - r.top - r.height / 2) / zoom;
+    resize();
+  }, { passive: false });
+  window.addEventListener('resize', resize);
+  var panelsOn = true;
+  function togglePanels() {
+    panelsOn = !panelsOn;
+    head.style.display = legend.style.display = panelsOn ? '' : 'none';
+    document.getElementById('ptoggle').style.left = panelsOn ? '358px' : '12px';
+  }
+  document.getElementById('ptoggle').onclick = togglePanels;
+  window.addEventListener('keydown', function (e) {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'Escape') { if (explorer.style.display === 'flex') closeExplorer(); else select(null); }
+    if (e.key === 'f') fit();
+    if (e.key === 'p') togglePanels();
+    if (e.key === 'h') home();
+  });
+
+  function home() {
+    zoom = 0.9;
+    cx = pos[nodes[0].id].x + (view.clientWidth / 2 - 520) / zoom;
+    cy = pos[nodes[0].id].y;
+    resize();
+  }
+  document.getElementById('home').onclick = home;
+  home();
+  select(null);
+})();
+</script>
+</body>
+</html>

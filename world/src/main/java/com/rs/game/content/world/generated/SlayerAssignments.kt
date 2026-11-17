@@ -94,7 +94,7 @@ object SlayerAssignments {
             if (maxOf(abs(dx), abs(dy)) < MIN_SPAWN_DISTANCE) return@repeat
             val tile = player.tile.transform(dx, dy, 0)
             if (tile.plane == GROUND_LEVEL && tile !in taken && World.floorAndWallsFree(tile, size) &&
-                GeneratedWorld.generator.liquidTileAt(tile.x, tile.y) == null && !GeneratedWorld.onRoad(tile.x, tile.y)
+                GeneratedWorld.generator.liquidTileAt(tile.x, tile.y) == null && !GeneratedWorld.onRoad(tile.x, tile.y) && !GeneratedWorld.inCity(tile.x, tile.y)
             ) return tile
         }
         return null

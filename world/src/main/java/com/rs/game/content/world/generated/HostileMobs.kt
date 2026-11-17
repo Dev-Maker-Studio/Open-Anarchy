@@ -82,7 +82,7 @@ private fun rollSpawn(chunkId: Int): Boolean {
 }
 
 private fun loadedChunks(): List<Int> = World.players
-    .filter { !it.isBot && it.hasStarted() && !it.hasFinished() && it.plane == GROUND_LEVEL }
+    .filter { !it.isBot && it.hasStarted() && !it.hasFinished() && it.plane == GROUND_LEVEL && !GeneratedWorld.inDungeon(it.x, it.y) }
     .flatMap { World.getChunkRadius(it.chunkId, LOADED_CHUNK_RADIUS) }
     .distinct()
     .filter { ChunkManager.findChunk(it).let { chunk -> chunk != null && chunk !is InstancedChunk } }
@@ -102,6 +102,8 @@ private fun canSpawnAt(tile: Tile): Boolean =
     World.floorAndWallsFree(tile, 1) &&
         generator.liquidTileAt(tile.x, tile.y) == null &&
         !GeneratedWorld.onRoad(tile.x, tile.y) &&
+        !GeneratedWorld.inCity(tile.x, tile.y) &&
+        !GeneratedWorld.inDungeon(tile.x, tile.y) &&
         World.players.none { !it.hasFinished() && it.plane == tile.plane && Utils.getDistance(it.tile, tile) < PLAYER_CLEARANCE }
 
 private fun spawnHostile(tile: Tile) {

@@ -1,6 +1,7 @@
 package com.rs.game.content.world.generated
 
 import com.rs.engine.pathfinder.DumbRouteFinder
+import com.rs.game.content.quests.area.AreaQuests
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions
 import com.rs.game.model.entity.player.Player
@@ -45,8 +46,10 @@ open class HostileNPC(id: Int, tile: Tile, val scale: Double, private val level:
         }
     }
 
+    protected open val dropsCoins: Boolean get() = false
+
     override fun canAggroPlayer(target: Player): Boolean =
-        !GeneratedWorld.onRoad(target.x, target.y) && !GeneratedWorld.onRoad(x, y)
+        !GeneratedWorld.onRoad(target.x, target.y) && !GeneratedWorld.onRoad(x, y) && !GeneratedWorld.inCity(target.x, target.y) && !GeneratedWorld.inCity(x, y)
 
     override fun randomWalk() {
         if (hasWalkSteps() || Math.random() >= WANDER_CHANCE) return
@@ -58,11 +61,12 @@ open class HostileNPC(id: Int, tile: Tile, val scale: Double, private val level:
 
     override fun drop(killer: Player, verifyCombatDefs: Boolean) {
         super.drop(killer, verifyCombatDefs)
+        AreaQuests.onKill(killer, this)
         if (level < HAMMER_MAX_LEVEL && Math.random() < HAMMER_CHANCE) sendDrop(killer, Item(Obj.hammer, 1))
     }
 
     override fun sendDrop(player: Player, item: Item) {
-        if (item.id == Obj.coins) return
+        if (item.id == Obj.coins && !dropsCoins) return
         if (id in HILL_GIANT_IDS && item.id !in HILL_GIANT_DROPS) return
         super.sendDrop(player, item)
     }

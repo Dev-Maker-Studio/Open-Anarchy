@@ -1,0 +1,10 @@
+{
+  "id": "sarnwick",
+  "name": "Sarnwick Sewers",
+  "theme": "sewer",
+  "seed": -4453093103104783233,
+  "slot": 3,
+  "entranceX": 7673,
+  "entranceY": 6168,
+  "origin": "city:sarnwick"
+}

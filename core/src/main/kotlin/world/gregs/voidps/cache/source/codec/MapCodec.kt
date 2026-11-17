@@ -30,6 +30,9 @@ object MapCodec : SourceCodec {
     @Volatile
     var generator: MapGenerator? = null
 
+    @Volatile
+    var reserved: Set<Int> = emptySet()
+
     override fun fileIdsFromMetadata(archive: Int): Boolean = true
 
     override fun exact(archive: Int): Boolean = false
@@ -112,6 +115,8 @@ object MapCodec : SourceCodec {
     private fun outsideArea(square: MapSquare.Square): ByteArray? {
         val generator = generator as? WorldGenerator ?: return null
         if (generator.inArea(square.regionX, square.regionY)) return null
+        val surface = square.shape == MapSquare.Shape.TERRAIN || square.shape == MapSquare.Shape.LOCATIONS
+        if (surface && square.region in reserved) return null
         return when (square.shape) {
             MapSquare.Shape.TERRAIN -> outside.computeIfAbsent(square.shape) { compile(square, generator.voidTerrain(square.regionX, square.regionY)) }
             MapSquare.Shape.LOCATIONS -> outside.computeIfAbsent(square.shape) { compile(square, generator.emptyLocations(square.regionX, square.regionY)) }

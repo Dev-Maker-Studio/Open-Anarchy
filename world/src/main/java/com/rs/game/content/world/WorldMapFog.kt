@@ -5,7 +5,9 @@ import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onChunkEnter
 import com.rs.plugin.kts.onLogin
 import org.darkan.core.gameval.gen.Varp
+import org.darkan.core.cache.WorldMapImage
 import org.darkan.core.map.WorldWindow
+import world.gregs.voidps.cache.definition.data.MapDefinition
 
 private const val FOG_AREA_TILES = WorldWindow.MAP_TILES
 private const val FOG_CELL_TILES = 256
@@ -24,7 +26,10 @@ fun mapWorldMapFog() {
     onChunkEnter { e -> e.player?.let(::revealFog) }
 }
 
-private fun revealFog(player: Player) = revealWorldMapFog(player, player.x, player.y, FOG_REVEAL_RADIUS_TILES)
+private fun revealFog(player: Player) {
+    revealWorldMapFog(player, player.x, player.y, FOG_REVEAL_RADIUS_TILES)
+    WorldMapImage.markVisited(player.x / MapDefinition.SIZE, player.y / MapDefinition.SIZE)
+}
 
 fun revealWorldMapFog(player: Player, centreX: Int, centreY: Int, radius: Int) {
     val x = centreX - WorldWindow.MAP_ORIGIN

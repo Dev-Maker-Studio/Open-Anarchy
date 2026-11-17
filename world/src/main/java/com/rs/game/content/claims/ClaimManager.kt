@@ -40,7 +40,12 @@ object ClaimManager {
     private const val LODESTONE_MESSAGE = "The land around a lodestone can't be claimed or built on."
     private const val PORT_MESSAGE = "The land around a port can't be claimed or built on."
     private const val ROAD_MESSAGE = "Nothing can be built on the road."
+    private const val CITY_BUILD_MESSAGE = "In a city you can only build inside a home you own. The city's realtor sells them."
+    private const val CITY_PROTECTED_MESSAGE = "Everything in a city is protected."
+    private const val CITY_CLAIM_MESSAGE = "City land is only bought and sold through the city's realtor."
+    private const val DUNGEON_MESSAGE = "You can't do that in a dungeon."
     private val LEGACY_FILE = File("./data/claims.json")
+    private val CITY_PROTECTED_OPTIONS = setOf("punch", "gather", "attack")
     private val DESTROY_OPTIONS = setOf("chop down", "chop", "mine", "cut", "cut down", "pick", "pick-up", "pick up", "smash", "break", "burn", "destroy", "dismantle", "demolish", "remove", "dig", "rake", "harvest", "clear", "pull")
     private val BORDER_BY_MASK = intArrayOf(
         -1,
@@ -64,7 +69,7 @@ object ClaimManager {
     }
 
     @JvmStatic
-    fun claimAt(tile: Tile): Claim? = claims.firstOrNull { it.contains(tile) }
+    fun claimAt(tile: Tile): Claim? = claims.firstOrNull { it.covers(tile) } ?: CityHomes.claimAt(tile)
 
     fun all(): List<Claim> = claims
 
@@ -100,6 +105,18 @@ object ClaimManager {
                 player.sendMessage(ROAD_MESSAGE)
             return false
         }
+        if (GeneratedWorld.inCity(tile.x, tile.y)) {
+            if (CityHomes.homeAt(tile)?.ownedBy(player) == true)
+                return true
+            if (notify)
+                player.sendMessage(CITY_BUILD_MESSAGE)
+            return false
+        }
+        if (GeneratedWorld.inDungeon(tile.x, tile.y)) {
+            if (notify)
+                player.sendMessage(DUNGEON_MESSAGE)
+            return false
+        }
         if (GeneratedWorld.inLodestoneZone(tile.x, tile.y)) {
             if (notify)
                 player.sendMessage(LODESTONE_MESSAGE)
@@ -120,6 +137,16 @@ object ClaimManager {
 
     @JvmStatic
     fun canDestroy(player: Player, tile: Tile, notify: Boolean = true): Boolean {
+        if (GeneratedWorld.inCity(tile.x, tile.y)) {
+            if (notify)
+                player.sendMessage(CITY_PROTECTED_MESSAGE)
+            return false
+        }
+        if (GeneratedWorld.inDungeon(tile.x, tile.y)) {
+            if (notify)
+                player.sendMessage(DUNGEON_MESSAGE)
+            return false
+        }
         val claim = claimAt(tile) ?: return true
         if (claim.owner == player.username || claim.allowDestroy)
             return true
@@ -131,11 +158,15 @@ object ClaimManager {
     @JvmStatic
     fun allowObjectOption(player: Player, obj: GameObject, opNum: Int): Boolean {
         val option = obj.getDefinitions(player).getOption(opNum)?.lowercase() ?: return true
+        if (option in CITY_PROTECTED_OPTIONS && GeneratedWorld.inCity(obj.tile.x, obj.tile.y)) {
+            player.sendMessage(CITY_PROTECTED_MESSAGE)
+            return false
+        }
         return option !in DESTROY_OPTIONS || canDestroy(player, obj.tile)
     }
 
     @JvmStatic
-    fun pvpOverride(tile: Tile): Boolean? = if (GeneratedWorld.onRoad(tile.x, tile.y)) false else claimAt(tile)?.allowPvp
+    fun pvpOverride(tile: Tile): Boolean? = if (GeneratedWorld.onRoad(tile.x, tile.y) || GeneratedWorld.inCity(tile.x, tile.y)) false else claimAt(tile)?.allowPvp
 
     @JvmStatic
     fun refreshPvp(player: Player) {
@@ -197,7 +228,9 @@ object ClaimManager {
         }
         val existing = claimAt(tile)
         when {
+            GeneratedWorld.inCity(tile.x, tile.y) -> player.sendMessage(CITY_CLAIM_MESSAGE)
             existing == null && GeneratedWorld.onRoad(tile.x, tile.y) -> player.sendMessage("Roads can't be claimed.")
+            existing == null && GeneratedWorld.inDungeon(tile.x, tile.y) -> player.sendMessage(DUNGEON_MESSAGE)
             existing == null && GeneratedWorld.inLodestoneZone(tile.x, tile.y) -> player.sendMessage(LODESTONE_MESSAGE)
             existing == null && PortSites.inZone(tile.x, tile.y) -> player.sendMessage(PORT_MESSAGE)
             existing == null -> {
@@ -241,6 +274,10 @@ object ClaimManager {
         }
         if (GeneratedWorld.roadTouches(candidate.minX, candidate.minY, candidate.maxX, candidate.maxY)) {
             player.sendMessage("Roads can't be claimed; that claim would cover one.")
+            return
+        }
+        if (GeneratedWorld.cityTouches(candidate.minX, candidate.minY, candidate.maxX, candidate.maxY)) {
+            player.sendMessage("That claim would cover part of a city, which can't be claimed.")
             return
         }
         if (GeneratedWorld.lodestoneZoneTouches(candidate.minX, candidate.minY, candidate.maxX, candidate.maxY)) {

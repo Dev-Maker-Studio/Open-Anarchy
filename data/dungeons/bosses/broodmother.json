@@ -1,0 +1,17 @@
+{
+  "id": "broodmother",
+  "name": "The Broodmother",
+  "npc": "giantspider2",
+  "level": 1.25,
+  "hitpoints": 6.0,
+  "damage": 1.2,
+  "respawnMinutes": 5,
+  "abilities": [
+    {"type": "summon", "atHealth": [75, 50, 25], "npc": "spider", "count": 3, "shout": "Feed, my children!"},
+    {"type": "enrage", "belowHealth": 20, "damage": 1.4, "shout": "Hssssss!"}
+  ],
+  "drops": [
+    {"item": "coins", "min": 40, "max": 90, "perLevel": true},
+    {"item": "big_bones", "min": 2, "max": 4}
+  ]
+}

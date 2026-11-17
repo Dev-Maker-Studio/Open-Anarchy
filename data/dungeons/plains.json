@@ -1,0 +1,10 @@
+{
+  "id": "plains",
+  "name": "Meadow Keep",
+  "theme": "fortress",
+  "seed": -405103487278760196,
+  "slot": 5,
+  "entranceX": 8304,
+  "entranceY": 6181,
+  "origin": "biome:plains"
+}

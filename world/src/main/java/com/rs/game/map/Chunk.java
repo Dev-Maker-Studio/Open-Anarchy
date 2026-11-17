@@ -6,6 +6,7 @@ import org.darkan.core.model.ObjectShape;
 import com.rs.engine.pathfinder.GameObjectCollision;
 import org.darkan.core.map.WorldCollision;
 import com.rs.game.World;
+import com.rs.game.content.skills.construction.BuiltRoofs;
 import com.rs.game.content.ItemConstants;
 import com.rs.game.content.pets.Pet;
 import com.rs.game.content.skills.summoning.Familiar;
@@ -793,11 +794,14 @@ public class Chunk {
                 object.getTile().getXInChunk(), object.getTile().getYInChunk(),
                 object.getType().getId(), object.getRotation()
             ));
-        for (GameObject object : getSpawnedObjects())
+        for (GameObject object : getSpawnedObjects()) {
+            if (BuiltRoofs.hiddenFrom(player, object))
+                continue;
             initUpdates.add(new CreateObject(
                 object.getTile().getXInChunk(), object.getTile().getYInChunk(),
                 object.getId(), object.getType().getId(), object.getRotation()
             ));
+        }
         for (GameObject object : flaggedObjectsForTickProcessing)
             initUpdates.add(new CreateObject(
                 object.getTile().getXInChunk(), object.getTile().getYInChunk(),

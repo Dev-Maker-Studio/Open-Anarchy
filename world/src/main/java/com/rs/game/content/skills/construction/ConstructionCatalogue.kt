@@ -21,6 +21,8 @@ enum class ConstructionCategory(val label: String) {
     MISC("Misc"),
 }
 
+enum class PieceKind { STANDARD, ROOF, FLOOR, LADDER }
+
 enum class Material(val xpPerDamage: Double) {
     LIGHT_WOOD(0.5),
     TIMBER(0.75),
@@ -79,9 +81,12 @@ class ConstructionPiece(
     val openLoc: Int = -1,
     val onOpen: ((Player, GameObject) -> Unit)? = null,
     val lockedLoc: Int = -1,
+    val kind: PieceKind = PieceKind.STANDARD,
+    val topLoc: Int = -1,
+    val hasCorner: Boolean = false,
 ) {
     val name: String get() = ItemDefinitions.getDefs(item).name
-    val placedLocs: IntArray get() = intArrayOf(loc, openLoc, lockedLoc).filter { it != -1 }.toIntArray()
+    val placedLocs: IntArray get() = intArrayOf(loc, openLoc, lockedLoc, topLoc).filter { it != -1 }.toIntArray()
     val materialValue: Int = cost.sumOf { (material, amount) -> ItemDefinitions.getDefs(material).getValue() * amount }
     val hitPoints: Int = (materialValue / ConstructionCatalogue.VALUE_PER_HIT_POINT).coerceIn(ConstructionCatalogue.MIN_HIT_POINTS, ConstructionCatalogue.MAX_HIT_POINTS)
     val material: Material get() = Material.forHitPoints(hitPoints)
@@ -100,6 +105,7 @@ object ConstructionCatalogue {
     private const val XP_PER_MATERIAL = 5.0
     private const val PLANKS_REQUIRED = 3
     private const val CHEST_PLANKS = 5
+    private const val WALL_MATERIALS = 4
     private const val WALL_QUARTER_TURN = 3
     private const val DEFAULT_MODEL_TYPE = 10
     private const val DOOR_XP = 100.0
@@ -114,6 +120,10 @@ object ConstructionCatalogue {
     private const val ANVIL_WIDTH = 1
     private const val ANVIL_DEPTH = 1
     private const val ANVIL_BARS = 5
+    private const val ROOF_MATERIALS = 2
+    private const val FLOOR_MATERIALS = 2
+    private const val LADDER_PLANKS = 4
+    private const val LADDER_NAILS = 4
 
     private val STARTS = linkedMapOf(
         HouseObjects.EXIT_PORTAL to ConstructionCategory.TELEPORTS,
@@ -177,6 +187,58 @@ object ConstructionCatalogue {
         HouseObjects.SHUTTERED_WINDOW to ConstructionCategory.DECOR,
     )
 
+    private data class Wall(val item: Int, val built: Int, val ghost: Int, val material: Int)
+
+    private val WALLS = listOf(
+        Wall(Obj.placeable_wall_1902, Loc.placeable_wall_1902_built, Loc.placeable_wall_1902_ghost, Obj.clay),
+        Wall(Obj.placeable_wall_13091, Loc.placeable_wall_13091_built, Loc.placeable_wall_13091_ghost, Obj.clay),
+        Wall(Obj.placeable_wall_25890, Loc.placeable_wall_25890_built, Loc.placeable_wall_25890_ghost, Obj.clay),
+        Wall(Obj.placeable_wall_25899, Loc.placeable_wall_25899_built, Loc.placeable_wall_25899_ghost, Obj.clay),
+        Wall(Obj.placeable_wall_36040, Loc.placeable_wall_36040_built, Loc.placeable_wall_36040_ghost, Obj.clay),
+        Wall(Obj.placeable_wall_36050, Loc.placeable_wall_36050_built, Loc.placeable_wall_36050_ghost, Obj.clay),
+        Wall(Obj.placeable_wall_11652, Loc.placeable_wall_11652_built, Loc.placeable_wall_11652_ghost, Obj.clay),
+        Wall(Obj.placeable_wall_11653, Loc.placeable_wall_11653_built, Loc.placeable_wall_11653_ghost, Obj.clay),
+        Wall(Obj.placeable_wall_1602, Loc.placeable_wall_1602_built, Loc.placeable_wall_1602_ghost, Obj.woodplank),
+        Wall(Obj.placeable_wall_10816, Loc.placeable_wall_10816_built, Loc.placeable_wall_10816_ghost, Obj.woodplank),
+        Wall(Obj.placeable_wall_24946, Loc.placeable_wall_24946_built, Loc.placeable_wall_24946_ghost, Obj.woodplank),
+        Wall(Obj.placeable_wall_24953, Loc.placeable_wall_24953_built, Loc.placeable_wall_24953_ghost, Obj.woodplank),
+        Wall(Obj.placeable_wall_23638, Loc.placeable_wall_23638_built, Loc.placeable_wall_23638_ghost, Obj.clay),
+        Wall(Obj.placeable_wall_23641, Loc.placeable_wall_23641_built, Loc.placeable_wall_23641_ghost, Obj.clay),
+        Wall(Obj.placeable_wall_5240, Loc.placeable_wall_5240_built, Loc.placeable_wall_5240_ghost, Obj.woodplank),
+        Wall(Obj.placeable_wall_5241, Loc.placeable_wall_5241_built, Loc.placeable_wall_5241_ghost, Obj.woodplank),
+        Wall(Obj.placeable_wall_1904, Loc.placeable_wall_1904_built, Loc.placeable_wall_1904_ghost, Obj.clay),
+        Wall(Obj.placeable_wall_33995, Loc.placeable_wall_33995_built, Loc.placeable_wall_33995_ghost, Obj.clay),
+        Wall(Obj.placeable_wall_33997, Loc.placeable_wall_33997_built, Loc.placeable_wall_33997_ghost, Obj.clay),
+        Wall(Obj.placeable_wall_36059, Loc.placeable_wall_36059_built, Loc.placeable_wall_36059_ghost, Obj.clay),
+        Wall(Obj.placeable_wall_36065, Loc.placeable_wall_36065_built, Loc.placeable_wall_36065_ghost, Obj.clay),
+        Wall(Obj.placeable_wall_35814, Loc.placeable_wall_35814_built, Loc.placeable_wall_35814_ghost, Obj.clay),
+        Wall(Obj.placeable_wall_35818, Loc.placeable_wall_35818_built, Loc.placeable_wall_35818_ghost, Obj.clay),
+        Wall(Obj.placeable_wall_33950, Loc.placeable_wall_33950_built, Loc.placeable_wall_33950_ghost, Obj.woodplank),
+        Wall(Obj.placeable_wall_24938, Loc.placeable_wall_24938_built, Loc.placeable_wall_24938_ghost, Obj.woodplank),
+        Wall(Obj.placeable_wall_24943, Loc.placeable_wall_24943_built, Loc.placeable_wall_24943_ghost, Obj.woodplank),
+        Wall(Obj.placeable_wall_23650, Loc.placeable_wall_23650_built, Loc.placeable_wall_23650_ghost, Obj.clay),
+    )
+
+    private data class Cover(val item: Int, val built: Int, val ghost: Int, val material: Int)
+
+    private val ROOFS = listOf(
+        Cover(Obj.placeable_roof_slate, Loc.placeable_roof_slate_built, Loc.placeable_roof_slate_ghost, Obj.clay),
+        Cover(Obj.placeable_roof_blueslate, Loc.placeable_roof_blueslate_built, Loc.placeable_roof_blueslate_ghost, Obj.clay),
+        Cover(Obj.placeable_roof_greyslate, Loc.placeable_roof_greyslate_built, Loc.placeable_roof_greyslate_ghost, Obj.clay),
+        Cover(Obj.placeable_roof_darkslate, Loc.placeable_roof_darkslate_built, Loc.placeable_roof_darkslate_ghost, Obj.clay),
+        Cover(Obj.placeable_roof_redslate, Loc.placeable_roof_redslate_built, Loc.placeable_roof_redslate_ghost, Obj.clay),
+        Cover(Obj.placeable_roof_thatch, Loc.placeable_roof_thatch_built, Loc.placeable_roof_thatch_ghost, Obj.logs),
+        Cover(Obj.placeable_roof_straw, Loc.placeable_roof_straw_built, Loc.placeable_roof_straw_ghost, Obj.logs),
+        Cover(Obj.placeable_roof_reed, Loc.placeable_roof_reed_built, Loc.placeable_roof_reed_ghost, Obj.logs),
+        Cover(Obj.placeable_roof_hay, Loc.placeable_roof_hay_built, Loc.placeable_roof_hay_ghost, Obj.logs),
+        Cover(Obj.placeable_roof_wood, Loc.placeable_roof_wood_built, Loc.placeable_roof_wood_ghost, Obj.woodplank),
+    )
+
+    private val FLOORS = listOf(
+        Cover(Obj.placeable_floor_wood, Loc.placeable_floor_wood_built, Loc.placeable_floor_wood_ghost, Obj.woodplank),
+        Cover(Obj.placeable_floor_slate, Loc.placeable_floor_slate_built, Loc.placeable_floor_slate_ghost, Obj.clay),
+    )
+
     val pieces: List<ConstructionPiece> by lazy { crafted() + vanilla() }
 
     private val byItem: Map<Int, ConstructionPiece> by lazy { pieces.associateBy { it.item } }
@@ -194,12 +256,17 @@ object ConstructionCatalogue {
 
     fun forCategory(category: ConstructionCategory): List<ConstructionPiece> = byCategory[category] ?: emptyList()
 
-    private fun sized(item: Int, built: Int, ghost: Int, source: Int, category: ConstructionCategory, cost: List<Pair<Int, Int>>, xp: Double, openLoc: Int = -1, onOpen: ((Player, GameObject) -> Unit)? = null, type: Int? = null, lockedLoc: Int = -1): ConstructionPiece {
+    private fun sized(item: Int, built: Int, ghost: Int, source: Int, category: ConstructionCategory, cost: List<Pair<Int, Int>>, xp: Double, openLoc: Int = -1, onOpen: ((Player, GameObject) -> Unit)? = null, type: Int? = null, lockedLoc: Int = -1, kind: PieceKind = PieceKind.STANDARD, topLoc: Int = -1): ConstructionPiece {
         val def = ObjectDefinitions.getDefs(source)
-        val shape = ObjectShape.forId(type ?: def.modelTypes?.firstOrNull()?.toInt() ?: DEFAULT_MODEL_TYPE) ?: ObjectShape.SCENERY_INTERACT
+        val types = def.modelTypes?.map { it.toInt() }.orEmpty()
+        val shape = ObjectShape.forId(type ?: types.firstOrNull() ?: DEFAULT_MODEL_TYPE) ?: ObjectShape.SCENERY_INTERACT
         val quarterTurn = if (shape == ObjectShape.WALL_STRAIGHT) WALL_QUARTER_TURN else 0
-        return ConstructionPiece(item, built, ghost, shape, quarterTurn, xp, def.sizeX, def.sizeY, category, cost, openLoc, onOpen, lockedLoc)
+        val hasCorner = shape == ObjectShape.WALL_STRAIGHT && ObjectShape.WALL_WHOLE_CORNER.id in types
+        return ConstructionPiece(item, built, ghost, shape, quarterTurn, xp, def.sizeX, def.sizeY, category, cost, openLoc, onOpen, lockedLoc, kind, topLoc, hasCorner)
     }
+
+    private fun cover(cover: Cover, kind: PieceKind, shape: ObjectShape, amount: Int): ConstructionPiece =
+        sized(cover.item, cover.built, cover.ghost, cover.built, ConstructionCategory.DECOR, listOf(cover.material to amount), amount * XP_PER_MATERIAL, type = shape.id, kind = kind)
 
     private fun piece(item: Int, built: Int, ghost: Int, category: ConstructionCategory, vararg cost: Pair<Int, Int>, xp: Double = cost.sumOf { it.second } * XP_PER_MATERIAL, openLoc: Int = -1, onOpen: ((Player, GameObject) -> Unit)? = null, lockedLoc: Int = -1): ConstructionPiece =
         sized(item, built, ghost, built, category, cost.toList(), xp, openLoc, onOpen, lockedLoc = lockedLoc)
@@ -232,6 +299,10 @@ object ConstructionCatalogue {
         piece(Obj.placeable_bank_table_591, Loc.placeable_bank_table_591_built, Loc.placeable_bank_table_591_ghost, ConstructionCategory.FUNCTIONAL, Obj.woodplank to 5, Obj.nails to 5),
         piece(Obj.placeable_table_593, Loc.placeable_table_593_built, Loc.placeable_table_593_ghost, ConstructionCategory.FURNISHINGS, Obj.woodplank to 5),
         piece(Obj.placeable_wall_36073, Loc.placeable_wall_36073_built, Loc.placeable_wall_36073_ghost, ConstructionCategory.DECOR, Obj.woodplank to 4),
+        *WALLS.map { (item, built, ghost, material) -> piece(item, built, ghost, ConstructionCategory.DECOR, material to WALL_MATERIALS) }.toTypedArray(),
+        *ROOFS.map { cover(it, PieceKind.ROOF, ObjectShape.STRAIGHT_FLAT_ROOF, ROOF_MATERIALS) }.toTypedArray(),
+        *FLOORS.map { cover(it, PieceKind.FLOOR, ObjectShape.GROUND_DECORATION, FLOOR_MATERIALS) }.toTypedArray(),
+        sized(Obj.placeable_ladder, Loc.placeable_ladder_built, Loc.placeable_ladder_ghost, Loc.placeable_ladder_built, ConstructionCategory.FUNCTIONAL, listOf(Obj.woodplank to LADDER_PLANKS, Obj.nails to LADDER_NAILS), (LADDER_PLANKS + LADDER_NAILS) * XP_PER_MATERIAL, kind = PieceKind.LADDER, topLoc = Loc.placeable_ladder_top_built),
         piece(Obj.placeable_candles_202, Loc.placeable_candles_202_built, Loc.placeable_candles_202_ghost, ConstructionCategory.LIGHTING, Obj.obj_36 to 3, Obj.woodplank to 1),
     )
 

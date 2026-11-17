@@ -49,7 +49,7 @@ fun startGeneratedWildlife() {
     if (!EnvVars.generateMaps) return
     WorldTasks.scheduleTimer(MINUTE_TICKS, MINUTE_TICKS) {
         World.players.forEach { player ->
-            if (player.hasStarted() && !player.hasFinished() && player.plane == GROUND_LEVEL) {
+            if (player.hasStarted() && !player.hasFinished() && player.plane == GROUND_LEVEL && !GeneratedWorld.inDungeon(player.x, player.y)) {
                 val odds = if (generator.biomeAt(player.x, player.y) in HOSTILE_BIOMES) WILDERNESS_POPUP_ODDS else POPUP_ODDS
                 if (Utils.random(odds) == 0) popUpAnimal(player)
             }
@@ -59,7 +59,7 @@ fun startGeneratedWildlife() {
 }
 
 private fun popUpAnimal(player: Player) {
-    val tile = findTile(player) { x, y -> World.floorFree(GROUND_LEVEL, x, y, 1) && generator.liquidTileAt(x, y) == null } ?: return
+    val tile = findTile(player) { x, y -> World.floorFree(GROUND_LEVEL, x, y, 1) && generator.liquidTileAt(x, y) == null && !GeneratedWorld.inCity(x, y) } ?: return
     val biome = generator.biomeAt(tile.x, tile.y)
     if (biome == Biome.FOREST) {
         Impling(forestImplings[Utils.random(forestImplings.size)], tile, true, true)
