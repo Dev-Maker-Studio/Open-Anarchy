@@ -38,7 +38,7 @@ Run from the server root: `python3 -I .claude/skills/questing/scripts/quests.py 
 
 - **Givers** are the city's invulnerable service NPCs only. `Talk-to` on one opens the quest menu when it has an offer, a step of yours or a quest of yours in progress; "Something else." passes to the NPC's normal chat. Other options (Bank, Trade) are never taken over.
 - **Discovery.** Hearing a giver's offers adds those quests to the quest tab in red. Accepting turns one yellow. Handing in turns it green and adds its quest points. A quest that `requires` something is not offered, and so not discovered, until the requirement is met.
-- **Quest tab.** In generated worlds the tab lists only discovered area quests, grouped by city. Clicking one opens the journal: done steps struck through, the current step, the rewards.
+- **Quest tab.** In generated worlds the tab lists only discovered area quests, grouped by city. Clicking one opens the journal: done steps struck through, the current step, the rewards. The server sends the rows as `Inv.area_quests` (one coin stack per row: the amount is the state, 1 header, 2 not started, 3 started, 4 complete; the tooltip is the text) and the client draws them itself: the `onTimer` of 190:15 runs `area_quests_timer`, which redraws from the inv as soon as the tab loads and every 3000 client cycles (one minute) after, so a reload of the tab or a vanilla `ql4_refresh` can never leave the vanilla list showing. The timer does nothing while the inv is empty, which is how a world without area quests keeps the vanilla list.
 - **Quest points** have no cap. Every quest that is added raises what a player can earn.
 - **Steps** are described in `SCHEMA.md`. Every quest ends by returning to its giver; that hand-in is not a step.
 
@@ -65,7 +65,7 @@ Run from the server root: `python3 -I .claude/skills/questing/scripts/quests.py 
 | A quest file | `::areaquests reload` in game, or a restart |
 | A city's seeded quests | delete `generated.json`, then restart or `::areaquests make <city>` |
 | Kotlin | `JAVA_HOME=/home/jesse/.jdks/jdk-26.0.2.1+1 flock /tmp/darkan-build.lock nice -n 10 ./gradlew :world:installDist --offline --console=plain -q`, then `systemctl --user restart darkan-world-22` |
-| `area_quests_clear.ts`, `area_quests_add.ts` | compile each with `tools cs2 compile cache-source/clientscripts <6747\|6748>` (needs `JAVA_HOME` 26 and `CACHE_PATH=$PWD/data/cache-cities/`), then restart; the start repacks them |
+| `area_quests_draw.ts`, `area_quests_timer.ts` | compile each with `tools cs2 compile cache-source/clientscripts <6747\|6748>` (needs `JAVA_HOME` 26 and `CACHE_PATH=$PWD/data/cache-cities/`), then restart; the start repacks them |
 
 `::areaquests reset` clears your own quest log for testing. Never restart the lobby or world 123.
 
@@ -83,7 +83,7 @@ The pages load `data/quest-views/three.min.js` by relative path, so open them fr
 | Reward formula | `AreaQuestRewards.kt` |
 | Quest tab rows, journal, completion scroll | `AreaQuestTab.kt` |
 | Seeded maker and `world.json` | `AreaQuestPlanner.kt` |
-| Quest tab scripts | `cache-source/clientscripts/clientscript/area_quests_clear.ts`, `area_quests_add.ts` |
+| Quest tab scripts | `cache-source/clientscripts/proc/area_quests_draw.ts`, `clientscript/area_quests_timer.ts` |
 
 Hooks outside the folder: `HostileNPC.drop` reports kills, `DungeonManager` reports a finished dungeoneering floor, and `QuestManager` hands the quest tab to `AreaQuestTab` when the world is generated.
 

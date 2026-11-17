@@ -1,45 +1,48 @@
 package com.rs.game.content.quests.area
 
 import com.rs.game.model.entity.player.Player
+import com.rs.game.model.item.ItemTooltips
 import org.darkan.core.Utils
 import org.darkan.core.gameval.gen.Component
 import org.darkan.core.gameval.gen.Cs2
 import org.darkan.core.gameval.gen.Interface
+import org.darkan.core.gameval.gen.Inv
 import org.darkan.core.gameval.gen.Obj
 import org.darkan.core.gameval.gen.Varcstr
 import org.darkan.core.gameval.gen.Varp
 import org.darkan.core.map.GeneratedWorld
 import org.darkan.core.model.IFEvents
+import org.darkan.core.model.Item
 
 private const val ROWS_KEY = "areaQuestRows"
-private const val HEADER_COLOUR = 0xFF9900
-private const val NOT_STARTED_COLOUR = 0xFF0000
-private const val STARTED_COLOUR = 0xFFFF00
-private const val COMPLETE_COLOUR = 0x00FF00
-private const val CLICKABLE = 1
-private const val NOT_CLICKABLE = 0
+private const val HEADER = 1
+private const val NOT_STARTED = 2
+private const val STARTED = 3
+private const val COMPLETE = 4
+private const val NO_QUESTS = "No quests discovered yet"
 private const val JINGLE = 152
 private const val STRIKE = "<str>"
 private const val BLANK = ""
 
 object AreaQuestTab {
 
-    private class Row(val text: String, val colour: Int, val quest: AreaQuest?)
+    private class Row(val text: String, val state: Int, val quest: AreaQuest?)
 
     private fun rows(log: AreaQuestLog): List<Row> = buildList {
         val known = AreaQuestRegistry.quests.values.filter(log::known).groupBy { it.area }
         for (area in GeneratedWorld.cities.map { it.id } + known.keys.filter { id -> GeneratedWorld.cities.none { it.id == id } }) {
             val quests = known[area] ?: continue
-            add(Row(AreaQuests.cityName(area), HEADER_COLOUR, null))
+            add(Row(AreaQuests.cityName(area), HEADER, null))
             for (quest in quests) {
-                val colour = when (quest.id) {
-                    in log.completed -> COMPLETE_COLOUR
-                    in log.active -> STARTED_COLOUR
-                    else -> NOT_STARTED_COLOUR
+                val state = when (quest.id) {
+                    in log.completed -> COMPLETE
+                    in log.active -> STARTED
+                    else -> NOT_STARTED
                 }
-                add(Row(quest.name, colour, quest))
+                add(Row(quest.name, state, quest))
             }
         }
+        if (isEmpty()) add(Row(NO_QUESTS, HEADER, null))
     }
 
     @JvmStatic
@@ -48,14 +51,9 @@ object AreaQuestTab {
         val rows = rows(log)
         player.tempAttribs.setO<List<Row>>(ROWS_KEY, rows)
         player.vars.setVar(Varp.qp, log.points)
-        player.packets.sendRunScript(Cs2.area_quests_clear)
-        rows.forEach { player.packets.sendRunScript(Cs2.area_quests_add, it.text, it.colour, if (it.quest == null) NOT_CLICKABLE else CLICKABLE) }
-        if (rows.isNotEmpty())
-            player.packets.setIFEvents(IFEvents(Interface.interface_190, component(Component.interface_190.component_190_15), 0, rows.size - 1).enableRightClickOption(0))
-        val done = rows.count { it.colour == COMPLETE_COLOUR }
-        val found = rows.count { it.quest != null }
-        player.packets.setIFText(Interface.interface_190, component(Component.interface_190.component_190_12), if (found == 0) "Speak to the townsfolk to find quests" else "$done of $found discovered quests complete")
-        player.packets.setIFText(Interface.interface_190, component(Component.interface_190.component_190_25), "Quest Points: ${Utils.getFormattedNumber(log.points)}")
+        player.packets.sendItems(Inv.area_quests, rows.map { Item(Obj.coins, it.state).addMetaData(ItemTooltips.METADATA_KEY, it.text) }.toTypedArray<Item?>())
+        player.packets.sendRunScript(Cs2.area_quests_draw)
+        player.packets.setIFEvents(IFEvents(Interface.interface_190, component(Component.interface_190.component_190_15), 0, rows.size - 1).enableRightClickOption(0))
     }
 
     @JvmStatic
