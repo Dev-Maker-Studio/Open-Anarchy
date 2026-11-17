@@ -71,6 +71,14 @@ object GeneratedWorld {
 
     fun cityTouches(minX: Int, minY: Int, maxX: Int, maxY: Int): Boolean = cities.any { it.touches(minX, minY, maxX, maxY) }
 
+    /** Land within [CITY_CLAIM_MARGIN] tiles of a city's edge can't be claimed. */
+    const val CITY_CLAIM_MARGIN = 100
+
+    fun cityClaimZoneTouches(minX: Int, minY: Int, maxX: Int, maxY: Int): Boolean =
+        EnvVars.generateMaps && cities.any { it.touches(minX, minY, maxX, maxY, CITY_CLAIM_MARGIN) }
+
+    fun inCityClaimZone(x: Int, y: Int): Boolean = cityClaimZoneTouches(x, y, x, y)
+
     val sectorName: String = WorldWindow.sectorName(windowX, windowY)
 
     val spawnX: Int = WorldWindow.toLocal(WorldGenerator.ORIGIN_X, windowX).coerceIn(0, WorldWindow.WINDOW_TILES - 1)

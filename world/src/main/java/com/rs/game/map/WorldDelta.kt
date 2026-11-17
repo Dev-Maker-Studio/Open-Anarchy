@@ -66,6 +66,8 @@ object WorldDelta {
     private val spots = HashMap<Long, Spot>()
     private val byChunk = HashMap<Int, MutableSet<Long>>()
     private val restoring = ThreadLocal.withInitial { false }
+    private val swinging = ThreadLocal.withInitial { false }
+    private val swung = HashSet<Long>()
     private val writer = Executors.newSingleThreadScheduledExecutor { Thread(it, "world-delta").also { thread -> thread.isDaemon = true } }
     private var pendingSave: ScheduledFuture<*>? = null
     private var loaded = false
@@ -110,6 +112,17 @@ object WorldDelta {
         }
     }
 
+    @JvmStatic
+    fun swing(action: Runnable) {
+        if (swinging.get()) return action.run()
+        swinging.set(true)
+        try {
+            action.run()
+        } finally {
+            swinging.set(false)
+        }
+    }
+
     private fun addedEntry(obj: GameObject, owner: String?) = Added(obj.x, obj.y, obj.plane, obj.id, obj.type.id, obj.rotation, owner, obj.attribs.getI(BUILT_FURNITURE_HP, MISSING))
 
     @JvmStatic
@@ -117,6 +130,7 @@ object WorldDelta {
         if (!enabled(chunk)) return false
         ensureLoaded()
         val k = key(obj)
+        if (swinging.get()) return synchronized(this) { swung.remove(k) }
         var cleared: Boolean
         synchronized(this) {
             cleared = removed[k]?.id == obj.id
@@ -139,6 +153,10 @@ object WorldDelta {
         if (!enabled(chunk)) return
         ensureLoaded()
         val k = key(obj)
+        if (swinging.get()) {
+            if (ofTheMap) synchronized(this) { swung.add(k) }
+            return
+        }
         synchronized(this) {
             val previous = added.remove(k)
             previous?.let { byChunk[chunkOf(it.x, it.y, it.plane)]?.remove(k) }

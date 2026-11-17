@@ -43,6 +43,7 @@ object ClaimManager {
     private const val CITY_BUILD_MESSAGE = "In a city you can only build inside a home you own. The city's realtor sells them."
     private const val CITY_PROTECTED_MESSAGE = "Everything in a city is protected."
     private const val CITY_CLAIM_MESSAGE = "City land is only bought and sold through the city's realtor."
+    private const val CITY_ZONE_MESSAGE = "Land within 100 tiles of a city can't be claimed."
     private const val DUNGEON_MESSAGE = "You can't do that in a dungeon."
     private val LEGACY_FILE = File("./data/claims.json")
     private val CITY_PROTECTED_OPTIONS = setOf("punch", "gather", "attack")
@@ -229,6 +230,7 @@ object ClaimManager {
         val existing = claimAt(tile)
         when {
             GeneratedWorld.inCity(tile.x, tile.y) -> player.sendMessage(CITY_CLAIM_MESSAGE)
+            existing == null && GeneratedWorld.inCityClaimZone(tile.x, tile.y) -> player.sendMessage(CITY_ZONE_MESSAGE)
             existing == null && GeneratedWorld.onRoad(tile.x, tile.y) -> player.sendMessage("Roads can't be claimed.")
             existing == null && GeneratedWorld.inDungeon(tile.x, tile.y) -> player.sendMessage(DUNGEON_MESSAGE)
             existing == null && GeneratedWorld.inLodestoneZone(tile.x, tile.y) -> player.sendMessage(LODESTONE_MESSAGE)
@@ -278,6 +280,10 @@ object ClaimManager {
         }
         if (GeneratedWorld.cityTouches(candidate.minX, candidate.minY, candidate.maxX, candidate.maxY)) {
             player.sendMessage("That claim would cover part of a city, which can't be claimed.")
+            return
+        }
+        if (editing == null && GeneratedWorld.cityClaimZoneTouches(candidate.minX, candidate.minY, candidate.maxX, candidate.maxY)) {
+            player.sendMessage("That claim would be within 100 tiles of a city, which can't be claimed.")
             return
         }
         if (GeneratedWorld.lodestoneZoneTouches(candidate.minX, candidate.minY, candidate.maxX, candidate.maxY)) {

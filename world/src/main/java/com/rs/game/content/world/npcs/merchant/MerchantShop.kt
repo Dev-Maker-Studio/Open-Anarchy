@@ -15,10 +15,26 @@ private const val DEED_PRICE = 100
 private const val MIN_PRICE = 1
 private const val MERCHANT_SHOP_INTERFACE = 1326
 
-class MerchantShop(private val merchant: CoinTrader, name: String = SHOP_NAME) : Shop(name, Obj.coins, emptyArray<ShopItem>(), true, false) {
+class MerchantShop(private val merchant: CoinTrader, name: String = SHOP_NAME, defaults: List<Item> = emptyList()) :
+    Shop(name, Obj.coins, defaults.map { ShopItem(it.id, it.amount) }.toTypedArray(), true, false) {
     private val viewers = HashSet<Player>()
 
     fun stock(): List<Item> = generalStock.orEmpty().filterNotNull().map { it.item }
+
+    fun defaultStock(): List<Item> = mainStock.map { it.item }
+
+    fun restore(itemId: Int, amount: Int) {
+        val default = mainStock.firstOrNull { it.item.id == itemId }
+        if (default != null) default.item.amount = amount else if (amount > 0) addItem(itemId, amount)
+    }
+
+    fun restockDefaults(amount: Int): Boolean {
+        val low = mainStock.filter { it.item.amount < getDefaultQuantity(it.item.id) }
+        if (low.isEmpty()) return false
+        low.forEach { it.item.amount = minOf(it.item.amount + amount, getDefaultQuantity(it.item.id)) }
+        refreshShop()
+        return true
+    }
 
     fun consume(itemId: Int): Boolean {
         val slots = generalStock ?: return false

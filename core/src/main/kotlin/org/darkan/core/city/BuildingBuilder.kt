@@ -57,7 +57,7 @@ object BuildingBuilder {
     class Plan(val furniture: List<Furnishing>, val residents: List<Resident>)
 
     fun locId(name: String): Int? {
-        val id = locIds.computeIfAbsent(name) { runCatching { Loc::class.java.getField(it).getInt(null) }.getOrDefault(MISSING) }
+        val id = locIds.computeIfAbsent(name) { runCatching { Loc::class.java.getField(it).apply { isAccessible = true }.getInt(null) }.getOrDefault(MISSING) }
         return id.takeIf { it != MISSING }
     }
 

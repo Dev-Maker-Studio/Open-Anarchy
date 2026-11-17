@@ -4,6 +4,7 @@ import org.darkan.core.cache.ObjectDefinitions;
 import world.gregs.voidps.cache.definition.data.ObjectDefinition;
 import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
+import com.rs.game.map.WorldDelta;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import world.gregs.voidps.type.Tile;
@@ -63,6 +64,10 @@ public class Doors {
     }
 
 	public static void handleClosedDoor(Player player, GameObject object) {
+		WorldDelta.swing(() -> swingClosedDoor(player, object));
+	}
+
+	private static void swingClosedDoor(Player player, GameObject object) {
 		boolean open = object.getDefinitions(player).containsOption("Open");
 		int rotation = object.getRotation(open ? 0 : -1);
 		Tile adjusted = object.getTile();
@@ -93,6 +98,10 @@ public class Doors {
 	}
 
 	public static void handleInPlaceSingleDoor(Player player, GameObject object) {
+		WorldDelta.swing(() -> swingInPlaceSingleDoor(player, object));
+	}
+
+	private static void swingInPlaceSingleDoor(Player player, GameObject object) {
 		ObjectDefinition openedDef = ObjectDefinitions.getDefs(DoorPair.getOpposingDoor(player, object));
 		boolean tempMove = isTempMove(openedDef);
 		if (tempMove) {
@@ -111,6 +120,10 @@ public class Doors {
 	}
 
 	public static void handleInPlaceDoubleDoor(Player player, GameObject object) {
+		WorldDelta.swing(() -> swingInPlaceDoubleDoor(player, object));
+	}
+
+	private static void swingInPlaceDoubleDoor(Player player, GameObject object) {
 		ObjectDefinition openedDef = ObjectDefinitions.getDefs(DoorPair.getOpposingDoor(player, object));
 		boolean tempMove = isTempMove(openedDef);
 		GameObject[] doors = getNearby(player, object, (t1, t2) -> t1.getY() > t2.getY(), object.getTile().transform(0, 1, 0), object.getTile().transform(0, -1, 0));
@@ -148,6 +161,10 @@ public class Doors {
 	}
 
 	public static void handleDoor(Player player, GameObject object, int offset) {
+		WorldDelta.swing(() -> swingDoor(player, object, offset));
+	}
+
+	private static void swingDoor(Player player, GameObject object, int offset) {
 		boolean open = object.getDefinitions(player).containsOption("Open");
 		int rotation = object.getRotation(open ? offset : -1 + offset);
 		Tile adjusted = object.getTile();
@@ -187,6 +204,10 @@ public class Doors {
 	}
 
 	public static void handleLeftHandedDoor(Player player, GameObject object, int offset) {
+		WorldDelta.swing(() -> swingLeftHandedDoor(player, object, offset));
+	}
+
+	private static void swingLeftHandedDoor(Player player, GameObject object, int offset) {
 		boolean open = object.getDefinitions(player).containsOption("Open");
 		int rotation = object.getRotation(open ? offset : -1 + offset);
 		Tile adjusted = object.getTile();
@@ -222,6 +243,10 @@ public class Doors {
 	}
 
 	public static void handleOneWayDoor(Player player, GameObject object, int rotation) {
+		WorldDelta.swing(() -> swingOneWayDoor(player, object, rotation));
+	}
+
+	private static void swingOneWayDoor(Player player, GameObject object, int rotation) {
 		boolean open = object.getDefinitions(player).containsOption("Open");
 		Tile adjusted = object.getTile();
         adjusted = switch (rotation) {
@@ -258,6 +283,10 @@ public class Doors {
 	}
 
 	public static void handleDoubleDoor(Player player, GameObject object, boolean invert) {
+		WorldDelta.swing(() -> swingDoubleDoor(player, object, invert));
+	}
+
+	private static void swingDoubleDoor(Player player, GameObject object, boolean invert) {
 		boolean open = object.getDefinitions(player).containsOption("Open");
 		ObjectDefinition openedDef = ObjectDefinitions.getDefs(DoorPair.getOpposingDoor(player, object));
 		boolean tempMove = isTempMove(openedDef);
@@ -364,6 +393,10 @@ public class Doors {
 	}
 
 	public static void handleGate(Player player, GameObject object) {
+		WorldDelta.swing(() -> swingGate(player, object));
+	}
+
+	private static void swingGate(Player player, GameObject object) {
 		boolean open = object.getDefinitions(player).containsOption("Open");
 		int rotation = object.getRotation(open ? 0 : 1);
 		ObjectDefinition openedDef = ObjectDefinitions.getDefs(DoorPair.getOpposingDoor(player, object));
