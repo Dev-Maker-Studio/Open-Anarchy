@@ -52,4 +52,15 @@ class CityJsonTest {
         assertEquals(Triple(foot.x, foot.y, foot.level + 1), Triple(top.x, top.y, top.level))
         assertEquals(setOf(0, 1), pieces.map { it.level }.toSet())
     }
+
+    @Test
+    fun `a smithy holds a furnace and an anvil that both become pieces`() {
+        val furniture = BuildingBuilder.plan(BuildingBuilder.SMITHY, 7510, 7600, 9, 9, Side.SOUTH, 1).furniture
+        val smithy = Building(BuildingBuilder.SMITHY, 7510, 7600, 9, 9, Side.SOUTH.name, 1, WallStyle.STONE.id, FloorStyle.SLATE.id, furniture)
+
+        val locs = smithy.pieces().map { it.loc }
+
+        assertEquals(listOf(Loc.built_furnace), locs.filter { it == Loc.built_furnace })
+        assertEquals(listOf(Loc.loc_2783), locs.filter { it == Loc.loc_2783 })
+    }
 }
