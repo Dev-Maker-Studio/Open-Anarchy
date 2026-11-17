@@ -1,6 +1,5 @@
 package com.rs.net.decoders.handlers
 
-import com.rs.Settings
 import com.rs.engine.quest.Quest
 import com.rs.game.content.Effect
 import com.rs.game.content.death.GraveStone
@@ -41,7 +40,7 @@ object NPCHandler {
             player.sendMessage("Spawn tile [${npc.respawnTile.x}, ${npc.respawnTile.y}, ${npc.respawnTile.plane}]]. ")
         }
         player.packets.sendNPCMessage(0, EXAMINE_COLOUR, npc, "${NPCExamines.getExamine(npc, player)} (${npc.id})")
-        if (Settings.getConfig().isDebug && (npc.definitions.hasAttackOption() || npc.definitions.hasOption("Investigate")))
+        if (npc.definitions.hasAttackOption() || npc.definitions.hasOption("Investigate"))
             player.sendOptionDialogue("Would you like to check the drops on this monster?") { ops ->
                 for (kills in DROP_SAMPLES) ops.add("Show drops (${"%,d".format(kills)} kills)") { NPC.displayDropsFor(player, npc.id, kills) }
                 ops.add("Nevermind")
