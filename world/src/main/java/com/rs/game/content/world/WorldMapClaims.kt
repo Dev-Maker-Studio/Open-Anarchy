@@ -39,7 +39,7 @@ fun mapWorldMapClaims() {
 
 private fun pushClaims(player: Player) {
     val nearest = ClaimManager.all()
-        .filter { it.plane == GROUND_PLANE && it.maxX >= MAP_ORIGIN && it.minX < MAP_ORIGIN + MAP_AREA_TILES && it.maxY >= MAP_ORIGIN && it.minY < MAP_ORIGIN + MAP_AREA_TILES }
+        .filter { it.owner == player.username && it.plane == GROUND_PLANE && it.maxX >= MAP_ORIGIN && it.minX < MAP_ORIGIN + MAP_AREA_TILES && it.maxY >= MAP_ORIGIN && it.minY < MAP_ORIGIN + MAP_AREA_TILES }
         .sortedBy { distance(it, player) }
         .take(SHOWN_CLAIMS)
     for (slot in 0 until SHOWN_CLAIMS) {

@@ -6,6 +6,7 @@ import com.rs.game.content.combat.AttackStyle.Companion.getStyles
 import com.rs.game.content.combat.CombatStyle
 import com.rs.game.content.combat.getMeleeCombatDelay
 import com.rs.game.content.combat.getWeaponAttackEmote
+import com.rs.game.content.world.generated.CityShopkeeper
 import com.rs.game.map.ChunkManager
 import com.rs.game.map.instance.InstancedChunk
 import com.rs.game.model.entity.Hit
@@ -97,8 +98,18 @@ private val activeMerchants = java.util.concurrent.ConcurrentHashMap.newKeySet<M
 @ServerStartupEvent
 fun mapWanderingMerchant() {
     instantiateNpc(*MERCHANT_IDS) { id, tile -> MerchantNPC(id, tile) }
-    onNpcClick(*MERCHANT_IDS, options = arrayOf("Trade")) { (player, npc) -> (npc as? MerchantNPC)?.trade(player) }
-    onNpcClick(*MERCHANT_IDS, options = arrayOf("Talk-to")) { (player, npc) -> (npc as? MerchantNPC)?.let { talk(player, it) } }
+    onNpcClick(*MERCHANT_IDS, options = arrayOf("Trade")) { (player, npc) ->
+        when (npc) {
+            is MerchantNPC -> npc.trade(player)
+            is CityShopkeeper -> npc.trade(player)
+        }
+    }
+    onNpcClick(*MERCHANT_IDS, options = arrayOf("Talk-to")) { (player, npc) ->
+        when (npc) {
+            is MerchantNPC -> talk(player, npc)
+            is CityShopkeeper -> npc.talk(player)
+        }
+    }
     npcCombat(*MERCHANT_IDS) { npc, target ->
         val weaponId = (npc as? MerchantNPC)?.weaponId ?: -1
         npc.anim(getWeaponAttackEmote(weaponId, getStyles(weaponId).getValue(MELEE_STYLE_INDEX)))

@@ -1,0 +1,1041 @@
+{
+  "area": "sarnwick",
+  "seed": 7274,
+  "generatorVersion": 1,
+  "quests": [
+    {
+      "id": "sarnwick_banker_cull",
+      "name": "Trouble with Ghosts",
+      "area": "sarnwick",
+      "giver": "banker",
+      "length": "short",
+      "summary": "The banker wants the ghost near Sarnwick thinned out.",
+      "intro": [
+        "The ghost beyond the walls grow bolder every week. Customers will not walk the road.",
+        "Put down 11 of them close to Sarnwick and I will make it worth your while."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "The road is quieter already. Here, as promised."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "ghost",
+          "amount": 11,
+          "where": {
+            "area": "sarnwick",
+            "radius": 300
+          }
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_general_store_stock",
+      "name": "Short on Coal",
+      "area": "sarnwick",
+      "giver": "general_store",
+      "length": "short",
+      "summary": "The general store keeper of Sarnwick has run out of coal.",
+      "intro": [
+        "My stores are bare. I need 22 coal and nobody in Sarnwick has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "mining"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 22,
+          "item": "coal"
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_barber_parcel",
+      "name": "A Parcel for the Magic Shop Keeper",
+      "area": "sarnwick",
+      "giver": "barber",
+      "length": "short",
+      "summary": "Carry a parcel across Sarnwick to the magic shop keeper.",
+      "intro": [
+        "This should have gone to the magic shop keeper days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "sarnwick",
+            "giver": "magic_shop"
+          },
+          "lines": [
+            "player: A delivery from the barber.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_sword_shop_word",
+      "name": "Word to the Clothes Shop Keeper",
+      "area": "sarnwick",
+      "giver": "sword_shop",
+      "length": "short",
+      "summary": "Call on the clothes shop keeper of Sarnwick and bring back their answer.",
+      "intro": [
+        "I need an answer from the clothes shop keeper and I would rather not shout it across the street.",
+        "Call on them as a customer, then ask how our accounts stand."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Balanced? Then I can sleep tonight. My thanks."
+      ],
+      "rewards": {},
+      "steps": [
+        {
+          "id": "s1",
+          "type": "service",
+          "to": {
+            "area": "sarnwick",
+            "giver": "clothes_shop"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "talk",
+          "to": {
+            "area": "sarnwick",
+            "giver": "clothes_shop"
+          },
+          "lines": [
+            "player: The sword shop keeper sent me to ask after the ledgers.",
+            "Tell them the figures balance, for once. There is nothing owed between us this season."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_archery_shop_scout",
+      "name": "Eyes on the Sarnwick Sewers",
+      "area": "sarnwick",
+      "giver": "archery_shop",
+      "length": "short",
+      "summary": "Climb down into Sarnwick Sewers and report what you see.",
+      "intro": [
+        "Something has been scratching under the streets at night. It comes from Sarnwick Sewers.",
+        "Go down the entrance, take a look around and come back in one piece."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "So it is as bad as I feared. Thank you for looking, that took nerve."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "sarnwick"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_magic_shop_cull",
+      "name": "Trouble with Zombies",
+      "area": "sarnwick",
+      "giver": "magic_shop",
+      "length": "short",
+      "summary": "The magic shop keeper wants the zombie near Sarnwick thinned out.",
+      "intro": [
+        "The zombie beyond the walls grow bolder every week. Customers will not walk the road.",
+        "Put down 11 of them close to Sarnwick and I will make it worth your while."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "The road is quieter already. Here, as promised."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "zombie",
+          "amount": 11,
+          "where": {
+            "area": "sarnwick",
+            "radius": 300
+          }
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_clothes_shop_stock",
+      "name": "Short on Steel Bar",
+      "area": "sarnwick",
+      "giver": "clothes_shop",
+      "length": "short",
+      "summary": "The clothes shop keeper of Sarnwick has run out of steel bar.",
+      "intro": [
+        "My stores are bare. I need 11 steel bar and nobody in Sarnwick has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "smithing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 11,
+          "item": "steel_bar"
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_food_shop_parcel",
+      "name": "A Parcel for the Armour Shop Keeper",
+      "area": "sarnwick",
+      "giver": "food_shop",
+      "length": "short",
+      "summary": "Carry a parcel across Sarnwick to the armour shop keeper.",
+      "intro": [
+        "This should have gone to the armour shop keeper days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "sarnwick",
+            "giver": "armour_shop"
+          },
+          "lines": [
+            "player: A delivery from the food shop keeper.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_banker_sweep",
+      "name": "Sweeping the Sarnwick Sewers",
+      "area": "sarnwick",
+      "giver": "banker",
+      "length": "medium",
+      "summary": "Clear giant spider out of Sarnwick Sewers and tell the general store keeper.",
+      "intro": [
+        "Sarnwick Sewers is crawling with giant spider, and they come up through the drains.",
+        "Go down, kill 18 of them, then let the general store keeper know their cellar is safe."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Both done? Sarnwick owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "sarnwick"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 18,
+          "where": {
+            "dungeon": "sarnwick"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "sarnwick",
+            "giver": "general_store"
+          },
+          "lines": [
+            "player: Sarnwick Sewers is clearer than it was. 18 giant spider fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_general_store_supply",
+      "name": "Supply Run to Velneir",
+      "area": "sarnwick",
+      "giver": "general_store",
+      "length": "medium",
+      "summary": "Gather coal for the general store keeper, then carry a shipment to Velneir.",
+      "intro": [
+        "I have an order from Velneir and nothing to fill it with.",
+        "Bring me 22 coal, then take the packed shipment to the banker there and do some business while you are in town."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "mining",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 22,
+          "item": "coal"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Goods from the general store keeper in Sarnwick.",
+            "From Sarnwick? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_barber_hunt",
+      "name": "The Long Hunt",
+      "area": "sarnwick",
+      "giver": "barber",
+      "length": "medium",
+      "summary": "Hunt the creatures around Sarnwick and bring back steel bar.",
+      "intro": [
+        "The wilds around Sarnwick need a firm hand. Start with 11 zombie outside the walls, then 18 giant spider down in Sarnwick Sewers.",
+        "When that is done, bring me 11 steel bar to show for it."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "smithing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "zombie",
+          "amount": 11,
+          "where": {
+            "area": "sarnwick",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 18,
+          "where": {
+            "dungeon": "sarnwick"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 11,
+          "item": "steel_bar"
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_sword_shop_council",
+      "name": "Votes for the Council",
+      "area": "sarnwick",
+      "giver": "sword_shop",
+      "length": "medium",
+      "summary": "Gather support around Sarnwick for the sword shop keeper.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the food shop keeper, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "sarnwick",
+            "giver": "food_shop"
+          },
+          "lines": [
+            "player: The sword shop keeper asks whether you will stand with them at the next council.",
+            "I will, if the armour shop keeper does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "ra3_package",
+          "to": {
+            "area": "sarnwick",
+            "giver": "armour_shop"
+          },
+          "lines": [
+            "player: A sealed note, from the food shop keeper.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "sarnwick",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_archery_shop_sweep",
+      "name": "Sweeping the Sarnwick Sewers (Archery Shop Keeper)",
+      "area": "sarnwick",
+      "giver": "archery_shop",
+      "length": "medium",
+      "summary": "Clear snake out of Sarnwick Sewers and tell the general store keeper.",
+      "intro": [
+        "Sarnwick Sewers is crawling with snake, and they come up through the drains.",
+        "Go down, kill 18 of them, then let the general store keeper know their cellar is safe."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Both done? Sarnwick owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "sarnwick"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "snake",
+          "amount": 18,
+          "where": {
+            "dungeon": "sarnwick"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "sarnwick",
+            "giver": "general_store"
+          },
+          "lines": [
+            "player: Sarnwick Sewers is clearer than it was. 18 snake fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_magic_shop_supply",
+      "name": "Supply Run to Velneir (Magic Shop Keeper)",
+      "area": "sarnwick",
+      "giver": "magic_shop",
+      "length": "medium",
+      "summary": "Gather big bones for the magic shop keeper, then carry a shipment to Velneir.",
+      "intro": [
+        "I have an order from Velneir and nothing to fill it with.",
+        "Bring me 13 big bones, then take the packed shipment to the banker there and do some business while you are in town."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "prayer",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 13,
+          "item": "big_bones"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Goods from the magic shop keeper in Sarnwick.",
+            "From Sarnwick? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_clothes_shop_hunt",
+      "name": "The Long Hunt (Clothes Shop Keeper)",
+      "area": "sarnwick",
+      "giver": "clothes_shop",
+      "length": "medium",
+      "summary": "Hunt the creatures around Sarnwick and bring back coal.",
+      "intro": [
+        "The wilds around Sarnwick need a firm hand. Start with 11 bat outside the walls, then 18 snake down in Sarnwick Sewers.",
+        "When that is done, bring me 22 coal to show for it."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "mining"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "bat",
+          "amount": 11,
+          "where": {
+            "area": "sarnwick",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "snake",
+          "amount": 18,
+          "where": {
+            "dungeon": "sarnwick"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 22,
+          "item": "coal"
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_food_shop_council",
+      "name": "Votes for the Council (Food Shop Keeper)",
+      "area": "sarnwick",
+      "giver": "food_shop",
+      "length": "medium",
+      "summary": "Gather support around Sarnwick for the food shop keeper.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the archery shop keeper, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "sarnwick",
+            "giver": "archery_shop"
+          },
+          "lines": [
+            "player: The food shop keeper asks whether you will stand with them at the next council.",
+            "I will, if the barber does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "sarnwick",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: A sealed note, from the archery shop keeper.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "sarnwick",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_banker_expedition",
+      "name": "The Fall of the Broodmother",
+      "area": "sarnwick",
+      "giver": "banker",
+      "length": "long",
+      "summary": "March on Stonejaw Depths, break its creatures and bring down The Broodmother.",
+      "intro": [
+        "Stonejaw Depths has stood against Sarnwick for too long. The Broodmother sits at the bottom of it.",
+        "Learn what you can from the sword shop keeper, fight your way through 26 cave crawler and end The Broodmother.",
+        "Bring 22 coal back so the town can rebuild."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "It is done, then. They will sing about this in every tavern from here to the coast.",
+        "Take your reward. You have more than earned it."
+      ],
+      "requires": {
+        "quests": [
+          "sarnwick_banker_cull"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "constitution",
+          "mining"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "sarnwick",
+            "giver": "sword_shop"
+          },
+          "lines": [
+            "player: What do you know of Stonejaw Depths?",
+            "Only that those who go in come back thin and quiet. The Broodmother rules it now."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "mountain"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "cave crawler",
+          "amount": 26,
+          "where": {
+            "dungeon": "mountain"
+          }
+        },
+        {
+          "id": "s4",
+          "type": "boss",
+          "dungeon": "mountain"
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 22,
+          "item": "coal"
+        },
+        {
+          "id": "s6",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Word from Sarnwick: The Broodmother is dead.",
+            "Dead? Then the caravans can leave at dawn. This news is worth more than gold."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_sword_shop_route",
+      "name": "The Sarnwick Trade Route",
+      "area": "sarnwick",
+      "giver": "sword_shop",
+      "length": "long",
+      "summary": "Open a trade route between Sarnwick and Velneir.",
+      "intro": [
+        "I mean to open a trade route to Velneir. It needs a contract carried, a road made safe and a courier who is proven underground.",
+        "Deliver the contract, trade there, cut down 26 zombie near our walls and prove yourself in the dungeoneering caves.",
+        "Then have the banker underwrite the venture."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Signed, safe and funded. You have changed the fortunes of this town.",
+        "Here is your cut of the first season."
+      ],
+      "requires": {
+        "quests": [
+          "sarnwick_sword_shop_word"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "dungeoneering"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: A contract from the sword shop keeper in Sarnwick.",
+            "A fair offer. But the road between us is not safe, and you know it."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "service",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "zombie",
+          "amount": 26,
+          "where": {
+            "area": "sarnwick",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s4",
+          "type": "dungeoneering",
+          "amount": 2
+        },
+        {
+          "id": "s5",
+          "type": "talk",
+          "to": {
+            "area": "sarnwick",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The route to Velneir is open and the contract is signed.",
+            "Then I will underwrite it. Sarnwick has not had news this good in years."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_clothes_shop_nest",
+      "name": "The Thing Beneath Sarnwick",
+      "area": "sarnwick",
+      "giver": "clothes_shop",
+      "length": "long",
+      "summary": "Find what rules Sarnwick Sewers, weaken its nest and destroy The Rat King.",
+      "intro": [
+        "Something rules Sarnwick Sewers and it is getting stronger. I want it gone.",
+        "Ask the general store keeper what they have heard, see it for yourself, then come back and we will decide how to break the nest.",
+        "When it is weak, kill it and tell the banker."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "I felt the ground go still. Sarnwick is yours to walk freely, friend.",
+        "Take this. It is everything I promised and a little more."
+      ],
+      "requires": {
+        "quests": [
+          "sarnwick_clothes_shop_stock"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "smithing",
+          "constitution"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "sarnwick",
+            "giver": "general_store"
+          },
+          "lines": [
+            "player: Have you heard anything from below the streets?",
+            "Every night. Something large is down there, and the small ones answer to it. They call it The Rat King."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "sarnwick"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "choice",
+          "lines": [
+            "So you have seen it. We can thin them by force, or I can have the guard hold the drains if they are supplied."
+          ],
+          "prompt": "How will you weaken the nest?",
+          "options": [
+            {
+              "text": "I will cut them down myself.",
+              "next": "s4"
+            },
+            {
+              "text": "Supply the guard and let them hold the drains.",
+              "next": "s5"
+            }
+          ]
+        },
+        {
+          "id": "s4",
+          "type": "kill",
+          "next": "s6",
+          "mob": "snake",
+          "amount": 26,
+          "where": {
+            "dungeon": "sarnwick"
+          }
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 11,
+          "item": "steel_bar"
+        },
+        {
+          "id": "s6",
+          "type": "boss",
+          "dungeon": "sarnwick"
+        },
+        {
+          "id": "s7",
+          "type": "talk",
+          "to": {
+            "area": "sarnwick",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The Rat King is dead. Sarnwick Sewers is quiet.",
+            "Then the vaults are safe and so is everyone above them. The town will hear of this."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sarnwick_general_store_expedition",
+      "name": "The Fall of the Broodmother (General Store Keeper)",
+      "area": "sarnwick",
+      "giver": "general_store",
+      "length": "long",
+      "summary": "March on Stonejaw Depths, break its creatures and bring down The Broodmother.",
+      "intro": [
+        "Stonejaw Depths has stood against Sarnwick for too long. The Broodmother sits at the bottom of it.",
+        "Learn what you can from the archery shop keeper, fight your way through 26 cave crawler and end The Broodmother.",
+        "Bring 22 coal back so the town can rebuild."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "It is done, then. They will sing about this in every tavern from here to the coast.",
+        "Take your reward. You have more than earned it."
+      ],
+      "requires": {
+        "quests": [
+          "sarnwick_general_store_stock"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "constitution",
+          "mining"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "sarnwick",
+            "giver": "archery_shop"
+          },
+          "lines": [
+            "player: What do you know of Stonejaw Depths?",
+            "Only that those who go in come back thin and quiet. The Broodmother rules it now."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "mountain"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "cave crawler",
+          "amount": 26,
+          "where": {
+            "dungeon": "mountain"
+          }
+        },
+        {
+          "id": "s4",
+          "type": "boss",
+          "dungeon": "mountain"
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 22,
+          "item": "coal"
+        },
+        {
+          "id": "s6",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Word from Sarnwick: The Broodmother is dead.",
+            "Dead? Then the caravans can leave at dawn. This news is worth more than gold."
+          ]
+        }
+      ]
+    }
+  ]
+}

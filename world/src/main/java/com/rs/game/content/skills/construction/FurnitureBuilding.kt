@@ -14,28 +14,45 @@ import org.darkan.core.Constants
 import org.darkan.core.gameval.gen.Obj
 import org.darkan.core.gameval.gen.Seq
 import org.darkan.core.model.Animation
+import org.darkan.core.model.ObjectShape
 import world.gregs.voidps.type.Tile
 
 private const val PLANKS_REQUIRED = 3
 private const val PLACEMENT_KEY = "furniturePlacement"
 private const val ROTATION_STEPS = 4
 private const val PLACE_OPTION = "Place"
+private const val PLACE_ABOVE_OPTION = "Place above"
 private const val PLACE_OP_NUM = 1
 private const val ROTATE_OP_NUM = 2
-private const val STEPS_PER_QUARTER_TURN = 1
 private const val DEGREES_PER_STEP = 360 / ROTATION_STEPS
-private val MENU_MATERIALS = ConstructionMaterials.PLANKS + ConstructionMaterials.NAIL_TYPES + ConstructionMaterials.CANDLES + ConstructionMaterials.BARS + intArrayOf(Obj.iron_ore, Obj.coal)
+private val MENU_MATERIALS = ConstructionMaterials.PLANKS + ConstructionMaterials.NAIL_TYPES + ConstructionMaterials.CANDLES + ConstructionMaterials.BARS + intArrayOf(Obj.iron_ore, Obj.coal, Obj.clay, Obj.logs)
 
 private fun ConstructionPiece.footprint(tile: Tile, rotation: Int): List<Tile> {
     val (across, along) = if (rotation and 1 == 0) width to depth else depth to width
     return (0 until across).flatMap { x -> (0 until along).map { y -> tile.transform(x, y) } }
 }
 
-private fun ConstructionPiece.fits(player: Player, tile: Tile, rotation: Int): Boolean =
-    tile.plane == player.plane && footprint(tile, rotation).all { World.floorAndWallsFree(it, 1) }
+private class Placement(val piece: ConstructionPiece, val raised: Boolean, val continued: Boolean = false, var anchor: Tile? = null, var ghost: GameObject? = null, var step: Int = 0) {
+    val steps get() = if (piece.hasCorner) ROTATION_STEPS * 2 else ROTATION_STEPS
+    val corner get() = step >= ROTATION_STEPS
+    val rotation get() = (piece.rotation + step) and 3
+    val shape get() = if (corner) ObjectShape.WALL_WHOLE_CORNER else piece.shape
 
-private class Placement(val piece: ConstructionPiece, var ghost: GameObject? = null, var step: Int = 0) {
-    val rotation get() = (piece.rotation + step / STEPS_PER_QUARTER_TURN) and 3
+    fun target(tile: Tile): Tile = if (raised) tile.transform(0, 0, 1) else tile
+
+    fun footprint(tile: Tile): List<Tile> = piece.footprint(target(tile), rotation)
+
+    fun fits(player: Player, tile: Tile): Boolean {
+        val target = target(tile)
+        if (tile.plane != player.plane || target.plane > TOP_PLANE) return false
+        return when (piece.kind) {
+            PieceKind.ROOF, PieceKind.FLOOR -> World.getObjectWithSlot(target, piece.shape.slot) == null
+            PieceKind.LADDER -> target.plane < TOP_PLANE && World.floorAndWallsFree(target, 1) && World.getObjectWithSlot(target.transform(0, 0, 1), piece.shape.slot) == null
+            PieceKind.STANDARD -> footprint(tile).all { World.floorAndWallsFree(it, 1) }
+        }
+    }
+
+    fun allowed(player: Player, tile: Tile): Boolean = footprint(tile).all { ClaimManager.canConstruct(player, it, !continued) }
 }
 
 @ServerStartupEvent
@@ -44,7 +61,7 @@ fun mapFurnitureBuilding() {
     onItemOnItem(intArrayOf(Obj.hammer), MENU_MATERIALS) { e -> ConstructionMenu.open(e.player) }
     onObjectClick(*ConstructionCatalogue.pieces.map { it.ghost }.toTypedArray()) { e -> if (e.opNum == ROTATE_OP_NUM) rotateGhost(e.player) }
     for (piece in ConstructionCatalogue.pieces)
-        onItemClick(piece.item, options = arrayOf(PLACE_OPTION)) { e -> startPlacement(e.player, piece) }
+        onItemClick(piece.item, options = arrayOf(PLACE_OPTION, PLACE_ABOVE_OPTION)) { e -> startPlacement(e.player, piece, e.option == PLACE_ABOVE_OPTION) }
     onLogin { (player) ->
         if (!player.inventory.containsItem(Obj.hammer)) player.inventory.addItemDrop(Obj.hammer)
         val missingPlanks = PLANKS_REQUIRED - player.inventory.getNumberOf(Obj.woodplank)
@@ -54,28 +71,38 @@ fun mapFurnitureBuilding() {
 
 fun handleFurniturePlacementClick(player: Player, tile: Tile): Boolean {
     val placement = player.tempAttribs.getO<Placement>(PLACEMENT_KEY) ?: return false
-    val ghost = placement.ghost
-    if (ghost != null && placement.piece.footprint(ghost.tile, placement.rotation).contains(tile)) {
-        build(player, placement, ghost.tile)
+    val anchor = placement.anchor
+    if (anchor != null && placement.piece.footprint(anchor, placement.rotation).contains(tile)) {
+        build(player, placement, anchor)
         return true
     }
-    if (!placement.piece.fits(player, tile, placement.rotation)) {
+    if (placement.continued) {
+        if (placement.fits(player, tile) && placement.allowed(player, tile)) {
+            build(player, placement, tile)
+            return true
+        }
+        cancelPlacement(player)
+        player.sendMessage("You stop building.")
+        return false
+    }
+    if (!placement.fits(player, tile)) {
         player.sendMessage("You can't build that there.")
         return true
     }
-    if (!placement.piece.footprint(tile, placement.rotation).all { ClaimManager.canConstruct(player, it) })
+    if (!placement.allowed(player, tile))
         return true
     showGhost(player, placement, tile)
-    player.sendMessage("Left-click the ghost to build it, right-click it to rotate, or click elsewhere to move it.")
+    player.sendMessage(if (placement.raised) "Click the same spot again to build it on the level above, or click elsewhere to move it." else "Left-click the ghost to build it, right-click it to rotate, or click elsewhere to move it.")
     return true
 }
 
 fun handleGhostClick(player: Player, tile: Tile, objectId: Int, opNum: Int): Boolean {
     val placement = player.tempAttribs.getO<Placement>(PLACEMENT_KEY) ?: return false
     val ghost = placement.ghost ?: return false
-    if (ghost.id != objectId || !ghost.tile.matches(tile)) return false
+    val anchor = placement.anchor ?: return false
+    if (ghost.id != objectId || ghost.x != tile.x || ghost.y != tile.y) return false
     when (opNum) {
-        PLACE_OP_NUM -> build(player, placement, ghost.tile)
+        PLACE_OP_NUM -> build(player, placement, anchor)
         ROTATE_OP_NUM -> rotateGhost(player)
     }
     return true
@@ -83,32 +110,33 @@ fun handleGhostClick(player: Player, tile: Tile, objectId: Int, opNum: Int): Boo
 
 private fun showGhost(player: Player, placement: Placement, tile: Tile) {
     placement.ghost?.let(player.packets::sendRemoveObject)
-    val piece = placement.piece
-    placement.ghost = GameObject(piece.ghost, piece.shape, placement.rotation, tile).also(player.packets::sendAddObject)
+    placement.anchor = tile
+    placement.ghost = GameObject(placement.piece.ghost, placement.shape, placement.rotation, placement.target(tile)).also(player.packets::sendAddObject)
 }
 
 private fun rotateGhost(player: Player) {
     val placement = player.tempAttribs.getO<Placement>(PLACEMENT_KEY) ?: return
-    val ghost = placement.ghost ?: return
-    val turned = Placement(placement.piece, step = (placement.step + 1) % ROTATION_STEPS)
-    if (!turned.piece.fits(player, ghost.tile, turned.rotation)) {
+    val anchor = placement.anchor ?: return
+    val turned = Placement(placement.piece, placement.raised, step = (placement.step + 1) % placement.steps)
+    if (!turned.fits(player, anchor)) {
         player.sendMessage("There isn't room to turn it that way.")
         return
     }
     placement.step = turned.step
-    showGhost(player, placement, ghost.tile)
-    player.sendMessage("Rotation ${placement.step * DEGREES_PER_STEP} degrees.")
+    showGhost(player, placement, anchor)
+    player.sendMessage("${if (placement.corner) "Corner piece, rotation" else "Rotation"} ${placement.step % ROTATION_STEPS * DEGREES_PER_STEP} degrees.")
 }
 
-fun startPlacement(player: Player, piece: ConstructionPiece) {
+fun startPlacement(player: Player, piece: ConstructionPiece, above: Boolean = false) {
     cancelPlacement(player)
     if (!ClaimManager.canConstruct(player, player.tile)) {
         player.closeInterfaces()
         return
     }
     player.closeInterfaces()
-    player.tempAttribs.setO<Placement>(PLACEMENT_KEY, Placement(piece))
-    player.sendMessage("Click the ground where you want to place the ${piece.name.lowercase()}.")
+    val raised = above || piece.kind == PieceKind.ROOF
+    player.tempAttribs.setO<Placement>(PLACEMENT_KEY, Placement(piece, raised))
+    player.sendMessage(if (raised) "Click the ground beneath where you want the ${piece.name.lowercase()}; it is built on the level above you." else "Click the ground where you want to place the ${piece.name.lowercase()}.")
 }
 
 fun cancelPlacement(player: Player) {
@@ -119,24 +147,27 @@ fun cancelPlacement(player: Player) {
 
 private fun build(player: Player, placement: Placement, tile: Tile) {
     val piece = placement.piece
-    val rotation = placement.rotation
     cancelPlacement(player)
     if (!player.inventory.containsItem(piece.item)) {
         player.sendMessage("You need a ${piece.name.lowercase()} to place.")
         return
     }
-    if (!piece.fits(player, tile, rotation)) {
+    if (!placement.fits(player, tile)) {
         player.sendMessage("You can't build that there.")
         return
     }
-    if (!piece.footprint(tile, rotation).all { ClaimManager.canConstruct(player, it) }) return
+    if (!placement.allowed(player, tile)) return
     player.faceTile(tile)
     player.inventory.deleteItem(piece.item, 1)
-    player.sendMessage("You place the ${piece.name.lowercase()}.")
-    val built = GameObject(piece.loc, piece.shape, rotation, tile)
+    player.sendMessage(if (piece.kind == PieceKind.ROOF) "You place the ${piece.name.lowercase()}. Roofs are hidden while you stand beneath them." else "You place the ${piece.name.lowercase()}.")
+    val built = GameObject(piece.loc, placement.shape, placement.rotation, placement.target(tile))
     initBuiltFurniture(built)
     World.spawnObject(built)
     WorldDelta.setOwner(built, player.username)
+    BuiltRoofs.built(built, piece, player.username)
+    if (piece.kind != PieceKind.ROOF && piece.kind != PieceKind.FLOOR || !player.inventory.containsItem(piece.item)) return
+    player.tempAttribs.setO<Placement>(PLACEMENT_KEY, Placement(piece, placement.raised, continued = true))
+    if (!placement.continued) player.sendMessage("Keep clicking to lay more, or click anywhere you can't build to stop.")
 }
 
 fun makePiece(player: Player, piece: ConstructionPiece, times: Int) {

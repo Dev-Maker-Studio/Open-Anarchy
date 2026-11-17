@@ -1,6 +1,7 @@
 package world.gregs.voidps.cache.source.codec
 
 import org.darkan.core.city.City
+import org.darkan.core.city.FloorStyle
 import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.gameval.gen.Npc
 import org.darkan.core.gameval.gen.Overlay
@@ -224,13 +225,39 @@ class WorldGenerator(
         val square = MapSquare.Square(MapSquare.Shape.TERRAIN, regionX, regionY)
         val grid = grid(originX / SIZE + regionX, originY / SIZE + regionY)
         val void = rows { _ -> row { _ -> VOID_TILE } }
-        val surface = rows { localX -> row { localY -> tile(grid, localX, localY) } }
+        val floors = buildingFloors(regionX, regionY)
+        val surface = rows { localX -> row { localY -> floors[floorKey(localX, localY, GROUND_LEVEL)]?.let { groundFloorTile(grid, localX, localY, it) } ?: tile(grid, localX, localY) } }
+        val upper = (1 until UPPER_LEVELS + 1).map { level ->
+            if (floors.keys.none { it shr FLOOR_LEVEL_SHIFT == level }) void
+            else rows { localX -> row { localY -> floors[floorKey(localX, localY, level)]?.let { "o$it/0/0,s$ROOFED_TILE,h$UPPER_FLOOR_HEIGHT" } ?: VOID_TILE } }
+        }
         val text = StringBuilder(TEXT_CAPACITY)
         text.append("{\n  \"region\": \"").append(square.directory).append("\",\n  \"levels\": 4,\n  \"tiles\": [\n")
-        text.append(surface).append(",\n").append(void).append(",\n").append(void).append(",\n").append(void)
+        text.append(surface).append(",\n").append(upper.joinToString(",\n"))
         text.append("\n  ],\n  \"effects\": ").append(EFFECTS).append("\n}\n")
         return text.toString().toByteArray(Charsets.UTF_8)
     }
+
+    private fun floorKey(localX: Int, localY: Int, level: Int) = level shl FLOOR_LEVEL_SHIFT or (localX shl FLOOR_AXIS_SHIFT) or localY
+
+    private fun buildingFloors(regionX: Int, regionY: Int): Map<Int, Int> {
+        val baseX = regionX * SIZE
+        val baseY = regionY * SIZE
+        val result = HashMap<Int, Int>()
+        for (city in cities) {
+            if (!city.touches(baseX, baseY, baseX + SIZE - 1, baseY + SIZE - 1)) continue
+            for (building in city.buildings) {
+                val overlay = FloorStyle.overlayOf(building.floor)
+                for (x in maxOf(building.x, baseX)..minOf(building.maxX, baseX + SIZE - 1)) for (y in maxOf(building.y, baseY)..minOf(building.maxY, baseY + SIZE - 1)) {
+                    for (level in 0 until building.levels) result[floorKey(x - baseX, y - baseY, level)] = overlay
+                }
+            }
+        }
+        return result
+    }
+
+    private fun groundFloorTile(grid: Grid, localX: Int, localY: Int, overlay: Int) =
+        "o$overlay/0/0,s$ROOFED_TILE,u${grid.underlays[localX][localY]},h${grid.heights[localX][localY]}"
 
     fun underwaterTerrain(regionX: Int, regionY: Int, surface: ByteArray? = null): ByteArray? {
         val grid = grid(originX / SIZE + regionX, originY / SIZE + regionY, true)
@@ -802,6 +829,55 @@ class WorldGenerator(
             }
         }
         return sites
+    }
+
+    fun caveSites(): List<Pair<Int, Int>> {
+        val sites = mutableListOf<Pair<Int, Int>>()
+        for (cellX in cellOf(originX) - 1..cellOf(originX + WorldWindow.WINDOW_TILES - 1) + 1) {
+            for (cellY in cellOf(originY) - 1..cellOf(originY + WorldWindow.WINDOW_TILES - 1) + 1) {
+                val site = site(cellX, cellY)
+                if (site.biome != Biome.WILDERNESS || !nearArea(site)) continue
+                val cave = findCave(site) ?: continue
+                val localX = cave.first - originX
+                val localY = cave.second - originY
+                val reach = CAVE_SIZE + CAVE_MARGIN
+                if (localX - CAVE_MARGIN < 0 || localY - CAVE_MARGIN < 0 || localX + reach >= WorldWindow.WINDOW_TILES || localY + reach >= WorldWindow.WINDOW_TILES) continue
+                if (inArea((localX - CAVE_MARGIN) / SIZE, (localY - CAVE_MARGIN) / SIZE) && inArea((localX + reach) / SIZE, (localY + reach) / SIZE)) {
+                    sites.add(localX to localY)
+                }
+            }
+        }
+        return sites
+    }
+
+    private fun nearArea(site: Site): Boolean {
+        if (areaTiles <= 0) return true
+        val reach = areaTiles / 2 + BIOME_SPACING
+        return abs(site.x - ORIGIN_X) <= reach && abs(site.y - ORIGIN_Y) <= reach
+    }
+
+    private fun findCave(site: Site): Pair<Int, Int>? {
+        val hash = hash(site.cellX, site.cellY, CAVE_SALT)
+        if (hash % PERCENT >= CAVE_PERCENT) return null
+        val others = fixturesOf(site.cellX, site.cellY)
+        val ores = clustersOf(site.cellX, site.cellY)
+        val span = CAVE_SIZE + 2 * CAVE_MARGIN
+        return findSpot(site, hash, CAVE_START_RADIUS, CAVE_SEARCH_RINGS, CAVE_STEP) { x, y ->
+            spotClear(site.biome, x - CAVE_MARGIN, y - CAVE_MARGIN, span, span, others) &&
+                ores.none { abs(it.centreX - x) < CLUSTER_GAP && abs(it.centreY - y) < CLUSTER_GAP } &&
+                caveGroundFlat(x - CAVE_MARGIN, y - CAVE_MARGIN, span)
+        }
+    }
+
+    private fun caveGroundFlat(x: Int, y: Int, span: Int): Boolean {
+        var lowest = Int.MAX_VALUE
+        var highest = Int.MIN_VALUE
+        for (tx in x until x + span) for (ty in y until y + span) {
+            val height = heightAt(tx - originX, ty - originY)
+            lowest = minOf(lowest, height)
+            highest = maxOf(highest, height)
+        }
+        return highest - lowest <= CAVE_MAX_SLOPE
     }
 
     private fun findTrees(site: Site, loc: Int, count: Int, size: Int, salt: Long, found: MutableList<Fixture> = mutableListOf()): List<Fixture> {
@@ -1546,6 +1622,11 @@ class WorldGenerator(
         const val DEFAULT_SEED = 727L
         const val BIOME_SPACING = 340
         private const val CITY_BLEND = 12
+        private const val UPPER_LEVELS = 3
+        private const val UPPER_FLOOR_HEIGHT = 31
+        private const val ROOFED_TILE = 4
+        private const val FLOOR_LEVEL_SHIFT = 12
+        private const val FLOOR_AXIS_SHIFT = 6
         const val ORIGIN_X = WorldWindow.WORLD_ORIGIN_X
         const val ORIGIN_Y = WorldWindow.WORLD_ORIGIN_Y
         private const val ORIGIN_CELL_X = ORIGIN_X / BIOME_SPACING
@@ -1664,6 +1745,14 @@ class WorldGenerator(
         private const val ALTAR_START_RADIUS = 90
         private const val ALTAR_SEARCH_RADIUS = 80
         private const val ALTAR_SALT = 0x414C54L
+        const val CAVE_SIZE = 4
+        const val CAVE_MARGIN = 3
+        private const val CAVE_PERCENT = 33
+        private const val CAVE_START_RADIUS = 70
+        private const val CAVE_SEARCH_RINGS = 40
+        private const val CAVE_STEP = 2
+        private const val CAVE_MAX_SLOPE = 2
+        private const val CAVE_SALT = 0x43415645L
         private const val ALTAR_SHIFT = 16
         private const val ALTAR_PEAK_SHIFT = 24
         private const val ALTAR_ALONG = 0.8

@@ -323,6 +323,11 @@ corrected opcode is added to the `Cs2Op` enum by hand.
   `proc_scrollbar_vertical` (wom2 pattern). The op is always 1 and the row is the cc id, so the click arrives as
   `e.slotId` and the 10-op limit of `setting` never caps the list; the server sends
   `IFEvents(list, 0, n - 1).enableRightClickOption(0)` once.
+- **Server-pushed rows with buttons (interface 1338 `realtor`)**: the same recipe with string arguments and several ccs per
+  row. `sendRunScript(Cs2.realtor_home_add, title, status, button, button, button)` creates five text ccs at
+  `ifGetNextSubId(list)`..`+4` (title, status, three right-anchored buttons laid out by `stringWidth`); an empty button
+  string still creates its cc, hidden and without an op, so ids stay contiguous and the server reads the row as
+  `slotId / 5` and the button as `slotId % 5 - 2` (`CityRealtor.kt`). The window is a copy of 1328's twenty components.
 - **Buff bar (interface 1322 `buff_bar`)**: 28 slots in two rows of 14, hosted by 746:458 and
   548:425 (519x68, bottom-anchored above the chatbox; `chatbox_resize`/`chatbox_resize_window` move
   the resizable host with the chat). Each slot has an obj component (1-28), a 24x24 graphic

@@ -1,5 +1,6 @@
 package org.darkan.core.city
 
+import org.darkan.core.gameval.gen.Loc
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -15,9 +16,10 @@ class CityJsonTest {
         baseHeight = 120,
         streets = listOf(Street(7496, 7596, 9, 9)),
         buildings = listOf(
-            BuildingBuilder.build(BuildingBuilder.BANK, 7510, 7600, 9, 9, Side.SOUTH).let {
-                Building(BuildingBuilder.BANK, 7510, 7600, 9, 9, Side.SOUTH.name, it.pieces)
-            },
+            Building(
+                BuildingBuilder.BANK, 7510, 7600, 9, 9, Side.SOUTH.name, 2, WallStyle.BRICK.id, FloorStyle.MARBLE.id,
+                BuildingBuilder.plan(BuildingBuilder.BANK, 7510, 7600, 9, 9, Side.SOUTH, 2).furniture,
+            ),
         ),
         residents = listOf(Resident(9, 7501, 7602, "guard")),
     )
@@ -37,7 +39,17 @@ class CityJsonTest {
 
     @Test
     fun `a bank holds booths and bankers`() {
-        val result = BuildingBuilder.build(BuildingBuilder.BANK, 0, 0, 9, 9, Side.SOUTH)
-        assertEquals(result.pieces.count { it.loc == org.darkan.core.gameval.gen.Loc.bankbooth }, result.residents.count { it.role == "banker" })
+        val plan = BuildingBuilder.plan(BuildingBuilder.BANK, 0, 0, 9, 9, Side.SOUTH, 1)
+        assertEquals(plan.furniture.count { it.loc == "bankbooth" }, plan.residents.count { it.role == "banker" })
+    }
+
+    @Test
+    fun `every upper floor is reached by a ladder with its top one level up`() {
+        val building = city.buildings.single()
+        val pieces = building.pieces()
+        val foot = pieces.single { it.loc == Loc.ladder }
+        val top = pieces.single { it.loc == Loc.laddertop }
+        assertEquals(Triple(foot.x, foot.y, foot.level + 1), Triple(top.x, top.y, top.level))
+        assertEquals(setOf(0, 1), pieces.map { it.level }.toSet())
     }
 }

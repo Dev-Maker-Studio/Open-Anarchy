@@ -1,5 +1,6 @@
 package com.rs.game.content.world.generated
 
+import com.rs.game.content.claims.BedRespawn
 import com.rs.game.World
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.player.Player
@@ -51,7 +52,7 @@ fun sendGeneratedWorldDeath(player: Player, source: Entity?): Boolean {
     val killer = pvpKiller(player)
     recentDamage.remove(player)
     if (killer != null) dropInventory(player)
-    player.dangerousDeath(source) { }
+    player.dangerousDeath(source, BedRespawn::wake)
     return true
 }
 

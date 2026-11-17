@@ -49,7 +49,7 @@ fun startGeneratedWildlife() {
     if (!EnvVars.generateMaps) return
     WorldTasks.scheduleTimer(MINUTE_TICKS, MINUTE_TICKS) {
         World.players.forEach { player ->
-            if (player.hasStarted() && !player.hasFinished() && player.plane == GROUND_LEVEL) {
+            if (player.hasStarted() && !player.hasFinished() && player.plane == GROUND_LEVEL && !GeneratedWorld.inDungeon(player.x, player.y)) {
                 val odds = if (generator.biomeAt(player.x, player.y) in HOSTILE_BIOMES) WILDERNESS_POPUP_ODDS else POPUP_ODDS
                 if (Utils.random(odds) == 0) popUpAnimal(player)
             }

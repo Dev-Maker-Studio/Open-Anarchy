@@ -15,7 +15,7 @@ private const val DEED_PRICE = 100
 private const val MIN_PRICE = 1
 private const val MERCHANT_SHOP_INTERFACE = 1326
 
-class MerchantShop(private val merchant: CoinTrader) : Shop(SHOP_NAME, Obj.coins, emptyArray<ShopItem>(), true, false) {
+class MerchantShop(private val merchant: CoinTrader, name: String = SHOP_NAME) : Shop(name, Obj.coins, emptyArray<ShopItem>(), true, false) {
     private val viewers = HashSet<Player>()
 
     fun stock(): List<Item> = generalStock.orEmpty().filterNotNull().map { it.item }

@@ -1,0 +1,10 @@
+{
+  "id": "brackenholt",
+  "name": "Brackenholt Sewers",
+  "theme": "sewer",
+  "seed": 4432902594885111797,
+  "slot": 1,
+  "entranceX": 9206,
+  "entranceY": 7656,
+  "origin": "city:brackenholt"
+}

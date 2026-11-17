@@ -20,6 +20,8 @@ data class Claim(
 
     fun contains(tile: Tile): Boolean = tile.plane == plane && tile.x in minX..maxX && tile.y in minY..maxY
 
+    fun covers(tile: Tile): Boolean = tile.plane >= plane && tile.x in minX..maxX && tile.y in minY..maxY
+
     fun isEdge(tile: Tile): Boolean = contains(tile) && (tile.x == minX || tile.x == maxX || tile.y == minY || tile.y == maxY)
 
     fun overlaps(other: Claim): Boolean =

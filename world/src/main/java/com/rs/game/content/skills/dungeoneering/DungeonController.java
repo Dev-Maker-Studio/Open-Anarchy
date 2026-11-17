@@ -298,7 +298,7 @@ public class DungeonController extends Controller {
 						increaseDeaths();
 					} else {
 						player.getControllerManager().forceStop();
-						player.tele(Tile.of(DungeonConstants.OUTSIDE, 2));
+						player.tele(player.getDungManager().getExitTile());
 					}
 					player.reset();
 					player.setNextAnimation(new Animation(-1));
@@ -1323,14 +1323,14 @@ public class DungeonController extends Controller {
 			player.setForceMultiArea(false);
 			if (player.getFamiliar() != null)
 				player.getFamiliar().sendDeath(player);
-			player.setLocation(Tile.of(DungeonConstants.OUTSIDE, 2));
+			player.setLocation(player.getDungManager().getExitTile());
 		}
 	}
 
 	@Override
 	public boolean login() {
 		removeController();
-		player.tele(Tile.of(DungeonConstants.OUTSIDE, 2));
+		player.tele(player.getDungManager().getExitTile());
 		return false;
 	}
 

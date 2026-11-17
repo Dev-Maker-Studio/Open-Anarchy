@@ -22,7 +22,7 @@ fun startGeneratedWeather() {
     val generator = GeneratedWorld.generator
     WorldTasks.scheduleTimer(SNOW_TICKS, SNOW_TICKS) {
         World.players.forEach { player ->
-            if (player.hasStarted() && !player.hasFinished() && player.plane == GROUND_LEVEL && generator.biomeAt(player.x, player.y) in SNOWY) {
+            if (player.hasStarted() && !player.hasFinished() && player.plane == GROUND_LEVEL && !GeneratedWorld.inDungeon(player.x, player.y) && generator.biomeAt(player.x, player.y) in SNOWY) {
                 repeat(SNOW_PER_PULSE) {
                     World.sendSpotAnim(player.tile.transform(Utils.random(-SNOW_REACH, SNOW_REACH + 1), Utils.random(-SNOW_REACH, SNOW_REACH + 1)), Spotanim.xmas_07_player_snowfall)
                 }
