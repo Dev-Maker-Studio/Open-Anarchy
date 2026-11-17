@@ -1591,6 +1591,12 @@ public class Player extends Entity {
 		running = false;
 	}
 
+	public void connectionLost() {
+		if (connectionLostAt == 0)
+			connectionLostAt = System.currentTimeMillis();
+		disconnected = true;
+	}
+
 	public void forceLogout() {
 		getPackets().sendLogout(false);
 		running = false;
@@ -1604,7 +1610,8 @@ public class Player extends Entity {
 	}
 
 	private transient long logoutDeadline;
-	private static final int MAX_LOGOUT_DELAY_TICKS = Ticks.fromSeconds(60);
+	private transient volatile long connectionLostAt;
+	private static final long MAX_LOGOUT_DELAY_MILLIS = 5_000L;
 	private static final double WEIGHT_RELIEF_KG_PER_STRENGTH_LEVEL = 1.0;
 	private static final double WEIGHT_RELIEF_KG_PER_AGILITY_LEVEL = 1.0;
 
@@ -1620,10 +1627,10 @@ public class Player extends Entity {
 			return;
 		disconnected = true;
 		if (logoutDeadline == 0) {
-			logoutDeadline = World.getServerTicks() + MAX_LOGOUT_DELAY_TICKS;
+			logoutDeadline = (connectionLostAt != 0 ? connectionLostAt : System.currentTimeMillis()) + MAX_LOGOUT_DELAY_MILLIS;
 			stopAll(false, true, !(getInteractionManager().getInteraction() instanceof PlayerCombatInteraction));
 		}
-		if (World.getServerTicks() < logoutDeadline && (inCombat(10000) || hasBeenHit(10000) || getEmotesManager().isAnimating() || isLocked()))
+		if (System.currentTimeMillis() < logoutDeadline && (inCombat(10000) || hasBeenHit(10000) || getEmotesManager().isAnimating() || isLocked()))
 			return;
 		realFinish();
 	}
