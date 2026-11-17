@@ -37,6 +37,7 @@ private const val UNLOCK_OPTION = "Unlock"
 private const val CLIMB_UP_OPTION = "Climb-up"
 private const val CLIMB_DOWN_OPTION = "Climb-down"
 private const val SET_RESPAWN_OPTION = "Set respawn"
+private val BASE_OPTIONS = setOf(DESTROY_OPTION, PICK_UP_OPTION, REPAIR_OPTION)
 private const val REPAIR_HP_PER_TICK = 6
 private const val REPAIR_XP_PER_TICK = 3.0
 private const val REPAIR_ANIM_INTERVAL = 3
@@ -50,6 +51,10 @@ private const val BAR_LINGER_TICKS = 4
 object BuiltFurniture {
     fun handle(player: Player, obj: GameObject, option: String): Boolean {
         val piece = ConstructionCatalogue.forLoc(obj.id) ?: return false
+        if (piece.kind == PieceKind.LADDER && obj.id == piece.topLoc && option in BASE_OPTIONS) {
+            val base = World.getObjectWithId(obj.tile.transform(0, 0, -1), piece.loc) ?: return true
+            return handle(player, base, option)
+        }
         when (option) {
             DESTROY_OPTION -> destroyPiece(player, obj, piece)
             PICK_UP_OPTION -> pickUpPiece(player, obj, piece)

@@ -63,6 +63,7 @@ Reading the pictures:
 - Judge in this order and stop at the first failure: walls closed and door on the street, floor right for the building, furniture inside and reachable, ladder on both levels, the building reads well from the tilt.
 - In the far city views wood floors (`planks`, `darkwood`) can draw pale blue. That is the far renderer; judge floors in the building views.
 - The furnace (`built_furnace`) does not draw in the harness yet. Check a smithy by `city.py building`, not by the picture.
+- A furniture `loc` is looked up by name in the `Loc` constants (`BuildingBuilder.locId`); a name that is not there is left out without a warning. After a debug start, `data/city-views/<city>.state.json` lists every loc the world really spawned, so check there that a piece (the furnace is id 73931) is present.
 
 ## JSON
 
@@ -147,18 +148,36 @@ Every city has one `realtor` building and two or three homes for sale. Both are 
 
 A city shopkeeper is a wandering merchant that cannot be hurt and stays in its shop (`CityShopkeeper.kt`). It uses a merchant look (`wandering_merchant_01` to `_50`, picked from the city seed) and the merchant shop window.
 
-- A shop starts empty and with 10,000 coins. It buys anything for the item's value while it has coins, and sells at 1.2 times the value. Coins it is paid go back into its purse.
-- Stock never restocks and never decays. An item a player sold stays until a player buys it; a slot that reaches zero is removed. A shop holds 40 different items.
-- Each shopkeeper has its own stock and purse, saved under its `shop` key in `data/city-shops/sector-<world>/<key>.json` on every sale and purchase, so it survives restarts. Deleting that file empties the shop.
+- A shop starts with the default stock of its kind and 0 coins. Its only coins are what players pay it, so it cannot buy anything until somebody has bought from it.
+- The default stock is copied from a vanilla shop when the shopkeeper spawns, picked by the end of the `shop` key (`DEFAULT_STOCK` in `CityShopkeeper.kt`):
+
+| Key ends with | Stock of |
+|---|---|
+| `general_store` | `varrock_general_store` |
+| `sword_shop` | `varrock_sword_shop` |
+| `archery_shop` | `lowes_archery_emporium` |
+| `magic_shop` | `auburys_rune_shop` |
+| `clothes_shop` | `thessalias_clothing` |
+| `food_shop` | `wydins_food_store` |
+| `armour_shop` | `horviks_armour_shop` |
+| `fishing_shop` | `gerrants_fishy_business` |
+| `staff_shop` | `zaffs_superior_staves` |
+
+- A key with none of these endings gets no default stock. To change what a kind sells, point it at another file in `data/items/shops` or edit that file's `items`.
+- It buys anything for the item's value while it has coins, and sells at 1.2 times the value. Coins it is paid go into its purse.
+- Default stock below its starting amount comes back one at a time every 50 ticks, as in a vanilla shop. It never drops back down: extra a player sold stays.
+- An item that is not default stock never restocks and never decays. It stays until a player buys it, and its slot is removed at zero. A shop holds 40 different items, default stock included.
+- Each shopkeeper has its own stock and purse, saved under its `shop` key in `data/city-shops/sector-<world>/<key>.json` on every sale, purchase and restock, so it survives restarts. Deleting that file (with the world stopped) puts the shop back to its default stock and 0 coins.
 - Remaking a city keeps shop stock, because the key (`<city>_<kind>`) does not change.
 - The general store also sells three estate deeds, refilled one at a time like a wandering merchant's.
-- The shop kind sets the icon, the floor and the title only. It does not limit what the shop buys.
+- The shop kind sets the icon, the floor, the title and the default stock. It does not limit what the shop buys.
 
 ## Floors and levels
 
 - A building's floor is a terrain overlay on every level it has; outside a building the ground or the street stays. Match it to the building: boards for homes, slabs for a guardhouse, slate for a smithy, tiles for a bank, cobbles for a market.
 - Upper floors are reached by ladders only. Each level above the ground needs a `ladder` on the level below and a `laddertop` on the same tile one level up, with a free tile beside it on both levels.
 - Upper floors get walls and windows all round and no door.
+- Opening or closing a door of the map or a city is never saved (`WorldDelta.swing`, used by `Doors.java`), so every such door is closed again after a restart. Doors a player built keep their state.
 
 ## What an edit needs
 
