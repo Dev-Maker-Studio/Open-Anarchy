@@ -83,4 +83,6 @@ const moved = db.players.updateMany({}, {
 print('Moved ' + moved.modifiedCount + ' of ' + moved.matchedCount + ' players to the spawn');
 "
 
-echo "Done. Start $UNIT to generate and pack the new world."
+echo "Done. Start the world alone so nothing else packs into $BUILD at the same time:"
+echo "  systemctl --user start --job-mode=ignore-dependencies $UNIT"
+echo "If a lobby serves $BUILD, keep it stopped until the world is listening, then start it."
