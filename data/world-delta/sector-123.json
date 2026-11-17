@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "sector": 123,
+  "added": [],
+  "removed": [
+    {
+      "x": 7480,
+      "y": 7508,
+      "plane": 0,
+      "id": 34807,
+      "shape": 0,
+      "rotation": 0,
+      "regrowAt": 0
+    },
+    {
+      "x": 7477,
+      "y": 7490,
+      "plane": 0,
+      "id": 24381,
+      "shape": 0,
+      "rotation": 2,
+      "regrowAt": 0
+    },
+    {
+      "x": 7477,
+      "y": 7515,
+      "plane": 0,
+      "id": 34807,
+      "shape": 0,
+      "rotation": 2,
+      "regrowAt": 0
+    },
+    {
+      "x": 7482,
+      "y": 7522,
+      "plane": 0,
+      "id": 24381,
+      "shape": 0,
+      "rotation": 3,
+      "regrowAt": 0
+    },
+    {
+      "x": 7508,
+      "y": 7522,
+      "plane": 0,
+      "id": 34807,
+      "shape": 0,
+      "rotation": 3,
+      "regrowAt": 0
+    },
+    {
+      "x": 7498,
+      "y": 7530,
+      "plane": 0,
+      "id": 24381,
+      "shape": 0,
+      "rotation": 2,
+      "regrowAt": 0
+    }
+  ],
+  "timed": [],
+  "spots": []
+}
