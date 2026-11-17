@@ -783,7 +783,7 @@ object World {
     }
 
     @JvmStatic
-    private fun getObjectWithSlot(tile: Tile, slot: Int): GameObject? {
+    fun getObjectWithSlot(tile: Tile, slot: Int): GameObject? {
         return ChunkManager.getChunk(tile.getChunkId()).getObjectWithSlot(tile, slot)
     }
 

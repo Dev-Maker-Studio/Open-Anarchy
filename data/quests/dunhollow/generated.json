@@ -1,0 +1,1066 @@
+{
+  "area": "dunhollow",
+  "seed": 7275,
+  "generatorVersion": 1,
+  "quests": [
+    {
+      "id": "dunhollow_banker_parcel",
+      "name": "A Parcel for the Clothes Shop Keeper",
+      "area": "dunhollow",
+      "giver": "banker",
+      "length": "short",
+      "summary": "Carry a parcel across Dunhollow to the clothes shop keeper.",
+      "intro": [
+        "This should have gone to the clothes shop keeper days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "dunhollow",
+            "giver": "clothes_shop"
+          },
+          "lines": [
+            "player: A delivery from the banker.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_general_store_word",
+      "name": "Word to the Magic Shop Keeper",
+      "area": "dunhollow",
+      "giver": "general_store",
+      "length": "short",
+      "summary": "Call on the magic shop keeper of Dunhollow and bring back their answer.",
+      "intro": [
+        "I need an answer from the magic shop keeper and I would rather not shout it across the street.",
+        "Call on them as a customer, then ask how our accounts stand."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Balanced? Then I can sleep tonight. My thanks."
+      ],
+      "rewards": {},
+      "steps": [
+        {
+          "id": "s1",
+          "type": "service",
+          "to": {
+            "area": "dunhollow",
+            "giver": "magic_shop"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "talk",
+          "to": {
+            "area": "dunhollow",
+            "giver": "magic_shop"
+          },
+          "lines": [
+            "player: The general store keeper sent me to ask after the ledgers.",
+            "Tell them the figures balance, for once. There is nothing owed between us this season."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_barber_scout",
+      "name": "Eyes on the Dunhollow Sewers",
+      "area": "dunhollow",
+      "giver": "barber",
+      "length": "short",
+      "summary": "Climb down into Dunhollow Sewers and report what you see.",
+      "intro": [
+        "Something has been scratching under the streets at night. It comes from Dunhollow Sewers.",
+        "Go down the entrance, take a look around and come back in one piece."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "So it is as bad as I feared. Thank you for looking, that took nerve."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "dunhollow"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_sword_shop_cull",
+      "name": "Trouble with Ghosts",
+      "area": "dunhollow",
+      "giver": "sword_shop",
+      "length": "short",
+      "summary": "The sword shop keeper wants the ghost near Dunhollow thinned out.",
+      "intro": [
+        "The ghost beyond the walls grow bolder every week. Customers will not walk the road.",
+        "Put down 12 of them close to Dunhollow and I will make it worth your while."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "The road is quieter already. Here, as promised."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "ghost",
+          "amount": 12,
+          "where": {
+            "area": "dunhollow",
+            "radius": 300
+          }
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_archery_shop_stock",
+      "name": "Short on Maple Logs",
+      "area": "dunhollow",
+      "giver": "archery_shop",
+      "length": "short",
+      "summary": "The archery shop keeper of Dunhollow has run out of maple logs.",
+      "intro": [
+        "My stores are bare. I need 24 maple logs and nobody in Dunhollow has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "woodcutting"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 24,
+          "item": "maple_logs"
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_magic_shop_parcel",
+      "name": "A Parcel for the Barber",
+      "area": "dunhollow",
+      "giver": "magic_shop",
+      "length": "short",
+      "summary": "Carry a parcel across Dunhollow to the barber.",
+      "intro": [
+        "This should have gone to the barber days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "dunhollow",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: A delivery from the magic shop keeper.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_clothes_shop_word",
+      "name": "Word to the Barber",
+      "area": "dunhollow",
+      "giver": "clothes_shop",
+      "length": "short",
+      "summary": "Call on the barber of Dunhollow and bring back their answer.",
+      "intro": [
+        "I need an answer from the barber and I would rather not shout it across the street.",
+        "Call on them as a customer, then ask how our accounts stand."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Balanced? Then I can sleep tonight. My thanks."
+      ],
+      "rewards": {},
+      "steps": [
+        {
+          "id": "s1",
+          "type": "service",
+          "to": {
+            "area": "dunhollow",
+            "giver": "barber"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "talk",
+          "to": {
+            "area": "dunhollow",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: The clothes shop keeper sent me to ask after the ledgers.",
+            "Tell them the figures balance, for once. There is nothing owed between us this season."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_food_shop_scout",
+      "name": "Eyes on the Dunhollow Sewers (Food Shop Keeper)",
+      "area": "dunhollow",
+      "giver": "food_shop",
+      "length": "short",
+      "summary": "Climb down into Dunhollow Sewers and report what you see.",
+      "intro": [
+        "Something has been scratching under the streets at night. It comes from Dunhollow Sewers.",
+        "Go down the entrance, take a look around and come back in one piece."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "So it is as bad as I feared. Thank you for looking, that took nerve."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "dunhollow"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_banker_hunt",
+      "name": "The Long Hunt",
+      "area": "dunhollow",
+      "giver": "banker",
+      "length": "medium",
+      "summary": "Hunt the creatures around Dunhollow and bring back raw tuna.",
+      "intro": [
+        "The wilds around Dunhollow need a firm hand. Start with 12 zombie outside the walls, then 19 giant spider down in Dunhollow Sewers.",
+        "When that is done, bring me 19 raw tuna to show for it."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "fishing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "zombie",
+          "amount": 12,
+          "where": {
+            "area": "dunhollow",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 19,
+          "where": {
+            "dungeon": "dunhollow"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 19,
+          "item": "raw_tuna"
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_general_store_council",
+      "name": "Votes for the Council",
+      "area": "dunhollow",
+      "giver": "general_store",
+      "length": "medium",
+      "summary": "Gather support around Dunhollow for the general store keeper.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the banker, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "dunhollow",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The general store keeper asks whether you will stand with them at the next council.",
+            "I will, if the food shop keeper does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "ra3_package",
+          "to": {
+            "area": "dunhollow",
+            "giver": "food_shop"
+          },
+          "lines": [
+            "player: A sealed note, from the banker.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "dunhollow",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_barber_sweep",
+      "name": "Sweeping the Dunhollow Sewers",
+      "area": "dunhollow",
+      "giver": "barber",
+      "length": "medium",
+      "summary": "Clear giant spider out of Dunhollow Sewers and tell the clothes shop keeper.",
+      "intro": [
+        "Dunhollow Sewers is crawling with giant spider, and they come up through the drains.",
+        "Go down, kill 19 of them, then let the clothes shop keeper know their cellar is safe."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Both done? Dunhollow owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "dunhollow"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 19,
+          "where": {
+            "dungeon": "dunhollow"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "dunhollow",
+            "giver": "clothes_shop"
+          },
+          "lines": [
+            "player: Dunhollow Sewers is clearer than it was. 19 giant spider fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_sword_shop_supply",
+      "name": "Supply Run to Velneir",
+      "area": "dunhollow",
+      "giver": "sword_shop",
+      "length": "medium",
+      "summary": "Gather coal for the sword shop keeper, then carry a shipment to Velneir.",
+      "intro": [
+        "I have an order from Velneir and nothing to fill it with.",
+        "Bring me 24 coal, then take the packed shipment to the banker there and do some business while you are in town."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "mining",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 24,
+          "item": "coal"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Goods from the sword shop keeper in Dunhollow.",
+            "From Dunhollow? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_archery_shop_hunt",
+      "name": "The Long Hunt (Archery Shop Keeper)",
+      "area": "dunhollow",
+      "giver": "archery_shop",
+      "length": "medium",
+      "summary": "Hunt the creatures around Dunhollow and bring back oak logs.",
+      "intro": [
+        "The wilds around Dunhollow need a firm hand. Start with 12 ghost outside the walls, then 19 rat down in Dunhollow Sewers.",
+        "When that is done, bring me 19 oak logs to show for it."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "woodcutting"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "ghost",
+          "amount": 12,
+          "where": {
+            "area": "dunhollow",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "rat",
+          "amount": 19,
+          "where": {
+            "dungeon": "dunhollow"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 19,
+          "item": "oak_logs"
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_magic_shop_council",
+      "name": "Votes for the Council (Magic Shop Keeper)",
+      "area": "dunhollow",
+      "giver": "magic_shop",
+      "length": "medium",
+      "summary": "Gather support around Dunhollow for the magic shop keeper.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the food shop keeper, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "dunhollow",
+            "giver": "food_shop"
+          },
+          "lines": [
+            "player: The magic shop keeper asks whether you will stand with them at the next council.",
+            "I will, if the banker does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "dunhollow",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: A sealed note, from the food shop keeper.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "dunhollow",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_clothes_shop_sweep",
+      "name": "Sweeping the Dunhollow Sewers (Clothes Shop Keeper)",
+      "area": "dunhollow",
+      "giver": "clothes_shop",
+      "length": "medium",
+      "summary": "Clear giant spider out of Dunhollow Sewers and tell the banker.",
+      "intro": [
+        "Dunhollow Sewers is crawling with giant spider, and they come up through the drains.",
+        "Go down, kill 19 of them, then let the banker know their cellar is safe."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Both done? Dunhollow owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "dunhollow"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 19,
+          "where": {
+            "dungeon": "dunhollow"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "dunhollow",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Dunhollow Sewers is clearer than it was. 19 giant spider fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_food_shop_supply",
+      "name": "Supply Run to Velneir (Food Shop Keeper)",
+      "area": "dunhollow",
+      "giver": "food_shop",
+      "length": "medium",
+      "summary": "Gather raw salmon for the food shop keeper, then carry a shipment to Velneir.",
+      "intro": [
+        "I have an order from Velneir and nothing to fill it with.",
+        "Bring me 19 raw salmon, then take the packed shipment to the food shop keeper there and do some business while you are in town."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "fishing",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 19,
+          "item": "raw_salmon"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "ra3_package",
+          "to": {
+            "area": "velneir",
+            "giver": "food_shop"
+          },
+          "lines": [
+            "player: Goods from the food shop keeper in Dunhollow.",
+            "From Dunhollow? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "velneir",
+            "giver": "food_shop"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_barber_nest",
+      "name": "The Thing Beneath Dunhollow",
+      "area": "dunhollow",
+      "giver": "barber",
+      "length": "long",
+      "summary": "Find what rules Dunhollow Sewers, weaken its nest and destroy The Rat King.",
+      "intro": [
+        "Something rules Dunhollow Sewers and it is getting stronger. I want it gone.",
+        "Ask the magic shop keeper what they have heard, see it for yourself, then come back and we will decide how to break the nest.",
+        "When it is weak, kill it and tell the banker."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "I felt the ground go still. Dunhollow is yours to walk freely, friend.",
+        "Take this. It is everything I promised and a little more."
+      ],
+      "requires": {
+        "quests": [
+          "dunhollow_barber_scout"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "fishing",
+          "constitution"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "dunhollow",
+            "giver": "magic_shop"
+          },
+          "lines": [
+            "player: Have you heard anything from below the streets?",
+            "Every night. Something large is down there, and the small ones answer to it. They call it The Rat King."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "dunhollow"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "choice",
+          "lines": [
+            "So you have seen it. We can thin them by force, or I can have the guard hold the drains if they are supplied."
+          ],
+          "prompt": "How will you weaken the nest?",
+          "options": [
+            {
+              "text": "I will cut them down myself.",
+              "next": "s4"
+            },
+            {
+              "text": "Supply the guard and let them hold the drains.",
+              "next": "s5"
+            }
+          ]
+        },
+        {
+          "id": "s4",
+          "type": "kill",
+          "next": "s6",
+          "mob": "giant spider",
+          "amount": 29,
+          "where": {
+            "dungeon": "dunhollow"
+          }
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 19,
+          "item": "raw_tuna"
+        },
+        {
+          "id": "s6",
+          "type": "boss",
+          "dungeon": "dunhollow"
+        },
+        {
+          "id": "s7",
+          "type": "talk",
+          "to": {
+            "area": "dunhollow",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The Rat King is dead. Dunhollow Sewers is quiet.",
+            "Then the vaults are safe and so is everyone above them. The town will hear of this."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_magic_shop_expedition",
+      "name": "The Fall of the Broodmother",
+      "area": "dunhollow",
+      "giver": "magic_shop",
+      "length": "long",
+      "summary": "March on Stonejaw Depths, break its creatures and bring down The Broodmother.",
+      "intro": [
+        "Stonejaw Depths has stood against Dunhollow for too long. The Broodmother sits at the bottom of it.",
+        "Learn what you can from the general store keeper, fight your way through 29 earth warrior and end The Broodmother.",
+        "Bring 14 big bones back so the town can rebuild."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "It is done, then. They will sing about this in every tavern from here to the coast.",
+        "Take your reward. You have more than earned it."
+      ],
+      "requires": {
+        "quests": [
+          "dunhollow_magic_shop_parcel"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "constitution",
+          "prayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "dunhollow",
+            "giver": "general_store"
+          },
+          "lines": [
+            "player: What do you know of Stonejaw Depths?",
+            "Only that those who go in come back thin and quiet. The Broodmother rules it now."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "mountain"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "earth warrior",
+          "amount": 29,
+          "where": {
+            "dungeon": "mountain"
+          }
+        },
+        {
+          "id": "s4",
+          "type": "boss",
+          "dungeon": "mountain"
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 14,
+          "item": "big_bones"
+        },
+        {
+          "id": "s6",
+          "type": "deliver",
+          "item": "ra3_package",
+          "to": {
+            "area": "velneir",
+            "giver": "magic_shop"
+          },
+          "lines": [
+            "player: Word from Dunhollow: The Broodmother is dead.",
+            "Dead? Then the caravans can leave at dawn. This news is worth more than gold."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_banker_route",
+      "name": "The Dunhollow Trade Route",
+      "area": "dunhollow",
+      "giver": "banker",
+      "length": "long",
+      "summary": "Open a trade route between Dunhollow and Velneir.",
+      "intro": [
+        "I mean to open a trade route to Velneir. It needs a contract carried, a road made safe and a courier who is proven underground.",
+        "Deliver the contract, trade there, cut down 29 zombie near our walls and prove yourself in the dungeoneering caves.",
+        "Then have the clothes shop keeper underwrite the venture."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Signed, safe and funded. You have changed the fortunes of this town.",
+        "Here is your cut of the first season."
+      ],
+      "requires": {
+        "quests": [
+          "dunhollow_banker_parcel"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "dungeoneering"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: A contract from the banker in Dunhollow.",
+            "A fair offer. But the road between us is not safe, and you know it."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "service",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "zombie",
+          "amount": 29,
+          "where": {
+            "area": "dunhollow",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s4",
+          "type": "dungeoneering",
+          "amount": 3
+        },
+        {
+          "id": "s5",
+          "type": "talk",
+          "to": {
+            "area": "dunhollow",
+            "giver": "clothes_shop"
+          },
+          "lines": [
+            "player: The route to Velneir is open and the contract is signed.",
+            "Then I will underwrite it. Dunhollow has not had news this good in years."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dunhollow_sword_shop_nest",
+      "name": "The Thing Beneath Dunhollow (Sword Shop Keeper)",
+      "area": "dunhollow",
+      "giver": "sword_shop",
+      "length": "long",
+      "summary": "Find what rules Dunhollow Sewers, weaken its nest and destroy The Rat King.",
+      "intro": [
+        "Something rules Dunhollow Sewers and it is getting stronger. I want it gone.",
+        "Ask the armour shop keeper what they have heard, see it for yourself, then come back and we will decide how to break the nest.",
+        "When it is weak, kill it and tell the banker."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "I felt the ground go still. Dunhollow is yours to walk freely, friend.",
+        "Take this. It is everything I promised and a little more."
+      ],
+      "requires": {
+        "quests": [
+          "dunhollow_sword_shop_cull"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "smithing",
+          "constitution"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "dunhollow",
+            "giver": "armour_shop"
+          },
+          "lines": [
+            "player: Have you heard anything from below the streets?",
+            "Every night. Something large is down there, and the small ones answer to it. They call it The Rat King."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "dunhollow"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "choice",
+          "lines": [
+            "So you have seen it. We can thin them by force, or I can have the guard hold the drains if they are supplied."
+          ],
+          "prompt": "How will you weaken the nest?",
+          "options": [
+            {
+              "text": "I will cut them down myself.",
+              "next": "s4"
+            },
+            {
+              "text": "Supply the guard and let them hold the drains.",
+              "next": "s5"
+            }
+          ]
+        },
+        {
+          "id": "s4",
+          "type": "kill",
+          "next": "s6",
+          "mob": "giant spider",
+          "amount": 29,
+          "where": {
+            "dungeon": "dunhollow"
+          }
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 12,
+          "item": "iron_bar"
+        },
+        {
+          "id": "s6",
+          "type": "boss",
+          "dungeon": "dunhollow"
+        },
+        {
+          "id": "s7",
+          "type": "talk",
+          "to": {
+            "area": "dunhollow",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The Rat King is dead. Dunhollow Sewers is quiet.",
+            "Then the vaults are safe and so is everyone above them. The town will hear of this."
+          ]
+        }
+      ]
+    }
+  ]
+}

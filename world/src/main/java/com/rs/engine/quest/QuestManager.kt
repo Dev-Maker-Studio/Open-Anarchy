@@ -1,5 +1,8 @@
 package com.rs.engine.quest
 
+import com.rs.game.content.quests.area.AreaQuestLog
+import com.rs.game.content.quests.area.AreaQuestTab
+import com.rs.game.content.quests.area.AreaQuests
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.player.Player
 import com.rs.plugin.annotations.ServerStartupEvent
@@ -40,23 +43,31 @@ class QuestManager {
             return
         }
         val handler = quest.handler ?: return
-        val fontId = IComponentDefinitions.getInterfaceComponent(Interface.interface_275, component(Component.interface_275.component_275_10))!!.fontId
         val stage = getStage(quest)
-        val journalLines = ArrayList<String>()
+        val lines = ArrayList<String>()
         for (i in 0 until stage)
             for (line in handler.getJournalLines(owner, i))
-                journalLines.addAll(wrapJournalLine("<str>$line", fontId))
-        for (line in handler.getJournalLines(owner, stage))
-            journalLines.addAll(wrapJournalLine(line, fontId))
+                lines += "<str>$line"
+        lines += handler.getJournalLines(owner, stage)
+        showJournal(quest.defs.extraInfo.name, lines)
+    }
+
+    fun showJournal(title: String, lines: List<String>) {
+        val fontId = IComponentDefinitions.getInterfaceComponent(Interface.interface_275, component(Component.interface_275.component_275_10))!!.fontId
+        val journalLines = lines.flatMap { wrapJournalLine(it.ifEmpty { " " }, fontId) }
         owner.interfaceManager.sendInterface(Interface.interface_275)
         owner.packets.sendRunScriptReverse(Cs2.cs2_1207, journalLines.size)
-        owner.packets.setIFText(Interface.interface_275, component(Component.interface_275.component_275_1), quest.defs.extraInfo.name)
+        owner.packets.setIFText(Interface.interface_275, component(Component.interface_275.component_275_1), title)
         val firstLine = component(Component.interface_275.component_275_10)
-        for (i in firstLine until firstLine + 279)
+        for (i in firstLine until firstLine + JOURNAL_LINES)
             owner.packets.setIFText(Interface.interface_275, i, journalLines.getOrNull(i - firstLine) ?: " ")
     }
 
     fun unlockQuestTabOptions() {
+        if (AreaQuests.active) {
+            AreaQuestTab.send(owner)
+            return
+        }
         owner.packets.setIFRightClickOps(Interface.interface_190, component(Component.interface_190.component_190_15), 0, 201, 0, 1, 2, 3)
         owner.packets.setIFEvents(IFEvents(Interface.interface_190, component(Component.interface_190.component_190_38), 0, 3).enableRightClickOption(0))
         owner.packets.sendVarc(Varc.varc_234, 0)
@@ -70,6 +81,8 @@ class QuestManager {
             return
         questStages[quest.id] = stage
         sendQuestStage(quest)
+        if (AreaQuests.active)
+            return
         owner.schedule {
             wait(1)
             owner.packets.sendRunScript(Cs2.ql4_refresh)
@@ -113,6 +126,10 @@ class QuestManager {
         get() = Quest.entries.filter { it.isImplemented && isComplete(it) }.sumOf { it.defs.questpointReward }
 
     fun sendQuestPoints() {
+        if (AreaQuests.active) {
+            owner.vars.setVar(Varp.qp, AreaQuestLog.of(owner).points)
+            return
+        }
         owner.vars.setVar(Varp.qp, questPoints)
         owner.vars.setVar(Varp.varp_904, MAX_QUESTPOINTS)
     }
@@ -132,6 +149,10 @@ class QuestManager {
     }
 
     fun updateOptions() {
+        if (AreaQuests.active) {
+            AreaQuestTab.send(owner)
+            return
+        }
         owner.vars.setVarBit(Varbit.ql4_perm_sort, sort)
         owner.vars.setVarBit(Varbit.ql4_perm_filter, if (filter) 0 else 1)
         owner.vars.setVarBit(Varbit.ql4_perm_donefilter, if (hideDone) 0 else 1)
@@ -169,10 +190,13 @@ fun mapQuestTab() {
             Component.interface_190.component_190_38 -> quests.setSort(e.slotId)
             Component.interface_190.component_190_3 -> quests.toggleFilter()
             Component.interface_190.component_190_7 -> quests.toggleHideDone()
-            Component.interface_190.component_190_15 -> quests.showQuestDetailInterface(Quest.forSlot(e.slotId))
+            Component.interface_190.component_190_15 ->
+                if (AreaQuests.active) AreaQuestTab.click(e.player, e.slotId) else quests.showQuestDetailInterface(Quest.forSlot(e.slotId))
         }
     }
 }
+
+private const val JOURNAL_LINES = 279
 
 private fun component(hash: Int) = Utils.componentIdFromHash(hash)
 

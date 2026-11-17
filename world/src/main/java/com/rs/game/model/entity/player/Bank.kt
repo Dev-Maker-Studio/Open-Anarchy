@@ -17,6 +17,7 @@ import com.rs.utils.ItemConfig
 import org.darkan.core.Utils
 import org.darkan.core.cache.EnumDefinitions
 import org.darkan.core.gameval.gen.Component
+import org.darkan.core.map.GeneratedWorld
 import org.darkan.core.gameval.gen.Cs2
 import org.darkan.core.gameval.gen.Enum
 import org.darkan.core.gameval.gen.Interface
@@ -38,6 +39,8 @@ class Bank {
     private var bankPin: Short = 0
     var lastX = 0
     private var enteredPin: MutableMap<String, Long>? = null
+    private var city: String? = null
+    private var cityTabs: MutableMap<String, Array<Array<Item>>>? = null
 
     @Transient
     private lateinit var player: Player
@@ -72,6 +75,20 @@ class Bank {
         this.player = player
         if (bankTabs.isEmpty()) bankTabs = arrayOf(emptyArray())
         bankTabs.forEach { tab -> tab.forEach { if (it.amount < 0) it.setAmount(0) } }
+    }
+
+    private fun enterCityBank(): String {
+        val here = GeneratedWorld.nearestCity(player.x, player.y) ?: return Settings.getConfig().serverName
+        val current = city ?: GeneratedWorld.homeCity?.id ?: here.id
+        if (current != here.id) {
+            val stored = cityTabs ?: HashMap<String, Array<Array<Item>>>().also { cityTabs = it }
+            stored[current] = bankTabs
+            bankTabs = stored.remove(here.id) ?: arrayOf(emptyArray())
+            viewedTab = 0
+            lastContainerCopy = null
+        }
+        city = here.id
+        return here.name
     }
 
     private inline fun findSlot(match: (Item) -> Boolean): IntArray? {
@@ -264,13 +281,14 @@ class Bank {
     }
 
     fun openDepositBox() {
+        val bankName = enterCityBank()
         player.tempAttribs.setB("viewingOtherBank", false)
         player.tempAttribs.setB("viewingDepositBox", true)
         player.interfaceManager.sendInterface(Interface.interface_11)
         player.interfaceManager.removeSubs(Sub.TAB_INVENTORY, Sub.TAB_EQUIPMENT)
         player.interfaceManager.openTab(Sub.TAB_FRIENDS)
         sendBoxInterItems()
-        player.packets.setIFText(Component.interface_11.component_11_13, "Bank Of ${Settings.getConfig().serverName} - Deposit Box")
+        player.packets.setIFText(Component.interface_11.component_11_13, "Bank Of $bankName - Deposit Box")
         player.setCloseInterfacesEvent {
             player.packets.sendRunScript(Cs2.clientscript_objdialog_close)
             player.abortDialogue()
@@ -408,6 +426,7 @@ class Bank {
 
     fun open() {
         if (!checkPin()) return
+        val bankName = enterCityBank()
         player.tempAttribs.removeB("viewingOtherBank")
         player.vars.setVar(Varp.swansong_temp, 0)
         player.vars.setVarBit(Varbit.bank_show_equipscreen, 0)
@@ -419,7 +438,7 @@ class Bank {
         player.interfaceManager.sendInterface(Interface.interface_762)
         player.interfaceManager.sendInventoryInterface(Interface.interface_763)
         player.packets.sendRunScript(Cs2.cs2_2319)
-        player.packets.setIFText(Component.interface_762.component_762_47, "Bank of ${Settings.getConfig().serverName}")
+        player.packets.setIFText(Component.interface_762.component_762_47, "Bank of $bankName")
         refreshOpVars()
         unlockButtons()
         sendItems()

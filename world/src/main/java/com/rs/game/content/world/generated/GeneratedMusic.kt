@@ -36,6 +36,6 @@ private val biomeGenres: Map<Biome, Genre> by lazy {
 }
 
 fun biomeGenre(player: Player): Genre? {
-    if (!EnvVars.generateMaps) return null
+    if (!EnvVars.generateMaps || GeneratedWorld.inDungeon(player.x, player.y)) return null
     return biomeGenres[GeneratedWorld.generator.biomeAt(player.x, player.y)]
 }

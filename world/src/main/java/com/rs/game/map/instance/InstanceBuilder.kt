@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import org.darkan.core.Logger
 import org.darkan.core.map.CollisionBuffer
 import org.darkan.core.map.CollisionWriter
+import org.darkan.core.map.GeneratedWorld
 import org.darkan.core.map.MapRegion
 import org.darkan.core.map.RegionCollision
 import org.darkan.core.map.WorldCollision
@@ -221,7 +222,10 @@ object InstanceBuilder {
                 for (regionY in FIRST_REGION..MAX_REGION_Y - spanY) {
                     val free = (regionX - 1..regionX + spanX).none { x -> (regionY - 1..regionY + spanY).any { y -> region(x, y) in reservedRegions } }
                     if (!free) continue
-                    for (x in regionX until regionX + spanX) for (y in regionY until regionY + spanY) reservedRegions.add(region(x, y))
+                    for (x in regionX until regionX + spanX) for (y in regionY until regionY + spanY) {
+                        reservedRegions.add(region(x, y))
+                        GeneratedWorld.instanceRegions.add(region(x, y))
+                    }
                     Logger.info(InstanceBuilder::class.java, "reserveRegions", "Reserved ${spanX}x$spanY regions at $regionX, $regionY (${reservedRegions.size} reserved)")
                     return intArrayOf(regionX * REGION_CHUNKS, regionY * REGION_CHUNKS)
                 }
@@ -230,7 +234,10 @@ object InstanceBuilder {
     }
 
     private fun releaseRegions(regionX: Int, regionY: Int, spanX: Int, spanY: Int) = synchronized(reservedRegions) {
-        for (x in regionX until regionX + spanX) for (y in regionY until regionY + spanY) reservedRegions.remove(region(x, y))
+        for (x in regionX until regionX + spanX) for (y in regionY until regionY + spanY) {
+            reservedRegions.remove(region(x, y))
+            GeneratedWorld.instanceRegions.remove(region(x, y))
+        }
         Logger.info(InstanceBuilder::class.java, "releaseRegions", "Released ${spanX}x$spanY regions at $regionX, $regionY (${reservedRegions.size} reserved)")
     }
 

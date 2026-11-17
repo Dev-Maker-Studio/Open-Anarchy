@@ -1,0 +1,815 @@
+{
+  "area": "velneir",
+  "seed": 7271,
+  "generatorVersion": 1,
+  "quests": [
+    {
+      "id": "velneir_banker_stock",
+      "name": "Short on Logs",
+      "area": "velneir",
+      "giver": "banker",
+      "length": "short",
+      "summary": "The banker of Velneir has run out of logs.",
+      "intro": [
+        "My stores are bare. I need 8 logs and nobody in Velneir has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "woodcutting"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 8,
+          "item": "logs"
+        }
+      ]
+    },
+    {
+      "id": "velneir_general_store_parcel",
+      "name": "A Parcel for the Clothes Shop Keeper",
+      "area": "velneir",
+      "giver": "general_store",
+      "length": "short",
+      "summary": "Carry a parcel across Velneir to the clothes shop keeper.",
+      "intro": [
+        "This should have gone to the clothes shop keeper days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "velneir",
+            "giver": "clothes_shop"
+          },
+          "lines": [
+            "player: A delivery from the general store keeper.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "velneir_barber_word",
+      "name": "Word to the Staff Shop Keeper",
+      "area": "velneir",
+      "giver": "barber",
+      "length": "short",
+      "summary": "Call on the staff shop keeper of Velneir and bring back their answer.",
+      "intro": [
+        "I need an answer from the staff shop keeper and I would rather not shout it across the street.",
+        "Call on them as a customer, then ask how our accounts stand."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Balanced? Then I can sleep tonight. My thanks."
+      ],
+      "rewards": {},
+      "steps": [
+        {
+          "id": "s1",
+          "type": "service",
+          "to": {
+            "area": "velneir",
+            "giver": "staff_shop"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "talk",
+          "to": {
+            "area": "velneir",
+            "giver": "staff_shop"
+          },
+          "lines": [
+            "player: The barber sent me to ask after the ledgers.",
+            "Tell them the figures balance, for once. There is nothing owed between us this season."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "velneir_sword_shop_scout",
+      "name": "Eyes on the Velneir Sewers",
+      "area": "velneir",
+      "giver": "sword_shop",
+      "length": "short",
+      "summary": "Climb down into Velneir Sewers and report what you see.",
+      "intro": [
+        "Something has been scratching under the streets at night. It comes from Velneir Sewers.",
+        "Go down the entrance, take a look around and come back in one piece."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "So it is as bad as I feared. Thank you for looking, that took nerve."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "velneir"
+          }
+        }
+      ]
+    },
+    {
+      "id": "velneir_archery_shop_cull",
+      "name": "Trouble with Giant Spiders",
+      "area": "velneir",
+      "giver": "archery_shop",
+      "length": "short",
+      "summary": "The archery shop keeper wants the giant spider near Velneir thinned out.",
+      "intro": [
+        "The giant spider beyond the walls grow bolder every week. Customers will not walk the road.",
+        "Put down 5 of them close to Velneir and I will make it worth your while."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "The road is quieter already. Here, as promised."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 5,
+          "where": {
+            "area": "velneir",
+            "radius": 300
+          }
+        }
+      ]
+    },
+    {
+      "id": "velneir_magic_shop_stock",
+      "name": "Short on Bones",
+      "area": "velneir",
+      "giver": "magic_shop",
+      "length": "short",
+      "summary": "The magic shop keeper of Velneir has run out of bones.",
+      "intro": [
+        "My stores are bare. I need 6 bones and nobody in Velneir has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "prayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 6,
+          "item": "bones"
+        }
+      ]
+    },
+    {
+      "id": "velneir_clothes_shop_parcel",
+      "name": "A Parcel for the Banker",
+      "area": "velneir",
+      "giver": "clothes_shop",
+      "length": "short",
+      "summary": "Carry a parcel across Velneir to the banker.",
+      "intro": [
+        "This should have gone to the banker days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: A delivery from the clothes shop keeper.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "velneir_banker_supply",
+      "name": "Supply Run to Sarnwick",
+      "area": "velneir",
+      "giver": "banker",
+      "length": "medium",
+      "summary": "Gather logs for the banker, then carry a shipment to Sarnwick.",
+      "intro": [
+        "I have an order from Sarnwick and nothing to fill it with.",
+        "Bring me 8 logs, then take the packed shipment to the banker there and do some business while you are in town."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "woodcutting",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 8,
+          "item": "logs"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "sarnwick",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Goods from the banker in Velneir.",
+            "From Velneir? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "sarnwick",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "velneir_general_store_hunt",
+      "name": "The Long Hunt",
+      "area": "velneir",
+      "giver": "general_store",
+      "length": "medium",
+      "summary": "Hunt the creatures around Velneir and bring back logs.",
+      "intro": [
+        "The wilds around Velneir need a firm hand. Start with 5 giant rat outside the walls, then 8 rat down in Velneir Sewers.",
+        "When that is done, bring me 8 logs to show for it."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "woodcutting"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "giant rat",
+          "amount": 5,
+          "where": {
+            "area": "velneir",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "rat",
+          "amount": 8,
+          "where": {
+            "dungeon": "velneir"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 8,
+          "item": "logs"
+        }
+      ]
+    },
+    {
+      "id": "velneir_barber_council",
+      "name": "Votes for the Council",
+      "area": "velneir",
+      "giver": "barber",
+      "length": "medium",
+      "summary": "Gather support around Velneir for the barber.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the realtor, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "velneir",
+            "giver": "realtor"
+          },
+          "lines": [
+            "player: The barber asks whether you will stand with them at the next council.",
+            "I will, if the general store keeper does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "velneir",
+            "giver": "general_store"
+          },
+          "lines": [
+            "player: A sealed note, from the realtor.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "velneir_sword_shop_sweep",
+      "name": "Sweeping the Velneir Sewers",
+      "area": "velneir",
+      "giver": "sword_shop",
+      "length": "medium",
+      "summary": "Clear snake out of Velneir Sewers and tell the general store keeper.",
+      "intro": [
+        "Velneir Sewers is crawling with snake, and they come up through the drains.",
+        "Go down, kill 8 of them, then let the general store keeper know their cellar is safe."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Both done? Velneir owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "velneir"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "snake",
+          "amount": 8,
+          "where": {
+            "dungeon": "velneir"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "velneir",
+            "giver": "general_store"
+          },
+          "lines": [
+            "player: Velneir Sewers is clearer than it was. 8 snake fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "velneir_archery_shop_supply",
+      "name": "Supply Run to Sarnwick (Archery Shop Keeper)",
+      "area": "velneir",
+      "giver": "archery_shop",
+      "length": "medium",
+      "summary": "Gather logs for the archery shop keeper, then carry a shipment to Sarnwick.",
+      "intro": [
+        "I have an order from Sarnwick and nothing to fill it with.",
+        "Bring me 8 logs, then take the packed shipment to the banker there and do some business while you are in town."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "woodcutting",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 8,
+          "item": "logs"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "sarnwick",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Goods from the archery shop keeper in Velneir.",
+            "From Velneir? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "sarnwick",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "velneir_magic_shop_hunt",
+      "name": "The Long Hunt (Magic Shop Keeper)",
+      "area": "velneir",
+      "giver": "magic_shop",
+      "length": "medium",
+      "summary": "Hunt the creatures around Velneir and bring back bones.",
+      "intro": [
+        "The wilds around Velneir need a firm hand. Start with 5 spider outside the walls, then 8 snake down in Velneir Sewers.",
+        "When that is done, bring me 6 bones to show for it."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "prayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "spider",
+          "amount": 5,
+          "where": {
+            "area": "velneir",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "snake",
+          "amount": 8,
+          "where": {
+            "dungeon": "velneir"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 6,
+          "item": "bones"
+        }
+      ]
+    },
+    {
+      "id": "velneir_general_store_route",
+      "name": "The Velneir Trade Route",
+      "area": "velneir",
+      "giver": "general_store",
+      "length": "long",
+      "summary": "Open a trade route between Velneir and Sarnwick.",
+      "intro": [
+        "I mean to open a trade route to Sarnwick. It needs a contract carried, a road made safe and a courier who is proven underground.",
+        "Deliver the contract, trade there, cut down 12 spider near our walls and prove yourself in the dungeoneering caves.",
+        "Then have the banker underwrite the venture."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Signed, safe and funded. You have changed the fortunes of this town.",
+        "Here is your cut of the first season."
+      ],
+      "requires": {
+        "quests": [
+          "velneir_general_store_parcel"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "dungeoneering"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "sarnwick",
+            "giver": "general_store"
+          },
+          "lines": [
+            "player: A contract from the general store keeper in Velneir.",
+            "A fair offer. But the road between us is not safe, and you know it."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "service",
+          "to": {
+            "area": "sarnwick",
+            "giver": "general_store"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "spider",
+          "amount": 12,
+          "where": {
+            "area": "velneir",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s4",
+          "type": "dungeoneering",
+          "amount": 1
+        },
+        {
+          "id": "s5",
+          "type": "talk",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The route to Sarnwick is open and the contract is signed.",
+            "Then I will underwrite it. Velneir has not had news this good in years."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "velneir_archery_shop_nest",
+      "name": "The Thing Beneath Velneir",
+      "area": "velneir",
+      "giver": "archery_shop",
+      "length": "long",
+      "summary": "Find what rules Velneir Sewers, weaken its nest and destroy The Rat King.",
+      "intro": [
+        "Something rules Velneir Sewers and it is getting stronger. I want it gone.",
+        "Ask the food shop keeper what they have heard, see it for yourself, then come back and we will decide how to break the nest.",
+        "When it is weak, kill it and tell the banker."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "I felt the ground go still. Velneir is yours to walk freely, friend.",
+        "Take this. It is everything I promised and a little more."
+      ],
+      "requires": {
+        "quests": [
+          "velneir_archery_shop_cull"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "woodcutting",
+          "constitution"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "velneir",
+            "giver": "food_shop"
+          },
+          "lines": [
+            "player: Have you heard anything from below the streets?",
+            "Every night. Something large is down there, and the small ones answer to it. They call it The Rat King."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "velneir"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "choice",
+          "lines": [
+            "So you have seen it. We can thin them by force, or I can have the guard hold the drains if they are supplied."
+          ],
+          "prompt": "How will you weaken the nest?",
+          "options": [
+            {
+              "text": "I will cut them down myself.",
+              "next": "s4"
+            },
+            {
+              "text": "Supply the guard and let them hold the drains.",
+              "next": "s5"
+            }
+          ]
+        },
+        {
+          "id": "s4",
+          "type": "kill",
+          "next": "s6",
+          "mob": "snake",
+          "amount": 12,
+          "where": {
+            "dungeon": "velneir"
+          }
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 8,
+          "item": "logs"
+        },
+        {
+          "id": "s6",
+          "type": "boss",
+          "dungeon": "velneir"
+        },
+        {
+          "id": "s7",
+          "type": "talk",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The Rat King is dead. Velneir Sewers is quiet.",
+            "Then the vaults are safe and so is everyone above them. The town will hear of this."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "velneir_banker_expedition",
+      "name": "The Fall of the Broodmother",
+      "area": "velneir",
+      "giver": "banker",
+      "length": "long",
+      "summary": "March on Frostbite Cavern, break its creatures and bring down The Broodmother.",
+      "intro": [
+        "Frostbite Cavern has stood against Velneir for too long. The Broodmother sits at the bottom of it.",
+        "Learn what you can from the staff shop keeper, fight your way through 12 bat and end The Broodmother.",
+        "Bring 8 logs back so the town can rebuild."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "It is done, then. They will sing about this in every tavern from here to the coast.",
+        "Take your reward. You have more than earned it."
+      ],
+      "requires": {
+        "quests": [
+          "velneir_banker_stock"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "constitution",
+          "woodcutting"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "velneir",
+            "giver": "staff_shop"
+          },
+          "lines": [
+            "player: What do you know of Frostbite Cavern?",
+            "Only that those who go in come back thin and quiet. The Broodmother rules it now."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "winter"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "bat",
+          "amount": 12,
+          "where": {
+            "dungeon": "winter"
+          }
+        },
+        {
+          "id": "s4",
+          "type": "boss",
+          "dungeon": "winter"
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 8,
+          "item": "logs"
+        },
+        {
+          "id": "s6",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "sarnwick",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Word from Velneir: The Broodmother is dead.",
+            "Dead? Then the caravans can leave at dawn. This news is worth more than gold."
+          ]
+        }
+      ]
+    }
+  ]
+}

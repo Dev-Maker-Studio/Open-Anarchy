@@ -1,6 +1,7 @@
 package com.rs.game.content.skills.construction
 
 import com.rs.game.World
+import com.rs.game.content.claims.BedRespawn
 import com.rs.game.content.claims.ClaimManager
 import com.rs.game.content.combat.XPType
 import com.rs.game.content.combat.getMeleeCombatDelay
@@ -24,15 +25,18 @@ import org.darkan.core.model.Animation
 import org.darkan.core.model.Bonus
 import world.gregs.voidps.type.Tile
 
-private const val HP_ATTRIB = BUILT_FURNITURE_HP
+internal const val HP_ATTRIB = BUILT_FURNITURE_HP
 private const val MISSING_HP = -1
 const val PICK_UP_OPTION = "Pick Up"
-private const val DESTROY_OPTION = "Destroy"
+internal const val DESTROY_OPTION = "Destroy"
 private const val REPAIR_OPTION = "Repair"
 internal const val OPEN_OPTION = "Open"
 internal const val CLOSE_OPTION = "Close"
 private const val LOCK_OPTION = "Lock"
 private const val UNLOCK_OPTION = "Unlock"
+private const val CLIMB_UP_OPTION = "Climb-up"
+private const val CLIMB_DOWN_OPTION = "Climb-down"
+private const val SET_RESPAWN_OPTION = "Set respawn"
 private const val REPAIR_HP_PER_TICK = 6
 private const val REPAIR_XP_PER_TICK = 3.0
 private const val REPAIR_ANIM_INTERVAL = 3
@@ -52,6 +56,8 @@ object BuiltFurniture {
             REPAIR_OPTION -> player.actionManager.setAction(RepairFurniture(obj, piece))
             OPEN_OPTION, CLOSE_OPTION -> openPiece(player, obj, piece, option == OPEN_OPTION)
             LOCK_OPTION, UNLOCK_OPTION -> lockPiece(player, obj, piece, option == LOCK_OPTION)
+            CLIMB_UP_OPTION, CLIMB_DOWN_OPTION -> BuiltRoofs.climb(player, option == CLIMB_UP_OPTION)
+            SET_RESPAWN_OPTION -> BedRespawn.set(player, obj)
             else -> return false
         }
         return true
@@ -71,7 +77,7 @@ fun mapBuiltFurniture() {
 
 fun initBuiltFurniture(obj: GameObject) = BuiltFurniture.init(obj)
 
-private fun hitPoints(obj: GameObject, piece: ConstructionPiece): Int =
+internal fun hitPoints(obj: GameObject, piece: ConstructionPiece): Int =
     obj.attribs.getI(HP_ATTRIB, MISSING_HP).takeIf { it != MISSING_HP } ?: piece.hitPoints
 
 private fun isStanding(obj: GameObject): Boolean = World.getObject(obj.tile, obj.type)?.id == obj.id
@@ -105,6 +111,7 @@ private fun pickUpPiece(player: Player, obj: GameObject, piece: ConstructionPiec
         return
     }
     World.removeObject(obj)
+    BuiltRoofs.removed(obj, piece)
     player.inventory.addItem(piece.item, 1)
     player.sendMessage("You pick up the ${piece.name.lowercase()}.")
 }
@@ -164,8 +171,10 @@ private fun Tile.doorSwingTile(rotation: Int, opening: Boolean): Tile {
 }
 
 private fun destroy(obj: GameObject) {
-    if (ConstructionCatalogue.forLoc(obj.id)?.onOpen != null) StorageChest.spill(obj)
+    val piece = ConstructionCatalogue.forLoc(obj.id)
+    if (piece?.onOpen != null) StorageChest.spill(obj)
     World.removeObject(obj)
+    piece?.let { BuiltRoofs.removed(obj, it) }
 }
 
 private class ObjectHitBar(private val from: Int, private val to: Int, private val max: Int) : HitBar() {

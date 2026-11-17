@@ -1,0 +1,1033 @@
+{
+  "area": "brackenholt",
+  "seed": 7273,
+  "generatorVersion": 1,
+  "quests": [
+    {
+      "id": "brackenholt_banker_stock",
+      "name": "Short on Maple Logs",
+      "area": "brackenholt",
+      "giver": "banker",
+      "length": "short",
+      "summary": "The banker of Brackenholt has run out of maple logs.",
+      "intro": [
+        "My stores are bare. I need 26 maple logs and nobody in Brackenholt has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "woodcutting"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 26,
+          "item": "maple_logs"
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_general_store_parcel",
+      "name": "A Parcel for the Barber",
+      "area": "brackenholt",
+      "giver": "general_store",
+      "length": "short",
+      "summary": "Carry a parcel across Brackenholt to the barber.",
+      "intro": [
+        "This should have gone to the barber days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "brackenholt",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: A delivery from the general store keeper.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_barber_word",
+      "name": "Word to the Fishing Shop Keeper",
+      "area": "brackenholt",
+      "giver": "barber",
+      "length": "short",
+      "summary": "Call on the fishing shop keeper of Brackenholt and bring back their answer.",
+      "intro": [
+        "I need an answer from the fishing shop keeper and I would rather not shout it across the street.",
+        "Call on them as a customer, then ask how our accounts stand."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Balanced? Then I can sleep tonight. My thanks."
+      ],
+      "rewards": {},
+      "steps": [
+        {
+          "id": "s1",
+          "type": "service",
+          "to": {
+            "area": "brackenholt",
+            "giver": "fishing_shop"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "talk",
+          "to": {
+            "area": "brackenholt",
+            "giver": "fishing_shop"
+          },
+          "lines": [
+            "player: The barber sent me to ask after the ledgers.",
+            "Tell them the figures balance, for once. There is nothing owed between us this season."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_sword_shop_scout",
+      "name": "Eyes on the Brackenholt Sewers",
+      "area": "brackenholt",
+      "giver": "sword_shop",
+      "length": "short",
+      "summary": "Climb down into Brackenholt Sewers and report what you see.",
+      "intro": [
+        "Something has been scratching under the streets at night. It comes from Brackenholt Sewers.",
+        "Go down the entrance, take a look around and come back in one piece."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "So it is as bad as I feared. Thank you for looking, that took nerve."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "brackenholt"
+          }
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_archery_shop_cull",
+      "name": "Trouble with Spiders",
+      "area": "brackenholt",
+      "giver": "archery_shop",
+      "length": "short",
+      "summary": "The archery shop keeper wants the spider near Brackenholt thinned out.",
+      "intro": [
+        "The spider beyond the walls grow bolder every week. Customers will not walk the road.",
+        "Put down 13 of them close to Brackenholt and I will make it worth your while."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "The road is quieter already. Here, as promised."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "spider",
+          "amount": 13,
+          "where": {
+            "area": "brackenholt",
+            "radius": 300
+          }
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_magic_shop_stock",
+      "name": "Short on Bones",
+      "area": "brackenholt",
+      "giver": "magic_shop",
+      "length": "short",
+      "summary": "The magic shop keeper of Brackenholt has run out of bones.",
+      "intro": [
+        "My stores are bare. I need 16 bones and nobody in Brackenholt has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "prayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 16,
+          "item": "bones"
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_clothes_shop_parcel",
+      "name": "A Parcel for the Banker",
+      "area": "brackenholt",
+      "giver": "clothes_shop",
+      "length": "short",
+      "summary": "Carry a parcel across Brackenholt to the banker.",
+      "intro": [
+        "This should have gone to the banker days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "ra3_package",
+          "to": {
+            "area": "brackenholt",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: A delivery from the clothes shop keeper.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_food_shop_word",
+      "name": "Word to the Sword Shop Keeper",
+      "area": "brackenholt",
+      "giver": "food_shop",
+      "length": "short",
+      "summary": "Call on the sword shop keeper of Brackenholt and bring back their answer.",
+      "intro": [
+        "I need an answer from the sword shop keeper and I would rather not shout it across the street.",
+        "Call on them as a customer, then ask how our accounts stand."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Balanced? Then I can sleep tonight. My thanks."
+      ],
+      "rewards": {},
+      "steps": [
+        {
+          "id": "s1",
+          "type": "service",
+          "to": {
+            "area": "brackenholt",
+            "giver": "sword_shop"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "talk",
+          "to": {
+            "area": "brackenholt",
+            "giver": "sword_shop"
+          },
+          "lines": [
+            "player: The food shop keeper sent me to ask after the ledgers.",
+            "Tell them the figures balance, for once. There is nothing owed between us this season."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_banker_supply",
+      "name": "Supply Run to Sarnwick",
+      "area": "brackenholt",
+      "giver": "banker",
+      "length": "medium",
+      "summary": "Gather raw lobster for the banker, then carry a shipment to Sarnwick.",
+      "intro": [
+        "I have an order from Sarnwick and nothing to fill it with.",
+        "Bring me 21 raw lobster, then take the packed shipment to the banker there and do some business while you are in town."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "fishing",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 21,
+          "item": "raw_lobster"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "sarnwick",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Goods from the banker in Brackenholt.",
+            "From Brackenholt? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "sarnwick",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_general_store_hunt",
+      "name": "The Long Hunt",
+      "area": "brackenholt",
+      "giver": "general_store",
+      "length": "medium",
+      "summary": "Hunt the creatures around Brackenholt and bring back mithril ore.",
+      "intro": [
+        "The wilds around Brackenholt need a firm hand. Start with 13 ghost outside the walls, then 21 snake down in Brackenholt Sewers.",
+        "When that is done, bring me 21 mithril ore to show for it."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "mining"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "ghost",
+          "amount": 13,
+          "where": {
+            "area": "brackenholt",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "snake",
+          "amount": 21,
+          "where": {
+            "dungeon": "brackenholt"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 21,
+          "item": "mithril_ore"
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_barber_council",
+      "name": "Votes for the Council",
+      "area": "brackenholt",
+      "giver": "barber",
+      "length": "medium",
+      "summary": "Gather support around Brackenholt for the barber.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the banker, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "brackenholt",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The barber asks whether you will stand with them at the next council.",
+            "I will, if the fishing shop keeper does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "brackenholt",
+            "giver": "fishing_shop"
+          },
+          "lines": [
+            "player: A sealed note, from the banker.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "brackenholt",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_sword_shop_sweep",
+      "name": "Sweeping the Brackenholt Sewers",
+      "area": "brackenholt",
+      "giver": "sword_shop",
+      "length": "medium",
+      "summary": "Clear giant spider out of Brackenholt Sewers and tell the realtor.",
+      "intro": [
+        "Brackenholt Sewers is crawling with giant spider, and they come up through the drains.",
+        "Go down, kill 21 of them, then let the realtor know their cellar is safe."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Both done? Brackenholt owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "brackenholt"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 21,
+          "where": {
+            "dungeon": "brackenholt"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "brackenholt",
+            "giver": "realtor"
+          },
+          "lines": [
+            "player: Brackenholt Sewers is clearer than it was. 21 giant spider fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_archery_shop_supply",
+      "name": "Supply Run to Sarnwick (Archery Shop Keeper)",
+      "area": "brackenholt",
+      "giver": "archery_shop",
+      "length": "medium",
+      "summary": "Gather maple logs for the archery shop keeper, then carry a shipment to Sarnwick.",
+      "intro": [
+        "I have an order from Sarnwick and nothing to fill it with.",
+        "Bring me 26 maple logs, then take the packed shipment to the archery shop keeper there and do some business while you are in town."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "woodcutting",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 26,
+          "item": "maple_logs"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "sarnwick",
+            "giver": "archery_shop"
+          },
+          "lines": [
+            "player: Goods from the archery shop keeper in Brackenholt.",
+            "From Brackenholt? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "sarnwick",
+            "giver": "archery_shop"
+          }
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_magic_shop_hunt",
+      "name": "The Long Hunt (Magic Shop Keeper)",
+      "area": "brackenholt",
+      "giver": "magic_shop",
+      "length": "medium",
+      "summary": "Hunt the creatures around Brackenholt and bring back big bones.",
+      "intro": [
+        "The wilds around Brackenholt need a firm hand. Start with 13 ghost outside the walls, then 21 snake down in Brackenholt Sewers.",
+        "When that is done, bring me 16 big bones to show for it."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "prayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "ghost",
+          "amount": 13,
+          "where": {
+            "area": "brackenholt",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "snake",
+          "amount": 21,
+          "where": {
+            "dungeon": "brackenholt"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 16,
+          "item": "big_bones"
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_clothes_shop_council",
+      "name": "Votes for the Council (Clothes Shop Keeper)",
+      "area": "brackenholt",
+      "giver": "clothes_shop",
+      "length": "medium",
+      "summary": "Gather support around Brackenholt for the clothes shop keeper.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the barber, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {},
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "brackenholt",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: The clothes shop keeper asks whether you will stand with them at the next council.",
+            "I will, if the barber does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "service",
+          "to": {
+            "area": "brackenholt",
+            "giver": "barber"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "brackenholt",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_food_shop_sweep",
+      "name": "Sweeping the Brackenholt Sewers (Food Shop Keeper)",
+      "area": "brackenholt",
+      "giver": "food_shop",
+      "length": "medium",
+      "summary": "Clear giant rat out of Brackenholt Sewers and tell the realtor.",
+      "intro": [
+        "Brackenholt Sewers is crawling with giant rat, and they come up through the drains.",
+        "Go down, kill 21 of them, then let the realtor know their cellar is safe."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Both done? Brackenholt owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "brackenholt"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant rat",
+          "amount": 21,
+          "where": {
+            "dungeon": "brackenholt"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "brackenholt",
+            "giver": "realtor"
+          },
+          "lines": [
+            "player: Brackenholt Sewers is clearer than it was. 21 giant rat fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_general_store_route",
+      "name": "The Brackenholt Trade Route",
+      "area": "brackenholt",
+      "giver": "general_store",
+      "length": "long",
+      "summary": "Open a trade route between Brackenholt and Sarnwick.",
+      "intro": [
+        "I mean to open a trade route to Sarnwick. It needs a contract carried, a road made safe and a courier who is proven underground.",
+        "Deliver the contract, trade there, cut down 31 spider near our walls and prove yourself in the dungeoneering caves.",
+        "Then have the banker underwrite the venture."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Signed, safe and funded. You have changed the fortunes of this town.",
+        "Here is your cut of the first season."
+      ],
+      "requires": {
+        "quests": [
+          "brackenholt_general_store_parcel"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "dungeoneering"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "sarnwick",
+            "giver": "general_store"
+          },
+          "lines": [
+            "player: A contract from the general store keeper in Brackenholt.",
+            "A fair offer. But the road between us is not safe, and you know it."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "service",
+          "to": {
+            "area": "sarnwick",
+            "giver": "general_store"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "spider",
+          "amount": 31,
+          "where": {
+            "area": "brackenholt",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s4",
+          "type": "dungeoneering",
+          "amount": 3
+        },
+        {
+          "id": "s5",
+          "type": "talk",
+          "to": {
+            "area": "brackenholt",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The route to Sarnwick is open and the contract is signed.",
+            "Then I will underwrite it. Brackenholt has not had news this good in years."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_archery_shop_nest",
+      "name": "The Thing Beneath Brackenholt",
+      "area": "brackenholt",
+      "giver": "archery_shop",
+      "length": "long",
+      "summary": "Find what rules Brackenholt Sewers, weaken its nest and destroy The Rat King.",
+      "intro": [
+        "Something rules Brackenholt Sewers and it is getting stronger. I want it gone.",
+        "Ask the food shop keeper what they have heard, see it for yourself, then come back and we will decide how to break the nest.",
+        "When it is weak, kill it and tell the banker."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "I felt the ground go still. Brackenholt is yours to walk freely, friend.",
+        "Take this. It is everything I promised and a little more."
+      ],
+      "requires": {
+        "quests": [
+          "brackenholt_archery_shop_cull"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "woodcutting",
+          "constitution"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "brackenholt",
+            "giver": "food_shop"
+          },
+          "lines": [
+            "player: Have you heard anything from below the streets?",
+            "Every night. Something large is down there, and the small ones answer to it. They call it The Rat King."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "brackenholt"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "choice",
+          "lines": [
+            "So you have seen it. We can thin them by force, or I can have the guard hold the drains if they are supplied."
+          ],
+          "prompt": "How will you weaken the nest?",
+          "options": [
+            {
+              "text": "I will cut them down myself.",
+              "next": "s4"
+            },
+            {
+              "text": "Supply the guard and let them hold the drains.",
+              "next": "s5"
+            }
+          ]
+        },
+        {
+          "id": "s4",
+          "type": "kill",
+          "next": "s6",
+          "mob": "giant spider",
+          "amount": 31,
+          "where": {
+            "dungeon": "brackenholt"
+          }
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 26,
+          "item": "willow_logs"
+        },
+        {
+          "id": "s6",
+          "type": "boss",
+          "dungeon": "brackenholt"
+        },
+        {
+          "id": "s7",
+          "type": "talk",
+          "to": {
+            "area": "brackenholt",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The Rat King is dead. Brackenholt Sewers is quiet.",
+            "Then the vaults are safe and so is everyone above them. The town will hear of this."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_food_shop_expedition",
+      "name": "The Fall of the Broodmother",
+      "area": "brackenholt",
+      "giver": "food_shop",
+      "length": "long",
+      "summary": "March on Rootbound Hollow, break its creatures and bring down The Broodmother.",
+      "intro": [
+        "Rootbound Hollow has stood against Brackenholt for too long. The Broodmother sits at the bottom of it.",
+        "Learn what you can from the realtor, fight your way through 31 giant bat and end The Broodmother.",
+        "Bring 21 raw salmon back so the town can rebuild."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "It is done, then. They will sing about this in every tavern from here to the coast.",
+        "Take your reward. You have more than earned it."
+      ],
+      "requires": {
+        "quests": [
+          "brackenholt_food_shop_word"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "constitution",
+          "fishing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "brackenholt",
+            "giver": "realtor"
+          },
+          "lines": [
+            "player: What do you know of Rootbound Hollow?",
+            "Only that those who go in come back thin and quiet. The Broodmother rules it now."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "forest"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "giant bat",
+          "amount": 31,
+          "where": {
+            "dungeon": "forest"
+          }
+        },
+        {
+          "id": "s4",
+          "type": "boss",
+          "dungeon": "forest"
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 21,
+          "item": "raw_salmon"
+        },
+        {
+          "id": "s6",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "sarnwick",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Word from Brackenholt: The Broodmother is dead.",
+            "Dead? Then the caravans can leave at dawn. This news is worth more than gold."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "brackenholt_barber_route",
+      "name": "The Brackenholt Trade Route (Barber)",
+      "area": "brackenholt",
+      "giver": "barber",
+      "length": "long",
+      "summary": "Open a trade route between Brackenholt and Sarnwick.",
+      "intro": [
+        "I mean to open a trade route to Sarnwick. It needs a contract carried, a road made safe and a courier who is proven underground.",
+        "Deliver the contract, trade there, cut down 31 ghost near our walls and prove yourself in the dungeoneering caves.",
+        "Then have the banker underwrite the venture."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Signed, safe and funded. You have changed the fortunes of this town.",
+        "Here is your cut of the first season."
+      ],
+      "requires": {
+        "quests": [
+          "brackenholt_barber_word"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "dungeoneering"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "ra3_package",
+          "to": {
+            "area": "sarnwick",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: A contract from the barber in Brackenholt.",
+            "A fair offer. But the road between us is not safe, and you know it."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "service",
+          "to": {
+            "area": "sarnwick",
+            "giver": "barber"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "ghost",
+          "amount": 31,
+          "where": {
+            "area": "brackenholt",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s4",
+          "type": "dungeoneering",
+          "amount": 3
+        },
+        {
+          "id": "s5",
+          "type": "talk",
+          "to": {
+            "area": "brackenholt",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The route to Sarnwick is open and the contract is signed.",
+            "Then I will underwrite it. Brackenholt has not had news this good in years."
+          ]
+        }
+      ]
+    }
+  ]
+}

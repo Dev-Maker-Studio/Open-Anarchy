@@ -8,6 +8,7 @@ import world.gregs.voidps.cache.definition.data.NPCDefinition;
 import org.darkan.core.model.ObjectShape;
 import com.rs.engine.thread.AsyncTaskExecutor;
 import com.rs.game.World;
+import com.rs.game.content.world.generated.DungeoneeringCaves;
 import com.rs.game.content.combat.CombatDefinitions.Spellbook;
 import com.rs.game.content.skills.dungeoneering.DungeonConstants.GuardianMonster;
 import com.rs.game.content.skills.dungeoneering.DungeonConstants.KeyDoors;
@@ -51,6 +52,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.darkan.core.gameval.gen.Varbit;
 
 public class DungeonManager {
+
+	private static final int TOKEN_RATE = 10;
 
 	private static final Map<Object, DungeonManager> ACTIVE_DUNGEONS = Collections.synchronizedMap(new HashMap<>());
 	public static final AtomicLong KEY_MAKER = new AtomicLong();
@@ -1065,17 +1068,18 @@ public class DungeonManager {
 		party.remove(player, logout);
 		player.stopAll();
 		player.getControllerManager().removeControllerWithoutCheck();
-		player.getControllerManager().startController(new DamonheimController());
+		if (!DungeoneeringCaves.active())
+			player.getControllerManager().startController(new DamonheimController());
 		resetTraps(player);
 		if (player.getFamiliar() != null)
 			player.getFamiliar().sendDeath(player);
 		if (logout) {
-			player.setTile(Tile.of(DungeonConstants.OUTSIDE, 2));
-			player.tele(Tile.of(DungeonConstants.OUTSIDE, 2));
+			player.setTile(player.getDungManager().getExitTile());
+			player.tele(player.getDungManager().getExitTile());
 		} else {
 			player.reset();
 			player.getDungManager().setRejoinKey(null);
-			player.useStairs(-1, Tile.of(DungeonConstants.OUTSIDE, 2), 0, 3);
+			player.useStairs(-1, player.getDungManager().getExitTile(), 0, 3);
 			player.getCombatDefinitions().removeDungeoneeringBook();
 			player.getPackets().sendVarc(1725, 1);
 			setWorldMap(player, false);
@@ -1292,16 +1296,18 @@ public class DungeonManager {
 			double averageXP = (floorXP + prestigeXP) / 2;
 			multiplier = Math.max(0.1, multiplier);
 			double totalXp = averageXP * multiplier;
-			int tokens = (int) (totalXp / 10.0);
+			int tokens = (int) (totalXp / 10.0) * TOKEN_RATE;
 			player.getPackets().sendVarc(1237, (int) (floorXP * 10));
 			player.getPackets().sendVarc(1238, (int) (prestigeXP * 10));
 			player.getPackets().sendVarc(1239, (int) (averageXP * 10));
 			player.getSkills().addXp(Constants.DUNGEONEERING, totalXp);
 			player.getDungManager().addTokens(tokens);
+			player.sendMessage("You receive " + Utils.formatNumber(tokens) + " dungeoneering tokens.");
 			player.getMusicsManager().forcePlayMusic(770);
 			player.incrementCount("Dungeons completed");
 			player.incrementCount(DungeonUtils.getFloorType(party.getFloor()).name() + " floors completed");
 			player.incrementCount(party.getSize() + " floors completed");
+			com.rs.game.content.quests.area.AreaQuests.onDungeoneeringFloor(player);
 			if (!tickedOff) {
 				if (DungeonUtils.getMaxFloor(player.getSkills().getLevelForXp(Constants.DUNGEONEERING)) < party.getFloor() + 1)
 					player.sendMessage("The next floor is not available at your dungeoneering level. Consider resetting your progress to gain best ongoing rate of xp.");

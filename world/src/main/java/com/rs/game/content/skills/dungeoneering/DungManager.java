@@ -8,6 +8,7 @@ import com.rs.game.World;
 import com.rs.game.content.skills.dungeoneering.dialogues.*;
 import com.rs.game.content.skills.magic.Magic;
 import com.rs.game.content.skills.magic.TeleType;
+import com.rs.game.content.world.generated.DungeoneeringCaves;
 import com.rs.game.model.entity.player.Equipment;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub;
@@ -44,6 +45,7 @@ public class DungManager {
 	private int kinshipResets;
 	private KinshipPerk activeRingPerk;
 	private KinshipPerk quickSwitch;
+	private int[] returnTile;
 
 	private Object rejoinKey;
 
@@ -291,11 +293,8 @@ public class DungManager {
 
 	public static ItemClickHandler handleBind = new ItemClickHandler(new String[] { "Bind" }, e -> e.getPlayer().getDungManager().bind(e.getItem(), e.getSlotId()));
 
-	public static ItemClickHandler handleKinship = new ItemClickHandler(Utils.streamObjects(15707, Utils.range(18817, 18828)), new String[] { "Customise", "Quick-switch", "Teleport to Daemonheim", "Open party interface" }, e -> {
+	public static ItemClickHandler handleKinship = new ItemClickHandler(Utils.streamObjects(15707, Utils.range(18817, 18828)), new String[] { "Customise", "Quick-switch", "Open party interface" }, e -> {
 		switch (e.getOption()) {
-		case "Teleport to Daemonheim":
-			Magic.sendDamonheimTeleport(e.getPlayer(), Tile.of(3449, 3698, 0));
-			break;
 		case "Open party interface":
 			e.getPlayer().getDungManager().openPartyInterface();
 			break;
@@ -785,7 +784,7 @@ public class DungManager {
 				return;
 			}
 			DungeonPartyManager party = p2.getDungManager().getParty();
-			if (p2.getDungManager().invitingPlayer != player || player.getPlane() != 0 || party == null || !party.isLeader(p2)) {
+			if (p2.getDungManager().invitingPlayer != player || (!DungeoneeringCaves.active() && player.getPlane() != 0) || party == null || !party.isLeader(p2)) {
 				player.sendMessage("You can't do that right now.");
 				return;
 			}
@@ -819,7 +818,7 @@ public class DungManager {
 				player.sendMessage("That player is offline, or has privacy mode enabled.");
 				return;
 			}
-			if (!(p2.getControllerManager().getController() instanceof DamonheimController)) {
+			if (!DungeoneeringCaves.active() && !(p2.getControllerManager().getController() instanceof DamonheimController)) {
 				player.sendMessage("You can only invite a player in or around Daemonheim.");
 				return;
 			}
@@ -827,7 +826,7 @@ public class DungManager {
 				player.sendMessage(p2.getDisplayName() + " is already in a party.");
 				return;
 			}
-			if (p2.getInterfaceManager().containsScreenInter() || p2.isCantTrade() || p2.isLocked()) {
+			if (p2.getInterfaceManager().containsScreenInter() || p2.isCantTrade() || p2.isLocked() || p2.getControllerManager().getController() instanceof DungeonController) {
 				player.sendMessage("The other player is busy.");
 				return;
 			}
@@ -1118,12 +1117,32 @@ public class DungManager {
 				player.sendMessage(p2.getDisplayName() + " is carrying a familiar that cannot be taken into Daemonheim.");
 				return;
 			}
-			if (p2.getPlane() != 0 || p2.getInterfaceManager().containsScreenInter() || p2.isLocked() || !(p2.getControllerManager().getController() instanceof DamonheimController)) {
+			if (p2.getInterfaceManager().containsScreenInter() || p2.isLocked() || !canEnterFrom(p2)) {
 				player.sendMessage(p2.getDisplayName() + " is busy.");
 				return;
 			}
 		}
+		for (Player p2 : party.getTeam())
+			p2.getDungManager().returnTile = DungeoneeringCaves.active() ? new int[] { p2.getX(), p2.getY(), p2.getPlane() } : null;
 		party.start();
+	}
+
+	private boolean canEnterFrom(Player member) {
+		if (!DungeoneeringCaves.active())
+			return member.getPlane() == 0 && member.getControllerManager().getController() instanceof DamonheimController;
+		if (member == player && !DungeoneeringCaves.near(member.getTile()))
+			return false;
+		return member.getControllerManager().getController() == null && !member.inCombat();
+	}
+
+	private boolean canFormParty() {
+		if (DungeoneeringCaves.active())
+			return DungeoneeringCaves.near(player.getTile());
+		return player.getControllerManager().getController() instanceof DamonheimController && player.getPlane() == 0;
+	}
+
+	public Tile getExitTile() {
+		return returnTile == null ? Tile.of(DungeonConstants.OUTSIDE, 2) : Tile.of(returnTile[0], returnTile[1], returnTile[2]);
 	}
 
 	public static boolean isBannedDungItem(Item item) {
@@ -1211,8 +1230,8 @@ public class DungManager {
 			openPartyInterface();
 		if (party != null)
 			return;
-		if (!(player.getControllerManager().getController() instanceof DamonheimController) || player.getPlane() != 0) {
-			player.sendMessage("You can only form a party in or around Daemonheim.");
+		if (!canFormParty()) {
+			player.sendMessage(DungeoneeringCaves.active() ? "You can only form a party beside a dungeoneering cave." : "You can only form a party in or around Daemonheim.");
 			return;
 		}
 		player.stopAll();

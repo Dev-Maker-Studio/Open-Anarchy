@@ -1,0 +1,79 @@
+{
+  "area": "velneir",
+  "quests": [
+    {
+      "id": "velneir_barber_close_shave",
+      "name": "A Close Shave",
+      "area": "velneir",
+      "giver": "barber",
+      "length": "short",
+      "summary": "The barber's razors have gone blunt and the smith wants bronze before he will grind them.",
+      "intro": ["Look at this edge. I could not shave a peach with it.", "The sword shop keeper will grind my razors, but only if I send bronze for the wheel. Bring me 3 bronze bars."],
+      "accept": "I'll find your bronze.",
+      "outro": ["Three good bars. You will have the sharpest chin in Velneir, on the house."],
+      "rewards": {"xp": ["smithing"]},
+      "steps": [
+        {"id": "bars", "type": "gather", "item": "bronze_bar", "amount": 3, "lines": ["player: Three bronze bars, as asked.", "Ha! Still warm from the furnace. Perfect."]}
+      ]
+    },
+    {
+      "id": "velneir_food_shop_empty_larder",
+      "name": "The Empty Larder",
+      "area": "velneir",
+      "giver": "food_shop",
+      "length": "medium",
+      "summary": "Rats from the sewers ate the food shop's stock; clear them out and tell the general store why the order is late.",
+      "intro": ["Rats got into the cellar and ate a week of stock, sacks and all.", "They come up from the sewers. Go down, kill 8 of them, and tell the general store keeper why their order is late."],
+      "accept": "I'll sort out your rats.",
+      "outro": ["Not a squeak below. I can restock in peace, thanks to you."],
+      "rewards": {"xp": ["slayer", "agility"], "items": [{"item": "bread", "amount": 3}]},
+      "steps": [
+        {"id": "sewer", "type": "visit", "place": {"dungeon": "velneir"}},
+        {"id": "rats", "type": "kill", "mob": "rat", "amount": 8, "where": {"dungeon": "velneir"}},
+        {"id": "sorry", "type": "talk", "to": {"area": "velneir", "giver": "general_store"}, "lines": ["player: The food shop sends apologies. Rats ate your order.", "Rats! I thought they had simply forgotten me. Tell them next week will do."]}
+      ]
+    },
+    {
+      "id": "velneir_realtor_deed_dispute",
+      "name": "The Deed Dispute",
+      "area": "velneir",
+      "giver": "realtor",
+      "length": "medium",
+      "summary": "Two towns claim the same plot; carry the realtor's survey to Sarnwick and settle it.",
+      "intro": ["Sarnwick's land office says a plot on the south road is theirs. My survey says otherwise.", "Lodge a copy with our banker first, then carry the survey to the realtor in Sarnwick. Mind the road, it is a long way south."],
+      "accept": "I'll carry the survey.",
+      "outro": ["They signed? Then the plot is ours and the map is honest again."],
+      "rewards": {"xp": ["agility"]},
+      "steps": [
+        {"id": "lodge", "type": "service", "to": {"area": "velneir", "giver": "banker"}, "journal": "Call on a banker in Velneir to lodge a copy of the survey."},
+        {"id": "road", "type": "visit", "place": {"area": "sarnwick"}},
+        {"id": "survey", "type": "deliver", "item": "royal_letter", "to": {"area": "sarnwick", "giver": "realtor"}, "lines": ["player: A survey from the land office in Velneir.", "Hm. Their chain-men measured true. Very well, Velneir may keep its plot."]}
+      ]
+    },
+    {
+      "id": "velneir_banker_rat_kings_hoard",
+      "name": "The Rat King's Hoard",
+      "area": "velneir",
+      "giver": "banker",
+      "length": "long",
+      "summary": "Coin is vanishing from the vault into the sewers; follow it to the Rat King and end the thefts.",
+      "intro": ["Coins are missing from the vault. Not many, but every night, and the floor is gnawed.", "Ask the armour shop keeper about the grate they fitted, then go below and see where the tunnels lead.", "Whatever is hoarding my customers' coin, I want it finished."],
+      "accept": "I'll follow the coin.",
+      "outro": ["The Rat King, dead? Then the vault is sound again.", "The bank does not forget its friends. This is yours."],
+      "requires": {"quests": ["velneir_banker_stock"]},
+      "rewards": {"xp": ["slayer", "constitution", "dungeoneering"]},
+      "steps": [
+        {"id": "grate", "type": "talk", "to": {"area": "velneir", "giver": "armour_shop"}, "lines": ["player: The banker says you fitted a grate under the vault.", "Iron, a thumb thick. Something chewed through it in a week. Nothing natural does that."]},
+        {"id": "below", "type": "visit", "place": {"dungeon": "velneir"}},
+        {"id": "plan", "type": "choice", "prompt": "How will you reach the hoard?", "lines": ["So the tunnels run under my vault. How do you mean to reach whatever made them?"], "options": [
+          {"text": "Fight through the pack.", "next": "pack"},
+          {"text": "Train in the caves first.", "next": "caves"}
+        ]},
+        {"id": "pack", "type": "kill", "mob": "giant spider", "amount": 10, "where": {"dungeon": "velneir"}, "next": "king"},
+        {"id": "caves", "type": "dungeoneering", "amount": 1},
+        {"id": "king", "type": "boss", "dungeon": "velneir"},
+        {"id": "proof", "type": "gather", "item": "bones", "amount": 5, "journal": "Bring 5 bones from the nest to the banker in Velneir as proof."}
+      ]
+    }
+  ]
+}

@@ -3,6 +3,7 @@ package org.darkan.world.server.packet
 import com.rs.game.World
 import com.rs.game.content.claims.ClaimManager
 import com.rs.game.content.clans.ClansManager
+import com.rs.game.content.skills.construction.BuiltRoofs
 import com.rs.game.content.skills.construction.handleGhostClick
 import com.rs.game.model.entity.player.Player
 import com.rs.net.decoders.handlers.ObjectHandler
@@ -19,7 +20,11 @@ class OpObjHandler : PacketHandler<Player, OpObj> {
             return
         if (handleGhostClick(player, tile, packet.objectId, packet.opNum))
             return
-        val mapObject = World.getObjectWithId(tile, packet.objectId) ?: return
+        val mapObject = World.getObjectWithId(tile, packet.objectId)
+        if (mapObject == null) {
+            BuiltRoofs.handleRaisedClick(player, tile, packet.objectId, packet.opNum)
+            return
+        }
         if (mapObject.id != packet.objectId)
             return
 

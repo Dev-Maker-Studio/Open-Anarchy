@@ -1,0 +1,10 @@
+{
+  "id": "aldmere",
+  "name": "Aldmere Sewers",
+  "theme": "sewer",
+  "seed": 2117340749827258417,
+  "slot": 0,
+  "entranceX": 7664,
+  "entranceY": 9100,
+  "origin": "city:aldmere"
+}

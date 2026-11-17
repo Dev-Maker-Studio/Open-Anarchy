@@ -57,6 +57,8 @@ object WorldDelta {
         val spots: List<Spot> = emptyList()
     )
 
+    class MapChange(val x: Int, val y: Int, val id: Int, val added: Boolean)
+
     private val tracked = HashSet<Int>()
     private val added = HashMap<Long, Added>()
     private val removed = HashMap<Long, Removed>()
@@ -145,6 +147,15 @@ object WorldDelta {
                 removed[k] = Removed(obj.x, obj.y, obj.plane, obj.id, obj.type.id, obj.rotation)
             if (ofTheMap || previous != null || timedEntry != null)
                 scheduleSave()
+        }
+    }
+
+    fun mapChanges(): List<MapChange> {
+        if (!EnvVars.generateMaps) return emptyList()
+        ensureLoaded()
+        return synchronized(this) {
+            removed.values.filter { it.plane == 0 }.map { MapChange(it.x, it.y, it.id, false) } +
+                added.values.filter { it.plane == 0 }.map { MapChange(it.x, it.y, it.id, true) }
         }
     }
 

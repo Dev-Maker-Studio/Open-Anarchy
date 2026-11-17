@@ -1,0 +1,10 @@
+{
+  "id": "velneir",
+  "name": "Velneir Sewers",
+  "theme": "sewer",
+  "seed": 13149688715701638,
+  "slot": 4,
+  "entranceX": 7483,
+  "entranceY": 7475,
+  "origin": "city:velneir"
+}

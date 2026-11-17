@@ -1,6 +1,7 @@
 package com.rs.game.content.interfacehandlers
 
 import com.rs.game.content.world.WORLD_MAP_WAYPOINT_BUTTON
+import com.rs.game.content.world.worldMapWaypointMenu
 import com.rs.game.content.world.worldMapWaypointOption
 import com.rs.game.content.skills.dungeoneering.DungeonController
 import com.rs.game.content.world.Rest
@@ -143,6 +144,7 @@ fun mapGameFrameButtons() {
             }
             Component.interface_755.component_755_42 -> closeWorldMapHint(e.player)
             WORLD_MAP_WAYPOINT_BUTTON -> worldMapWaypointOption(e.player, e.opNum)
+            Component.interface_755.worldmap_waypoints -> worldMapWaypointMenu(e.player, e.slotId, e.opNum)
             Component.interface_755.component_755_49 -> worldMapKeyOption(e)
             Component.interface_755.component_755_54 -> {
                 val vars = e.player.vars

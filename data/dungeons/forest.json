@@ -1,0 +1,10 @@
+{
+  "id": "forest",
+  "name": "Rootbound Hollow",
+  "theme": "cave",
+  "seed": -2001065441085657302,
+  "slot": 6,
+  "entranceX": 9259,
+  "entranceY": 7847,
+  "origin": "biome:forest"
+}

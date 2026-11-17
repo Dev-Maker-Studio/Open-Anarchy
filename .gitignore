@@ -97,3 +97,13 @@ world-server.jar
 .env.unit
 .jar.version
 /data/cache-*/
+
+# Runtime output of generated worlds: logs, regeneration backups, the world map square cache and rendered views
+/logs/
+/data/backup-regenerate-*/
+/data/worldmap-squares-v1/
+/data/worldmap-visited.txt
+/data/city-views/*/
+/data/city-views/*.state.json
+/data/dungeon-views/
+/data/quest-views/

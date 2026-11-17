@@ -1,0 +1,298 @@
+package org.darkan.core.city
+
+import org.darkan.core.gameval.gen.Npc
+import world.gregs.voidps.cache.source.codec.WorldGenerator
+import java.util.Random
+
+object CityPlanner {
+    private const val SPAWN_HALF = 40
+    private const val HALF = 34
+    private const val PLAZA_HALF = 4
+    private const val RING = 20
+    private const val AVENUE = 3
+    private const val RING_WIDTH = 2
+    private const val MIN_SIDE = 5
+    private const val SIDE_SPREAD = 5
+    private const val ATTEMPTS = 60
+    private const val HOUSES = 14
+    private const val SCAN_STEP = 6
+    private const val SEARCH_STEP = 25
+    private const val SEARCH_SPAN = 600
+    private const val MAP_MARGIN = 80
+    private const val GUARD_OFFSET = 3
+    private const val ARMS = 4
+
+    private const val STYLE_SALT = 9001L
+    private const val TWO_FLOOR_HOUSE_PERCENT = 40
+    private const val PERCENT = 100
+    private const val TALL = 2
+    private const val LOW = 1
+
+    private const val ROOF_SALT = 4409L
+    private const val MIN_HOUSES = 3
+    private const val SEED_STEP = 7919L
+    private const val CITY_SALT = 7271L
+    private const val NAME_SALT = 131L
+    private const val BASE_DISTANCE = 1100
+    private const val DISTANCE_SPREAD = 400
+    private const val LAP_DISTANCE = 1500
+    private const val MIN_HOME_STYLES = 2
+    private const val HOME_STYLE_SPREAD = 2
+    private const val MIN_ROOF_STYLES = 3
+    private const val ROOF_STYLE_SPREAD = 2
+    private const val LEGACY_SHOP_PREFIX = "city_"
+    private const val REALTOR_SALT = 6143L
+    private const val REALTOR_ATTEMPTS = 400
+    private const val HOME_SALT = 2713L
+    private const val MIN_HOMES = 2
+    private const val HOME_SPREAD = 2
+    const val CITIES = 5
+
+    private val armOrder = listOf(0, 2, 1, 3)
+    private val names = listOf("Velneir", "Aldmere", "Brackenholt", "Sarnwick", "Dunhollow")
+    private val nameStarts = listOf("Ar", "Bel", "Cor", "Dra", "El", "Fen", "Gar", "Hal", "Ist", "Kel", "Lor", "Mor", "Nar", "Or", "Pel", "Ren", "Sel", "Tar", "Ul", "Var", "Wen", "Yar")
+    private val nameMiddles = listOf("a", "an", "e", "en", "i", "o", "ow", "u", "ar", "el")
+    private val nameEnds = listOf("mere", "holt", "wick", "hollow", "ford", "stead", "gate", "haven", "moor", "reach", "dale", "burn")
+    private val civicKinds = setOf(BuildingBuilder.BANK, BuildingBuilder.GUARDHOUSE)
+
+    private class Palette(seed: Long) {
+        private val random = Random(seed + STYLE_SALT)
+        val civic: WallStyle = WallStyle.entries[random.nextInt(WallStyle.entries.size)]
+        val homes: List<WallStyle> = pick(WallStyle.entries - civic, MIN_HOME_STYLES + random.nextInt(HOME_STYLE_SPREAD))
+        val civicRoof: RoofStyle = RoofStyle.entries[random.nextInt(RoofStyle.entries.size)]
+        val roofs: List<RoofStyle> = pick(RoofStyle.entries - civicRoof, MIN_ROOF_STYLES + random.nextInt(ROOF_STYLE_SPREAD))
+
+        private fun <T> pick(from: List<T>, count: Int): List<T> {
+            val pool = from.toMutableList()
+            return List(minOf(count, pool.size)) { pool.removeAt(random.nextInt(pool.size)) }
+        }
+    }
+
+    private class Road(val arm: Int, val along: Int)
+
+    fun citySeed(worldSeed: Long, index: Int): Long = worldSeed * SEED_STEP + CITY_SALT + index
+
+    fun cityName(seed: Long, index: Int): String = names.getOrNull(index) ?: Random(seed + NAME_SALT).let { random ->
+        nameStarts[random.nextInt(nameStarts.size)] + nameMiddles[random.nextInt(nameMiddles.size)] + nameEnds[random.nextInt(nameEnds.size)]
+    }
+
+    fun stub(name: String, seed: Long, centerX: Int, centerY: Int, halfSize: Int): City =
+        City(name.lowercase().replace(' ', '_'), name, seed, centerX, centerY, halfSize, 0, emptyList(), emptyList(), emptyList())
+
+    fun isStub(city: City): Boolean = city.streets.isEmpty() && city.buildings.isEmpty()
+
+    fun plan(generator: WorldGenerator, worldSeed: Long, spawnX: Int, spawnY: Int, mapMin: Int, mapMax: Int, count: Int = CITIES): List<City> {
+        val taken = HashSet<String>()
+        return (0 until count).mapNotNull { index ->
+            val seed = citySeed(worldSeed, index)
+            val name = cityName(seed, index).let { if (taken.add(it)) it else "$it ${index + 1}" }
+            if (index == 0) return@mapNotNull make(generator, stub(name, seed, spawnX, spawnY, SPAWN_HALF))
+            val arm = armOrder[(index - 1) % ARMS]
+            val distance = BASE_DISTANCE + Random(seed).nextInt(DISTANCE_SPREAD) + (index - 1) / ARMS * LAP_DISTANCE
+            locate(generator, arm, distance, mapMin, mapMax)?.let { (x, y) -> make(generator, stub(name, seed, x, y, HALF)) }
+        }
+    }
+
+    fun make(generator: WorldGenerator, stub: City): City {
+        val half = stub.halfSize.takeIf { it > 0 } ?: HALF
+        val road = roadThrough(generator, stub.centerX, stub.centerY, half)
+        val crossroads = road != null && road.along <= half
+        val random = Random(stub.seed)
+        val styles = Random(stub.seed + STYLE_SALT)
+        val palette = Palette(stub.seed)
+        val streets = streets(stub.centerX, stub.centerY, half, road?.arm?.takeUnless { crossroads })
+        val buildings = ArrayList<Building>()
+        val residents = ArrayList<Resident>()
+        val kinds = listOf(BuildingBuilder.BANK, BuildingBuilder.SMITHY, BuildingBuilder.MARKET, BuildingBuilder.GUARDHOUSE) + List(HOUSES) { BuildingBuilder.HOUSE }
+        for (kind in kinds) {
+            for (attempt in 0 until ATTEMPTS) {
+                val candidate = candidate(generator, random, styles, palette, stub.id, kind, stub.centerX, stub.centerY, half, streets, buildings) ?: continue
+                buildings += candidate.first
+                residents += candidate.second
+                break
+            }
+        }
+        residents += guards(generator, road, crossroads, stub.centerX, stub.centerY, half)
+        return upgrade(generator, stub.copy(halfSize = half, baseHeight = generator.heightAt(stub.centerX, stub.centerY), streets = streets, buildings = buildings, residents = residents))
+    }
+
+    fun upgrade(generator: WorldGenerator, city: City): City = withHomes(withRealtor(generator, upgrade(city)))
+
+    private fun withRealtor(generator: WorldGenerator, city: City): City {
+        val kind = Service.REALTOR.kind
+        if (city.buildings.any { it.kind == kind }) return city
+        val random = Random(city.seed + REALTOR_SALT)
+        val palette = Palette(city.seed)
+        repeat(REALTOR_ATTEMPTS) {
+            val (office, staff) = candidate(generator, random, random, palette, city.id, kind, city.centerX, city.centerY, city.halfSize, city.streets, city.buildings) ?: return@repeat
+            return city.copy(buildings = city.buildings + office.copy(floor = Service.REALTOR.floor.id, roof = palette.civicRoof.id), residents = city.residents + staff)
+        }
+        val index = city.buildings.indexOfLast { it.kind == BuildingBuilder.MARKET }.takeIf { it >= 0 } ?: city.buildings.indexOfLast { it.kind == BuildingBuilder.HOUSE }
+        if (index < 0) return city
+        val old = city.buildings[index]
+        val plan = BuildingBuilder.plan(kind, old.x, old.y, old.width, old.depth, Side.valueOf(old.door), old.levels, city.id, city.seed)
+        val buildings = city.buildings.toMutableList()
+        buildings[index] = old.copy(kind = kind, floor = Service.REALTOR.floor.id, furniture = plan.furniture)
+        return city.copy(buildings = buildings, residents = city.residents + plan.residents)
+    }
+
+    private fun withHomes(city: City): City {
+        if (city.buildings.any { it.isForSale }) return city
+        val count = MIN_HOMES + Random(city.seed * SEED_STEP + HOME_SALT).nextInt(HOME_SPREAD)
+        val listed = city.buildings.indices.filter { city.buildings[it].kind == BuildingBuilder.HOUSE }.take(count).toSet()
+        return city.copy(buildings = city.buildings.mapIndexed { index, building ->
+            if (index in listed) building.copy(forSale = true, furniture = building.furniture.filter { it.loc == BuildingBuilder.LADDER || it.loc == BuildingBuilder.LADDER_TOP }) else building
+        })
+    }
+
+    fun upgrade(city: City): City {
+        val palette = Palette(city.seed)
+        val roofs = Random(city.seed + ROOF_SALT)
+        val buildings = city.buildings.toMutableList()
+        val residents = city.residents.mapTo(ArrayList()) { resident ->
+            val shop = resident.shop ?: return@mapTo resident
+            if (shop.startsWith(LEGACY_SHOP_PREFIX)) resident.copy(shop = "${city.id}_${shop.removePrefix(LEGACY_SHOP_PREFIX)}", npc = keeperNpc(city.seed, shop.removePrefix(LEGACY_SHOP_PREFIX))) else resident
+        }
+        val missing = Service.shops.takeIf { shops -> buildings.none { building -> shops.any { it.kind == building.kind } } }.orEmpty()
+        val houses = buildings.indices.filter { buildings[it].kind == BuildingBuilder.HOUSE }
+        for ((service, index) in missing.zip(houses.drop(MIN_HOUSES))) {
+            val house = buildings[index]
+            val plan = BuildingBuilder.plan(service.kind, house.x, house.y, house.width, house.depth, Side.valueOf(house.door), house.levels, city.id, city.seed)
+            buildings[index] = house.copy(kind = service.kind, floor = service.floor.id, furniture = plan.furniture)
+            residents += plan.residents
+        }
+        for (index in buildings.indices) {
+            val building = buildings[index]
+            val pick = roofs.nextInt(Int.MAX_VALUE)
+            if (building.roof != null) continue
+            val roof = if (building.kind in civicKinds) palette.civicRoof else palette.roofs[pick % palette.roofs.size]
+            buildings[index] = building.copy(roof = roof.id)
+        }
+        return city.copy(buildings = buildings, residents = residents)
+    }
+
+    fun keeperNpc(seed: Long, kind: String): Int = Npc.wandering_merchant_01 + Random(seed + kind.hashCode()).nextInt(MERCHANT_LOOKS)
+
+    private const val MERCHANT_LOOKS = 50
+    private const val ROAD_SCAN_STEP = 1
+
+    private fun roadThrough(generator: WorldGenerator, cx: Int, cy: Int, half: Int): Road? {
+        var best: Road? = null
+        var bestDistance = half / 2
+        generator.roadArms().forEachIndexed { arm, road ->
+            for (along in 0 until road.length step ROAD_SCAN_STEP) {
+                val (x, y) = generator.roadCentreAt(arm, along)
+                val distance = maxOf(Math.abs(x - cx), Math.abs(y - cy))
+                if (distance < bestDistance) {
+                    bestDistance = distance
+                    best = Road(arm, along)
+                }
+            }
+        }
+        return best
+    }
+
+    private fun locate(generator: WorldGenerator, arm: Int, distance: Int, mapMin: Int, mapMax: Int): Pair<Int, Int>? {
+        for (step in 0..SEARCH_SPAN / SEARCH_STEP) {
+            val (x, y) = generator.roadCentreAt(arm, distance + step * SEARCH_STEP)
+            if (x - HALF < mapMin + MAP_MARGIN || y - HALF < mapMin + MAP_MARGIN || x + HALF > mapMax - MAP_MARGIN || y + HALF > mapMax - MAP_MARGIN) continue
+            if (suitable(generator, x, y, HALF)) return x to y
+        }
+        return null
+    }
+
+    private fun suitable(generator: WorldGenerator, cx: Int, cy: Int, half: Int): Boolean {
+        val reach = half + SCAN_STEP
+        if (generator.lodestoneSites().any { (lx, ly) -> Math.abs(lx - cx) < reach + WorldGenerator.LODESTONE_RADIUS && Math.abs(ly - cy) < reach + WorldGenerator.LODESTONE_RADIUS }) return false
+        for (dx in -reach..reach step SCAN_STEP) for (dy in -reach..reach step SCAN_STEP) {
+            if (generator.liquidTileAt(cx + dx, cy + dy) != null || generator.biomeAt(cx + dx, cy + dy) in badBiomes || generator.roadHazard(cx + dx, cy + dy)) return false
+        }
+        return true
+    }
+
+    private val houseFloors = listOf(FloorStyle.PLANKS, FloorStyle.DARKWOOD, FloorStyle.SANDSTONE, FloorStyle.TERRACOTTA)
+
+    private val badBiomes = setOf(WorldGenerator.Biome.OCEAN, WorldGenerator.Biome.MOUNTAIN, WorldGenerator.Biome.VOLCANO, WorldGenerator.Biome.RUNE_ESSENCE)
+
+    private fun streets(cx: Int, cy: Int, half: Int, arm: Int?): List<Street> {
+        val result = arrayListOf(
+            Street(cx - PLAZA_HALF, cy - PLAZA_HALF, 2 * PLAZA_HALF + 1, 2 * PLAZA_HALF + 1),
+            Street(cx - RING, cy + RING, 2 * RING + RING_WIDTH, RING_WIDTH),
+            Street(cx - RING, cy - RING - RING_WIDTH, 2 * RING + RING_WIDTH, RING_WIDTH),
+            Street(cx - RING - RING_WIDTH, cy - RING, RING_WIDTH, 2 * RING + RING_WIDTH),
+            Street(cx + RING, cy - RING, RING_WIDTH, 2 * RING + RING_WIDTH),
+        )
+        val horizontal = arm == null || arm >= 2
+        val vertical = arm == null || arm < 2
+        if (horizontal) result += Street(cx - half, cy - 1, 2 * half + 1, AVENUE)
+        if (vertical) result += Street(cx - 1, cy - half, AVENUE, 2 * half + 1)
+        if (arm != null) result += if (horizontal) Street(cx - 1, cy - half, AVENUE, 2 * half + 1) else Street(cx - half, cy - 1, 2 * half + 1, AVENUE)
+        return result
+    }
+
+    private fun candidate(
+        generator: WorldGenerator, random: Random, styles: Random, palette: Palette, city: String, kind: String, cx: Int, cy: Int, half: Int, streets: List<Street>, placed: List<Building>,
+    ): Pair<Building, List<Resident>>? {
+        val street = streets[random.nextInt(streets.size)]
+        val width = MIN_SIDE + 2 + random.nextInt(SIDE_SPREAD)
+        val depth = MIN_SIDE + 2 + random.nextInt(SIDE_SPREAD)
+        val sides = if (street.width > street.depth * 2) listOf(Side.SOUTH, Side.NORTH) else if (street.depth > street.width * 2) listOf(Side.WEST, Side.EAST) else Side.entries
+        val door = sides[random.nextInt(sides.size)]
+        val (bx, by) = when (door) {
+            Side.SOUTH -> street.x + random.nextInt(street.width) - width / 2 to street.y + street.depth
+            Side.NORTH -> street.x + random.nextInt(street.width) - width / 2 to street.y - depth
+            Side.WEST -> street.x + street.width to street.y + random.nextInt(street.depth) - depth / 2
+            Side.EAST -> street.x - width to street.y + random.nextInt(street.depth) - depth / 2
+        }
+        val maxX = bx + width - 1
+        val maxY = by + depth - 1
+        if (bx < cx - half + 2 || by < cy - half + 2 || maxX > cx + half - 2 || maxY > cy + half - 2) return null
+        if (streets.any { it.touches(bx, by, maxX, maxY) } || placed.any { it.touches(bx, by, maxX, maxY, 1) }) return null
+        if (generator.roadTouches(bx - 1, by - 1, maxX + 1, maxY + 1)) return null
+        val (doorX, doorY) = BuildingBuilder.doorTile(bx, by, width, depth, door)
+        val outX = doorX + door.dx
+        val outY = doorY + door.dy
+        if (streets.none { it.touches(outX, outY, outX, outY) }) return null
+        val house = kind == BuildingBuilder.HOUSE
+        val floors = when (kind) {
+            BuildingBuilder.BANK, BuildingBuilder.GUARDHOUSE -> TALL
+            BuildingBuilder.HOUSE -> if (styles.nextInt(PERCENT) < TWO_FLOOR_HOUSE_PERCENT) TALL else LOW
+            else -> LOW
+        }
+        val wall = if (house) palette.homes[styles.nextInt(palette.homes.size)] else palette.civic
+        val floor = when (kind) {
+            BuildingBuilder.BANK -> FloorStyle.MARBLE
+            BuildingBuilder.MARKET -> FloorStyle.COBBLE
+            BuildingBuilder.SMITHY -> FloorStyle.SLATE
+            BuildingBuilder.GUARDHOUSE -> FloorStyle.FLAGSTONE
+            else -> houseFloors[styles.nextInt(houseFloors.size)]
+        }
+        val plan = BuildingBuilder.plan(kind, bx, by, width, depth, door, floors, city)
+        return Building(kind, bx, by, width, depth, door.name, floors, wall.id, floor.id, plan.furniture) to plan.residents
+    }
+
+    private fun guards(generator: WorldGenerator, road: Road?, crossroads: Boolean, cx: Int, cy: Int, half: Int): List<Resident> {
+        val gates = when {
+            road == null -> emptyList()
+            crossroads -> List(ARMS) { Triple(it, half, direction(it)) }
+            else -> listOf(Triple(road.arm, road.along + half, direction(road.arm)), Triple(road.arm, road.along - half, -direction(road.arm)))
+        }
+        val result = ArrayList<Resident>()
+        for ((arm, distance, outward) in gates) {
+            val (gx, gy) = generator.roadCentreAt(arm, distance)
+            val shift = -outward * GUARD_OFFSET
+            if (arm < 2) {
+                result += Resident(Npc.guard1, gx - GUARD_OFFSET, gy + shift, BuildingBuilder.GUARD)
+                result += Resident(Npc.guard1, gx + GUARD_OFFSET + 1, gy + shift, BuildingBuilder.GUARD)
+            } else {
+                result += Resident(Npc.guard1, gx + shift, gy - GUARD_OFFSET, BuildingBuilder.GUARD)
+                result += Resident(Npc.guard1, gx + shift, gy + GUARD_OFFSET + 1, BuildingBuilder.GUARD)
+            }
+        }
+        val spread = RING / 2
+        result += listOf(cx - spread to cy + RING, cx + spread to cy - RING, cx - RING to cy - spread, cx + RING to cy + spread).map { (x, y) -> Resident(Npc.guard1, x, y, BuildingBuilder.PATROL) }
+        return result
+    }
+
+    private fun direction(arm: Int) = if (arm % 2 == 0) 1 else -1
+}
