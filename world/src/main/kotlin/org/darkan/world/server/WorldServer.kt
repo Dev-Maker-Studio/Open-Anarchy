@@ -248,7 +248,7 @@ object WorldServer {
             )
 
             session.onDisconnecting {
-                player.disconnected = true
+                player.connectionLost()
             }
             player.start()
             session.flush()
