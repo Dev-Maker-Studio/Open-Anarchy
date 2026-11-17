@@ -1,5 +1,6 @@
 package world.gregs.voidps.cache.source.codec
 
+import org.darkan.core.city.City
 import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.gameval.gen.Npc
 import org.darkan.core.gameval.gen.Overlay
@@ -22,7 +23,8 @@ class WorldGenerator(
     private val seed: Long = DEFAULT_SEED,
     private val originX: Int = 0,
     private val originY: Int = 0,
-    private val areaTiles: Int = 0
+    private val areaTiles: Int = 0,
+    private val cities: List<City> = emptyList()
 ) : MapGenerator {
 
     fun inArea(regionX: Int, regionY: Int): Boolean {
@@ -291,6 +293,7 @@ class WorldGenerator(
         placeScenery(definition, grid(globalX, globalY), globalX, globalY)
         placeFixtures(definition, globalX, globalY)
         placeOreClusters(definition, globalX, globalY)
+        if (cities.isNotEmpty()) definition.objects.removeAll { scenery -> cities.any { it.covers(regionX * SIZE + scenery.x, regionY * SIZE + scenery.y) } }
         return definition.objects
     }
 
@@ -306,6 +309,22 @@ class WorldGenerator(
         return grid.liquids[Math.floorMod(globalX, SIZE)][Math.floorMod(globalY, SIZE)]
     }
 
+    fun heightAt(x: Int, y: Int): Int {
+        val globalX = x + originX
+        val globalY = y + originY
+        val regionX = Math.floorDiv(globalX, SIZE)
+        val regionY = Math.floorDiv(globalY, SIZE)
+        val grid = grids.computeIfAbsent(cellKey(regionX, regionY)) { grid(regionX, regionY) }
+        return grid.heights[Math.floorMod(globalX, SIZE)][Math.floorMod(globalY, SIZE)]
+    }
+
+    fun roadCentreAt(arm: Int, along: Int): Pair<Int, Int> {
+        val road = road.arms[arm]
+        val index = along.coerceIn(0, road.length - 1)
+        val (x, y) = road.tile(index, road.offsets[index].toInt())
+        return x - originX to y - originY
+    }
+
     fun onRoad(x: Int, y: Int): Boolean = roadAt(x + originX, y + originY)
 
     fun roadTouches(minX: Int, minY: Int, maxX: Int, maxY: Int): Boolean =
@@ -317,7 +336,8 @@ class WorldGenerator(
 
     private fun roadAt(x: Int, y: Int): Boolean = roadTouchesGlobal(x, y, x, y)
 
-    private fun roadTouchesGlobal(minX: Int, minY: Int, maxX: Int, maxY: Int): Boolean = road.touches(minX, minY, maxX, maxY)
+    private fun roadTouchesGlobal(minX: Int, minY: Int, maxX: Int, maxY: Int): Boolean =
+        road.touches(minX, minY, maxX, maxY) || cities.any { it.streetTouches(minX - originX, minY - originY, maxX - originX, maxY - originY) }
 
     private fun roadProbe(x: Int, y: Int): Int {
         val site = nearestSite(x, y)
@@ -382,6 +402,7 @@ class WorldGenerator(
         val heights = Array(SIZE) { dx ->
             IntArray(SIZE) { dy -> height(baseX + dx, baseY + dy, nearest[dx][dy], lake[dx][dy], pond[dx][dy], island[dx][dy], crater[dx][dy], masses[dx][dy], gaps[dx][dy]) }
         }
+        flatten(heights, baseX, baseY)
         val underlays = Array(SIZE) { dx ->
             IntArray(SIZE) { dy -> underlay(baseX + dx, baseY + dy, nearest[dx][dy], heights[dx][dy], crater[dx][dy], gaps[dx][dy]) }
         }
@@ -395,6 +416,21 @@ class WorldGenerator(
             BooleanArray(SIZE) { dy -> masses[dx][dy] >= BODY_THRESHOLD && !walkable[dx][dy] && liquids[dx][dy] == null && !roads[dx][dy] }
         }
         return Grid(Array(SIZE) { dx -> Array(SIZE) { dy -> biomes[dx][dy] } }, liquids, heights, underlays, roads, depths, blocked)
+    }
+
+    private fun flatten(heights: Array<IntArray>, baseX: Int, baseY: Int) {
+        for (city in cities) {
+            val centreX = city.centerX + originX
+            val centreY = city.centerY + originY
+            val reach = city.halfSize + CITY_BLEND
+            if (baseX + SIZE <= centreX - reach || baseX > centreX + reach || baseY + SIZE <= centreY - reach || baseY > centreY + reach) continue
+            for (dx in 0 until SIZE) for (dy in 0 until SIZE) {
+                val outside = maxOf(abs(baseX + dx - centreX), abs(baseY + dy - centreY)) - city.halfSize
+                if (outside >= CITY_BLEND) continue
+                val weight = if (outside <= 0) 1.0 else smooth(1.0 - outside.toDouble() / CITY_BLEND)
+                heights[dx][dy] = lerp(heights[dx][dy].toDouble(), city.baseHeight.toDouble(), weight).toInt()
+            }
+        }
     }
 
     private fun height(x: Int, y: Int, site: Site, lake: Double, pond: Double, island: Double, crater: Double, mass: Double, pathGap: Double): Int {
@@ -1509,6 +1545,7 @@ class WorldGenerator(
     companion object {
         const val DEFAULT_SEED = 727L
         const val BIOME_SPACING = 340
+        private const val CITY_BLEND = 12
         const val ORIGIN_X = WorldWindow.WORLD_ORIGIN_X
         const val ORIGIN_Y = WorldWindow.WORLD_ORIGIN_Y
         private const val ORIGIN_CELL_X = ORIGIN_X / BIOME_SPACING

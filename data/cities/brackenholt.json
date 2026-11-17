@@ -1,0 +1,4390 @@
+{
+  "id": "brackenholt",
+  "name": "Brackenholt",
+  "seed": 7273,
+  "centerX": 9225,
+  "centerY": 7669,
+  "halfSize": 34,
+  "baseHeight": 35,
+  "streets": [
+    {
+      "x": 9221,
+      "y": 7665,
+      "width": 9,
+      "depth": 9
+    },
+    {
+      "x": 9205,
+      "y": 7689,
+      "width": 42,
+      "depth": 2
+    },
+    {
+      "x": 9205,
+      "y": 7647,
+      "width": 42,
+      "depth": 2
+    },
+    {
+      "x": 9203,
+      "y": 7649,
+      "width": 2,
+      "depth": 42
+    },
+    {
+      "x": 9245,
+      "y": 7649,
+      "width": 2,
+      "depth": 42
+    },
+    {
+      "x": 9191,
+      "y": 7668,
+      "width": 69,
+      "depth": 3
+    },
+    {
+      "x": 9224,
+      "y": 7635,
+      "width": 3,
+      "depth": 69
+    }
+  ],
+  "buildings": [
+    {
+      "kind": "bank",
+      "x": 9206,
+      "y": 7639,
+      "width": 11,
+      "depth": 8,
+      "door": "NORTH",
+      "pieces": [
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 3,
+          "x": 9206,
+          "y": 7639
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9206,
+          "y": 7640
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9206,
+          "y": 7641
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9206,
+          "y": 7642
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9206,
+          "y": 7643
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9206,
+          "y": 7644
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9206,
+          "y": 7645
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 0,
+          "x": 9206,
+          "y": 7646
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9207,
+          "y": 7639
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9207,
+          "y": 7646
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9208,
+          "y": 7639
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9208,
+          "y": 7646
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9209,
+          "y": 7639
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9209,
+          "y": 7646
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9210,
+          "y": 7639
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9210,
+          "y": 7646
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9211,
+          "y": 7639
+        },
+        {
+          "loc": 1530,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9211,
+          "y": 7646
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9212,
+          "y": 7639
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9212,
+          "y": 7646
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9213,
+          "y": 7639
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9213,
+          "y": 7646
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9214,
+          "y": 7639
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9214,
+          "y": 7646
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9215,
+          "y": 7639
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9215,
+          "y": 7646
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 2,
+          "x": 9216,
+          "y": 7639
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9216,
+          "y": 7640
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9216,
+          "y": 7641
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9216,
+          "y": 7642
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9216,
+          "y": 7643
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9216,
+          "y": 7644
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9216,
+          "y": 7645
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 1,
+          "x": 9216,
+          "y": 7646
+        },
+        {
+          "loc": 2213,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9212,
+          "y": 7641
+        },
+        {
+          "loc": 2213,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9211,
+          "y": 7641
+        },
+        {
+          "loc": 2213,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9210,
+          "y": 7641
+        },
+        {
+          "loc": 362,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9215,
+          "y": 7645
+        },
+        {
+          "loc": 366,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9207,
+          "y": 7645
+        }
+      ]
+    },
+    {
+      "kind": "smithy",
+      "x": 9210,
+      "y": 7657,
+      "width": 9,
+      "depth": 11,
+      "door": "NORTH",
+      "pieces": [
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 3,
+          "x": 9210,
+          "y": 7657
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9210,
+          "y": 7658
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9210,
+          "y": 7659
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9210,
+          "y": 7660
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9210,
+          "y": 7661
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9210,
+          "y": 7662
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9210,
+          "y": 7663
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9210,
+          "y": 7664
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9210,
+          "y": 7665
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9210,
+          "y": 7666
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 0,
+          "x": 9210,
+          "y": 7667
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9211,
+          "y": 7657
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9211,
+          "y": 7667
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9212,
+          "y": 7657
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9212,
+          "y": 7667
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9213,
+          "y": 7657
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9213,
+          "y": 7667
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9214,
+          "y": 7657
+        },
+        {
+          "loc": 1530,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9214,
+          "y": 7667
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9215,
+          "y": 7657
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9215,
+          "y": 7667
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9216,
+          "y": 7657
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9216,
+          "y": 7667
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9217,
+          "y": 7657
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9217,
+          "y": 7667
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 2,
+          "x": 9218,
+          "y": 7657
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9218,
+          "y": 7658
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9218,
+          "y": 7659
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9218,
+          "y": 7660
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9218,
+          "y": 7661
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9218,
+          "y": 7662
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9218,
+          "y": 7663
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9218,
+          "y": 7664
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9218,
+          "y": 7665
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9218,
+          "y": 7666
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 1,
+          "x": 9218,
+          "y": 7667
+        },
+        {
+          "loc": 73931,
+          "shape": 10,
+          "rotation": 0,
+          "x": 9211,
+          "y": 7658
+        },
+        {
+          "loc": 2783,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9214,
+          "y": 7659
+        },
+        {
+          "loc": 362,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9217,
+          "y": 7666
+        },
+        {
+          "loc": 366,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9211,
+          "y": 7666
+        }
+      ]
+    },
+    {
+      "kind": "market",
+      "x": 9247,
+      "y": 7655,
+      "width": 7,
+      "depth": 7,
+      "door": "WEST",
+      "pieces": [
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 3,
+          "x": 9247,
+          "y": 7655
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7656
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7657
+        },
+        {
+          "loc": 1530,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7658
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7659
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7660
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7661
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9248,
+          "y": 7655
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9248,
+          "y": 7661
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9249,
+          "y": 7655
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9249,
+          "y": 7661
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9250,
+          "y": 7655
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9250,
+          "y": 7661
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9251,
+          "y": 7655
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9251,
+          "y": 7661
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9252,
+          "y": 7655
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9252,
+          "y": 7661
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 2,
+          "x": 9253,
+          "y": 7655
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9253,
+          "y": 7656
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9253,
+          "y": 7657
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9253,
+          "y": 7658
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9253,
+          "y": 7659
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9253,
+          "y": 7660
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 1,
+          "x": 9253,
+          "y": 7661
+        },
+        {
+          "loc": 602,
+          "shape": 10,
+          "rotation": 0,
+          "x": 9251,
+          "y": 7660
+        },
+        {
+          "loc": 602,
+          "shape": 10,
+          "rotation": 0,
+          "x": 9251,
+          "y": 7658
+        },
+        {
+          "loc": 602,
+          "shape": 10,
+          "rotation": 0,
+          "x": 9251,
+          "y": 7656
+        },
+        {
+          "loc": 366,
+          "shape": 10,
+          "rotation": 0,
+          "x": 9252,
+          "y": 7660
+        },
+        {
+          "loc": 362,
+          "shape": 10,
+          "rotation": 0,
+          "x": 9252,
+          "y": 7656
+        },
+        {
+          "loc": 366,
+          "shape": 10,
+          "rotation": 0,
+          "x": 9248,
+          "y": 7656
+        }
+      ]
+    },
+    {
+      "kind": "guardhouse",
+      "x": 9214,
+      "y": 7679,
+      "width": 8,
+      "depth": 10,
+      "door": "NORTH",
+      "pieces": [
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 3,
+          "x": 9214,
+          "y": 7679
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9214,
+          "y": 7680
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9214,
+          "y": 7681
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9214,
+          "y": 7682
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9214,
+          "y": 7683
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9214,
+          "y": 7684
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9214,
+          "y": 7685
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9214,
+          "y": 7686
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9214,
+          "y": 7687
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 0,
+          "x": 9214,
+          "y": 7688
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9215,
+          "y": 7679
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9215,
+          "y": 7688
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9216,
+          "y": 7679
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9216,
+          "y": 7688
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9217,
+          "y": 7679
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9217,
+          "y": 7688
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9218,
+          "y": 7679
+        },
+        {
+          "loc": 1530,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9218,
+          "y": 7688
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9219,
+          "y": 7679
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9219,
+          "y": 7688
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9220,
+          "y": 7679
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9220,
+          "y": 7688
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 2,
+          "x": 9221,
+          "y": 7679
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9221,
+          "y": 7680
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9221,
+          "y": 7681
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9221,
+          "y": 7682
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9221,
+          "y": 7683
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9221,
+          "y": 7684
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9221,
+          "y": 7685
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9221,
+          "y": 7686
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9221,
+          "y": 7687
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 1,
+          "x": 9221,
+          "y": 7688
+        },
+        {
+          "loc": 1106,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9218,
+          "y": 7680
+        },
+        {
+          "loc": 366,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9215,
+          "y": 7687
+        }
+      ]
+    },
+    {
+      "kind": "house",
+      "x": 9196,
+      "y": 7656,
+      "width": 7,
+      "depth": 7,
+      "door": "EAST",
+      "pieces": [
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 3,
+          "x": 9196,
+          "y": 7656
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9196,
+          "y": 7657
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9196,
+          "y": 7658
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9196,
+          "y": 7659
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9196,
+          "y": 7660
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9196,
+          "y": 7661
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 0,
+          "x": 9196,
+          "y": 7662
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9197,
+          "y": 7656
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9197,
+          "y": 7662
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9198,
+          "y": 7656
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9198,
+          "y": 7662
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9199,
+          "y": 7656
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9199,
+          "y": 7662
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9200,
+          "y": 7656
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9200,
+          "y": 7662
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9201,
+          "y": 7656
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9201,
+          "y": 7662
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 2,
+          "x": 9202,
+          "y": 7656
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9202,
+          "y": 7657
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9202,
+          "y": 7658
+        },
+        {
+          "loc": 1530,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9202,
+          "y": 7659
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9202,
+          "y": 7660
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9202,
+          "y": 7661
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 1,
+          "x": 9202,
+          "y": 7662
+        },
+        {
+          "loc": 602,
+          "shape": 10,
+          "rotation": 2,
+          "x": 9199,
+          "y": 7659
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9199,
+          "y": 7658
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9199,
+          "y": 7660
+        },
+        {
+          "loc": 417,
+          "shape": 10,
+          "rotation": 2,
+          "x": 9198,
+          "y": 7657
+        },
+        {
+          "loc": 380,
+          "shape": 10,
+          "rotation": 2,
+          "x": 9197,
+          "y": 7661
+        },
+        {
+          "loc": 362,
+          "shape": 10,
+          "rotation": 2,
+          "x": 9201,
+          "y": 7657
+        },
+        {
+          "loc": 366,
+          "shape": 10,
+          "rotation": 2,
+          "x": 9201,
+          "y": 7661
+        }
+      ]
+    },
+    {
+      "kind": "house",
+      "x": 9231,
+      "y": 7691,
+      "width": 9,
+      "depth": 10,
+      "door": "SOUTH",
+      "pieces": [
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 3,
+          "x": 9231,
+          "y": 7691
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9231,
+          "y": 7692
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9231,
+          "y": 7693
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9231,
+          "y": 7694
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9231,
+          "y": 7695
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9231,
+          "y": 7696
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9231,
+          "y": 7697
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9231,
+          "y": 7698
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9231,
+          "y": 7699
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 0,
+          "x": 9231,
+          "y": 7700
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9232,
+          "y": 7691
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9232,
+          "y": 7700
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9233,
+          "y": 7691
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9233,
+          "y": 7700
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9234,
+          "y": 7691
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9234,
+          "y": 7700
+        },
+        {
+          "loc": 1530,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9235,
+          "y": 7691
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9235,
+          "y": 7700
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9236,
+          "y": 7691
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9236,
+          "y": 7700
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9237,
+          "y": 7691
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9237,
+          "y": 7700
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9238,
+          "y": 7691
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9238,
+          "y": 7700
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 2,
+          "x": 9239,
+          "y": 7691
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9239,
+          "y": 7692
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9239,
+          "y": 7693
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9239,
+          "y": 7694
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9239,
+          "y": 7695
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9239,
+          "y": 7696
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9239,
+          "y": 7697
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9239,
+          "y": 7698
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9239,
+          "y": 7699
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 1,
+          "x": 9239,
+          "y": 7700
+        },
+        {
+          "loc": 602,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9235,
+          "y": 7696
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9234,
+          "y": 7696
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9236,
+          "y": 7696
+        },
+        {
+          "loc": 417,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9232,
+          "y": 7698
+        },
+        {
+          "loc": 380,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9238,
+          "y": 7699
+        },
+        {
+          "loc": 362,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9232,
+          "y": 7692
+        },
+        {
+          "loc": 366,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9238,
+          "y": 7692
+        }
+      ]
+    },
+    {
+      "kind": "house",
+      "x": 9227,
+      "y": 7682,
+      "width": 8,
+      "depth": 7,
+      "door": "NORTH",
+      "pieces": [
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 3,
+          "x": 9227,
+          "y": 7682
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9227,
+          "y": 7683
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9227,
+          "y": 7684
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9227,
+          "y": 7685
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9227,
+          "y": 7686
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9227,
+          "y": 7687
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 0,
+          "x": 9227,
+          "y": 7688
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9228,
+          "y": 7682
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9228,
+          "y": 7688
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9229,
+          "y": 7682
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9229,
+          "y": 7688
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9230,
+          "y": 7682
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9230,
+          "y": 7688
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9231,
+          "y": 7682
+        },
+        {
+          "loc": 1530,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9231,
+          "y": 7688
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9232,
+          "y": 7682
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9232,
+          "y": 7688
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9233,
+          "y": 7682
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9233,
+          "y": 7688
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 2,
+          "x": 9234,
+          "y": 7682
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9234,
+          "y": 7683
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9234,
+          "y": 7684
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9234,
+          "y": 7685
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9234,
+          "y": 7686
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9234,
+          "y": 7687
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 1,
+          "x": 9234,
+          "y": 7688
+        },
+        {
+          "loc": 602,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9231,
+          "y": 7685
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9232,
+          "y": 7685
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9230,
+          "y": 7685
+        },
+        {
+          "loc": 380,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9228,
+          "y": 7683
+        },
+        {
+          "loc": 366,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9228,
+          "y": 7687
+        }
+      ]
+    },
+    {
+      "kind": "house",
+      "x": 9236,
+      "y": 7679,
+      "width": 9,
+      "depth": 7,
+      "door": "EAST",
+      "pieces": [
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 3,
+          "x": 9236,
+          "y": 7679
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9236,
+          "y": 7680
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9236,
+          "y": 7681
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9236,
+          "y": 7682
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9236,
+          "y": 7683
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9236,
+          "y": 7684
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 0,
+          "x": 9236,
+          "y": 7685
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9237,
+          "y": 7679
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9237,
+          "y": 7685
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9238,
+          "y": 7679
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9238,
+          "y": 7685
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9239,
+          "y": 7679
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9239,
+          "y": 7685
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9240,
+          "y": 7679
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9240,
+          "y": 7685
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9241,
+          "y": 7679
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9241,
+          "y": 7685
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9242,
+          "y": 7679
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9242,
+          "y": 7685
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9243,
+          "y": 7679
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9243,
+          "y": 7685
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 2,
+          "x": 9244,
+          "y": 7679
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9244,
+          "y": 7680
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9244,
+          "y": 7681
+        },
+        {
+          "loc": 1530,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9244,
+          "y": 7682
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9244,
+          "y": 7683
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9244,
+          "y": 7684
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 1,
+          "x": 9244,
+          "y": 7685
+        },
+        {
+          "loc": 602,
+          "shape": 10,
+          "rotation": 2,
+          "x": 9240,
+          "y": 7682
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9240,
+          "y": 7681
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9240,
+          "y": 7683
+        },
+        {
+          "loc": 417,
+          "shape": 10,
+          "rotation": 2,
+          "x": 9238,
+          "y": 7680
+        },
+        {
+          "loc": 380,
+          "shape": 10,
+          "rotation": 2,
+          "x": 9237,
+          "y": 7684
+        },
+        {
+          "loc": 362,
+          "shape": 10,
+          "rotation": 2,
+          "x": 9243,
+          "y": 7680
+        },
+        {
+          "loc": 366,
+          "shape": 10,
+          "rotation": 2,
+          "x": 9243,
+          "y": 7684
+        }
+      ]
+    },
+    {
+      "kind": "house",
+      "x": 9212,
+      "y": 7691,
+      "width": 9,
+      "depth": 7,
+      "door": "SOUTH",
+      "pieces": [
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 3,
+          "x": 9212,
+          "y": 7691
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9212,
+          "y": 7692
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9212,
+          "y": 7693
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9212,
+          "y": 7694
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9212,
+          "y": 7695
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9212,
+          "y": 7696
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 0,
+          "x": 9212,
+          "y": 7697
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9213,
+          "y": 7691
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9213,
+          "y": 7697
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9214,
+          "y": 7691
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9214,
+          "y": 7697
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9215,
+          "y": 7691
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9215,
+          "y": 7697
+        },
+        {
+          "loc": 1530,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9216,
+          "y": 7691
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9216,
+          "y": 7697
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9217,
+          "y": 7691
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9217,
+          "y": 7697
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9218,
+          "y": 7691
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9218,
+          "y": 7697
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9219,
+          "y": 7691
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9219,
+          "y": 7697
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 2,
+          "x": 9220,
+          "y": 7691
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9220,
+          "y": 7692
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9220,
+          "y": 7693
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9220,
+          "y": 7694
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9220,
+          "y": 7695
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9220,
+          "y": 7696
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 1,
+          "x": 9220,
+          "y": 7697
+        },
+        {
+          "loc": 602,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9216,
+          "y": 7694
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9215,
+          "y": 7694
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9217,
+          "y": 7694
+        },
+        {
+          "loc": 417,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9213,
+          "y": 7695
+        },
+        {
+          "loc": 380,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9219,
+          "y": 7696
+        },
+        {
+          "loc": 362,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9213,
+          "y": 7692
+        },
+        {
+          "loc": 366,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9219,
+          "y": 7692
+        }
+      ]
+    },
+    {
+      "kind": "house",
+      "x": 9241,
+      "y": 7691,
+      "width": 10,
+      "depth": 11,
+      "door": "SOUTH",
+      "pieces": [
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 3,
+          "x": 9241,
+          "y": 7691
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9241,
+          "y": 7692
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9241,
+          "y": 7693
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9241,
+          "y": 7694
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9241,
+          "y": 7695
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9241,
+          "y": 7696
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9241,
+          "y": 7697
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9241,
+          "y": 7698
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9241,
+          "y": 7699
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9241,
+          "y": 7700
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 0,
+          "x": 9241,
+          "y": 7701
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9242,
+          "y": 7691
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9242,
+          "y": 7701
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9243,
+          "y": 7691
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9243,
+          "y": 7701
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9244,
+          "y": 7691
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9244,
+          "y": 7701
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9245,
+          "y": 7691
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9245,
+          "y": 7701
+        },
+        {
+          "loc": 1530,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9246,
+          "y": 7691
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9246,
+          "y": 7701
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9247,
+          "y": 7691
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9247,
+          "y": 7701
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9248,
+          "y": 7691
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9248,
+          "y": 7701
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9249,
+          "y": 7691
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9249,
+          "y": 7701
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 2,
+          "x": 9250,
+          "y": 7691
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9250,
+          "y": 7692
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9250,
+          "y": 7693
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9250,
+          "y": 7694
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9250,
+          "y": 7695
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9250,
+          "y": 7696
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9250,
+          "y": 7697
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9250,
+          "y": 7698
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9250,
+          "y": 7699
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9250,
+          "y": 7700
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 1,
+          "x": 9250,
+          "y": 7701
+        },
+        {
+          "loc": 602,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9246,
+          "y": 7696
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9245,
+          "y": 7696
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9247,
+          "y": 7696
+        },
+        {
+          "loc": 417,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9242,
+          "y": 7699
+        },
+        {
+          "loc": 362,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9242,
+          "y": 7692
+        }
+      ]
+    },
+    {
+      "kind": "house",
+      "x": 9235,
+      "y": 7656,
+      "width": 10,
+      "depth": 10,
+      "door": "EAST",
+      "pieces": [
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 3,
+          "x": 9235,
+          "y": 7656
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9235,
+          "y": 7657
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9235,
+          "y": 7658
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9235,
+          "y": 7659
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9235,
+          "y": 7660
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9235,
+          "y": 7661
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9235,
+          "y": 7662
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9235,
+          "y": 7663
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9235,
+          "y": 7664
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 0,
+          "x": 9235,
+          "y": 7665
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9236,
+          "y": 7656
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9236,
+          "y": 7665
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9237,
+          "y": 7656
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9237,
+          "y": 7665
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9238,
+          "y": 7656
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9238,
+          "y": 7665
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9239,
+          "y": 7656
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9239,
+          "y": 7665
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9240,
+          "y": 7656
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9240,
+          "y": 7665
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9241,
+          "y": 7656
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9241,
+          "y": 7665
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9242,
+          "y": 7656
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9242,
+          "y": 7665
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9243,
+          "y": 7656
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9243,
+          "y": 7665
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 2,
+          "x": 9244,
+          "y": 7656
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9244,
+          "y": 7657
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9244,
+          "y": 7658
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9244,
+          "y": 7659
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9244,
+          "y": 7660
+        },
+        {
+          "loc": 1530,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9244,
+          "y": 7661
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9244,
+          "y": 7662
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9244,
+          "y": 7663
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9244,
+          "y": 7664
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 1,
+          "x": 9244,
+          "y": 7665
+        },
+        {
+          "loc": 602,
+          "shape": 10,
+          "rotation": 2,
+          "x": 9239,
+          "y": 7661
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9239,
+          "y": 7660
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9239,
+          "y": 7662
+        },
+        {
+          "loc": 417,
+          "shape": 10,
+          "rotation": 2,
+          "x": 9237,
+          "y": 7657
+        },
+        {
+          "loc": 362,
+          "shape": 10,
+          "rotation": 2,
+          "x": 9243,
+          "y": 7657
+        }
+      ]
+    },
+    {
+      "kind": "house",
+      "x": 9212,
+      "y": 7649,
+      "width": 9,
+      "depth": 7,
+      "door": "SOUTH",
+      "pieces": [
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 3,
+          "x": 9212,
+          "y": 7649
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9212,
+          "y": 7650
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9212,
+          "y": 7651
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9212,
+          "y": 7652
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9212,
+          "y": 7653
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9212,
+          "y": 7654
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 0,
+          "x": 9212,
+          "y": 7655
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9213,
+          "y": 7649
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9213,
+          "y": 7655
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9214,
+          "y": 7649
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9214,
+          "y": 7655
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9215,
+          "y": 7649
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9215,
+          "y": 7655
+        },
+        {
+          "loc": 1530,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9216,
+          "y": 7649
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9216,
+          "y": 7655
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9217,
+          "y": 7649
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9217,
+          "y": 7655
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9218,
+          "y": 7649
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9218,
+          "y": 7655
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9219,
+          "y": 7649
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9219,
+          "y": 7655
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 2,
+          "x": 9220,
+          "y": 7649
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9220,
+          "y": 7650
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9220,
+          "y": 7651
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9220,
+          "y": 7652
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9220,
+          "y": 7653
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9220,
+          "y": 7654
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 1,
+          "x": 9220,
+          "y": 7655
+        },
+        {
+          "loc": 602,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9216,
+          "y": 7652
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9215,
+          "y": 7652
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9217,
+          "y": 7652
+        },
+        {
+          "loc": 417,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9213,
+          "y": 7653
+        },
+        {
+          "loc": 380,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9219,
+          "y": 7654
+        },
+        {
+          "loc": 362,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9213,
+          "y": 7650
+        },
+        {
+          "loc": 366,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9219,
+          "y": 7650
+        }
+      ]
+    },
+    {
+      "kind": "house",
+      "x": 9247,
+      "y": 7680,
+      "width": 7,
+      "depth": 8,
+      "door": "WEST",
+      "pieces": [
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 3,
+          "x": 9247,
+          "y": 7680
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7681
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7682
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7683
+        },
+        {
+          "loc": 1530,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7684
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7685
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7686
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7687
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9248,
+          "y": 7680
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9248,
+          "y": 7687
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9249,
+          "y": 7680
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9249,
+          "y": 7687
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9250,
+          "y": 7680
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9250,
+          "y": 7687
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9251,
+          "y": 7680
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9251,
+          "y": 7687
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9252,
+          "y": 7680
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9252,
+          "y": 7687
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 2,
+          "x": 9253,
+          "y": 7680
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9253,
+          "y": 7681
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9253,
+          "y": 7682
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9253,
+          "y": 7683
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9253,
+          "y": 7684
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9253,
+          "y": 7685
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9253,
+          "y": 7686
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 1,
+          "x": 9253,
+          "y": 7687
+        },
+        {
+          "loc": 602,
+          "shape": 10,
+          "rotation": 0,
+          "x": 9250,
+          "y": 7684
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9250,
+          "y": 7685
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9250,
+          "y": 7683
+        },
+        {
+          "loc": 380,
+          "shape": 10,
+          "rotation": 0,
+          "x": 9252,
+          "y": 7681
+        },
+        {
+          "loc": 366,
+          "shape": 10,
+          "rotation": 0,
+          "x": 9248,
+          "y": 7681
+        }
+      ]
+    },
+    {
+      "kind": "house",
+      "x": 9227,
+      "y": 7637,
+      "width": 11,
+      "depth": 10,
+      "door": "NORTH",
+      "pieces": [
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 3,
+          "x": 9227,
+          "y": 7637
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9227,
+          "y": 7638
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9227,
+          "y": 7639
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9227,
+          "y": 7640
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9227,
+          "y": 7641
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9227,
+          "y": 7642
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9227,
+          "y": 7643
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9227,
+          "y": 7644
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9227,
+          "y": 7645
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 0,
+          "x": 9227,
+          "y": 7646
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9228,
+          "y": 7637
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9228,
+          "y": 7646
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9229,
+          "y": 7637
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9229,
+          "y": 7646
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9230,
+          "y": 7637
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9230,
+          "y": 7646
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9231,
+          "y": 7637
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9231,
+          "y": 7646
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9232,
+          "y": 7637
+        },
+        {
+          "loc": 1530,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9232,
+          "y": 7646
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9233,
+          "y": 7637
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9233,
+          "y": 7646
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9234,
+          "y": 7637
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9234,
+          "y": 7646
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9235,
+          "y": 7637
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9235,
+          "y": 7646
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9236,
+          "y": 7637
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9236,
+          "y": 7646
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 2,
+          "x": 9237,
+          "y": 7637
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9237,
+          "y": 7638
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9237,
+          "y": 7639
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9237,
+          "y": 7640
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9237,
+          "y": 7641
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9237,
+          "y": 7642
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9237,
+          "y": 7643
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9237,
+          "y": 7644
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9237,
+          "y": 7645
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 1,
+          "x": 9237,
+          "y": 7646
+        },
+        {
+          "loc": 602,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9232,
+          "y": 7641
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9233,
+          "y": 7641
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9231,
+          "y": 7641
+        },
+        {
+          "loc": 417,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9236,
+          "y": 7639
+        },
+        {
+          "loc": 380,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9228,
+          "y": 7638
+        },
+        {
+          "loc": 362,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9236,
+          "y": 7645
+        },
+        {
+          "loc": 366,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9228,
+          "y": 7645
+        }
+      ]
+    },
+    {
+      "kind": "house",
+      "x": 9247,
+      "y": 7645,
+      "width": 10,
+      "depth": 8,
+      "door": "WEST",
+      "pieces": [
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 3,
+          "x": 9247,
+          "y": 7645
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7646
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7647
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7648
+        },
+        {
+          "loc": 1530,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7649
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7650
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7651
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 0,
+          "x": 9247,
+          "y": 7652
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9248,
+          "y": 7645
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9248,
+          "y": 7652
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9249,
+          "y": 7645
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9249,
+          "y": 7652
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9250,
+          "y": 7645
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9250,
+          "y": 7652
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9251,
+          "y": 7645
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9251,
+          "y": 7652
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9252,
+          "y": 7645
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9252,
+          "y": 7652
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9253,
+          "y": 7645
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9253,
+          "y": 7652
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9254,
+          "y": 7645
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9254,
+          "y": 7652
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9255,
+          "y": 7645
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9255,
+          "y": 7652
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 2,
+          "x": 9256,
+          "y": 7645
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9256,
+          "y": 7646
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9256,
+          "y": 7647
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9256,
+          "y": 7648
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9256,
+          "y": 7649
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9256,
+          "y": 7650
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9256,
+          "y": 7651
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 1,
+          "x": 9256,
+          "y": 7652
+        },
+        {
+          "loc": 602,
+          "shape": 10,
+          "rotation": 0,
+          "x": 9252,
+          "y": 7649
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9252,
+          "y": 7650
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9252,
+          "y": 7648
+        },
+        {
+          "loc": 380,
+          "shape": 10,
+          "rotation": 0,
+          "x": 9255,
+          "y": 7646
+        },
+        {
+          "loc": 366,
+          "shape": 10,
+          "rotation": 0,
+          "x": 9248,
+          "y": 7646
+        }
+      ]
+    },
+    {
+      "kind": "house",
+      "x": 9193,
+      "y": 7646,
+      "width": 10,
+      "depth": 8,
+      "door": "EAST",
+      "pieces": [
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 3,
+          "x": 9193,
+          "y": 7646
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9193,
+          "y": 7647
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9193,
+          "y": 7648
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9193,
+          "y": 7649
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9193,
+          "y": 7650
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9193,
+          "y": 7651
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 0,
+          "x": 9193,
+          "y": 7652
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 0,
+          "x": 9193,
+          "y": 7653
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9194,
+          "y": 7646
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9194,
+          "y": 7653
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9195,
+          "y": 7646
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9195,
+          "y": 7653
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9196,
+          "y": 7646
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9196,
+          "y": 7653
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9197,
+          "y": 7646
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9197,
+          "y": 7653
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9198,
+          "y": 7646
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9198,
+          "y": 7653
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9199,
+          "y": 7646
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9199,
+          "y": 7653
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9200,
+          "y": 7646
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9200,
+          "y": 7653
+        },
+        {
+          "loc": 5241,
+          "shape": 0,
+          "rotation": 3,
+          "x": 9201,
+          "y": 7646
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 1,
+          "x": 9201,
+          "y": 7653
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 2,
+          "x": 9202,
+          "y": 7646
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9202,
+          "y": 7647
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9202,
+          "y": 7648
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9202,
+          "y": 7649
+        },
+        {
+          "loc": 1530,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9202,
+          "y": 7650
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9202,
+          "y": 7651
+        },
+        {
+          "loc": 5240,
+          "shape": 0,
+          "rotation": 2,
+          "x": 9202,
+          "y": 7652
+        },
+        {
+          "loc": 5240,
+          "shape": 2,
+          "rotation": 1,
+          "x": 9202,
+          "y": 7653
+        },
+        {
+          "loc": 602,
+          "shape": 10,
+          "rotation": 2,
+          "x": 9197,
+          "y": 7650
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 1,
+          "x": 9197,
+          "y": 7649
+        },
+        {
+          "loc": 1088,
+          "shape": 10,
+          "rotation": 3,
+          "x": 9197,
+          "y": 7651
+        },
+        {
+          "loc": 417,
+          "shape": 10,
+          "rotation": 2,
+          "x": 9195,
+          "y": 7647
+        },
+        {
+          "loc": 362,
+          "shape": 10,
+          "rotation": 2,
+          "x": 9201,
+          "y": 7647
+        }
+      ]
+    }
+  ],
+  "residents": [
+    {
+      "npc": 494,
+      "x": 9212,
+      "y": 7640,
+      "role": "banker"
+    },
+    {
+      "npc": 494,
+      "x": 9211,
+      "y": 7640,
+      "role": "banker"
+    },
+    {
+      "npc": 494,
+      "x": 9210,
+      "y": 7640,
+      "role": "banker"
+    },
+    {
+      "npc": 9,
+      "x": 9219,
+      "y": 7683,
+      "role": "guard"
+    },
+    {
+      "npc": 9,
+      "x": 9217,
+      "y": 7683,
+      "role": "guard"
+    },
+    {
+      "npc": 9,
+      "x": 9256,
+      "y": 7666,
+      "role": "guard"
+    },
+    {
+      "npc": 9,
+      "x": 9256,
+      "y": 7673,
+      "role": "guard"
+    },
+    {
+      "npc": 9,
+      "x": 9194,
+      "y": 7685,
+      "role": "guard"
+    },
+    {
+      "npc": 9,
+      "x": 9194,
+      "y": 7692,
+      "role": "guard"
+    },
+    {
+      "npc": 9,
+      "x": 9215,
+      "y": 7689,
+      "role": "patrol"
+    },
+    {
+      "npc": 9,
+      "x": 9235,
+      "y": 7649,
+      "role": "patrol"
+    },
+    {
+      "npc": 9,
+      "x": 9205,
+      "y": 7659,
+      "role": "patrol"
+    },
+    {
+      "npc": 9,
+      "x": 9245,
+      "y": 7679,
+      "role": "patrol"
+    }
+  ]
+}

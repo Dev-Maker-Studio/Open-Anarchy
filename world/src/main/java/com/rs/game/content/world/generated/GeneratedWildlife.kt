@@ -59,7 +59,7 @@ fun startGeneratedWildlife() {
 }
 
 private fun popUpAnimal(player: Player) {
-    val tile = findTile(player) { x, y -> World.floorFree(GROUND_LEVEL, x, y, 1) && generator.liquidTileAt(x, y) == null } ?: return
+    val tile = findTile(player) { x, y -> World.floorFree(GROUND_LEVEL, x, y, 1) && generator.liquidTileAt(x, y) == null && !GeneratedWorld.inCity(x, y) } ?: return
     val biome = generator.biomeAt(tile.x, tile.y)
     if (biome == Biome.FOREST) {
         Impling(forestImplings[Utils.random(forestImplings.size)], tile, true, true)

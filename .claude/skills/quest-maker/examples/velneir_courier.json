@@ -1,0 +1,174 @@
+{
+  "generatorVersion": "3.0",
+  "quest": "VELNEIR_COURIER",
+  "name": "Velneir Courier",
+  "summary": "A Velneir guard needs iron delivered to the town smith.",
+  "startNpc": "Npc.guard1",
+  "requirements": [
+    {
+      "type": "skill",
+      "stat": "smithing",
+      "level": 5
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "stat": "smithing",
+      "amount": 150
+    },
+    {
+      "type": "coins",
+      "amount": 200
+    },
+    {
+      "type": "item",
+      "obj": "Obj.steel_bar",
+      "amount": 2
+    },
+    {
+      "type": "questPoints",
+      "amount": 1
+    }
+  ],
+  "stages": [
+    {
+      "stage": 0,
+      "title": "Not started",
+      "journal": "I can start this quest by speaking to the guard in Velneir."
+    },
+    {
+      "stage": 1,
+      "title": "Fetch the iron",
+      "journal": "The guard wants an iron bar from the chest in Velneir."
+    },
+    {
+      "stage": 2,
+      "title": "Deliver the iron",
+      "journal": "I have the iron bar. The smith in Velneir is waiting for it."
+    },
+    {
+      "stage": 3,
+      "title": "Complete",
+      "journal": "QUEST COMPLETE!"
+    }
+  ],
+  "hops": [
+    {
+      "id": "arrive",
+      "stage": 0,
+      "kind": "city",
+      "title": "Reach Velneir",
+      "at": {
+        "city": "velneir"
+      },
+      "next": [
+        "talk_guard"
+      ]
+    },
+    {
+      "id": "talk_guard",
+      "stage": 0,
+      "kind": "npc_talk",
+      "title": "Speak to the guard",
+      "npc": "Npc.guard1",
+      "at": {
+        "city": "velneir"
+      },
+      "steps": [
+        {
+          "step": "say",
+          "who": "npc",
+          "head": "CALM_TALK",
+          "text": "The smith is out of iron and the garrison needs repairs."
+        },
+        {
+          "step": "say",
+          "who": "player",
+          "head": "CONFUSED",
+          "text": "Where do I find iron?"
+        },
+        {
+          "step": "options",
+          "options": [
+            {
+              "text": "I will fetch it.",
+              "steps": [
+                {
+                  "step": "say",
+                  "who": "player",
+                  "head": "HAPPY_TALKING",
+                  "text": "I will fetch it."
+                },
+                {
+                  "step": "say",
+                  "who": "npc",
+                  "head": "CHEERFUL",
+                  "text": "The chest by the gate holds a bar. Bring it to the smith."
+                },
+                {
+                  "step": "action",
+                  "type": "set_stage",
+                  "args": {
+                    "stage": 1
+                  }
+                }
+              ]
+            },
+            {
+              "text": "Not now.",
+              "steps": []
+            }
+          ]
+        }
+      ],
+      "next": [
+        "get_iron"
+      ]
+    },
+    {
+      "id": "get_iron",
+      "stage": 1,
+      "kind": "item_get",
+      "title": "Take the iron bar",
+      "obj": "Obj.iron_bar",
+      "amount": 1,
+      "from": {
+        "loc": "Loc.chestclosed"
+      },
+      "at": {
+        "city": "velneir"
+      },
+      "next": [
+        "give_iron"
+      ]
+    },
+    {
+      "id": "give_iron",
+      "stage": 2,
+      "kind": "item_give",
+      "title": "Give the bar to the smith",
+      "obj": "Obj.iron_bar",
+      "amount": 1,
+      "to": {
+        "npc": "Npc.misc_smithy"
+      },
+      "at": {
+        "city": "velneir"
+      },
+      "steps": [
+        {
+          "step": "say",
+          "who": "npc",
+          "head": "HAPPY_TALKING",
+          "text": "Just what I needed. Here is your pay."
+        },
+        {
+          "step": "action",
+          "type": "complete_quest",
+          "args": {}
+        }
+      ]
+    }
+  ]
+}

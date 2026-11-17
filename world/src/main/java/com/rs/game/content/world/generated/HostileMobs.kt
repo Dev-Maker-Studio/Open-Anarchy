@@ -102,6 +102,7 @@ private fun canSpawnAt(tile: Tile): Boolean =
     World.floorAndWallsFree(tile, 1) &&
         generator.liquidTileAt(tile.x, tile.y) == null &&
         !GeneratedWorld.onRoad(tile.x, tile.y) &&
+        !GeneratedWorld.inCity(tile.x, tile.y) &&
         World.players.none { !it.hasFinished() && it.plane == tile.plane && Utils.getDistance(it.tile, tile) < PLAYER_CLEARANCE }
 
 private fun spawnHostile(tile: Tile) {

@@ -46,7 +46,7 @@ open class HostileNPC(id: Int, tile: Tile, val scale: Double, private val level:
     }
 
     override fun canAggroPlayer(target: Player): Boolean =
-        !GeneratedWorld.onRoad(target.x, target.y) && !GeneratedWorld.onRoad(x, y)
+        !GeneratedWorld.onRoad(target.x, target.y) && !GeneratedWorld.onRoad(x, y) && !GeneratedWorld.inCity(target.x, target.y) && !GeneratedWorld.inCity(x, y)
 
     override fun randomWalk() {
         if (hasWalkSteps() || Math.random() >= WANDER_CHANCE) return

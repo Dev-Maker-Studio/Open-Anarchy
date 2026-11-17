@@ -1,6 +1,8 @@
 package org.darkan.core.map
 
 import org.darkan.core.EnvVars
+import org.darkan.core.city.City
+import org.darkan.core.city.CityRegistry
 import world.gregs.voidps.cache.source.codec.WorldGenerator
 
 object GeneratedWorld {
@@ -25,9 +27,20 @@ object GeneratedWorld {
         return resolved
     }
 
-    val generator: WorldGenerator by lazy {
-        WorldGenerator(WorldGenerator.DEFAULT_SEED, WorldWindow.origin(windowX), WorldWindow.origin(windowY), EnvVars.generateSize)
+    val cities: List<City> by lazy {
+        if (!EnvVars.generateMaps) emptyList()
+        else CityRegistry.load({ WorldGenerator(WorldGenerator.DEFAULT_SEED, WorldWindow.origin(windowX), WorldWindow.origin(windowY), EnvVars.generateSize) }, spawnX, spawnY)
     }
+
+    val generator: WorldGenerator by lazy {
+        WorldGenerator(WorldGenerator.DEFAULT_SEED, WorldWindow.origin(windowX), WorldWindow.origin(windowY), EnvVars.generateSize, cities)
+    }
+
+    fun cityAt(x: Int, y: Int): City? = cities.firstOrNull { it.covers(x, y) }
+
+    fun inCity(x: Int, y: Int): Boolean = EnvVars.generateMaps && cityAt(x, y) != null
+
+    fun cityTouches(minX: Int, minY: Int, maxX: Int, maxY: Int): Boolean = cities.any { it.touches(minX, minY, maxX, maxY) }
 
     val sectorName: String = WorldWindow.sectorName(windowX, windowY)
 

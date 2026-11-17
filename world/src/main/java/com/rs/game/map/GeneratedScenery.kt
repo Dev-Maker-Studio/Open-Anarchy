@@ -14,7 +14,7 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.ConcurrentHashMap
 import com.rs.game.content.world.generated.StartLodestone
-import com.rs.game.content.world.generated.Town
+import com.rs.game.content.world.generated.Cities
 
 private const val REGION_SIZE = 64
 private const val REGION_CACHE_LIMIT = 64
@@ -38,13 +38,13 @@ object GeneratedScenery {
             val x = baseX + scenery.x
             val y = baseY + scenery.y
             if (scenery.level != chunk.plane || x shr 3 != chunk.x || y shr 3 != chunk.y) continue
-            if (Town.covers(x, y)) continue
+            if (Cities.covers(x, y)) continue
             val shape = ObjectShape.forId(scenery.shape) ?: continue
             chunk.addGeneratedObject(GameObject(scenery.id, shape, scenery.rotation, x, y, scenery.level))
         }
         FixedFishingSpots.spawn(chunk, generator.fishingSpotsIn(regionX, regionY))
         StartLodestone.spawn(chunk)
-        Town.spawn(chunk)
+        Cities.spawn(chunk)
     }
 
     private fun scenery(generator: WorldGenerator, regionX: Int, regionY: Int): List<MapObject> {

@@ -1,0 +1,285 @@
+{
+  "generatorVersion": "3.0",
+  "quest": "THREE_BIOMES_RELIC",
+  "name": "The Three Biomes Relic",
+  "summary": "A Velneir wizard sends you through desert, winter and mountain to wake a relic at an altar.",
+  "startNpc": "Npc.wizard",
+  "requirements": [
+    {
+      "type": "skill",
+      "stat": "slayer",
+      "level": 10
+    },
+    {
+      "type": "questPoints",
+      "amount": 1
+    }
+  ],
+  "rewards": [
+    {
+      "type": "xp",
+      "stat": "slayer",
+      "amount": 2500
+    },
+    {
+      "type": "xp",
+      "stat": "magic",
+      "amount": 1500
+    },
+    {
+      "type": "coins",
+      "amount": 5000
+    },
+    {
+      "type": "item",
+      "obj": "Obj.amulet_of_glory",
+      "amount": 1
+    },
+    {
+      "type": "questPoints",
+      "amount": 3
+    }
+  ],
+  "stages": [
+    {
+      "stage": 0,
+      "title": "Not started",
+      "journal": "I can start this quest by speaking to the wizard in Velneir."
+    },
+    {
+      "stage": 1,
+      "title": "The desert horn",
+      "journal": "I need a horn from a goat in the desert."
+    },
+    {
+      "stage": 2,
+      "title": "The winter trial",
+      "journal": "I must defeat three ice warriors in the winter biome."
+    },
+    {
+      "stage": 3,
+      "title": "The mountain gem",
+      "journal": "A mountain troll carries a diamond I need."
+    },
+    {
+      "stage": 4,
+      "title": "The altar",
+      "journal": "I must use the diamond on the altar in the mountains."
+    },
+    {
+      "stage": 5,
+      "title": "Return",
+      "journal": "I should return to the wizard in Velneir with the horn."
+    },
+    {
+      "stage": 6,
+      "title": "Complete",
+      "journal": "QUEST COMPLETE!"
+    }
+  ],
+  "hops": [
+    {
+      "id": "arrive",
+      "stage": 0,
+      "kind": "city",
+      "title": "Reach Velneir",
+      "at": {
+        "city": "velneir"
+      },
+      "next": [
+        "talk_start"
+      ]
+    },
+    {
+      "id": "talk_start",
+      "stage": 0,
+      "kind": "npc_talk",
+      "title": "Speak to the wizard",
+      "npc": "Npc.wizard",
+      "at": {
+        "city": "velneir"
+      },
+      "steps": [
+        {
+          "step": "say",
+          "who": "npc",
+          "head": "CALM_TALK",
+          "text": "A relic sleeps beyond the three wild lands. Only their gifts will wake it."
+        },
+        {
+          "step": "say",
+          "who": "player",
+          "head": "CONFUSED",
+          "text": "What do you need?"
+        },
+        {
+          "step": "say",
+          "who": "npc",
+          "head": "HAPPY_TALKING",
+          "text": "A goat horn from the desert, proof of valour in the cold, and a diamond from the mountains."
+        },
+        {
+          "step": "action",
+          "type": "set_stage",
+          "args": {
+            "stage": 1
+          }
+        }
+      ],
+      "next": [
+        "go_desert"
+      ]
+    },
+    {
+      "id": "go_desert",
+      "stage": 1,
+      "kind": "biome",
+      "title": "Cross into the desert",
+      "at": {
+        "biome": "desert"
+      },
+      "next": [
+        "get_horn"
+      ]
+    },
+    {
+      "id": "get_horn",
+      "stage": 1,
+      "kind": "item_get",
+      "title": "Take a horn from a desert goat",
+      "obj": "Obj.desert_goat_horn",
+      "amount": 1,
+      "from": {
+        "npc": "Npc.desert_goat_black1"
+      },
+      "at": {
+        "biome": "desert"
+      },
+      "next": [
+        "go_winter"
+      ]
+    },
+    {
+      "id": "go_winter",
+      "stage": 2,
+      "kind": "biome",
+      "title": "Travel to the winter biome",
+      "at": {
+        "biome": "winter"
+      },
+      "next": [
+        "kill_ice_warriors"
+      ]
+    },
+    {
+      "id": "kill_ice_warriors",
+      "stage": 2,
+      "kind": "mob_kill",
+      "title": "Defeat ice warriors",
+      "npc": "Npc.rand_ice_warrior_3",
+      "amount": 3,
+      "biome": "winter",
+      "at": {
+        "biome": "winter"
+      },
+      "next": [
+        "go_mountain"
+      ]
+    },
+    {
+      "id": "go_mountain",
+      "stage": 3,
+      "kind": "biome",
+      "title": "Climb the mountains",
+      "at": {
+        "biome": "mountain"
+      },
+      "next": [
+        "get_diamond"
+      ]
+    },
+    {
+      "id": "get_diamond",
+      "stage": 3,
+      "kind": "item_get",
+      "title": "Take the diamond from a mountain troll",
+      "obj": "Obj.diamond",
+      "amount": 1,
+      "from": {
+        "npc": "Npc.loy_troll_melee_5"
+      },
+      "at": {
+        "biome": "mountain"
+      },
+      "next": [
+        "use_altar"
+      ]
+    },
+    {
+      "id": "use_altar",
+      "stage": 4,
+      "kind": "item_use",
+      "title": "Place the diamond on the altar",
+      "obj": "Obj.diamond",
+      "amount": 1,
+      "on": {
+        "loc": "Loc.altarv2"
+      },
+      "at": {
+        "biome": "mountain"
+      },
+      "next": [
+        "return_velneir"
+      ]
+    },
+    {
+      "id": "return_velneir",
+      "stage": 5,
+      "kind": "city",
+      "title": "Return to Velneir",
+      "at": {
+        "city": "velneir"
+      },
+      "next": [
+        "report"
+      ]
+    },
+    {
+      "id": "report",
+      "stage": 5,
+      "kind": "npc_talk",
+      "title": "Report to the wizard",
+      "npc": "Npc.wizard",
+      "at": {
+        "city": "velneir"
+      },
+      "steps": [
+        {
+          "step": "say",
+          "who": "npc",
+          "head": "CHEERFUL",
+          "text": "The altar glows. You brought what I asked."
+        },
+        {
+          "step": "action",
+          "type": "take_item",
+          "args": {
+            "obj": "Obj.desert_goat_horn",
+            "amount": 1
+          }
+        },
+        {
+          "step": "say",
+          "who": "npc",
+          "head": "HAPPY_TALKING",
+          "text": "The relic is awake. Take this reward."
+        },
+        {
+          "step": "action",
+          "type": "complete_quest",
+          "args": {}
+        }
+      ]
+    }
+  ]
+}
