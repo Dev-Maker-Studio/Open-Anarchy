@@ -63,4 +63,13 @@ class CityJsonTest {
         assertEquals(listOf(Loc.built_furnace), locs.filter { it == Loc.built_furnace })
         assertEquals(listOf(Loc.loc_2783), locs.filter { it == Loc.loc_2783 })
     }
+
+    @Test
+    fun `the 100 tile buffer is measured from the city's edge, not its center`() {
+        val east = city.centerX + city.halfSize
+
+        assertEquals(true, city.covers(east + 100, city.centerY, 100))
+        assertEquals(false, city.covers(east + 101, city.centerY, 100))
+        assertEquals(false, city.covers(city.centerX + 100, city.centerY + 150, 100))
+    }
 }
