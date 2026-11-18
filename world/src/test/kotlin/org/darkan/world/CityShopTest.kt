@@ -89,6 +89,21 @@ class CityShopTest {
     }
 
     @Test
+    fun `a keeper takes over the ledger saved under the old city and kind key`() {
+        WorldHarness.boot()
+        val old = saved(SWORD_SHOP)
+        old.parentFile.mkdirs()
+        old.writeText("""{"coins":9,"items":[{"id":${Obj.abyssal_whip},"amount":4}],"restocked":${System.currentTimeMillis()}}""")
+
+        val keeper = CityShop.of("harness_keeper_c", SWORD_SHOP)
+
+        assertEquals(9, keeper.coins)
+        assertEquals(listOf(4), keeper.shop.stock().filter { it.id == Obj.abyssal_whip }.map { it.amount })
+        assertTrue(!old.isFile)
+        saved("harness_keeper_c").delete()
+    }
+
+    @Test
     fun `default stock comes back for the time that has passed and stops at its default`() {
         WorldHarness.boot()
         val full = amountOf(CityShop(SWORD_SHOP), Obj.bronze_dagger)
