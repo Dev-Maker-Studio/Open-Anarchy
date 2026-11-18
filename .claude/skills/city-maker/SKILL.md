@@ -167,7 +167,7 @@ A city shopkeeper is a wandering merchant that cannot be hurt and stays in its s
 - It buys anything for the item's value while it has coins, and sells at 1.2 times the value. Coins it is paid go into its purse.
 - Default stock below its starting amount comes back one at a time every 50 ticks, as in a vanilla shop. It never drops back down: extra a player sold stays.
 - An item that is not default stock never restocks and never decays. It stays until a player buys it, and its slot is removed at zero. A shop holds 40 different items, default stock included.
-- Each shopkeeper has its own stock and purse, saved under its `shop` key in `data/city-shops/sector-<world>/<key>.json` on every sale, purchase and restock, so it survives restarts. Deleting that file (with the world stopped) puts the shop back to its default stock and 0 coins.
+- Each shopkeeper has its own stock and purse, saved per keeper (his service key plus his tile) in `data/city-shops/sector-<world>/<kind>_<x>_<y>_<plane>.json` on every sale, purchase and restock, so it survives restarts. Deleting that file (with the world stopped) puts the shop back to its default stock and 0 coins.
 - Remaking a city keeps shop stock, because the key (`<city>_<kind>`) does not change.
 - The general store also sells three estate deeds, refilled one at a time like a wandering merchant's.
 - The shop kind sets the icon, the floor, the title and the default stock. It does not limit what the shop buys.

@@ -74,6 +74,21 @@ class CityShopTest {
     }
 
     @Test
+    fun `two keepers of one kind each keep their own sold items and coins`() {
+        WorldHarness.boot()
+        val first = CityShop.of("harness_keeper_a", SWORD_SHOP)
+        val second = CityShop.of("harness_keeper_b", SWORD_SHOP)
+
+        first.shop.addItem(Obj.abyssal_whip, 3)
+        first.earn(50)
+
+        assertEquals(listOf(Obj.abyssal_whip), first.shop.stock().map { it.id })
+        assertTrue(second.shop.stock().isEmpty())
+        assertEquals(0, second.coins)
+        assertEquals(first.shop.defaultStock().map { it.id }, second.shop.defaultStock().map { it.id })
+    }
+
+    @Test
     fun `default stock comes back for the time that has passed and stops at its default`() {
         WorldHarness.boot()
         val full = amountOf(CityShop(SWORD_SHOP), Obj.bronze_dagger)
