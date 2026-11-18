@@ -1,0 +1,1042 @@
+{
+  "area": "lorowick",
+  "seed": 5764400,
+  "generatorVersion": 1,
+  "quests": [
+    {
+      "id": "lorowick_banker_stock",
+      "name": "Short on Willow Logs",
+      "area": "lorowick",
+      "giver": "banker",
+      "length": "short",
+      "summary": "The banker of Lorowick has run out of willow logs.",
+      "intro": [
+        "My stores are bare. I need 16 willow logs and nobody in Lorowick has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "woodcutting"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 16,
+          "item": "willow_logs"
+        }
+      ]
+    },
+    {
+      "id": "lorowick_general_store_parcel",
+      "name": "A Parcel for the Armour Shop Keeper",
+      "area": "lorowick",
+      "giver": "general_store",
+      "length": "short",
+      "summary": "Carry a parcel across Lorowick to the armour shop keeper.",
+      "intro": [
+        "This should have gone to the armour shop keeper days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "lorowick",
+            "giver": "armour_shop"
+          },
+          "lines": [
+            "player: A delivery from the general store keeper.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lorowick_barber_word",
+      "name": "Word to the Sword Shop Keeper",
+      "area": "lorowick",
+      "giver": "barber",
+      "length": "short",
+      "summary": "Call on the sword shop keeper of Lorowick and bring back their answer.",
+      "intro": [
+        "I need an answer from the sword shop keeper and I would rather not shout it across the street.",
+        "Call on them as a customer, then ask how our accounts stand."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Balanced? Then I can sleep tonight. My thanks."
+      ],
+      "rewards": {},
+      "steps": [
+        {
+          "id": "s1",
+          "type": "service",
+          "to": {
+            "area": "lorowick",
+            "giver": "sword_shop"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "talk",
+          "to": {
+            "area": "lorowick",
+            "giver": "sword_shop"
+          },
+          "lines": [
+            "player: The barber sent me to ask after the ledgers.",
+            "Tell them the figures balance, for once. There is nothing owed between us this season."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lorowick_sword_shop_scout",
+      "name": "Eyes on the Lorowick Sewers",
+      "area": "lorowick",
+      "giver": "sword_shop",
+      "length": "short",
+      "summary": "Climb down into Lorowick Sewers and report what you see.",
+      "intro": [
+        "Something has been scratching under the streets at night. It comes from Lorowick Sewers.",
+        "Go down the entrance, take a look around and come back in one piece."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "So it is as bad as I feared. Thank you for looking, that took nerve."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "lorowick"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lorowick_archery_shop_cull",
+      "name": "Trouble with Zombies",
+      "area": "lorowick",
+      "giver": "archery_shop",
+      "length": "short",
+      "summary": "The archery shop keeper wants the zombie near Lorowick thinned out.",
+      "intro": [
+        "The zombie beyond the walls grow bolder every week. Customers will not walk the road.",
+        "Put down 8 of them close to Lorowick and I will make it worth your while."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "The road is quieter already. Here, as promised."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "zombie",
+          "amount": 8,
+          "where": {
+            "area": "lorowick",
+            "radius": 300
+          }
+        }
+      ]
+    },
+    {
+      "id": "lorowick_magic_shop_stock",
+      "name": "Short on Bones",
+      "area": "lorowick",
+      "giver": "magic_shop",
+      "length": "short",
+      "summary": "The magic shop keeper of Lorowick has run out of bones.",
+      "intro": [
+        "My stores are bare. I need 10 bones and nobody in Lorowick has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "prayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 10,
+          "item": "bones"
+        }
+      ]
+    },
+    {
+      "id": "lorowick_clothes_shop_parcel",
+      "name": "A Parcel for the Magic Shop Keeper",
+      "area": "lorowick",
+      "giver": "clothes_shop",
+      "length": "short",
+      "summary": "Carry a parcel across Lorowick to the magic shop keeper.",
+      "intro": [
+        "This should have gone to the magic shop keeper days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "lorowick",
+            "giver": "magic_shop"
+          },
+          "lines": [
+            "player: A delivery from the clothes shop keeper.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lorowick_food_shop_word",
+      "name": "Word to the Clothes Shop Keeper",
+      "area": "lorowick",
+      "giver": "food_shop",
+      "length": "short",
+      "summary": "Call on the clothes shop keeper of Lorowick and bring back their answer.",
+      "intro": [
+        "I need an answer from the clothes shop keeper and I would rather not shout it across the street.",
+        "Call on them as a customer, then ask how our accounts stand."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Balanced? Then I can sleep tonight. My thanks."
+      ],
+      "rewards": {},
+      "steps": [
+        {
+          "id": "s1",
+          "type": "service",
+          "to": {
+            "area": "lorowick",
+            "giver": "clothes_shop"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "talk",
+          "to": {
+            "area": "lorowick",
+            "giver": "clothes_shop"
+          },
+          "lines": [
+            "player: The food shop keeper sent me to ask after the ledgers.",
+            "Tell them the figures balance, for once. There is nothing owed between us this season."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lorowick_banker_supply",
+      "name": "Supply Run to Velneir",
+      "area": "lorowick",
+      "giver": "banker",
+      "length": "medium",
+      "summary": "Gather willow logs for the banker, then carry a shipment to Velneir.",
+      "intro": [
+        "I have an order from Velneir and nothing to fill it with.",
+        "Bring me 16 willow logs, then take the packed shipment to the banker there and do some business while you are in town."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "woodcutting",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 16,
+          "item": "willow_logs"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Goods from the banker in Lorowick.",
+            "From Lorowick? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lorowick_general_store_hunt",
+      "name": "The Long Hunt",
+      "area": "lorowick",
+      "giver": "general_store",
+      "length": "medium",
+      "summary": "Hunt the creatures around Lorowick and bring back iron bar.",
+      "intro": [
+        "The wilds around Lorowick need a firm hand. Start with 8 giant rat outside the walls, then 13 giant spider down in Lorowick Sewers.",
+        "When that is done, bring me 8 iron bar to show for it."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "smithing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "giant rat",
+          "amount": 8,
+          "where": {
+            "area": "lorowick",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 13,
+          "where": {
+            "dungeon": "lorowick"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 8,
+          "item": "iron_bar"
+        }
+      ]
+    },
+    {
+      "id": "lorowick_barber_council",
+      "name": "Votes for the Council",
+      "area": "lorowick",
+      "giver": "barber",
+      "length": "medium",
+      "summary": "Gather support around Lorowick for the barber.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the food shop keeper, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "lorowick",
+            "giver": "food_shop"
+          },
+          "lines": [
+            "player: The barber asks whether you will stand with them at the next council.",
+            "I will, if the staff shop keeper does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "lorowick",
+            "giver": "staff_shop"
+          },
+          "lines": [
+            "player: A sealed note, from the food shop keeper.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "lorowick",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lorowick_sword_shop_sweep",
+      "name": "Sweeping the Lorowick Sewers",
+      "area": "lorowick",
+      "giver": "sword_shop",
+      "length": "medium",
+      "summary": "Clear giant spider out of Lorowick Sewers and tell the general store keeper.",
+      "intro": [
+        "Lorowick Sewers is crawling with giant spider, and they come up through the drains.",
+        "Go down, kill 13 of them, then let the general store keeper know their cellar is safe."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Both done? Lorowick owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "lorowick"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 13,
+          "where": {
+            "dungeon": "lorowick"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "lorowick",
+            "giver": "general_store"
+          },
+          "lines": [
+            "player: Lorowick Sewers is clearer than it was. 13 giant spider fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lorowick_archery_shop_supply",
+      "name": "Supply Run to Velneir (Archery Shop Keeper)",
+      "area": "lorowick",
+      "giver": "archery_shop",
+      "length": "medium",
+      "summary": "Gather logs for the archery shop keeper, then carry a shipment to Velneir.",
+      "intro": [
+        "I have an order from Velneir and nothing to fill it with.",
+        "Bring me 13 logs, then take the packed shipment to the banker there and do some business while you are in town."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "woodcutting",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 13,
+          "item": "logs"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "ra3_package",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Goods from the archery shop keeper in Lorowick.",
+            "From Lorowick? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lorowick_magic_shop_hunt",
+      "name": "The Long Hunt (Magic Shop Keeper)",
+      "area": "lorowick",
+      "giver": "magic_shop",
+      "length": "medium",
+      "summary": "Hunt the creatures around Lorowick and bring back bones.",
+      "intro": [
+        "The wilds around Lorowick need a firm hand. Start with 8 zombie outside the walls, then 13 giant rat down in Lorowick Sewers.",
+        "When that is done, bring me 10 bones to show for it."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "prayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "zombie",
+          "amount": 8,
+          "where": {
+            "area": "lorowick",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant rat",
+          "amount": 13,
+          "where": {
+            "dungeon": "lorowick"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 10,
+          "item": "bones"
+        }
+      ]
+    },
+    {
+      "id": "lorowick_clothes_shop_council",
+      "name": "Votes for the Council (Clothes Shop Keeper)",
+      "area": "lorowick",
+      "giver": "clothes_shop",
+      "length": "medium",
+      "summary": "Gather support around Lorowick for the clothes shop keeper.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the realtor, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "lorowick",
+            "giver": "realtor"
+          },
+          "lines": [
+            "player: The clothes shop keeper asks whether you will stand with them at the next council.",
+            "I will, if the magic shop keeper does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "lorowick",
+            "giver": "magic_shop"
+          },
+          "lines": [
+            "player: A sealed note, from the realtor.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "lorowick",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lorowick_food_shop_sweep",
+      "name": "Sweeping the Lorowick Sewers (Food Shop Keeper)",
+      "area": "lorowick",
+      "giver": "food_shop",
+      "length": "medium",
+      "summary": "Clear giant rat out of Lorowick Sewers and tell the archery shop keeper.",
+      "intro": [
+        "Lorowick Sewers is crawling with giant rat, and they come up through the drains.",
+        "Go down, kill 13 of them, then let the archery shop keeper know their cellar is safe."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Both done? Lorowick owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "lorowick"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant rat",
+          "amount": 13,
+          "where": {
+            "dungeon": "lorowick"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "lorowick",
+            "giver": "archery_shop"
+          },
+          "lines": [
+            "player: Lorowick Sewers is clearer than it was. 13 giant rat fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lorowick_general_store_route",
+      "name": "The Lorowick Trade Route",
+      "area": "lorowick",
+      "giver": "general_store",
+      "length": "long",
+      "summary": "Open a trade route between Lorowick and Velneir.",
+      "intro": [
+        "I mean to open a trade route to Velneir. It needs a contract carried, a road made safe and a courier who is proven underground.",
+        "Deliver the contract, trade there, cut down 19 zombie near our walls and prove yourself in the dungeoneering caves.",
+        "Then have the banker underwrite the venture."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Signed, safe and funded. You have changed the fortunes of this town.",
+        "Here is your cut of the first season."
+      ],
+      "requires": {
+        "quests": [
+          "lorowick_general_store_parcel"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "dungeoneering"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "velneir",
+            "giver": "general_store"
+          },
+          "lines": [
+            "player: A contract from the general store keeper in Lorowick.",
+            "A fair offer. But the road between us is not safe, and you know it."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "service",
+          "to": {
+            "area": "velneir",
+            "giver": "general_store"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "zombie",
+          "amount": 19,
+          "where": {
+            "area": "lorowick",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s4",
+          "type": "dungeoneering",
+          "amount": 2
+        },
+        {
+          "id": "s5",
+          "type": "talk",
+          "to": {
+            "area": "lorowick",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The route to Velneir is open and the contract is signed.",
+            "Then I will underwrite it. Lorowick has not had news this good in years."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lorowick_archery_shop_nest",
+      "name": "The Thing Beneath Lorowick",
+      "area": "lorowick",
+      "giver": "archery_shop",
+      "length": "long",
+      "summary": "Find what rules Lorowick Sewers, weaken its nest and destroy The Rat King.",
+      "intro": [
+        "Something rules Lorowick Sewers and it is getting stronger. I want it gone.",
+        "Ask the realtor what they have heard, see it for yourself, then come back and we will decide how to break the nest.",
+        "When it is weak, kill it and tell the banker."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "I felt the ground go still. Lorowick is yours to walk freely, friend.",
+        "Take this. It is everything I promised and a little more."
+      ],
+      "requires": {
+        "quests": [
+          "lorowick_archery_shop_cull"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "woodcutting",
+          "constitution"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "lorowick",
+            "giver": "realtor"
+          },
+          "lines": [
+            "player: Have you heard anything from below the streets?",
+            "Every night. Something large is down there, and the small ones answer to it. They call it The Rat King."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "lorowick"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "choice",
+          "lines": [
+            "So you have seen it. We can thin them by force, or I can have the guard hold the drains if they are supplied."
+          ],
+          "prompt": "How will you weaken the nest?",
+          "options": [
+            {
+              "text": "I will cut them down myself.",
+              "next": "s4"
+            },
+            {
+              "text": "Supply the guard and let them hold the drains.",
+              "next": "s5"
+            }
+          ]
+        },
+        {
+          "id": "s4",
+          "type": "kill",
+          "next": "s6",
+          "mob": "spider",
+          "amount": 19,
+          "where": {
+            "dungeon": "lorowick"
+          }
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 13,
+          "item": "logs"
+        },
+        {
+          "id": "s6",
+          "type": "boss",
+          "dungeon": "lorowick"
+        },
+        {
+          "id": "s7",
+          "type": "talk",
+          "to": {
+            "area": "lorowick",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The Rat King is dead. Lorowick Sewers is quiet.",
+            "Then the vaults are safe and so is everyone above them. The town will hear of this."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lorowick_food_shop_expedition",
+      "name": "The Fall of the Fallen Warden",
+      "area": "lorowick",
+      "giver": "food_shop",
+      "length": "long",
+      "summary": "March on Meadow Keep, break its creatures and bring down The Fallen Warden.",
+      "intro": [
+        "Meadow Keep has stood against Lorowick for too long. The Fallen Warden sits at the bottom of it.",
+        "Learn what you can from the barber, fight your way through 19 zombie and end The Fallen Warden.",
+        "Bring 13 raw trout back so the town can rebuild."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "It is done, then. They will sing about this in every tavern from here to the coast.",
+        "Take your reward. You have more than earned it."
+      ],
+      "requires": {
+        "quests": [
+          "lorowick_food_shop_word"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "constitution",
+          "fishing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "lorowick",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: What do you know of Meadow Keep?",
+            "Only that those who go in come back thin and quiet. The Fallen Warden rules it now."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "plains"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "zombie",
+          "amount": 19,
+          "where": {
+            "dungeon": "plains"
+          }
+        },
+        {
+          "id": "s4",
+          "type": "boss",
+          "dungeon": "plains"
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 13,
+          "item": "raw_trout"
+        },
+        {
+          "id": "s6",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "velneir",
+            "giver": "food_shop"
+          },
+          "lines": [
+            "player: Word from Lorowick: The Fallen Warden is dead.",
+            "Dead? Then the caravans can leave at dawn. This news is worth more than gold."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lorowick_barber_route",
+      "name": "The Lorowick Trade Route (Barber)",
+      "area": "lorowick",
+      "giver": "barber",
+      "length": "long",
+      "summary": "Open a trade route between Lorowick and Velneir.",
+      "intro": [
+        "I mean to open a trade route to Velneir. It needs a contract carried, a road made safe and a courier who is proven underground.",
+        "Deliver the contract, trade there, cut down 19 giant rat near our walls and prove yourself in the dungeoneering caves.",
+        "Then have the banker underwrite the venture."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Signed, safe and funded. You have changed the fortunes of this town.",
+        "Here is your cut of the first season."
+      ],
+      "requires": {
+        "quests": [
+          "lorowick_barber_word"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "dungeoneering"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: A contract from the barber in Lorowick.",
+            "A fair offer. But the road between us is not safe, and you know it."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "service",
+          "to": {
+            "area": "velneir",
+            "giver": "banker"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "giant rat",
+          "amount": 19,
+          "where": {
+            "area": "lorowick",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s4",
+          "type": "dungeoneering",
+          "amount": 2
+        },
+        {
+          "id": "s5",
+          "type": "talk",
+          "to": {
+            "area": "lorowick",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The route to Velneir is open and the contract is signed.",
+            "Then I will underwrite it. Lorowick has not had news this good in years."
+          ]
+        }
+      ]
+    }
+  ]
+}

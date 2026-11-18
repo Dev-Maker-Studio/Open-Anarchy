@@ -1,0 +1,10 @@
+{
+  "id": "seluford",
+  "name": "Seluford Sewers",
+  "theme": "sewer",
+  "seed": 8827158880025193294,
+  "slot": 15,
+  "entranceX": 9318,
+  "entranceY": 8216,
+  "origin": "city:seluford"
+}

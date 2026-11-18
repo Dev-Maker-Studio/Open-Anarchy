@@ -1,0 +1,18 @@
+{
+  "id": "ooze_mother",
+  "name": "The Ooze Mother",
+  "npc": "rand_jelly",
+  "level": 1.2,
+  "hitpoints": 6.5,
+  "damage": 1.15,
+  "respawnMinutes": 5,
+  "abilities": [
+    {"type": "summon", "atHealth": [80, 55, 30], "npc": "rand_cave_slime", "count": 3, "shout": "Blorp!"},
+    {"type": "heal", "everyTicks": 25, "percent": 6},
+    {"type": "enrage", "belowHealth": 15, "damage": 1.35}
+  ],
+  "drops": [
+    {"item": "coins", "min": 35, "max": 85, "perLevel": true},
+    {"item": "big_bones", "min": 1, "max": 2}
+  ]
+}

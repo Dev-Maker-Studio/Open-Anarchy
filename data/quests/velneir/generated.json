@@ -1,49 +1,49 @@
 {
   "area": "velneir",
-  "seed": 7271,
+  "seed": 5764384,
   "generatorVersion": 1,
   "quests": [
     {
       "id": "velneir_banker_stock",
-      "name": "Short on Logs",
+      "name": "Short on Copper Ore",
       "area": "velneir",
       "giver": "banker",
       "length": "short",
-      "summary": "The banker of Velneir has run out of logs.",
+      "summary": "The banker of Velneir has run out of copper ore.",
       "intro": [
-        "My stores are bare. I need 8 logs and nobody in Velneir has any to spare.",
+        "My stores are bare. I need 6 copper ore and nobody in Velneir has any to spare.",
         "Bring them to me, however you come by them."
       ],
-      "accept": "Leave it with me.",
+      "accept": "I'll see it done.",
       "outro": [
         "That will keep me going for a good while. Take this for your trouble."
       ],
       "rewards": {
         "xp": [
-          "woodcutting"
+          "mining"
         ]
       },
       "steps": [
         {
           "id": "s1",
           "type": "gather",
-          "amount": 8,
-          "item": "logs"
+          "amount": 6,
+          "item": "copper_ore"
         }
       ]
     },
     {
       "id": "velneir_general_store_parcel",
-      "name": "A Parcel for the Clothes Shop Keeper",
+      "name": "A Parcel for the Staff Shop Keeper",
       "area": "velneir",
       "giver": "general_store",
       "length": "short",
-      "summary": "Carry a parcel across Velneir to the clothes shop keeper.",
+      "summary": "Carry a parcel across Velneir to the staff shop keeper.",
       "intro": [
-        "This should have gone to the clothes shop keeper days ago and I cannot leave my post.",
+        "This should have gone to the staff shop keeper days ago and I cannot leave my post.",
         "Take it over for me and come back when it is done."
       ],
-      "accept": "I'll see it done.",
+      "accept": "Consider it handled.",
       "outro": [
         "Delivered and settled? Good. Here is something for the legwork."
       ],
@@ -56,10 +56,10 @@
         {
           "id": "s1",
           "type": "deliver",
-          "item": "burgh_generalstore_crate",
+          "item": "royal_letter",
           "to": {
             "area": "velneir",
-            "giver": "clothes_shop"
+            "giver": "staff_shop"
           },
           "lines": [
             "player: A delivery from the general store keeper.",
@@ -70,16 +70,16 @@
     },
     {
       "id": "velneir_barber_word",
-      "name": "Word to the Staff Shop Keeper",
+      "name": "Word to the Banker",
       "area": "velneir",
       "giver": "barber",
       "length": "short",
-      "summary": "Call on the staff shop keeper of Velneir and bring back their answer.",
+      "summary": "Call on the banker of Velneir and bring back their answer.",
       "intro": [
-        "I need an answer from the staff shop keeper and I would rather not shout it across the street.",
+        "I need an answer from the banker and I would rather not shout it across the street.",
         "Call on them as a customer, then ask how our accounts stand."
       ],
-      "accept": "Consider it handled.",
+      "accept": "I'll see it done.",
       "outro": [
         "Balanced? Then I can sleep tonight. My thanks."
       ],
@@ -90,7 +90,7 @@
           "type": "service",
           "to": {
             "area": "velneir",
-            "giver": "staff_shop"
+            "giver": "banker"
           }
         },
         {
@@ -98,7 +98,7 @@
           "type": "talk",
           "to": {
             "area": "velneir",
-            "giver": "staff_shop"
+            "giver": "banker"
           },
           "lines": [
             "player: The barber sent me to ask after the ledgers.",
@@ -139,16 +139,16 @@
     },
     {
       "id": "velneir_archery_shop_cull",
-      "name": "Trouble with Giant Spiders",
+      "name": "Trouble with Spiders",
       "area": "velneir",
       "giver": "archery_shop",
       "length": "short",
-      "summary": "The archery shop keeper wants the giant spider near Velneir thinned out.",
+      "summary": "The archery shop keeper wants the spider near Velneir thinned out.",
       "intro": [
-        "The giant spider beyond the walls grow bolder every week. Customers will not walk the road.",
+        "The spider beyond the walls grow bolder every week. Customers will not walk the road.",
         "Put down 5 of them close to Velneir and I will make it worth your while."
       ],
-      "accept": "Leave it with me.",
+      "accept": "Consider it handled.",
       "outro": [
         "The road is quieter already. Here, as promised."
       ],
@@ -161,7 +161,7 @@
         {
           "id": "s1",
           "type": "kill",
-          "mob": "giant spider",
+          "mob": "spider",
           "amount": 5,
           "where": {
             "area": "velneir",
@@ -181,7 +181,7 @@
         "My stores are bare. I need 6 bones and nobody in Velneir has any to spare.",
         "Bring them to me, however you come by them."
       ],
-      "accept": "Consider it handled.",
+      "accept": "Leave it with me.",
       "outro": [
         "That will keep me going for a good while. Take this for your trouble."
       ],
@@ -201,16 +201,16 @@
     },
     {
       "id": "velneir_clothes_shop_parcel",
-      "name": "A Parcel for the Banker",
+      "name": "A Parcel for the Food Shop Keeper",
       "area": "velneir",
       "giver": "clothes_shop",
       "length": "short",
-      "summary": "Carry a parcel across Velneir to the banker.",
+      "summary": "Carry a parcel across Velneir to the food shop keeper.",
       "intro": [
-        "This should have gone to the banker days ago and I cannot leave my post.",
+        "This should have gone to the food shop keeper days ago and I cannot leave my post.",
         "Take it over for me and come back when it is done."
       ],
-      "accept": "Consider it handled.",
+      "accept": "Leave it with me.",
       "outro": [
         "Delivered and settled? Good. Here is something for the legwork."
       ],
@@ -223,10 +223,10 @@
         {
           "id": "s1",
           "type": "deliver",
-          "item": "royal_letter",
+          "item": "ra3_package",
           "to": {
             "area": "velneir",
-            "giver": "banker"
+            "giver": "food_shop"
           },
           "lines": [
             "player: A delivery from the clothes shop keeper.",
@@ -237,14 +237,14 @@
     },
     {
       "id": "velneir_banker_supply",
-      "name": "Supply Run to Sarnwick",
+      "name": "Supply Run to Lorowick",
       "area": "velneir",
       "giver": "banker",
       "length": "medium",
-      "summary": "Gather logs for the banker, then carry a shipment to Sarnwick.",
+      "summary": "Gather copper ore for the banker, then carry a shipment to Lorowick.",
       "intro": [
-        "I have an order from Sarnwick and nothing to fill it with.",
-        "Bring me 8 logs, then take the packed shipment to the banker there and do some business while you are in town."
+        "I have an order from Lorowick and nothing to fill it with.",
+        "Bring me 6 copper ore, then take the packed shipment to the banker there and do some business while you are in town."
       ],
       "accept": "I'll see it done.",
       "outro": [
@@ -252,7 +252,7 @@
       ],
       "rewards": {
         "xp": [
-          "woodcutting",
+          "mining",
           "agility"
         ]
       },
@@ -260,15 +260,15 @@
         {
           "id": "s1",
           "type": "gather",
-          "amount": 8,
-          "item": "logs"
+          "amount": 6,
+          "item": "copper_ore"
         },
         {
           "id": "s2",
           "type": "deliver",
-          "item": "sailing_courier_crate",
+          "item": "burgh_generalstore_crate",
           "to": {
-            "area": "sarnwick",
+            "area": "lorowick",
             "giver": "banker"
           },
           "lines": [
@@ -280,7 +280,7 @@
           "id": "s3",
           "type": "service",
           "to": {
-            "area": "sarnwick",
+            "area": "lorowick",
             "giver": "banker"
           }
         }
@@ -292,19 +292,19 @@
       "area": "velneir",
       "giver": "general_store",
       "length": "medium",
-      "summary": "Hunt the creatures around Velneir and bring back logs.",
+      "summary": "Hunt the creatures around Velneir and bring back tin ore.",
       "intro": [
-        "The wilds around Velneir need a firm hand. Start with 5 giant rat outside the walls, then 8 rat down in Velneir Sewers.",
-        "When that is done, bring me 8 logs to show for it."
+        "The wilds around Velneir need a firm hand. Start with 5 giant rat outside the walls, then 8 rogue down in Velneir Sewers.",
+        "When that is done, bring me 6 tin ore to show for it."
       ],
-      "accept": "I'll see it done.",
+      "accept": "Leave it with me.",
       "outro": [
         "A proper hunt. The town will eat and sleep easier for it."
       ],
       "rewards": {
         "xp": [
           "slayer",
-          "woodcutting"
+          "mining"
         ]
       },
       "steps": [
@@ -321,7 +321,7 @@
         {
           "id": "s2",
           "type": "kill",
-          "mob": "rat",
+          "mob": "rogue",
           "amount": 8,
           "where": {
             "dungeon": "velneir"
@@ -330,8 +330,8 @@
         {
           "id": "s3",
           "type": "gather",
-          "amount": 8,
-          "item": "logs"
+          "amount": 6,
+          "item": "tin_ore"
         }
       ]
     },
@@ -344,9 +344,9 @@
       "summary": "Gather support around Velneir for the barber.",
       "intro": [
         "The council meets soon and I am short of friends.",
-        "Speak to the realtor, carry whatever they give you, and see that the paperwork is lodged."
+        "Speak to the clothes shop keeper, carry whatever they give you, and see that the paperwork is lodged."
       ],
-      "accept": "Leave it with me.",
+      "accept": "I'll see it done.",
       "outro": [
         "Agreed, all of them? You have a talent for this. Here."
       ],
@@ -361,23 +361,23 @@
           "type": "talk",
           "to": {
             "area": "velneir",
-            "giver": "realtor"
+            "giver": "clothes_shop"
           },
           "lines": [
             "player: The barber asks whether you will stand with them at the next council.",
-            "I will, if the general store keeper does. Take this sealed note over and we shall see."
+            "I will, if the fishing shop keeper does. Take this sealed note over and we shall see."
           ]
         },
         {
           "id": "s2",
           "type": "deliver",
-          "item": "royal_letter",
+          "item": "ra3_package",
           "to": {
             "area": "velneir",
-            "giver": "general_store"
+            "giver": "fishing_shop"
           },
           "lines": [
-            "player: A sealed note, from the realtor.",
+            "player: A sealed note, from the clothes shop keeper.",
             "Hm. They want my vote. Very well, tell your employer it is agreed."
           ]
         },
@@ -397,12 +397,12 @@
       "area": "velneir",
       "giver": "sword_shop",
       "length": "medium",
-      "summary": "Clear snake out of Velneir Sewers and tell the general store keeper.",
+      "summary": "Clear giant spider out of Velneir Sewers and tell the realtor.",
       "intro": [
-        "Velneir Sewers is crawling with snake, and they come up through the drains.",
-        "Go down, kill 8 of them, then let the general store keeper know their cellar is safe."
+        "Velneir Sewers is crawling with giant spider, and they come up through the drains.",
+        "Go down, kill 8 of them, then let the realtor know their cellar is safe."
       ],
-      "accept": "Consider it handled.",
+      "accept": "I'll see it done.",
       "outro": [
         "Both done? Velneir owes you more than I can pay, but take this."
       ],
@@ -423,7 +423,7 @@
         {
           "id": "s2",
           "type": "kill",
-          "mob": "snake",
+          "mob": "giant spider",
           "amount": 8,
           "where": {
             "dungeon": "velneir"
@@ -434,10 +434,10 @@
           "type": "talk",
           "to": {
             "area": "velneir",
-            "giver": "general_store"
+            "giver": "realtor"
           },
           "lines": [
-            "player: Velneir Sewers is clearer than it was. 8 snake fewer.",
+            "player: Velneir Sewers is clearer than it was. 8 giant spider fewer.",
             "Then the cellars on this street are safe a while longer. I will tell the others."
           ]
         }
@@ -445,14 +445,14 @@
     },
     {
       "id": "velneir_archery_shop_supply",
-      "name": "Supply Run to Sarnwick (Archery Shop Keeper)",
+      "name": "Supply Run to Lorowick (Archery Shop Keeper)",
       "area": "velneir",
       "giver": "archery_shop",
       "length": "medium",
-      "summary": "Gather logs for the archery shop keeper, then carry a shipment to Sarnwick.",
+      "summary": "Gather logs for the archery shop keeper, then carry a shipment to Lorowick.",
       "intro": [
-        "I have an order from Sarnwick and nothing to fill it with.",
-        "Bring me 8 logs, then take the packed shipment to the banker there and do some business while you are in town."
+        "I have an order from Lorowick and nothing to fill it with.",
+        "Bring me 8 logs, then take the packed shipment to the archery shop keeper there and do some business while you are in town."
       ],
       "accept": "I'll see it done.",
       "outro": [
@@ -476,8 +476,8 @@
           "type": "deliver",
           "item": "burgh_generalstore_crate",
           "to": {
-            "area": "sarnwick",
-            "giver": "banker"
+            "area": "lorowick",
+            "giver": "archery_shop"
           },
           "lines": [
             "player: Goods from the archery shop keeper in Velneir.",
@@ -488,8 +488,8 @@
           "id": "s3",
           "type": "service",
           "to": {
-            "area": "sarnwick",
-            "giver": "banker"
+            "area": "lorowick",
+            "giver": "archery_shop"
           }
         }
       ]
@@ -502,10 +502,10 @@
       "length": "medium",
       "summary": "Hunt the creatures around Velneir and bring back bones.",
       "intro": [
-        "The wilds around Velneir need a firm hand. Start with 5 spider outside the walls, then 8 snake down in Velneir Sewers.",
+        "The wilds around Velneir need a firm hand. Start with 5 spider outside the walls, then 8 giant rat down in Velneir Sewers.",
         "When that is done, bring me 6 bones to show for it."
       ],
-      "accept": "I'll see it done.",
+      "accept": "Consider it handled.",
       "outro": [
         "A proper hunt. The town will eat and sleep easier for it."
       ],
@@ -529,7 +529,7 @@
         {
           "id": "s2",
           "type": "kill",
-          "mob": "snake",
+          "mob": "giant rat",
           "amount": 8,
           "where": {
             "dungeon": "velneir"
@@ -549,13 +549,13 @@
       "area": "velneir",
       "giver": "general_store",
       "length": "long",
-      "summary": "Open a trade route between Velneir and Sarnwick.",
+      "summary": "Open a trade route between Velneir and Lorowick.",
       "intro": [
-        "I mean to open a trade route to Sarnwick. It needs a contract carried, a road made safe and a courier who is proven underground.",
-        "Deliver the contract, trade there, cut down 12 spider near our walls and prove yourself in the dungeoneering caves.",
+        "I mean to open a trade route to Lorowick. It needs a contract carried, a road made safe and a courier who is proven underground.",
+        "Deliver the contract, trade there, cut down 12 giant rat near our walls and prove yourself in the dungeoneering caves.",
         "Then have the banker underwrite the venture."
       ],
-      "accept": "Consider it handled.",
+      "accept": "Leave it with me.",
       "outro": [
         "Signed, safe and funded. You have changed the fortunes of this town.",
         "Here is your cut of the first season."
@@ -576,9 +576,9 @@
         {
           "id": "s1",
           "type": "deliver",
-          "item": "sailing_courier_crate",
+          "item": "ra3_package",
           "to": {
-            "area": "sarnwick",
+            "area": "lorowick",
             "giver": "general_store"
           },
           "lines": [
@@ -590,14 +590,14 @@
           "id": "s2",
           "type": "service",
           "to": {
-            "area": "sarnwick",
+            "area": "lorowick",
             "giver": "general_store"
           }
         },
         {
           "id": "s3",
           "type": "kill",
-          "mob": "spider",
+          "mob": "giant rat",
           "amount": 12,
           "where": {
             "area": "velneir",
@@ -617,7 +617,7 @@
             "giver": "banker"
           },
           "lines": [
-            "player: The route to Sarnwick is open and the contract is signed.",
+            "player: The route to Lorowick is open and the contract is signed.",
             "Then I will underwrite it. Velneir has not had news this good in years."
           ]
         }
@@ -629,13 +629,13 @@
       "area": "velneir",
       "giver": "archery_shop",
       "length": "long",
-      "summary": "Find what rules Velneir Sewers, weaken its nest and destroy The Rat King.",
+      "summary": "Find what rules Velneir Sewers, weaken its nest and destroy The Ooze Mother.",
       "intro": [
         "Something rules Velneir Sewers and it is getting stronger. I want it gone.",
-        "Ask the food shop keeper what they have heard, see it for yourself, then come back and we will decide how to break the nest.",
+        "Ask the banker what they have heard, see it for yourself, then come back and we will decide how to break the nest.",
         "When it is weak, kill it and tell the banker."
       ],
-      "accept": "I'll see it done.",
+      "accept": "Leave it with me.",
       "outro": [
         "I felt the ground go still. Velneir is yours to walk freely, friend.",
         "Take this. It is everything I promised and a little more."
@@ -659,11 +659,11 @@
           "type": "talk",
           "to": {
             "area": "velneir",
-            "giver": "food_shop"
+            "giver": "banker"
           },
           "lines": [
             "player: Have you heard anything from below the streets?",
-            "Every night. Something large is down there, and the small ones answer to it. They call it The Rat King."
+            "Every night. Something large is down there, and the small ones answer to it. They call it The Ooze Mother."
           ]
         },
         {
@@ -695,7 +695,7 @@
           "id": "s4",
           "type": "kill",
           "next": "s6",
-          "mob": "snake",
+          "mob": "giant rat",
           "amount": 12,
           "where": {
             "dungeon": "velneir"
@@ -720,7 +720,7 @@
             "giver": "banker"
           },
           "lines": [
-            "player: The Rat King is dead. Velneir Sewers is quiet.",
+            "player: The Ooze Mother is dead. Velneir Sewers is quiet.",
             "Then the vaults are safe and so is everyone above them. The town will hear of this."
           ]
         }
@@ -735,10 +735,10 @@
       "summary": "March on Frostbite Cavern, break its creatures and bring down The Broodmother.",
       "intro": [
         "Frostbite Cavern has stood against Velneir for too long. The Broodmother sits at the bottom of it.",
-        "Learn what you can from the staff shop keeper, fight your way through 12 bat and end The Broodmother.",
+        "Learn what you can from the magic shop keeper, fight your way through 12 giant bat and end The Broodmother.",
         "Bring 8 logs back so the town can rebuild."
       ],
-      "accept": "Consider it handled.",
+      "accept": "I'll see it done.",
       "outro": [
         "It is done, then. They will sing about this in every tavern from here to the coast.",
         "Take your reward. You have more than earned it."
@@ -762,7 +762,7 @@
           "type": "talk",
           "to": {
             "area": "velneir",
-            "giver": "staff_shop"
+            "giver": "magic_shop"
           },
           "lines": [
             "player: What do you know of Frostbite Cavern?",
@@ -779,7 +779,7 @@
         {
           "id": "s3",
           "type": "kill",
-          "mob": "bat",
+          "mob": "giant bat",
           "amount": 12,
           "where": {
             "dungeon": "winter"
@@ -799,9 +799,9 @@
         {
           "id": "s6",
           "type": "deliver",
-          "item": "sailing_courier_crate",
+          "item": "burgh_generalstore_crate",
           "to": {
-            "area": "sarnwick",
+            "area": "lorowick",
             "giver": "banker"
           },
           "lines": [

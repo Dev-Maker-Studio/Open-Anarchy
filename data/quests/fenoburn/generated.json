@@ -1,0 +1,1041 @@
+{
+  "area": "fenoburn",
+  "seed": 5764396,
+  "generatorVersion": 1,
+  "quests": [
+    {
+      "id": "fenoburn_banker_cull",
+      "name": "Trouble with Ghosts",
+      "area": "fenoburn",
+      "giver": "banker",
+      "length": "short",
+      "summary": "The banker wants the ghost near Fenoburn thinned out.",
+      "intro": [
+        "The ghost beyond the walls grow bolder every week. Customers will not walk the road.",
+        "Put down 12 of them close to Fenoburn and I will make it worth your while."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "The road is quieter already. Here, as promised."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "ghost",
+          "amount": 12,
+          "where": {
+            "area": "fenoburn",
+            "radius": 300
+          }
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_general_store_stock",
+      "name": "Short on Maple Logs",
+      "area": "fenoburn",
+      "giver": "general_store",
+      "length": "short",
+      "summary": "The general store keeper of Fenoburn has run out of maple logs.",
+      "intro": [
+        "My stores are bare. I need 24 maple logs and nobody in Fenoburn has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "woodcutting"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 24,
+          "item": "maple_logs"
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_barber_parcel",
+      "name": "A Parcel for the Food Shop Keeper",
+      "area": "fenoburn",
+      "giver": "barber",
+      "length": "short",
+      "summary": "Carry a parcel across Fenoburn to the food shop keeper.",
+      "intro": [
+        "This should have gone to the food shop keeper days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "ra3_package",
+          "to": {
+            "area": "fenoburn",
+            "giver": "food_shop"
+          },
+          "lines": [
+            "player: A delivery from the barber.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_sword_shop_word",
+      "name": "Word to the General Store Keeper",
+      "area": "fenoburn",
+      "giver": "sword_shop",
+      "length": "short",
+      "summary": "Call on the general store keeper of Fenoburn and bring back their answer.",
+      "intro": [
+        "I need an answer from the general store keeper and I would rather not shout it across the street.",
+        "Call on them as a customer, then ask how our accounts stand."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Balanced? Then I can sleep tonight. My thanks."
+      ],
+      "rewards": {},
+      "steps": [
+        {
+          "id": "s1",
+          "type": "service",
+          "to": {
+            "area": "fenoburn",
+            "giver": "general_store"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "talk",
+          "to": {
+            "area": "fenoburn",
+            "giver": "general_store"
+          },
+          "lines": [
+            "player: The sword shop keeper sent me to ask after the ledgers.",
+            "Tell them the figures balance, for once. There is nothing owed between us this season."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_archery_shop_scout",
+      "name": "Eyes on the Fenoburn Sewers",
+      "area": "fenoburn",
+      "giver": "archery_shop",
+      "length": "short",
+      "summary": "Climb down into Fenoburn Sewers and report what you see.",
+      "intro": [
+        "Something has been scratching under the streets at night. It comes from Fenoburn Sewers.",
+        "Go down the entrance, take a look around and come back in one piece."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "So it is as bad as I feared. Thank you for looking, that took nerve."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "fenoburn"
+          }
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_magic_shop_cull",
+      "name": "Trouble with Ghosts (Magic Shop Keeper)",
+      "area": "fenoburn",
+      "giver": "magic_shop",
+      "length": "short",
+      "summary": "The magic shop keeper wants the ghost near Fenoburn thinned out.",
+      "intro": [
+        "The ghost beyond the walls grow bolder every week. Customers will not walk the road.",
+        "Put down 12 of them close to Fenoburn and I will make it worth your while."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "The road is quieter already. Here, as promised."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "ghost",
+          "amount": 12,
+          "where": {
+            "area": "fenoburn",
+            "radius": 300
+          }
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_clothes_shop_stock",
+      "name": "Short on Raw Lobster",
+      "area": "fenoburn",
+      "giver": "clothes_shop",
+      "length": "short",
+      "summary": "The clothes shop keeper of Fenoburn has run out of raw lobster.",
+      "intro": [
+        "My stores are bare. I need 19 raw lobster and nobody in Fenoburn has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "fishing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 19,
+          "item": "raw_lobster"
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_food_shop_parcel",
+      "name": "A Parcel for the Barber",
+      "area": "fenoburn",
+      "giver": "food_shop",
+      "length": "short",
+      "summary": "Carry a parcel across Fenoburn to the barber.",
+      "intro": [
+        "This should have gone to the barber days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "fenoburn",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: A delivery from the food shop keeper.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_banker_sweep",
+      "name": "Sweeping the Fenoburn Sewers",
+      "area": "fenoburn",
+      "giver": "banker",
+      "length": "medium",
+      "summary": "Clear giant spider out of Fenoburn Sewers and tell the sword shop keeper.",
+      "intro": [
+        "Fenoburn Sewers is crawling with giant spider, and they come up through the drains.",
+        "Go down, kill 19 of them, then let the sword shop keeper know their cellar is safe."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Both done? Fenoburn owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "fenoburn"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 19,
+          "where": {
+            "dungeon": "fenoburn"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "fenoburn",
+            "giver": "sword_shop"
+          },
+          "lines": [
+            "player: Fenoburn Sewers is clearer than it was. 19 giant spider fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_general_store_supply",
+      "name": "Supply Run to Pelenstead",
+      "area": "fenoburn",
+      "giver": "general_store",
+      "length": "medium",
+      "summary": "Gather raw tuna for the general store keeper, then carry a shipment to Pelenstead.",
+      "intro": [
+        "I have an order from Pelenstead and nothing to fill it with.",
+        "Bring me 19 raw tuna, then take the packed shipment to the general store keeper there and do some business while you are in town."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "fishing",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 19,
+          "item": "raw_tuna"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "pelenstead",
+            "giver": "general_store"
+          },
+          "lines": [
+            "player: Goods from the general store keeper in Fenoburn.",
+            "From Fenoburn? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "pelenstead",
+            "giver": "general_store"
+          }
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_barber_hunt",
+      "name": "The Long Hunt",
+      "area": "fenoburn",
+      "giver": "barber",
+      "length": "medium",
+      "summary": "Hunt the creatures around Fenoburn and bring back maple logs.",
+      "intro": [
+        "The wilds around Fenoburn need a firm hand. Start with 12 spider outside the walls, then 19 giant rat down in Fenoburn Sewers.",
+        "When that is done, bring me 24 maple logs to show for it."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "woodcutting"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "spider",
+          "amount": 12,
+          "where": {
+            "area": "fenoburn",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant rat",
+          "amount": 19,
+          "where": {
+            "dungeon": "fenoburn"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 24,
+          "item": "maple_logs"
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_sword_shop_council",
+      "name": "Votes for the Council",
+      "area": "fenoburn",
+      "giver": "sword_shop",
+      "length": "medium",
+      "summary": "Gather support around Fenoburn for the sword shop keeper.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the banker, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "fenoburn",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The sword shop keeper asks whether you will stand with them at the next council.",
+            "I will, if the fishing shop keeper does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "ra3_package",
+          "to": {
+            "area": "fenoburn",
+            "giver": "fishing_shop"
+          },
+          "lines": [
+            "player: A sealed note, from the banker.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "fenoburn",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_archery_shop_sweep",
+      "name": "Sweeping the Fenoburn Sewers (Archery Shop Keeper)",
+      "area": "fenoburn",
+      "giver": "archery_shop",
+      "length": "medium",
+      "summary": "Clear giant spider out of Fenoburn Sewers and tell the sword shop keeper.",
+      "intro": [
+        "Fenoburn Sewers is crawling with giant spider, and they come up through the drains.",
+        "Go down, kill 19 of them, then let the sword shop keeper know their cellar is safe."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Both done? Fenoburn owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "fenoburn"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 19,
+          "where": {
+            "dungeon": "fenoburn"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "fenoburn",
+            "giver": "sword_shop"
+          },
+          "lines": [
+            "player: Fenoburn Sewers is clearer than it was. 19 giant spider fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_magic_shop_supply",
+      "name": "Supply Run to Pelenstead (Magic Shop Keeper)",
+      "area": "fenoburn",
+      "giver": "magic_shop",
+      "length": "medium",
+      "summary": "Gather big bones for the magic shop keeper, then carry a shipment to Pelenstead.",
+      "intro": [
+        "I have an order from Pelenstead and nothing to fill it with.",
+        "Bring me 14 big bones, then take the packed shipment to the banker there and do some business while you are in town."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "prayer",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 14,
+          "item": "big_bones"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "pelenstead",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Goods from the magic shop keeper in Fenoburn.",
+            "From Fenoburn? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "pelenstead",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_clothes_shop_hunt",
+      "name": "The Long Hunt (Clothes Shop Keeper)",
+      "area": "fenoburn",
+      "giver": "clothes_shop",
+      "length": "medium",
+      "summary": "Hunt the creatures around Fenoburn and bring back maple logs.",
+      "intro": [
+        "The wilds around Fenoburn need a firm hand. Start with 12 spider outside the walls, then 19 zombie down in Fenoburn Sewers.",
+        "When that is done, bring me 24 maple logs to show for it."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "woodcutting"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "spider",
+          "amount": 12,
+          "where": {
+            "area": "fenoburn",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "zombie",
+          "amount": 19,
+          "where": {
+            "dungeon": "fenoburn"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 24,
+          "item": "maple_logs"
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_food_shop_council",
+      "name": "Votes for the Council (Food Shop Keeper)",
+      "area": "fenoburn",
+      "giver": "food_shop",
+      "length": "medium",
+      "summary": "Gather support around Fenoburn for the food shop keeper.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the staff shop keeper, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "fenoburn",
+            "giver": "staff_shop"
+          },
+          "lines": [
+            "player: The food shop keeper asks whether you will stand with them at the next council.",
+            "I will, if the barber does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "fenoburn",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: A sealed note, from the staff shop keeper.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "fenoburn",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_banker_expedition",
+      "name": "The Fall of the Fallen Warden",
+      "area": "fenoburn",
+      "giver": "banker",
+      "length": "long",
+      "summary": "March on Meadow Keep, break its creatures and bring down The Fallen Warden.",
+      "intro": [
+        "Meadow Keep has stood against Fenoburn for too long. The Fallen Warden sits at the bottom of it.",
+        "Learn what you can from the sword shop keeper, fight your way through 29 zombie and end The Fallen Warden.",
+        "Bring 19 raw tuna back so the town can rebuild."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "It is done, then. They will sing about this in every tavern from here to the coast.",
+        "Take your reward. You have more than earned it."
+      ],
+      "requires": {
+        "quests": [
+          "fenoburn_banker_cull"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "constitution",
+          "fishing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "fenoburn",
+            "giver": "sword_shop"
+          },
+          "lines": [
+            "player: What do you know of Meadow Keep?",
+            "Only that those who go in come back thin and quiet. The Fallen Warden rules it now."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "plains"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "zombie",
+          "amount": 29,
+          "where": {
+            "dungeon": "plains"
+          }
+        },
+        {
+          "id": "s4",
+          "type": "boss",
+          "dungeon": "plains"
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 19,
+          "item": "raw_tuna"
+        },
+        {
+          "id": "s6",
+          "type": "deliver",
+          "item": "ra3_package",
+          "to": {
+            "area": "pelenstead",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Word from Fenoburn: The Fallen Warden is dead.",
+            "Dead? Then the caravans can leave at dawn. This news is worth more than gold."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_sword_shop_route",
+      "name": "The Fenoburn Trade Route",
+      "area": "fenoburn",
+      "giver": "sword_shop",
+      "length": "long",
+      "summary": "Open a trade route between Fenoburn and Pelenstead.",
+      "intro": [
+        "I mean to open a trade route to Pelenstead. It needs a contract carried, a road made safe and a courier who is proven underground.",
+        "Deliver the contract, trade there, cut down 29 ghost near our walls and prove yourself in the dungeoneering caves.",
+        "Then have the banker underwrite the venture."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Signed, safe and funded. You have changed the fortunes of this town.",
+        "Here is your cut of the first season."
+      ],
+      "requires": {
+        "quests": [
+          "fenoburn_sword_shop_word"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "dungeoneering"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "pelenstead",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: A contract from the sword shop keeper in Fenoburn.",
+            "A fair offer. But the road between us is not safe, and you know it."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "service",
+          "to": {
+            "area": "pelenstead",
+            "giver": "banker"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "ghost",
+          "amount": 29,
+          "where": {
+            "area": "fenoburn",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s4",
+          "type": "dungeoneering",
+          "amount": 3
+        },
+        {
+          "id": "s5",
+          "type": "talk",
+          "to": {
+            "area": "fenoburn",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The route to Pelenstead is open and the contract is signed.",
+            "Then I will underwrite it. Fenoburn has not had news this good in years."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_clothes_shop_nest",
+      "name": "The Thing Beneath Fenoburn",
+      "area": "fenoburn",
+      "giver": "clothes_shop",
+      "length": "long",
+      "summary": "Find what rules Fenoburn Sewers, weaken its nest and destroy The Plague Warden.",
+      "intro": [
+        "Something rules Fenoburn Sewers and it is getting stronger. I want it gone.",
+        "Ask the fishing shop keeper what they have heard, see it for yourself, then come back and we will decide how to break the nest.",
+        "When it is weak, kill it and tell the banker."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "I felt the ground go still. Fenoburn is yours to walk freely, friend.",
+        "Take this. It is everything I promised and a little more."
+      ],
+      "requires": {
+        "quests": [
+          "fenoburn_clothes_shop_stock"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "fishing",
+          "constitution"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "fenoburn",
+            "giver": "fishing_shop"
+          },
+          "lines": [
+            "player: Have you heard anything from below the streets?",
+            "Every night. Something large is down there, and the small ones answer to it. They call it The Plague Warden."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "fenoburn"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "choice",
+          "lines": [
+            "So you have seen it. We can thin them by force, or I can have the guard hold the drains if they are supplied."
+          ],
+          "prompt": "How will you weaken the nest?",
+          "options": [
+            {
+              "text": "I will cut them down myself.",
+              "next": "s4"
+            },
+            {
+              "text": "Supply the guard and let them hold the drains.",
+              "next": "s5"
+            }
+          ]
+        },
+        {
+          "id": "s4",
+          "type": "kill",
+          "next": "s6",
+          "mob": "giant spider",
+          "amount": 29,
+          "where": {
+            "dungeon": "fenoburn"
+          }
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 19,
+          "item": "raw_lobster"
+        },
+        {
+          "id": "s6",
+          "type": "boss",
+          "dungeon": "fenoburn"
+        },
+        {
+          "id": "s7",
+          "type": "talk",
+          "to": {
+            "area": "fenoburn",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The Plague Warden is dead. Fenoburn Sewers is quiet.",
+            "Then the vaults are safe and so is everyone above them. The town will hear of this."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fenoburn_general_store_expedition",
+      "name": "The Fall of the Fallen Warden (General Store Keeper)",
+      "area": "fenoburn",
+      "giver": "general_store",
+      "length": "long",
+      "summary": "March on Meadow Keep, break its creatures and bring down The Fallen Warden.",
+      "intro": [
+        "Meadow Keep has stood against Fenoburn for too long. The Fallen Warden sits at the bottom of it.",
+        "Learn what you can from the barber, fight your way through 29 zombie and end The Fallen Warden.",
+        "Bring 19 raw tuna back so the town can rebuild."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "It is done, then. They will sing about this in every tavern from here to the coast.",
+        "Take your reward. You have more than earned it."
+      ],
+      "requires": {
+        "quests": [
+          "fenoburn_general_store_stock"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "constitution",
+          "fishing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "fenoburn",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: What do you know of Meadow Keep?",
+            "Only that those who go in come back thin and quiet. The Fallen Warden rules it now."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "plains"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "zombie",
+          "amount": 29,
+          "where": {
+            "dungeon": "plains"
+          }
+        },
+        {
+          "id": "s4",
+          "type": "boss",
+          "dungeon": "plains"
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 19,
+          "item": "raw_tuna"
+        },
+        {
+          "id": "s6",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "pelenstead",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Word from Fenoburn: The Fallen Warden is dead.",
+            "Dead? Then the caravans can leave at dawn. This news is worth more than gold."
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1042 @@
+{
+  "area": "orandale",
+  "seed": 5764403,
+  "generatorVersion": 1,
+  "quests": [
+    {
+      "id": "orandale_banker_stock",
+      "name": "Short on Mithril Ore",
+      "area": "orandale",
+      "giver": "banker",
+      "length": "short",
+      "summary": "The banker of Orandale has run out of mithril ore.",
+      "intro": [
+        "My stores are bare. I need 22 mithril ore and nobody in Orandale has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "mining"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 22,
+          "item": "mithril_ore"
+        }
+      ]
+    },
+    {
+      "id": "orandale_general_store_parcel",
+      "name": "A Parcel for the Realtor",
+      "area": "orandale",
+      "giver": "general_store",
+      "length": "short",
+      "summary": "Carry a parcel across Orandale to the realtor.",
+      "intro": [
+        "This should have gone to the realtor days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "orandale",
+            "giver": "realtor"
+          },
+          "lines": [
+            "player: A delivery from the general store keeper.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orandale_barber_word",
+      "name": "Word to the Food Shop Keeper",
+      "area": "orandale",
+      "giver": "barber",
+      "length": "short",
+      "summary": "Call on the food shop keeper of Orandale and bring back their answer.",
+      "intro": [
+        "I need an answer from the food shop keeper and I would rather not shout it across the street.",
+        "Call on them as a customer, then ask how our accounts stand."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Balanced? Then I can sleep tonight. My thanks."
+      ],
+      "rewards": {},
+      "steps": [
+        {
+          "id": "s1",
+          "type": "service",
+          "to": {
+            "area": "orandale",
+            "giver": "food_shop"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "talk",
+          "to": {
+            "area": "orandale",
+            "giver": "food_shop"
+          },
+          "lines": [
+            "player: The barber sent me to ask after the ledgers.",
+            "Tell them the figures balance, for once. There is nothing owed between us this season."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orandale_sword_shop_scout",
+      "name": "Eyes on the Orandale Sewers",
+      "area": "orandale",
+      "giver": "sword_shop",
+      "length": "short",
+      "summary": "Climb down into Orandale Sewers and report what you see.",
+      "intro": [
+        "Something has been scratching under the streets at night. It comes from Orandale Sewers.",
+        "Go down the entrance, take a look around and come back in one piece."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "So it is as bad as I feared. Thank you for looking, that took nerve."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "orandale"
+          }
+        }
+      ]
+    },
+    {
+      "id": "orandale_archery_shop_cull",
+      "name": "Trouble with Bats",
+      "area": "orandale",
+      "giver": "archery_shop",
+      "length": "short",
+      "summary": "The archery shop keeper wants the bat near Orandale thinned out.",
+      "intro": [
+        "The bat beyond the walls grow bolder every week. Customers will not walk the road.",
+        "Put down 14 of them close to Orandale and I will make it worth your while."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "The road is quieter already. Here, as promised."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "bat",
+          "amount": 14,
+          "where": {
+            "area": "orandale",
+            "radius": 300
+          }
+        }
+      ]
+    },
+    {
+      "id": "orandale_magic_shop_stock",
+      "name": "Short on Bones",
+      "area": "orandale",
+      "giver": "magic_shop",
+      "length": "short",
+      "summary": "The magic shop keeper of Orandale has run out of bones.",
+      "intro": [
+        "My stores are bare. I need 17 bones and nobody in Orandale has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "prayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 17,
+          "item": "bones"
+        }
+      ]
+    },
+    {
+      "id": "orandale_clothes_shop_parcel",
+      "name": "A Parcel for the Archery Shop Keeper",
+      "area": "orandale",
+      "giver": "clothes_shop",
+      "length": "short",
+      "summary": "Carry a parcel across Orandale to the archery shop keeper.",
+      "intro": [
+        "This should have gone to the archery shop keeper days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "orandale",
+            "giver": "archery_shop"
+          },
+          "lines": [
+            "player: A delivery from the clothes shop keeper.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orandale_food_shop_word",
+      "name": "Word to the Banker",
+      "area": "orandale",
+      "giver": "food_shop",
+      "length": "short",
+      "summary": "Call on the banker of Orandale and bring back their answer.",
+      "intro": [
+        "I need an answer from the banker and I would rather not shout it across the street.",
+        "Call on them as a customer, then ask how our accounts stand."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Balanced? Then I can sleep tonight. My thanks."
+      ],
+      "rewards": {},
+      "steps": [
+        {
+          "id": "s1",
+          "type": "service",
+          "to": {
+            "area": "orandale",
+            "giver": "banker"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "talk",
+          "to": {
+            "area": "orandale",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The food shop keeper sent me to ask after the ledgers.",
+            "Tell them the figures balance, for once. There is nothing owed between us this season."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orandale_banker_supply",
+      "name": "Supply Run to Uludale",
+      "area": "orandale",
+      "giver": "banker",
+      "length": "medium",
+      "summary": "Gather yew logs for the banker, then carry a shipment to Uludale.",
+      "intro": [
+        "I have an order from Uludale and nothing to fill it with.",
+        "Bring me 22 yew logs, then take the packed shipment to the banker there and do some business while you are in town."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "woodcutting",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 22,
+          "item": "yew_logs"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "uludale",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Goods from the banker in Orandale.",
+            "From Orandale? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "uludale",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "orandale_general_store_hunt",
+      "name": "The Long Hunt",
+      "area": "orandale",
+      "giver": "general_store",
+      "length": "medium",
+      "summary": "Hunt the creatures around Orandale and bring back yew logs.",
+      "intro": [
+        "The wilds around Orandale need a firm hand. Start with 14 giant rat outside the walls, then 22 giant spider down in Orandale Sewers.",
+        "When that is done, bring me 22 yew logs to show for it."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "woodcutting"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "giant rat",
+          "amount": 14,
+          "where": {
+            "area": "orandale",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 22,
+          "where": {
+            "dungeon": "orandale"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 22,
+          "item": "yew_logs"
+        }
+      ]
+    },
+    {
+      "id": "orandale_barber_council",
+      "name": "Votes for the Council",
+      "area": "orandale",
+      "giver": "barber",
+      "length": "medium",
+      "summary": "Gather support around Orandale for the barber.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the food shop keeper, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "orandale",
+            "giver": "food_shop"
+          },
+          "lines": [
+            "player: The barber asks whether you will stand with them at the next council.",
+            "I will, if the archery shop keeper does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "orandale",
+            "giver": "archery_shop"
+          },
+          "lines": [
+            "player: A sealed note, from the food shop keeper.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "orandale",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "orandale_sword_shop_sweep",
+      "name": "Sweeping the Orandale Sewers",
+      "area": "orandale",
+      "giver": "sword_shop",
+      "length": "medium",
+      "summary": "Clear giant rat out of Orandale Sewers and tell the barber.",
+      "intro": [
+        "Orandale Sewers is crawling with giant rat, and they come up through the drains.",
+        "Go down, kill 22 of them, then let the barber know their cellar is safe."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Both done? Orandale owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "orandale"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant rat",
+          "amount": 22,
+          "where": {
+            "dungeon": "orandale"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "orandale",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: Orandale Sewers is clearer than it was. 22 giant rat fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orandale_archery_shop_supply",
+      "name": "Supply Run to Uludale (Archery Shop Keeper)",
+      "area": "orandale",
+      "giver": "archery_shop",
+      "length": "medium",
+      "summary": "Gather maple logs for the archery shop keeper, then carry a shipment to Uludale.",
+      "intro": [
+        "I have an order from Uludale and nothing to fill it with.",
+        "Bring me 28 maple logs, then take the packed shipment to the banker there and do some business while you are in town."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "woodcutting",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 28,
+          "item": "maple_logs"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "uludale",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Goods from the archery shop keeper in Orandale.",
+            "From Orandale? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "uludale",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "orandale_magic_shop_hunt",
+      "name": "The Long Hunt (Magic Shop Keeper)",
+      "area": "orandale",
+      "giver": "magic_shop",
+      "length": "medium",
+      "summary": "Hunt the creatures around Orandale and bring back bones.",
+      "intro": [
+        "The wilds around Orandale need a firm hand. Start with 14 giant rat outside the walls, then 22 bat down in Orandale Sewers.",
+        "When that is done, bring me 17 bones to show for it."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "prayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "giant rat",
+          "amount": 14,
+          "where": {
+            "area": "orandale",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "bat",
+          "amount": 22,
+          "where": {
+            "dungeon": "orandale"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 17,
+          "item": "bones"
+        }
+      ]
+    },
+    {
+      "id": "orandale_clothes_shop_council",
+      "name": "Votes for the Council (Clothes Shop Keeper)",
+      "area": "orandale",
+      "giver": "clothes_shop",
+      "length": "medium",
+      "summary": "Gather support around Orandale for the clothes shop keeper.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the realtor, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "orandale",
+            "giver": "realtor"
+          },
+          "lines": [
+            "player: The clothes shop keeper asks whether you will stand with them at the next council.",
+            "I will, if the sword shop keeper does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "orandale",
+            "giver": "sword_shop"
+          },
+          "lines": [
+            "player: A sealed note, from the realtor.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "orandale",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "orandale_food_shop_sweep",
+      "name": "Sweeping the Orandale Sewers (Food Shop Keeper)",
+      "area": "orandale",
+      "giver": "food_shop",
+      "length": "medium",
+      "summary": "Clear bat out of Orandale Sewers and tell the magic shop keeper.",
+      "intro": [
+        "Orandale Sewers is crawling with bat, and they come up through the drains.",
+        "Go down, kill 22 of them, then let the magic shop keeper know their cellar is safe."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Both done? Orandale owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "orandale"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "bat",
+          "amount": 22,
+          "where": {
+            "dungeon": "orandale"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "orandale",
+            "giver": "magic_shop"
+          },
+          "lines": [
+            "player: Orandale Sewers is clearer than it was. 22 bat fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orandale_general_store_route",
+      "name": "The Orandale Trade Route",
+      "area": "orandale",
+      "giver": "general_store",
+      "length": "long",
+      "summary": "Open a trade route between Orandale and Uludale.",
+      "intro": [
+        "I mean to open a trade route to Uludale. It needs a contract carried, a road made safe and a courier who is proven underground.",
+        "Deliver the contract, trade there, cut down 34 giant rat near our walls and prove yourself in the dungeoneering caves.",
+        "Then have the banker underwrite the venture."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Signed, safe and funded. You have changed the fortunes of this town.",
+        "Here is your cut of the first season."
+      ],
+      "requires": {
+        "quests": [
+          "orandale_general_store_parcel"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "dungeoneering"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "ra3_package",
+          "to": {
+            "area": "uludale",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: A contract from the general store keeper in Orandale.",
+            "A fair offer. But the road between us is not safe, and you know it."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "service",
+          "to": {
+            "area": "uludale",
+            "giver": "banker"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "giant rat",
+          "amount": 34,
+          "where": {
+            "area": "orandale",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s4",
+          "type": "dungeoneering",
+          "amount": 3
+        },
+        {
+          "id": "s5",
+          "type": "talk",
+          "to": {
+            "area": "orandale",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The route to Uludale is open and the contract is signed.",
+            "Then I will underwrite it. Orandale has not had news this good in years."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orandale_archery_shop_nest",
+      "name": "The Thing Beneath Orandale",
+      "area": "orandale",
+      "giver": "archery_shop",
+      "length": "long",
+      "summary": "Find what rules Orandale Sewers, weaken its nest and destroy The Rat King.",
+      "intro": [
+        "Something rules Orandale Sewers and it is getting stronger. I want it gone.",
+        "Ask the banker what they have heard, see it for yourself, then come back and we will decide how to break the nest.",
+        "When it is weak, kill it and tell the banker."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "I felt the ground go still. Orandale is yours to walk freely, friend.",
+        "Take this. It is everything I promised and a little more."
+      ],
+      "requires": {
+        "quests": [
+          "orandale_archery_shop_cull"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "woodcutting",
+          "constitution"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "orandale",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Have you heard anything from below the streets?",
+            "Every night. Something large is down there, and the small ones answer to it. They call it The Rat King."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "orandale"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "choice",
+          "lines": [
+            "So you have seen it. We can thin them by force, or I can have the guard hold the drains if they are supplied."
+          ],
+          "prompt": "How will you weaken the nest?",
+          "options": [
+            {
+              "text": "I will cut them down myself.",
+              "next": "s4"
+            },
+            {
+              "text": "Supply the guard and let them hold the drains.",
+              "next": "s5"
+            }
+          ]
+        },
+        {
+          "id": "s4",
+          "type": "kill",
+          "next": "s6",
+          "mob": "giant rat",
+          "amount": 34,
+          "where": {
+            "dungeon": "orandale"
+          }
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 28,
+          "item": "willow_logs"
+        },
+        {
+          "id": "s6",
+          "type": "boss",
+          "dungeon": "orandale"
+        },
+        {
+          "id": "s7",
+          "type": "talk",
+          "to": {
+            "area": "orandale",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The Rat King is dead. Orandale Sewers is quiet.",
+            "Then the vaults are safe and so is everyone above them. The town will hear of this."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orandale_food_shop_expedition",
+      "name": "The Fall of the Broodmother",
+      "area": "orandale",
+      "giver": "food_shop",
+      "length": "long",
+      "summary": "March on Frostbite Cavern, break its creatures and bring down The Broodmother.",
+      "intro": [
+        "Frostbite Cavern has stood against Orandale for too long. The Broodmother sits at the bottom of it.",
+        "Learn what you can from the barber, fight your way through 34 giant spider and end The Broodmother.",
+        "Bring 22 raw tuna back so the town can rebuild."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "It is done, then. They will sing about this in every tavern from here to the coast.",
+        "Take your reward. You have more than earned it."
+      ],
+      "requires": {
+        "quests": [
+          "orandale_food_shop_word"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "constitution",
+          "fishing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "orandale",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: What do you know of Frostbite Cavern?",
+            "Only that those who go in come back thin and quiet. The Broodmother rules it now."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "winter"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 34,
+          "where": {
+            "dungeon": "winter"
+          }
+        },
+        {
+          "id": "s4",
+          "type": "boss",
+          "dungeon": "winter"
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 22,
+          "item": "raw_tuna"
+        },
+        {
+          "id": "s6",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "uludale",
+            "giver": "food_shop"
+          },
+          "lines": [
+            "player: Word from Orandale: The Broodmother is dead.",
+            "Dead? Then the caravans can leave at dawn. This news is worth more than gold."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orandale_barber_route",
+      "name": "The Orandale Trade Route (Barber)",
+      "area": "orandale",
+      "giver": "barber",
+      "length": "long",
+      "summary": "Open a trade route between Orandale and Uludale.",
+      "intro": [
+        "I mean to open a trade route to Uludale. It needs a contract carried, a road made safe and a courier who is proven underground.",
+        "Deliver the contract, trade there, cut down 34 giant rat near our walls and prove yourself in the dungeoneering caves.",
+        "Then have the banker underwrite the venture."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Signed, safe and funded. You have changed the fortunes of this town.",
+        "Here is your cut of the first season."
+      ],
+      "requires": {
+        "quests": [
+          "orandale_barber_word"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "dungeoneering"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "uludale",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: A contract from the barber in Orandale.",
+            "A fair offer. But the road between us is not safe, and you know it."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "service",
+          "to": {
+            "area": "uludale",
+            "giver": "barber"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "giant rat",
+          "amount": 34,
+          "where": {
+            "area": "orandale",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s4",
+          "type": "dungeoneering",
+          "amount": 3
+        },
+        {
+          "id": "s5",
+          "type": "talk",
+          "to": {
+            "area": "orandale",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The route to Uludale is open and the contract is signed.",
+            "Then I will underwrite it. Orandale has not had news this good in years."
+          ]
+        }
+      ]
+    }
+  ]
+}

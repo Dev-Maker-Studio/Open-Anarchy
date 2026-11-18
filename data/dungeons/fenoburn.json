@@ -1,0 +1,10 @@
+{
+  "id": "fenoburn",
+  "name": "Fenoburn Sewers",
+  "theme": "sewer",
+  "seed": 3494062474277193073,
+  "slot": 12,
+  "entranceX": 9045,
+  "entranceY": 7119,
+  "origin": "city:fenoburn"
+}

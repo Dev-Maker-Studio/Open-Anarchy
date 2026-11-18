@@ -1,49 +1,82 @@
 {
   "area": "aldmere",
-  "seed": 7272,
+  "seed": 5764385,
   "generatorVersion": 1,
   "quests": [
     {
-      "id": "aldmere_banker_stock",
-      "name": "Short on Mithril Ore",
+      "id": "aldmere_banker_cull",
+      "name": "Trouble with Zombies",
       "area": "aldmere",
       "giver": "banker",
       "length": "short",
-      "summary": "The banker of Aldmere has run out of mithril ore.",
+      "summary": "The banker wants the zombie near Aldmere thinned out.",
       "intro": [
-        "My stores are bare. I need 21 mithril ore and nobody in Aldmere has any to spare.",
-        "Bring them to me, however you come by them."
+        "The zombie beyond the walls grow bolder every week. Customers will not walk the road.",
+        "Put down 8 of them close to Aldmere and I will make it worth your while."
       ],
       "accept": "I'll see it done.",
+      "outro": [
+        "The road is quieter already. Here, as promised."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "zombie",
+          "amount": 8,
+          "where": {
+            "area": "aldmere",
+            "radius": 300
+          }
+        }
+      ]
+    },
+    {
+      "id": "aldmere_general_store_stock",
+      "name": "Short on Willow Logs",
+      "area": "aldmere",
+      "giver": "general_store",
+      "length": "short",
+      "summary": "The general store keeper of Aldmere has run out of willow logs.",
+      "intro": [
+        "My stores are bare. I need 16 willow logs and nobody in Aldmere has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "Consider it handled.",
       "outro": [
         "That will keep me going for a good while. Take this for your trouble."
       ],
       "rewards": {
         "xp": [
-          "mining"
+          "woodcutting"
         ]
       },
       "steps": [
         {
           "id": "s1",
           "type": "gather",
-          "amount": 21,
-          "item": "mithril_ore"
+          "amount": 16,
+          "item": "willow_logs"
         }
       ]
     },
     {
-      "id": "aldmere_general_store_parcel",
-      "name": "A Parcel for the Staff Shop Keeper",
+      "id": "aldmere_barber_parcel",
+      "name": "A Parcel for the Archery Shop Keeper",
       "area": "aldmere",
-      "giver": "general_store",
+      "giver": "barber",
       "length": "short",
-      "summary": "Carry a parcel across Aldmere to the staff shop keeper.",
+      "summary": "Carry a parcel across Aldmere to the archery shop keeper.",
       "intro": [
-        "This should have gone to the staff shop keeper days ago and I cannot leave my post.",
+        "This should have gone to the archery shop keeper days ago and I cannot leave my post.",
         "Take it over for me and come back when it is done."
       ],
-      "accept": "I'll see it done.",
+      "accept": "Consider it handled.",
       "outro": [
         "Delivered and settled? Good. Here is something for the legwork."
       ],
@@ -59,27 +92,27 @@
           "item": "ra3_package",
           "to": {
             "area": "aldmere",
-            "giver": "staff_shop"
+            "giver": "archery_shop"
           },
           "lines": [
-            "player: A delivery from the general store keeper.",
+            "player: A delivery from the barber.",
             "At last. I had begun to think it lost. Tell them the account is settled."
           ]
         }
       ]
     },
     {
-      "id": "aldmere_barber_word",
-      "name": "Word to the Archery Shop Keeper",
+      "id": "aldmere_sword_shop_word",
+      "name": "Word to the Food Shop Keeper",
       "area": "aldmere",
-      "giver": "barber",
+      "giver": "sword_shop",
       "length": "short",
-      "summary": "Call on the archery shop keeper of Aldmere and bring back their answer.",
+      "summary": "Call on the food shop keeper of Aldmere and bring back their answer.",
       "intro": [
-        "I need an answer from the archery shop keeper and I would rather not shout it across the street.",
+        "I need an answer from the food shop keeper and I would rather not shout it across the street.",
         "Call on them as a customer, then ask how our accounts stand."
       ],
-      "accept": "I'll see it done.",
+      "accept": "Consider it handled.",
       "outro": [
         "Balanced? Then I can sleep tonight. My thanks."
       ],
@@ -90,7 +123,7 @@
           "type": "service",
           "to": {
             "area": "aldmere",
-            "giver": "archery_shop"
+            "giver": "food_shop"
           }
         },
         {
@@ -98,27 +131,27 @@
           "type": "talk",
           "to": {
             "area": "aldmere",
-            "giver": "archery_shop"
+            "giver": "food_shop"
           },
           "lines": [
-            "player: The barber sent me to ask after the ledgers.",
+            "player: The sword shop keeper sent me to ask after the ledgers.",
             "Tell them the figures balance, for once. There is nothing owed between us this season."
           ]
         }
       ]
     },
     {
-      "id": "aldmere_sword_shop_scout",
+      "id": "aldmere_archery_shop_scout",
       "name": "Eyes on the Aldmere Sewers",
       "area": "aldmere",
-      "giver": "sword_shop",
+      "giver": "archery_shop",
       "length": "short",
       "summary": "Climb down into Aldmere Sewers and report what you see.",
       "intro": [
         "Something has been scratching under the streets at night. It comes from Aldmere Sewers.",
         "Go down the entrance, take a look around and come back in one piece."
       ],
-      "accept": "Leave it with me.",
+      "accept": "I'll see it done.",
       "outro": [
         "So it is as bad as I feared. Thank you for looking, that took nerve."
       ],
@@ -138,17 +171,17 @@
       ]
     },
     {
-      "id": "aldmere_archery_shop_cull",
-      "name": "Trouble with Snakes",
+      "id": "aldmere_magic_shop_cull",
+      "name": "Trouble with Spiders",
       "area": "aldmere",
-      "giver": "archery_shop",
+      "giver": "magic_shop",
       "length": "short",
-      "summary": "The archery shop keeper wants the snake near Aldmere thinned out.",
+      "summary": "The magic shop keeper wants the spider near Aldmere thinned out.",
       "intro": [
-        "The snake beyond the walls grow bolder every week. Customers will not walk the road.",
-        "Put down 13 of them close to Aldmere and I will make it worth your while."
+        "The spider beyond the walls grow bolder every week. Customers will not walk the road.",
+        "Put down 8 of them close to Aldmere and I will make it worth your while."
       ],
-      "accept": "Leave it with me.",
+      "accept": "Consider it handled.",
       "outro": [
         "The road is quieter already. Here, as promised."
       ],
@@ -161,8 +194,8 @@
         {
           "id": "s1",
           "type": "kill",
-          "mob": "snake",
-          "amount": 13,
+          "mob": "spider",
+          "amount": 8,
           "where": {
             "area": "aldmere",
             "radius": 300
@@ -171,14 +204,14 @@
       ]
     },
     {
-      "id": "aldmere_magic_shop_stock",
-      "name": "Short on Bones",
+      "id": "aldmere_clothes_shop_stock",
+      "name": "Short on Iron Bar",
       "area": "aldmere",
-      "giver": "magic_shop",
+      "giver": "clothes_shop",
       "length": "short",
-      "summary": "The magic shop keeper of Aldmere has run out of bones.",
+      "summary": "The clothes shop keeper of Aldmere has run out of iron bar.",
       "intro": [
-        "My stores are bare. I need 16 bones and nobody in Aldmere has any to spare.",
+        "My stores are bare. I need 8 iron bar and nobody in Aldmere has any to spare.",
         "Bring them to me, however you come by them."
       ],
       "accept": "Leave it with me.",
@@ -187,27 +220,27 @@
       ],
       "rewards": {
         "xp": [
-          "prayer"
+          "smithing"
         ]
       },
       "steps": [
         {
           "id": "s1",
           "type": "gather",
-          "amount": 16,
-          "item": "bones"
+          "amount": 8,
+          "item": "iron_bar"
         }
       ]
     },
     {
-      "id": "aldmere_clothes_shop_parcel",
-      "name": "A Parcel for the Sword Shop Keeper",
+      "id": "aldmere_food_shop_parcel",
+      "name": "A Parcel for the Staff Shop Keeper",
       "area": "aldmere",
-      "giver": "clothes_shop",
+      "giver": "food_shop",
       "length": "short",
-      "summary": "Carry a parcel across Aldmere to the sword shop keeper.",
+      "summary": "Carry a parcel across Aldmere to the staff shop keeper.",
       "intro": [
-        "This should have gone to the sword shop keeper days ago and I cannot leave my post.",
+        "This should have gone to the staff shop keeper days ago and I cannot leave my post.",
         "Take it over for me and come back when it is done."
       ],
       "accept": "Leave it with me.",
@@ -223,75 +256,88 @@
         {
           "id": "s1",
           "type": "deliver",
-          "item": "ra3_package",
+          "item": "royal_letter",
           "to": {
             "area": "aldmere",
-            "giver": "sword_shop"
+            "giver": "staff_shop"
           },
           "lines": [
-            "player: A delivery from the clothes shop keeper.",
+            "player: A delivery from the food shop keeper.",
             "At last. I had begun to think it lost. Tell them the account is settled."
           ]
         }
       ]
     },
     {
-      "id": "aldmere_food_shop_word",
-      "name": "Word to the Realtor",
+      "id": "aldmere_banker_sweep",
+      "name": "Sweeping the Aldmere Sewers",
       "area": "aldmere",
-      "giver": "food_shop",
-      "length": "short",
-      "summary": "Call on the realtor of Aldmere and bring back their answer.",
+      "giver": "banker",
+      "length": "medium",
+      "summary": "Clear giant spider out of Aldmere Sewers and tell the general store keeper.",
       "intro": [
-        "I need an answer from the realtor and I would rather not shout it across the street.",
-        "Call on them as a customer, then ask how our accounts stand."
+        "Aldmere Sewers is crawling with giant spider, and they come up through the drains.",
+        "Go down, kill 13 of them, then let the general store keeper know their cellar is safe."
       ],
-      "accept": "Consider it handled.",
+      "accept": "I'll see it done.",
       "outro": [
-        "Balanced? Then I can sleep tonight. My thanks."
+        "Both done? Aldmere owes you more than I can pay, but take this."
       ],
-      "rewards": {},
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
       "steps": [
         {
           "id": "s1",
-          "type": "service",
-          "to": {
-            "area": "aldmere",
-            "giver": "realtor"
+          "type": "visit",
+          "place": {
+            "dungeon": "aldmere"
           }
         },
         {
           "id": "s2",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 13,
+          "where": {
+            "dungeon": "aldmere"
+          }
+        },
+        {
+          "id": "s3",
           "type": "talk",
           "to": {
             "area": "aldmere",
-            "giver": "realtor"
+            "giver": "general_store"
           },
           "lines": [
-            "player: The food shop keeper sent me to ask after the ledgers.",
-            "Tell them the figures balance, for once. There is nothing owed between us this season."
+            "player: Aldmere Sewers is clearer than it was. 13 giant spider fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
           ]
         }
       ]
     },
     {
-      "id": "aldmere_banker_supply",
-      "name": "Supply Run to Brackenholt",
+      "id": "aldmere_general_store_supply",
+      "name": "Supply Run to Velneir",
       "area": "aldmere",
-      "giver": "banker",
+      "giver": "general_store",
       "length": "medium",
-      "summary": "Gather raw lobster for the banker, then carry a shipment to Brackenholt.",
+      "summary": "Gather iron bar for the general store keeper, then carry a shipment to Velneir.",
       "intro": [
-        "I have an order from Brackenholt and nothing to fill it with.",
-        "Bring me 21 raw lobster, then take the packed shipment to the banker there and do some business while you are in town."
+        "I have an order from Velneir and nothing to fill it with.",
+        "Bring me 8 iron bar, then take the packed shipment to the general store keeper there and do some business while you are in town."
       ],
-      "accept": "I'll see it done.",
+      "accept": "Consider it handled.",
       "outro": [
         "They took the lot? Then we have a trade route. Your share, as agreed."
       ],
       "rewards": {
         "xp": [
-          "fishing",
+          "smithing",
           "agility"
         ]
       },
@@ -299,19 +345,19 @@
         {
           "id": "s1",
           "type": "gather",
-          "amount": 21,
-          "item": "raw_lobster"
+          "amount": 8,
+          "item": "iron_bar"
         },
         {
           "id": "s2",
           "type": "deliver",
-          "item": "royal_letter",
+          "item": "burgh_generalstore_crate",
           "to": {
-            "area": "brackenholt",
-            "giver": "banker"
+            "area": "velneir",
+            "giver": "general_store"
           },
           "lines": [
-            "player: Goods from the banker in Aldmere.",
+            "player: Goods from the general store keeper in Aldmere.",
             "From Aldmere? Then the roads are open after all. Set it down there."
           ]
         },
@@ -319,24 +365,232 @@
           "id": "s3",
           "type": "service",
           "to": {
-            "area": "brackenholt",
+            "area": "velneir",
+            "giver": "general_store"
+          }
+        }
+      ]
+    },
+    {
+      "id": "aldmere_barber_hunt",
+      "name": "The Long Hunt",
+      "area": "aldmere",
+      "giver": "barber",
+      "length": "medium",
+      "summary": "Hunt the creatures around Aldmere and bring back iron bar.",
+      "intro": [
+        "The wilds around Aldmere need a firm hand. Start with 8 bat outside the walls, then 13 giant rat down in Aldmere Sewers.",
+        "When that is done, bring me 8 iron bar to show for it."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "smithing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "bat",
+          "amount": 8,
+          "where": {
+            "area": "aldmere",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant rat",
+          "amount": 13,
+          "where": {
+            "dungeon": "aldmere"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 8,
+          "item": "iron_bar"
+        }
+      ]
+    },
+    {
+      "id": "aldmere_sword_shop_council",
+      "name": "Votes for the Council",
+      "area": "aldmere",
+      "giver": "sword_shop",
+      "length": "medium",
+      "summary": "Gather support around Aldmere for the sword shop keeper.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the archery shop keeper, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "aldmere",
+            "giver": "archery_shop"
+          },
+          "lines": [
+            "player: The sword shop keeper asks whether you will stand with them at the next council.",
+            "I will, if the general store keeper does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "aldmere",
+            "giver": "general_store"
+          },
+          "lines": [
+            "player: A sealed note, from the archery shop keeper.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "aldmere",
             "giver": "banker"
           }
         }
       ]
     },
     {
-      "id": "aldmere_general_store_hunt",
-      "name": "The Long Hunt",
+      "id": "aldmere_archery_shop_sweep",
+      "name": "Sweeping the Aldmere Sewers (Archery Shop Keeper)",
       "area": "aldmere",
-      "giver": "general_store",
+      "giver": "archery_shop",
       "length": "medium",
-      "summary": "Hunt the creatures around Aldmere and bring back maple logs.",
+      "summary": "Clear giant rat out of Aldmere Sewers and tell the fishing shop keeper.",
       "intro": [
-        "The wilds around Aldmere need a firm hand. Start with 13 giant spider outside the walls, then 21 rat down in Aldmere Sewers.",
-        "When that is done, bring me 26 maple logs to show for it."
+        "Aldmere Sewers is crawling with giant rat, and they come up through the drains.",
+        "Go down, kill 13 of them, then let the fishing shop keeper know their cellar is safe."
       ],
-      "accept": "I'll see it done.",
+      "accept": "Leave it with me.",
+      "outro": [
+        "Both done? Aldmere owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "aldmere"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant rat",
+          "amount": 13,
+          "where": {
+            "dungeon": "aldmere"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "aldmere",
+            "giver": "fishing_shop"
+          },
+          "lines": [
+            "player: Aldmere Sewers is clearer than it was. 13 giant rat fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aldmere_magic_shop_supply",
+      "name": "Supply Run to Velneir (Magic Shop Keeper)",
+      "area": "aldmere",
+      "giver": "magic_shop",
+      "length": "medium",
+      "summary": "Gather big bones for the magic shop keeper, then carry a shipment to Velneir.",
+      "intro": [
+        "I have an order from Velneir and nothing to fill it with.",
+        "Bring me 10 big bones, then take the packed shipment to the magic shop keeper there and do some business while you are in town."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "prayer",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 10,
+          "item": "big_bones"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "ra3_package",
+          "to": {
+            "area": "velneir",
+            "giver": "magic_shop"
+          },
+          "lines": [
+            "player: Goods from the magic shop keeper in Aldmere.",
+            "From Aldmere? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "velneir",
+            "giver": "magic_shop"
+          }
+        }
+      ]
+    },
+    {
+      "id": "aldmere_clothes_shop_hunt",
+      "name": "The Long Hunt (Clothes Shop Keeper)",
+      "area": "aldmere",
+      "giver": "clothes_shop",
+      "length": "medium",
+      "summary": "Hunt the creatures around Aldmere and bring back willow logs.",
+      "intro": [
+        "The wilds around Aldmere need a firm hand. Start with 8 zombie outside the walls, then 13 giant spider down in Aldmere Sewers.",
+        "When that is done, bring me 16 willow logs to show for it."
+      ],
+      "accept": "Leave it with me.",
       "outro": [
         "A proper hunt. The town will eat and sleep easier for it."
       ],
@@ -350,8 +604,8 @@
         {
           "id": "s1",
           "type": "kill",
-          "mob": "giant spider",
-          "amount": 13,
+          "mob": "zombie",
+          "amount": 8,
           "where": {
             "area": "aldmere",
             "radius": 300
@@ -360,8 +614,8 @@
         {
           "id": "s2",
           "type": "kill",
-          "mob": "rat",
-          "amount": 21,
+          "mob": "giant spider",
+          "amount": 13,
           "where": {
             "dungeon": "aldmere"
           }
@@ -369,23 +623,23 @@
         {
           "id": "s3",
           "type": "gather",
-          "amount": 26,
-          "item": "maple_logs"
+          "amount": 16,
+          "item": "willow_logs"
         }
       ]
     },
     {
-      "id": "aldmere_barber_council",
-      "name": "Votes for the Council",
+      "id": "aldmere_food_shop_council",
+      "name": "Votes for the Council (Food Shop Keeper)",
       "area": "aldmere",
-      "giver": "barber",
+      "giver": "food_shop",
       "length": "medium",
-      "summary": "Gather support around Aldmere for the barber.",
+      "summary": "Gather support around Aldmere for the food shop keeper.",
       "intro": [
         "The council meets soon and I am short of friends.",
-        "Speak to the realtor, carry whatever they give you, and see that the paperwork is lodged."
+        "Speak to the barber, carry whatever they give you, and see that the paperwork is lodged."
       ],
-      "accept": "I'll see it done.",
+      "accept": "Leave it with me.",
       "outro": [
         "Agreed, all of them? You have a talent for this. Here."
       ],
@@ -400,10 +654,10 @@
           "type": "talk",
           "to": {
             "area": "aldmere",
-            "giver": "realtor"
+            "giver": "barber"
           },
           "lines": [
-            "player: The barber asks whether you will stand with them at the next council.",
+            "player: The food shop keeper asks whether you will stand with them at the next council.",
             "I will, if the armour shop keeper does. Take this sealed note over and we shall see."
           ]
         },
@@ -416,7 +670,7 @@
             "giver": "armour_shop"
           },
           "lines": [
-            "player: A sealed note, from the realtor.",
+            "player: A sealed note, from the barber.",
             "Hm. They want my vote. Very well, tell your employer it is agreed."
           ]
         },
@@ -431,275 +685,100 @@
       ]
     },
     {
-      "id": "aldmere_sword_shop_sweep",
-      "name": "Sweeping the Aldmere Sewers",
+      "id": "aldmere_banker_expedition",
+      "name": "The Fall of the Broodmother",
       "area": "aldmere",
-      "giver": "sword_shop",
-      "length": "medium",
-      "summary": "Clear king scorpion out of Aldmere Sewers and tell the general store keeper.",
+      "giver": "banker",
+      "length": "long",
+      "summary": "March on Stonejaw Depths, break its creatures and bring down The Broodmother.",
       "intro": [
-        "Aldmere Sewers is crawling with king scorpion, and they come up through the drains.",
-        "Go down, kill 21 of them, then let the general store keeper know their cellar is safe."
+        "Stonejaw Depths has stood against Aldmere for too long. The Broodmother sits at the bottom of it.",
+        "Learn what you can from the magic shop keeper, fight your way through 19 bat and end The Broodmother.",
+        "Bring 10 big bones back so the town can rebuild."
       ],
-      "accept": "I'll see it done.",
+      "accept": "Leave it with me.",
       "outro": [
-        "Both done? Aldmere owes you more than I can pay, but take this."
+        "It is done, then. They will sing about this in every tavern from here to the coast.",
+        "Take your reward. You have more than earned it."
       ],
+      "requires": {
+        "quests": [
+          "aldmere_banker_cull"
+        ]
+      },
       "rewards": {
         "xp": [
           "agility",
-          "slayer"
-        ]
-      },
-      "steps": [
-        {
-          "id": "s1",
-          "type": "visit",
-          "place": {
-            "dungeon": "aldmere"
-          }
-        },
-        {
-          "id": "s2",
-          "type": "kill",
-          "mob": "king scorpion",
-          "amount": 21,
-          "where": {
-            "dungeon": "aldmere"
-          }
-        },
-        {
-          "id": "s3",
-          "type": "talk",
-          "to": {
-            "area": "aldmere",
-            "giver": "general_store"
-          },
-          "lines": [
-            "player: Aldmere Sewers is clearer than it was. 21 king scorpion fewer.",
-            "Then the cellars on this street are safe a while longer. I will tell the others."
-          ]
-        }
-      ]
-    },
-    {
-      "id": "aldmere_archery_shop_supply",
-      "name": "Supply Run to Brackenholt (Archery Shop Keeper)",
-      "area": "aldmere",
-      "giver": "archery_shop",
-      "length": "medium",
-      "summary": "Gather oak logs for the archery shop keeper, then carry a shipment to Brackenholt.",
-      "intro": [
-        "I have an order from Brackenholt and nothing to fill it with.",
-        "Bring me 21 oak logs, then take the packed shipment to the archery shop keeper there and do some business while you are in town."
-      ],
-      "accept": "Consider it handled.",
-      "outro": [
-        "They took the lot? Then we have a trade route. Your share, as agreed."
-      ],
-      "rewards": {
-        "xp": [
-          "woodcutting",
-          "agility"
-        ]
-      },
-      "steps": [
-        {
-          "id": "s1",
-          "type": "gather",
-          "amount": 21,
-          "item": "oak_logs"
-        },
-        {
-          "id": "s2",
-          "type": "deliver",
-          "item": "burgh_generalstore_crate",
-          "to": {
-            "area": "brackenholt",
-            "giver": "archery_shop"
-          },
-          "lines": [
-            "player: Goods from the archery shop keeper in Aldmere.",
-            "From Aldmere? Then the roads are open after all. Set it down there."
-          ]
-        },
-        {
-          "id": "s3",
-          "type": "service",
-          "to": {
-            "area": "brackenholt",
-            "giver": "archery_shop"
-          }
-        }
-      ]
-    },
-    {
-      "id": "aldmere_magic_shop_hunt",
-      "name": "The Long Hunt (Magic Shop Keeper)",
-      "area": "aldmere",
-      "giver": "magic_shop",
-      "length": "medium",
-      "summary": "Hunt the creatures around Aldmere and bring back big bones.",
-      "intro": [
-        "The wilds around Aldmere need a firm hand. Start with 13 snake outside the walls, then 21 rat down in Aldmere Sewers.",
-        "When that is done, bring me 16 big bones to show for it."
-      ],
-      "accept": "Consider it handled.",
-      "outro": [
-        "A proper hunt. The town will eat and sleep easier for it."
-      ],
-      "rewards": {
-        "xp": [
           "slayer",
+          "constitution",
           "prayer"
         ]
       },
       "steps": [
         {
           "id": "s1",
-          "type": "kill",
-          "mob": "snake",
-          "amount": 13,
-          "where": {
-            "area": "aldmere",
-            "radius": 300
-          }
-        },
-        {
-          "id": "s2",
-          "type": "kill",
-          "mob": "rat",
-          "amount": 21,
-          "where": {
-            "dungeon": "aldmere"
-          }
-        },
-        {
-          "id": "s3",
-          "type": "gather",
-          "amount": 16,
-          "item": "big_bones"
-        }
-      ]
-    },
-    {
-      "id": "aldmere_clothes_shop_council",
-      "name": "Votes for the Council (Clothes Shop Keeper)",
-      "area": "aldmere",
-      "giver": "clothes_shop",
-      "length": "medium",
-      "summary": "Gather support around Aldmere for the clothes shop keeper.",
-      "intro": [
-        "The council meets soon and I am short of friends.",
-        "Speak to the food shop keeper, carry whatever they give you, and see that the paperwork is lodged."
-      ],
-      "accept": "I'll see it done.",
-      "outro": [
-        "Agreed, all of them? You have a talent for this. Here."
-      ],
-      "rewards": {
-        "xp": [
-          "agility"
-        ]
-      },
-      "steps": [
-        {
-          "id": "s1",
           "type": "talk",
           "to": {
             "area": "aldmere",
-            "giver": "food_shop"
+            "giver": "magic_shop"
           },
           "lines": [
-            "player: The clothes shop keeper asks whether you will stand with them at the next council.",
-            "I will, if the sword shop keeper does. Take this sealed note over and we shall see."
+            "player: What do you know of Stonejaw Depths?",
+            "Only that those who go in come back thin and quiet. The Broodmother rules it now."
           ]
         },
         {
           "id": "s2",
-          "type": "deliver",
-          "item": "sailing_courier_crate",
-          "to": {
-            "area": "aldmere",
-            "giver": "sword_shop"
-          },
-          "lines": [
-            "player: A sealed note, from the food shop keeper.",
-            "Hm. They want my vote. Very well, tell your employer it is agreed."
-          ]
-        },
-        {
-          "id": "s3",
-          "type": "service",
-          "to": {
-            "area": "aldmere",
-            "giver": "banker"
-          }
-        }
-      ]
-    },
-    {
-      "id": "aldmere_food_shop_sweep",
-      "name": "Sweeping the Aldmere Sewers (Food Shop Keeper)",
-      "area": "aldmere",
-      "giver": "food_shop",
-      "length": "medium",
-      "summary": "Clear rat out of Aldmere Sewers and tell the fishing shop keeper.",
-      "intro": [
-        "Aldmere Sewers is crawling with rat, and they come up through the drains.",
-        "Go down, kill 21 of them, then let the fishing shop keeper know their cellar is safe."
-      ],
-      "accept": "Leave it with me.",
-      "outro": [
-        "Both done? Aldmere owes you more than I can pay, but take this."
-      ],
-      "rewards": {
-        "xp": [
-          "agility",
-          "slayer"
-        ]
-      },
-      "steps": [
-        {
-          "id": "s1",
           "type": "visit",
           "place": {
-            "dungeon": "aldmere"
-          }
-        },
-        {
-          "id": "s2",
-          "type": "kill",
-          "mob": "rat",
-          "amount": 21,
-          "where": {
-            "dungeon": "aldmere"
+            "dungeon": "mountain"
           }
         },
         {
           "id": "s3",
-          "type": "talk",
+          "type": "kill",
+          "mob": "bat",
+          "amount": 19,
+          "where": {
+            "dungeon": "mountain"
+          }
+        },
+        {
+          "id": "s4",
+          "type": "boss",
+          "dungeon": "mountain"
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 10,
+          "item": "big_bones"
+        },
+        {
+          "id": "s6",
+          "type": "deliver",
+          "item": "royal_letter",
           "to": {
-            "area": "aldmere",
-            "giver": "fishing_shop"
+            "area": "velneir",
+            "giver": "banker"
           },
           "lines": [
-            "player: Aldmere Sewers is clearer than it was. 21 rat fewer.",
-            "Then the cellars on this street are safe a while longer. I will tell the others."
+            "player: Word from Aldmere: The Broodmother is dead.",
+            "Dead? Then the caravans can leave at dawn. This news is worth more than gold."
           ]
         }
       ]
     },
     {
-      "id": "aldmere_general_store_route",
+      "id": "aldmere_sword_shop_route",
       "name": "The Aldmere Trade Route",
       "area": "aldmere",
-      "giver": "general_store",
+      "giver": "sword_shop",
       "length": "long",
-      "summary": "Open a trade route between Aldmere and Brackenholt.",
+      "summary": "Open a trade route between Aldmere and Velneir.",
       "intro": [
-        "I mean to open a trade route to Brackenholt. It needs a contract carried, a road made safe and a courier who is proven underground.",
-        "Deliver the contract, trade there, cut down 31 snake near our walls and prove yourself in the dungeoneering caves.",
+        "I mean to open a trade route to Velneir. It needs a contract carried, a road made safe and a courier who is proven underground.",
+        "Deliver the contract, trade there, cut down 19 bat near our walls and prove yourself in the dungeoneering caves.",
         "Then have the banker underwrite the venture."
       ],
       "accept": "Leave it with me.",
@@ -709,7 +788,7 @@
       ],
       "requires": {
         "quests": [
-          "aldmere_general_store_parcel"
+          "aldmere_sword_shop_word"
         ]
       },
       "rewards": {
@@ -723,13 +802,13 @@
         {
           "id": "s1",
           "type": "deliver",
-          "item": "royal_letter",
+          "item": "sailing_courier_crate",
           "to": {
-            "area": "brackenholt",
-            "giver": "banker"
+            "area": "velneir",
+            "giver": "sword_shop"
           },
           "lines": [
-            "player: A contract from the general store keeper in Aldmere.",
+            "player: A contract from the sword shop keeper in Aldmere.",
             "A fair offer. But the road between us is not safe, and you know it."
           ]
         },
@@ -737,15 +816,15 @@
           "id": "s2",
           "type": "service",
           "to": {
-            "area": "brackenholt",
-            "giver": "banker"
+            "area": "velneir",
+            "giver": "sword_shop"
           }
         },
         {
           "id": "s3",
           "type": "kill",
-          "mob": "snake",
-          "amount": 31,
+          "mob": "bat",
+          "amount": 19,
           "where": {
             "area": "aldmere",
             "radius": 300
@@ -754,7 +833,7 @@
         {
           "id": "s4",
           "type": "dungeoneering",
-          "amount": 3
+          "amount": 2
         },
         {
           "id": "s5",
@@ -764,32 +843,32 @@
             "giver": "banker"
           },
           "lines": [
-            "player: The route to Brackenholt is open and the contract is signed.",
+            "player: The route to Velneir is open and the contract is signed.",
             "Then I will underwrite it. Aldmere has not had news this good in years."
           ]
         }
       ]
     },
     {
-      "id": "aldmere_archery_shop_nest",
+      "id": "aldmere_clothes_shop_nest",
       "name": "The Thing Beneath Aldmere",
       "area": "aldmere",
-      "giver": "archery_shop",
+      "giver": "clothes_shop",
       "length": "long",
-      "summary": "Find what rules Aldmere Sewers, weaken its nest and destroy The Rat King.",
+      "summary": "Find what rules Aldmere Sewers, weaken its nest and destroy The Plague Warden.",
       "intro": [
         "Something rules Aldmere Sewers and it is getting stronger. I want it gone.",
-        "Ask the banker what they have heard, see it for yourself, then come back and we will decide how to break the nest.",
+        "Ask the food shop keeper what they have heard, see it for yourself, then come back and we will decide how to break the nest.",
         "When it is weak, kill it and tell the banker."
       ],
-      "accept": "Leave it with me.",
+      "accept": "I'll see it done.",
       "outro": [
         "I felt the ground go still. Aldmere is yours to walk freely, friend.",
         "Take this. It is everything I promised and a little more."
       ],
       "requires": {
         "quests": [
-          "aldmere_archery_shop_cull"
+          "aldmere_clothes_shop_stock"
         ]
       },
       "rewards": {
@@ -806,11 +885,11 @@
           "type": "talk",
           "to": {
             "area": "aldmere",
-            "giver": "banker"
+            "giver": "food_shop"
           },
           "lines": [
             "player: Have you heard anything from below the streets?",
-            "Every night. Something large is down there, and the small ones answer to it. They call it The Rat King."
+            "Every night. Something large is down there, and the small ones answer to it. They call it The Plague Warden."
           ]
         },
         {
@@ -842,8 +921,8 @@
           "id": "s4",
           "type": "kill",
           "next": "s6",
-          "mob": "rat",
-          "amount": 31,
+          "mob": "giant spider",
+          "amount": 19,
           "where": {
             "dungeon": "aldmere"
           }
@@ -851,7 +930,7 @@
         {
           "id": "s5",
           "type": "gather",
-          "amount": 26,
+          "amount": 16,
           "item": "willow_logs"
         },
         {
@@ -867,32 +946,32 @@
             "giver": "banker"
           },
           "lines": [
-            "player: The Rat King is dead. Aldmere Sewers is quiet.",
+            "player: The Plague Warden is dead. Aldmere Sewers is quiet.",
             "Then the vaults are safe and so is everyone above them. The town will hear of this."
           ]
         }
       ]
     },
     {
-      "id": "aldmere_food_shop_expedition",
-      "name": "The Fall of the Broodmother",
+      "id": "aldmere_general_store_expedition",
+      "name": "The Fall of the Broodmother (General Store Keeper)",
       "area": "aldmere",
-      "giver": "food_shop",
+      "giver": "general_store",
       "length": "long",
-      "summary": "March on Frostbite Cavern, break its creatures and bring down The Broodmother.",
+      "summary": "March on Stonejaw Depths, break its creatures and bring down The Broodmother.",
       "intro": [
-        "Frostbite Cavern has stood against Aldmere for too long. The Broodmother sits at the bottom of it.",
-        "Learn what you can from the armour shop keeper, fight your way through 31 bat and end The Broodmother.",
-        "Bring 21 raw lobster back so the town can rebuild."
+        "Stonejaw Depths has stood against Aldmere for too long. The Broodmother sits at the bottom of it.",
+        "Learn what you can from the sword shop keeper, fight your way through 19 bat and end The Broodmother.",
+        "Bring 8 iron bar back so the town can rebuild."
       ],
-      "accept": "Leave it with me.",
+      "accept": "Consider it handled.",
       "outro": [
         "It is done, then. They will sing about this in every tavern from here to the coast.",
         "Take your reward. You have more than earned it."
       ],
       "requires": {
         "quests": [
-          "aldmere_food_shop_word"
+          "aldmere_general_store_stock"
         ]
       },
       "rewards": {
@@ -900,7 +979,7 @@
           "agility",
           "slayer",
           "constitution",
-          "fishing"
+          "smithing"
         ]
       },
       "steps": [
@@ -909,10 +988,10 @@
           "type": "talk",
           "to": {
             "area": "aldmere",
-            "giver": "armour_shop"
+            "giver": "sword_shop"
           },
           "lines": [
-            "player: What do you know of Frostbite Cavern?",
+            "player: What do you know of Stonejaw Depths?",
             "Only that those who go in come back thin and quiet. The Broodmother rules it now."
           ]
         },
@@ -920,120 +999,40 @@
           "id": "s2",
           "type": "visit",
           "place": {
-            "dungeon": "winter"
+            "dungeon": "mountain"
           }
         },
         {
           "id": "s3",
           "type": "kill",
           "mob": "bat",
-          "amount": 31,
+          "amount": 19,
           "where": {
-            "dungeon": "winter"
+            "dungeon": "mountain"
           }
         },
         {
           "id": "s4",
           "type": "boss",
-          "dungeon": "winter"
+          "dungeon": "mountain"
         },
         {
           "id": "s5",
           "type": "gather",
-          "amount": 21,
-          "item": "raw_lobster"
+          "amount": 8,
+          "item": "iron_bar"
         },
         {
           "id": "s6",
           "type": "deliver",
-          "item": "royal_letter",
+          "item": "burgh_generalstore_crate",
           "to": {
-            "area": "brackenholt",
-            "giver": "banker"
+            "area": "velneir",
+            "giver": "general_store"
           },
           "lines": [
             "player: Word from Aldmere: The Broodmother is dead.",
             "Dead? Then the caravans can leave at dawn. This news is worth more than gold."
-          ]
-        }
-      ]
-    },
-    {
-      "id": "aldmere_barber_route",
-      "name": "The Aldmere Trade Route (Barber)",
-      "area": "aldmere",
-      "giver": "barber",
-      "length": "long",
-      "summary": "Open a trade route between Aldmere and Brackenholt.",
-      "intro": [
-        "I mean to open a trade route to Brackenholt. It needs a contract carried, a road made safe and a courier who is proven underground.",
-        "Deliver the contract, trade there, cut down 31 snake near our walls and prove yourself in the dungeoneering caves.",
-        "Then have the banker underwrite the venture."
-      ],
-      "accept": "Leave it with me.",
-      "outro": [
-        "Signed, safe and funded. You have changed the fortunes of this town.",
-        "Here is your cut of the first season."
-      ],
-      "requires": {
-        "quests": [
-          "aldmere_barber_word"
-        ]
-      },
-      "rewards": {
-        "xp": [
-          "agility",
-          "slayer",
-          "dungeoneering"
-        ]
-      },
-      "steps": [
-        {
-          "id": "s1",
-          "type": "deliver",
-          "item": "sailing_courier_crate",
-          "to": {
-            "area": "brackenholt",
-            "giver": "banker"
-          },
-          "lines": [
-            "player: A contract from the barber in Aldmere.",
-            "A fair offer. But the road between us is not safe, and you know it."
-          ]
-        },
-        {
-          "id": "s2",
-          "type": "service",
-          "to": {
-            "area": "brackenholt",
-            "giver": "banker"
-          }
-        },
-        {
-          "id": "s3",
-          "type": "kill",
-          "mob": "snake",
-          "amount": 31,
-          "where": {
-            "area": "aldmere",
-            "radius": 300
-          }
-        },
-        {
-          "id": "s4",
-          "type": "dungeoneering",
-          "amount": 3
-        },
-        {
-          "id": "s5",
-          "type": "talk",
-          "to": {
-            "area": "aldmere",
-            "giver": "banker"
-          },
-          "lines": [
-            "player: The route to Brackenholt is open and the contract is signed.",
-            "Then I will underwrite it. Aldmere has not had news this good in years."
           ]
         }
       ]
