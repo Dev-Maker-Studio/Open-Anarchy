@@ -44,6 +44,8 @@ object ClaimManager {
     private const val CITY_PROTECTED_MESSAGE = "Everything in a city is protected."
     private const val CITY_CLAIM_MESSAGE = "City land is only bought and sold through the city's realtor."
     private const val CITY_ZONE_MESSAGE = "Land within 100 tiles of a city can't be claimed."
+    private const val CITY_TREE_MESSAGE = "Trees can't be planted or punched within 100 tiles of a city, except in a home you own."
+    private val TREE_NAMES = setOf("tree", "swamp tree", "dead tree", "evergreen", "dying tree", "jungle tree")
     private const val DUNGEON_MESSAGE = "You can't do that in a dungeon."
     private val LEGACY_FILE = File("./data/claims.json")
     private val CITY_PROTECTED_OPTIONS = setOf("punch", "gather", "attack")
@@ -156,6 +158,15 @@ object ClaimManager {
         return false
     }
 
+    /** Trees can't be planted or punched in a city or within its 100 tile buffer, except inside a home the player owns. */
+    @JvmStatic
+    fun canGrowTrees(player: Player, tile: Tile, notify: Boolean = true): Boolean {
+        if (!GeneratedWorld.inCityClaimZone(tile.x, tile.y) || CityHomes.homeAt(tile)?.ownedBy(player) == true) return true
+        if (notify)
+            player.sendMessage(CITY_TREE_MESSAGE)
+        return false
+    }
+
     @JvmStatic
     fun allowObjectOption(player: Player, obj: GameObject, opNum: Int): Boolean {
         val option = obj.getDefinitions(player).getOption(opNum)?.lowercase() ?: return true
@@ -163,6 +174,7 @@ object ClaimManager {
             player.sendMessage(CITY_PROTECTED_MESSAGE)
             return false
         }
+        if (option == "punch" && obj.getDefinitions(player).name.lowercase() in TREE_NAMES && !canGrowTrees(player, obj.tile)) return false
         return option !in DESTROY_OPTIONS || canDestroy(player, obj.tile)
     }
 
@@ -282,7 +294,7 @@ object ClaimManager {
             player.sendMessage("That claim would cover part of a city, which can't be claimed.")
             return
         }
-        if (editing == null && GeneratedWorld.cityClaimZoneTouches(candidate.minX, candidate.minY, candidate.maxX, candidate.maxY)) {
+        if (GeneratedWorld.cityClaimZoneTouches(candidate.minX, candidate.minY, candidate.maxX, candidate.maxY)) {
             player.sendMessage("That claim would be within 100 tiles of a city, which can't be claimed.")
             return
         }

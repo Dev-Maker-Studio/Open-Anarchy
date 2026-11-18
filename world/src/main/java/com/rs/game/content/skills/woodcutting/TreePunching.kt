@@ -1,6 +1,7 @@
 package com.rs.game.content.skills.woodcutting
 
 import com.rs.game.World
+import com.rs.game.content.claims.ClaimManager
 import com.rs.game.content.skills.construction.TreeRoot
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.actions.Action
@@ -84,6 +85,7 @@ private class TreePunch(private val tree: GameObject) : Action() {
     private fun check(entity: Entity): Boolean {
         val player = entity as? Player ?: return false
         if (World.getObject(tree.tile, tree.type)?.id != tree.id) return false
+        if (!ClaimManager.canGrowTrees(player, tree.tile)) return false
         if (player.inventory.freeSlots < FREE_SLOTS_REQUIRED) {
             player.sendMessage("You need three free inventory slots to fell this tree.")
             return false
