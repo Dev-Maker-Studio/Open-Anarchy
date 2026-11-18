@@ -672,8 +672,8 @@ object World {
 
     @JvmStatic
     fun isMultiArea(tile: Tile): Boolean {
-        val chunkId = MapUtils.encode(Structure.CHUNK, tile.chunkX, tile.chunkY)
-        return Areas.withinArea("multi", chunkId) || (ChunkManager.getChunk(tile.getChunkId())?.isMulticombat ?: false)
+        // Open Anarchy: the whole world is multicombat, so any number of NPCs may attack at once.
+        return true
     }
 
     @JvmStatic
