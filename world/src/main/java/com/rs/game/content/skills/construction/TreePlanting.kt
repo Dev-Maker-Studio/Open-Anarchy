@@ -1,6 +1,7 @@
 package com.rs.game.content.skills.construction
 
 import com.rs.game.World
+import com.rs.game.content.claims.ClaimManager
 import com.rs.game.content.skills.firemaking.Firemaking
 import com.rs.game.map.WorldDelta
 import com.rs.game.model.entity.player.Player
@@ -43,6 +44,7 @@ private fun plantTreeRoot(player: Player, type: TreeRoot) {
         player.sendMessage("You can't plant a tree root here.")
         return
     }
+    if (!ClaimManager.canGrowTrees(player, player.tile)) return
     val tile = Tile.of(player.tile)
     player.inventory.deleteItem(type.root, 1)
     player.resetWalkSteps()
