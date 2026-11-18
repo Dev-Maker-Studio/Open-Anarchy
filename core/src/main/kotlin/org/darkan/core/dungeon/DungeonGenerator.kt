@@ -8,10 +8,10 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
 
 object DungeonGenerator {
-    const val MIN_ROOMS = 5
-    const val MAX_ROOMS = 9
+    const val MIN_ROOMS = 10
+    const val MAX_ROOMS = 18
     private const val SIZE = DungeonGrid.SIZE
-    private const val CELLS = 4
+    private const val CELLS = 6
     private const val CELL = 30
     private const val MARGIN = 4
     private const val CELL_GAP = 1
@@ -21,7 +21,7 @@ object DungeonGenerator {
     private const val HALL_STEPS = 5
     private const val SIDE_STEPS = 3
     private const val ODD_STEP = 2
-    private const val MAX_SIDE_ROOMS = 3
+    private const val MAX_SIDE_ROOMS = 6
     private const val ORGANIC_WOBBLE = 0.35
     private const val EXIT_OFFSET = 2
     private const val ARENA_CORNER = 6

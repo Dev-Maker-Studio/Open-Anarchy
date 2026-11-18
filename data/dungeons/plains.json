@@ -2,9 +2,9 @@
   "id": "plains",
   "name": "Meadow Keep",
   "theme": "fortress",
-  "seed": -405103487278760196,
-  "slot": 5,
-  "entranceX": 8304,
-  "entranceY": 6181,
+  "seed": 2956632075064873980,
+  "slot": 20,
+  "entranceX": 8996,
+  "entranceY": 7570,
   "origin": "biome:plains"
 }

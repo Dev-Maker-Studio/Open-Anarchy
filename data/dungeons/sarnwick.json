@@ -2,9 +2,9 @@
   "id": "sarnwick",
   "name": "Sarnwick Sewers",
   "theme": "sewer",
-  "seed": -4453093103104783233,
+  "seed": -81596451952635058,
   "slot": 3,
-  "entranceX": 7673,
-  "entranceY": 6168,
+  "entranceX": 7479,
+  "entranceY": 8569,
   "origin": "city:sarnwick"
 }

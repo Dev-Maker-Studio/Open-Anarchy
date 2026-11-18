@@ -1,0 +1,19 @@
+{
+  "id": "hollow_wyrm",
+  "name": "The Hollow Wyrm",
+  "npc": "babybluedragon",
+  "level": 1.25,
+  "hitpoints": 6.5,
+  "damage": 1.3,
+  "respawnMinutes": 5,
+  "abilities": [
+    {"type": "summon", "atHealth": [70, 40], "npc": "bat", "count": 4, "shout": "The dark takes wing!"},
+    {"type": "slam", "everyTicks": 30, "radius": 4, "damage": 1.1, "shout": "Roooar!"},
+    {"type": "heal", "everyTicks": 40, "percent": 4},
+    {"type": "enrage", "belowHealth": 15, "damage": 1.4}
+  ],
+  "drops": [
+    {"item": "coins", "min": 45, "max": 100, "perLevel": true},
+    {"item": "big_bones", "min": 2, "max": 4}
+  ]
+}

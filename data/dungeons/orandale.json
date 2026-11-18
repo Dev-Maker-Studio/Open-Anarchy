@@ -1,0 +1,10 @@
+{
+  "id": "orandale",
+  "name": "Orandale Sewers",
+  "theme": "sewer",
+  "seed": -6612993452418312624,
+  "slot": 19,
+  "entranceX": 6031,
+  "entranceY": 9330,
+  "origin": "city:orandale"
+}

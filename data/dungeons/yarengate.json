@@ -1,0 +1,10 @@
+{
+  "id": "yarengate",
+  "name": "Yarengate Sewers",
+  "theme": "sewer",
+  "seed": -6160292271784505366,
+  "slot": 9,
+  "entranceX": 7815,
+  "entranceY": 9265,
+  "origin": "city:yarengate"
+}

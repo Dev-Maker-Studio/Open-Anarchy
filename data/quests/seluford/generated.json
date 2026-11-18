@@ -1,0 +1,1042 @@
+{
+  "area": "seluford",
+  "seed": 5764399,
+  "generatorVersion": 1,
+  "quests": [
+    {
+      "id": "seluford_banker_stock",
+      "name": "Short on Yew Logs",
+      "area": "seluford",
+      "giver": "banker",
+      "length": "short",
+      "summary": "The banker of Seluford has run out of yew logs.",
+      "intro": [
+        "My stores are bare. I need 22 yew logs and nobody in Seluford has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "woodcutting"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 22,
+          "item": "yew_logs"
+        }
+      ]
+    },
+    {
+      "id": "seluford_general_store_parcel",
+      "name": "A Parcel for the Archery Shop Keeper",
+      "area": "seluford",
+      "giver": "general_store",
+      "length": "short",
+      "summary": "Carry a parcel across Seluford to the archery shop keeper.",
+      "intro": [
+        "This should have gone to the archery shop keeper days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "seluford",
+            "giver": "archery_shop"
+          },
+          "lines": [
+            "player: A delivery from the general store keeper.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seluford_barber_word",
+      "name": "Word to the Banker",
+      "area": "seluford",
+      "giver": "barber",
+      "length": "short",
+      "summary": "Call on the banker of Seluford and bring back their answer.",
+      "intro": [
+        "I need an answer from the banker and I would rather not shout it across the street.",
+        "Call on them as a customer, then ask how our accounts stand."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Balanced? Then I can sleep tonight. My thanks."
+      ],
+      "rewards": {},
+      "steps": [
+        {
+          "id": "s1",
+          "type": "service",
+          "to": {
+            "area": "seluford",
+            "giver": "banker"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "talk",
+          "to": {
+            "area": "seluford",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The barber sent me to ask after the ledgers.",
+            "Tell them the figures balance, for once. There is nothing owed between us this season."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seluford_sword_shop_scout",
+      "name": "Eyes on the Seluford Sewers",
+      "area": "seluford",
+      "giver": "sword_shop",
+      "length": "short",
+      "summary": "Climb down into Seluford Sewers and report what you see.",
+      "intro": [
+        "Something has been scratching under the streets at night. It comes from Seluford Sewers.",
+        "Go down the entrance, take a look around and come back in one piece."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "So it is as bad as I feared. Thank you for looking, that took nerve."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "seluford"
+          }
+        }
+      ]
+    },
+    {
+      "id": "seluford_archery_shop_cull",
+      "name": "Trouble with Spiders",
+      "area": "seluford",
+      "giver": "archery_shop",
+      "length": "short",
+      "summary": "The archery shop keeper wants the spider near Seluford thinned out.",
+      "intro": [
+        "The spider beyond the walls grow bolder every week. Customers will not walk the road.",
+        "Put down 14 of them close to Seluford and I will make it worth your while."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "The road is quieter already. Here, as promised."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "spider",
+          "amount": 14,
+          "where": {
+            "area": "seluford",
+            "radius": 300
+          }
+        }
+      ]
+    },
+    {
+      "id": "seluford_magic_shop_stock",
+      "name": "Short on Bones",
+      "area": "seluford",
+      "giver": "magic_shop",
+      "length": "short",
+      "summary": "The magic shop keeper of Seluford has run out of bones.",
+      "intro": [
+        "My stores are bare. I need 17 bones and nobody in Seluford has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "prayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 17,
+          "item": "bones"
+        }
+      ]
+    },
+    {
+      "id": "seluford_clothes_shop_parcel",
+      "name": "A Parcel for the Barber",
+      "area": "seluford",
+      "giver": "clothes_shop",
+      "length": "short",
+      "summary": "Carry a parcel across Seluford to the barber.",
+      "intro": [
+        "This should have gone to the barber days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "seluford",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: A delivery from the clothes shop keeper.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seluford_food_shop_word",
+      "name": "Word to the Barber",
+      "area": "seluford",
+      "giver": "food_shop",
+      "length": "short",
+      "summary": "Call on the barber of Seluford and bring back their answer.",
+      "intro": [
+        "I need an answer from the barber and I would rather not shout it across the street.",
+        "Call on them as a customer, then ask how our accounts stand."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Balanced? Then I can sleep tonight. My thanks."
+      ],
+      "rewards": {},
+      "steps": [
+        {
+          "id": "s1",
+          "type": "service",
+          "to": {
+            "area": "seluford",
+            "giver": "barber"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "talk",
+          "to": {
+            "area": "seluford",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: The food shop keeper sent me to ask after the ledgers.",
+            "Tell them the figures balance, for once. There is nothing owed between us this season."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seluford_banker_supply",
+      "name": "Supply Run to Varenhollow",
+      "area": "seluford",
+      "giver": "banker",
+      "length": "medium",
+      "summary": "Gather raw swordfish for the banker, then carry a shipment to Varenhollow.",
+      "intro": [
+        "I have an order from Varenhollow and nothing to fill it with.",
+        "Bring me 17 raw swordfish, then take the packed shipment to the banker there and do some business while you are in town."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "fishing",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 17,
+          "item": "raw_swordfish"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "varenhollow",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Goods from the banker in Seluford.",
+            "From Seluford? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "varenhollow",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "seluford_general_store_hunt",
+      "name": "The Long Hunt",
+      "area": "seluford",
+      "giver": "general_store",
+      "length": "medium",
+      "summary": "Hunt the creatures around Seluford and bring back mithril ore.",
+      "intro": [
+        "The wilds around Seluford need a firm hand. Start with 14 giant rat outside the walls, then 22 giant spider down in Seluford Sewers.",
+        "When that is done, bring me 22 mithril ore to show for it."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "mining"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "giant rat",
+          "amount": 14,
+          "where": {
+            "area": "seluford",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 22,
+          "where": {
+            "dungeon": "seluford"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 22,
+          "item": "mithril_ore"
+        }
+      ]
+    },
+    {
+      "id": "seluford_barber_council",
+      "name": "Votes for the Council",
+      "area": "seluford",
+      "giver": "barber",
+      "length": "medium",
+      "summary": "Gather support around Seluford for the barber.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the clothes shop keeper, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "seluford",
+            "giver": "clothes_shop"
+          },
+          "lines": [
+            "player: The barber asks whether you will stand with them at the next council.",
+            "I will, if the magic shop keeper does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "ra3_package",
+          "to": {
+            "area": "seluford",
+            "giver": "magic_shop"
+          },
+          "lines": [
+            "player: A sealed note, from the clothes shop keeper.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "seluford",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "seluford_sword_shop_sweep",
+      "name": "Sweeping the Seluford Sewers",
+      "area": "seluford",
+      "giver": "sword_shop",
+      "length": "medium",
+      "summary": "Clear giant rat out of Seluford Sewers and tell the archery shop keeper.",
+      "intro": [
+        "Seluford Sewers is crawling with giant rat, and they come up through the drains.",
+        "Go down, kill 22 of them, then let the archery shop keeper know their cellar is safe."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Both done? Seluford owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "seluford"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant rat",
+          "amount": 22,
+          "where": {
+            "dungeon": "seluford"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "seluford",
+            "giver": "archery_shop"
+          },
+          "lines": [
+            "player: Seluford Sewers is clearer than it was. 22 giant rat fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seluford_archery_shop_supply",
+      "name": "Supply Run to Varenhollow (Archery Shop Keeper)",
+      "area": "seluford",
+      "giver": "archery_shop",
+      "length": "medium",
+      "summary": "Gather willow logs for the archery shop keeper, then carry a shipment to Varenhollow.",
+      "intro": [
+        "I have an order from Varenhollow and nothing to fill it with.",
+        "Bring me 28 willow logs, then take the packed shipment to the archery shop keeper there and do some business while you are in town."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "woodcutting",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 28,
+          "item": "willow_logs"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "ra3_package",
+          "to": {
+            "area": "varenhollow",
+            "giver": "archery_shop"
+          },
+          "lines": [
+            "player: Goods from the archery shop keeper in Seluford.",
+            "From Seluford? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "varenhollow",
+            "giver": "archery_shop"
+          }
+        }
+      ]
+    },
+    {
+      "id": "seluford_magic_shop_hunt",
+      "name": "The Long Hunt (Magic Shop Keeper)",
+      "area": "seluford",
+      "giver": "magic_shop",
+      "length": "medium",
+      "summary": "Hunt the creatures around Seluford and bring back big bones.",
+      "intro": [
+        "The wilds around Seluford need a firm hand. Start with 14 giant spider outside the walls, then 22 king scorpion down in Seluford Sewers.",
+        "When that is done, bring me 17 big bones to show for it."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "prayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 14,
+          "where": {
+            "area": "seluford",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "king scorpion",
+          "amount": 22,
+          "where": {
+            "dungeon": "seluford"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 17,
+          "item": "big_bones"
+        }
+      ]
+    },
+    {
+      "id": "seluford_clothes_shop_council",
+      "name": "Votes for the Council (Clothes Shop Keeper)",
+      "area": "seluford",
+      "giver": "clothes_shop",
+      "length": "medium",
+      "summary": "Gather support around Seluford for the clothes shop keeper.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the food shop keeper, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "seluford",
+            "giver": "food_shop"
+          },
+          "lines": [
+            "player: The clothes shop keeper asks whether you will stand with them at the next council.",
+            "I will, if the realtor does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "seluford",
+            "giver": "realtor"
+          },
+          "lines": [
+            "player: A sealed note, from the food shop keeper.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "seluford",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "seluford_food_shop_sweep",
+      "name": "Sweeping the Seluford Sewers (Food Shop Keeper)",
+      "area": "seluford",
+      "giver": "food_shop",
+      "length": "medium",
+      "summary": "Clear king scorpion out of Seluford Sewers and tell the sword shop keeper.",
+      "intro": [
+        "Seluford Sewers is crawling with king scorpion, and they come up through the drains.",
+        "Go down, kill 22 of them, then let the sword shop keeper know their cellar is safe."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Both done? Seluford owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "seluford"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "king scorpion",
+          "amount": 22,
+          "where": {
+            "dungeon": "seluford"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "seluford",
+            "giver": "sword_shop"
+          },
+          "lines": [
+            "player: Seluford Sewers is clearer than it was. 22 king scorpion fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seluford_general_store_route",
+      "name": "The Seluford Trade Route",
+      "area": "seluford",
+      "giver": "general_store",
+      "length": "long",
+      "summary": "Open a trade route between Seluford and Varenhollow.",
+      "intro": [
+        "I mean to open a trade route to Varenhollow. It needs a contract carried, a road made safe and a courier who is proven underground.",
+        "Deliver the contract, trade there, cut down 34 spider near our walls and prove yourself in the dungeoneering caves.",
+        "Then have the banker underwrite the venture."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Signed, safe and funded. You have changed the fortunes of this town.",
+        "Here is your cut of the first season."
+      ],
+      "requires": {
+        "quests": [
+          "seluford_general_store_parcel"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "dungeoneering"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "varenhollow",
+            "giver": "general_store"
+          },
+          "lines": [
+            "player: A contract from the general store keeper in Seluford.",
+            "A fair offer. But the road between us is not safe, and you know it."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "service",
+          "to": {
+            "area": "varenhollow",
+            "giver": "general_store"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "spider",
+          "amount": 34,
+          "where": {
+            "area": "seluford",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s4",
+          "type": "dungeoneering",
+          "amount": 3
+        },
+        {
+          "id": "s5",
+          "type": "talk",
+          "to": {
+            "area": "seluford",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The route to Varenhollow is open and the contract is signed.",
+            "Then I will underwrite it. Seluford has not had news this good in years."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seluford_archery_shop_nest",
+      "name": "The Thing Beneath Seluford",
+      "area": "seluford",
+      "giver": "archery_shop",
+      "length": "long",
+      "summary": "Find what rules Seluford Sewers, weaken its nest and destroy The Plague Warden.",
+      "intro": [
+        "Something rules Seluford Sewers and it is getting stronger. I want it gone.",
+        "Ask the sword shop keeper what they have heard, see it for yourself, then come back and we will decide how to break the nest.",
+        "When it is weak, kill it and tell the banker."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "I felt the ground go still. Seluford is yours to walk freely, friend.",
+        "Take this. It is everything I promised and a little more."
+      ],
+      "requires": {
+        "quests": [
+          "seluford_archery_shop_cull"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "woodcutting",
+          "constitution"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "seluford",
+            "giver": "sword_shop"
+          },
+          "lines": [
+            "player: Have you heard anything from below the streets?",
+            "Every night. Something large is down there, and the small ones answer to it. They call it The Plague Warden."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "seluford"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "choice",
+          "lines": [
+            "So you have seen it. We can thin them by force, or I can have the guard hold the drains if they are supplied."
+          ],
+          "prompt": "How will you weaken the nest?",
+          "options": [
+            {
+              "text": "I will cut them down myself.",
+              "next": "s4"
+            },
+            {
+              "text": "Supply the guard and let them hold the drains.",
+              "next": "s5"
+            }
+          ]
+        },
+        {
+          "id": "s4",
+          "type": "kill",
+          "next": "s6",
+          "mob": "giant spider",
+          "amount": 34,
+          "where": {
+            "dungeon": "seluford"
+          }
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 28,
+          "item": "willow_logs"
+        },
+        {
+          "id": "s6",
+          "type": "boss",
+          "dungeon": "seluford"
+        },
+        {
+          "id": "s7",
+          "type": "talk",
+          "to": {
+            "area": "seluford",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The Plague Warden is dead. Seluford Sewers is quiet.",
+            "Then the vaults are safe and so is everyone above them. The town will hear of this."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seluford_food_shop_expedition",
+      "name": "The Fall of the Broodmother",
+      "area": "seluford",
+      "giver": "food_shop",
+      "length": "long",
+      "summary": "March on Rootbound Hollow, break its creatures and bring down The Broodmother.",
+      "intro": [
+        "Rootbound Hollow has stood against Seluford for too long. The Broodmother sits at the bottom of it.",
+        "Learn what you can from the clothes shop keeper, fight your way through 34 earth warrior and end The Broodmother.",
+        "Bring 22 raw tuna back so the town can rebuild."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "It is done, then. They will sing about this in every tavern from here to the coast.",
+        "Take your reward. You have more than earned it."
+      ],
+      "requires": {
+        "quests": [
+          "seluford_food_shop_word"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "constitution",
+          "fishing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "seluford",
+            "giver": "clothes_shop"
+          },
+          "lines": [
+            "player: What do you know of Rootbound Hollow?",
+            "Only that those who go in come back thin and quiet. The Broodmother rules it now."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "forest"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "earth warrior",
+          "amount": 34,
+          "where": {
+            "dungeon": "forest"
+          }
+        },
+        {
+          "id": "s4",
+          "type": "boss",
+          "dungeon": "forest"
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 22,
+          "item": "raw_tuna"
+        },
+        {
+          "id": "s6",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "varenhollow",
+            "giver": "food_shop"
+          },
+          "lines": [
+            "player: Word from Seluford: The Broodmother is dead.",
+            "Dead? Then the caravans can leave at dawn. This news is worth more than gold."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seluford_barber_route",
+      "name": "The Seluford Trade Route (Barber)",
+      "area": "seluford",
+      "giver": "barber",
+      "length": "long",
+      "summary": "Open a trade route between Seluford and Varenhollow.",
+      "intro": [
+        "I mean to open a trade route to Varenhollow. It needs a contract carried, a road made safe and a courier who is proven underground.",
+        "Deliver the contract, trade there, cut down 34 spider near our walls and prove yourself in the dungeoneering caves.",
+        "Then have the banker underwrite the venture."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Signed, safe and funded. You have changed the fortunes of this town.",
+        "Here is your cut of the first season."
+      ],
+      "requires": {
+        "quests": [
+          "seluford_barber_word"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "dungeoneering"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "varenhollow",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: A contract from the barber in Seluford.",
+            "A fair offer. But the road between us is not safe, and you know it."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "service",
+          "to": {
+            "area": "varenhollow",
+            "giver": "barber"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "spider",
+          "amount": 34,
+          "where": {
+            "area": "seluford",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s4",
+          "type": "dungeoneering",
+          "amount": 3
+        },
+        {
+          "id": "s5",
+          "type": "talk",
+          "to": {
+            "area": "seluford",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The route to Varenhollow is open and the contract is signed.",
+            "Then I will underwrite it. Seluford has not had news this good in years."
+          ]
+        }
+      ]
+    }
+  ]
+}

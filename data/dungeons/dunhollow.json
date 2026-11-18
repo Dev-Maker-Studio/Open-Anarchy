@@ -2,9 +2,9 @@
   "id": "dunhollow",
   "name": "Dunhollow Sewers",
   "theme": "sewer",
-  "seed": 4509600905665041054,
-  "slot": 2,
-  "entranceX": 6031,
-  "entranceY": 7356,
+  "seed": 8103905130667055758,
+  "slot": 4,
+  "entranceX": 6096,
+  "entranceY": 8044,
   "origin": "city:dunhollow"
 }

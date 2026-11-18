@@ -1,0 +1,10 @@
+{
+  "id": "pelenstead",
+  "name": "Pelenstead Sewers",
+  "theme": "sewer",
+  "seed": -1159960438789959918,
+  "slot": 10,
+  "entranceX": 8328,
+  "entranceY": 7891,
+  "origin": "city:pelenstead"
+}

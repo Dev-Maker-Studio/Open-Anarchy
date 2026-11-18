@@ -22,6 +22,7 @@ object BuildingBuilder {
     const val LADDER = "ladder"
     const val LADDER_TOP = "laddertop"
     private const val BANK_BOOTH = "bankbooth"
+    private const val BOOTH_TURN = 1 // a quarter turn from the door side lays the booths side by side as one counter of windows
     private const val TABLE = "table"
     private const val CHAIR = "chair"
     private const val BED = "bed"
@@ -284,7 +285,7 @@ object BuildingBuilder {
 
         private fun bank() {
             for (across in -1..1) {
-                if (place(BANK_BOOTH, at(across, inward - 3))) resident(Npc.banker1, at(across, inward - 2), BANKER)
+                if (place(BANK_BOOTH, at(across, inward - 3), (door.rotation + BOOTH_TURN) % 4)) resident(Npc.banker1, at(across, inward - 2), BANKER)
             }
             place(BARREL, at(-lateral / 2 + 1, 1))
             place(CRATE, at(lateral / 2 - 1, 1))

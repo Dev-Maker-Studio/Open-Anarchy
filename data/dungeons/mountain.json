@@ -3,7 +3,7 @@
   "name": "Stonejaw Depths",
   "theme": "cave",
   "seed": -205923255385843874,
-  "slot": 10,
+  "slot": 25,
   "entranceX": 7100,
   "entranceY": 6271,
   "origin": "biome:mountain"

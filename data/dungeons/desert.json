@@ -3,7 +3,7 @@
   "name": "Sunken Bastion",
   "theme": "fortress",
   "seed": -80569895767100213,
-  "slot": 7,
+  "slot": 22,
   "entranceX": 8014,
   "entranceY": 5541,
   "origin": "biome:desert"

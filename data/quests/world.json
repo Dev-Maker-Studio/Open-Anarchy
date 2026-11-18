@@ -1,226 +1,6 @@
 {
   "areas": [
     {
-      "id": "aldmere",
-      "name": "Aldmere",
-      "tier": 9,
-      "x": 7671,
-      "y": 9125,
-      "givers": [
-        "banker",
-        "general_store",
-        "barber",
-        "sword_shop",
-        "archery_shop",
-        "magic_shop",
-        "clothes_shop",
-        "food_shop",
-        "armour_shop",
-        "fishing_shop",
-        "staff_shop",
-        "realtor"
-      ],
-      "sewer": "aldmere",
-      "wildDungeons": [
-        "winter",
-        "forest"
-      ],
-      "neighbours": [
-        "brackenholt",
-        "velneir",
-        "dunhollow",
-        "sarnwick"
-      ],
-      "localMobs": [
-        "spider",
-        "snake",
-        "giant spider",
-        "bat",
-        "earth warrior"
-      ],
-      "rewards": {
-        "short": {
-          "questPoints": 2,
-          "coins": 900,
-          "xp": 4050
-        },
-        "medium": {
-          "questPoints": 3,
-          "coins": 2700,
-          "xp": 12150
-        },
-        "long": {
-          "questPoints": 4,
-          "coins": 6300,
-          "xp": 28350
-        }
-      }
-    },
-    {
-      "id": "brackenholt",
-      "name": "Brackenholt",
-      "tier": 9,
-      "x": 9225,
-      "y": 7669,
-      "givers": [
-        "banker",
-        "general_store",
-        "barber",
-        "sword_shop",
-        "archery_shop",
-        "magic_shop",
-        "clothes_shop",
-        "food_shop",
-        "armour_shop",
-        "fishing_shop",
-        "realtor"
-      ],
-      "sewer": "brackenholt",
-      "wildDungeons": [
-        "forest",
-        "winter"
-      ],
-      "neighbours": [
-        "sarnwick",
-        "aldmere",
-        "velneir",
-        "dunhollow"
-      ],
-      "localMobs": [
-        "spider",
-        "zombie",
-        "ghost",
-        "giant spider",
-        "giant rat",
-        "bat",
-        "snake"
-      ],
-      "rewards": {
-        "short": {
-          "questPoints": 2,
-          "coins": 900,
-          "xp": 4050
-        },
-        "medium": {
-          "questPoints": 3,
-          "coins": 2700,
-          "xp": 12150
-        },
-        "long": {
-          "questPoints": 4,
-          "coins": 6300,
-          "xp": 28350
-        }
-      }
-    },
-    {
-      "id": "dunhollow",
-      "name": "Dunhollow",
-      "tier": 8,
-      "x": 6026,
-      "y": 7363,
-      "givers": [
-        "banker",
-        "general_store",
-        "barber",
-        "sword_shop",
-        "archery_shop",
-        "magic_shop",
-        "clothes_shop",
-        "food_shop",
-        "armour_shop",
-        "realtor"
-      ],
-      "sewer": "dunhollow",
-      "wildDungeons": [
-        "mountain",
-        "wilderness"
-      ],
-      "neighbours": [
-        "velneir",
-        "sarnwick",
-        "aldmere",
-        "brackenholt"
-      ],
-      "localMobs": [
-        "zombie",
-        "ghost",
-        "bat",
-        "earth warrior"
-      ],
-      "rewards": {
-        "short": {
-          "questPoints": 2,
-          "coins": 800,
-          "xp": 3300
-        },
-        "medium": {
-          "questPoints": 3,
-          "coins": 2400,
-          "xp": 9900
-        },
-        "long": {
-          "questPoints": 4,
-          "coins": 5600,
-          "xp": 23100
-        }
-      }
-    },
-    {
-      "id": "sarnwick",
-      "name": "Sarnwick",
-      "tier": 7,
-      "x": 7687,
-      "y": 6151,
-      "givers": [
-        "banker",
-        "general_store",
-        "barber",
-        "sword_shop",
-        "archery_shop",
-        "magic_shop",
-        "clothes_shop",
-        "food_shop",
-        "armour_shop",
-        "realtor"
-      ],
-      "sewer": "sarnwick",
-      "wildDungeons": [
-        "mountain",
-        "desert"
-      ],
-      "neighbours": [
-        "velneir",
-        "brackenholt",
-        "dunhollow",
-        "aldmere"
-      ],
-      "localMobs": [
-        "bat",
-        "zombie",
-        "ghost",
-        "spider",
-        "giant rat"
-      ],
-      "rewards": {
-        "short": {
-          "questPoints": 2,
-          "coins": 700,
-          "xp": 2625
-        },
-        "medium": {
-          "questPoints": 3,
-          "coins": 2100,
-          "xp": 7875
-        },
-        "long": {
-          "questPoints": 4,
-          "coins": 4900,
-          "xp": 18375
-        }
-      }
-    },
-    {
       "id": "velneir",
       "name": "Velneir",
       "tier": 1,
@@ -246,10 +26,25 @@
         "mountain"
       ],
       "neighbours": [
-        "sarnwick",
-        "dunhollow",
+        "lorowick",
         "aldmere",
-        "brackenholt"
+        "brackenholt",
+        "draelford",
+        "pelenstead",
+        "sarnwick",
+        "selendale",
+        "narustead",
+        "dunhollow",
+        "fenoburn",
+        "arelburn",
+        "uludale",
+        "kelanreach",
+        "varenhollow",
+        "eloreach",
+        "yarengate",
+        "seluford",
+        "orandale",
+        "renudale"
       ],
       "localMobs": [
         "spider",
@@ -273,96 +68,1857 @@
           "xp": 1050
         }
       }
+    },
+    {
+      "id": "aldmere",
+      "name": "Aldmere",
+      "tier": 4,
+      "x": 6803,
+      "y": 7637,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "aldmere",
+      "wildDungeons": [
+        "mountain",
+        "wilderness"
+      ],
+      "neighbours": [
+        "velneir",
+        "dunhollow",
+        "draelford",
+        "brackenholt",
+        "sarnwick",
+        "kelanreach",
+        "uludale",
+        "lorowick",
+        "selendale",
+        "narustead",
+        "pelenstead",
+        "eloreach",
+        "yarengate",
+        "renudale",
+        "arelburn",
+        "orandale",
+        "varenhollow",
+        "fenoburn",
+        "seluford"
+      ],
+      "localMobs": [
+        "bat",
+        "zombie",
+        "spider",
+        "ghost",
+        "giant spider",
+        "giant rat",
+        "snake"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 1,
+          "coins": 400,
+          "xp": 1050
+        },
+        "medium": {
+          "questPoints": 2,
+          "coins": 1200,
+          "xp": 3150
+        },
+        "long": {
+          "questPoints": 3,
+          "coins": 2800,
+          "xp": 7350
+        }
+      }
+    },
+    {
+      "id": "brackenholt",
+      "name": "Brackenholt",
+      "tier": 4,
+      "x": 7370,
+      "y": 6769,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "brackenholt",
+      "wildDungeons": [
+        "mountain",
+        "wilderness"
+      ],
+      "neighbours": [
+        "draelford",
+        "velneir",
+        "lorowick",
+        "arelburn",
+        "aldmere",
+        "selendale",
+        "narustead",
+        "pelenstead",
+        "dunhollow",
+        "kelanreach",
+        "fenoburn",
+        "renudale",
+        "sarnwick",
+        "uludale",
+        "seluford",
+        "varenhollow",
+        "eloreach",
+        "yarengate",
+        "orandale"
+      ],
+      "localMobs": [
+        "spider",
+        "zombie",
+        "giant spider",
+        "ghost",
+        "bat",
+        "snake"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 1,
+          "coins": 400,
+          "xp": 1050
+        },
+        "medium": {
+          "questPoints": 2,
+          "coins": 1200,
+          "xp": 3150
+        },
+        "long": {
+          "questPoints": 3,
+          "coins": 2800,
+          "xp": 7350
+        }
+      }
+    },
+    {
+      "id": "sarnwick",
+      "name": "Sarnwick",
+      "tier": 6,
+      "x": 7492,
+      "y": 8565,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "sarnwick",
+      "wildDungeons": [
+        "winter",
+        "plains"
+      ],
+      "neighbours": [
+        "eloreach",
+        "yarengate",
+        "pelenstead",
+        "aldmere",
+        "velneir",
+        "varenhollow",
+        "dunhollow",
+        "orandale",
+        "fenoburn",
+        "lorowick",
+        "uludale",
+        "kelanreach",
+        "draelford",
+        "brackenholt",
+        "seluford",
+        "selendale",
+        "narustead",
+        "renudale",
+        "arelburn"
+      ],
+      "localMobs": [
+        "spider",
+        "giant spider",
+        "bat",
+        "snake",
+        "earth warrior",
+        "giant rat"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 2,
+          "coins": 600,
+          "xp": 2025
+        },
+        "medium": {
+          "questPoints": 3,
+          "coins": 1800,
+          "xp": 6075
+        },
+        "long": {
+          "questPoints": 4,
+          "coins": 4200,
+          "xp": 14175
+        }
+      }
+    },
+    {
+      "id": "dunhollow",
+      "name": "Dunhollow",
+      "tier": 8,
+      "x": 6075,
+      "y": 8020,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "dunhollow",
+      "wildDungeons": [
+        "mountain",
+        "wilderness"
+      ],
+      "neighbours": [
+        "uludale",
+        "aldmere",
+        "kelanreach",
+        "draelford",
+        "eloreach",
+        "brackenholt",
+        "orandale",
+        "sarnwick",
+        "velneir",
+        "yarengate",
+        "narustead",
+        "renudale",
+        "lorowick",
+        "arelburn",
+        "selendale",
+        "pelenstead",
+        "varenhollow",
+        "fenoburn",
+        "seluford"
+      ],
+      "localMobs": [
+        "spider",
+        "giant rat",
+        "zombie",
+        "ghost",
+        "bat"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 2,
+          "coins": 800,
+          "xp": 3300
+        },
+        "medium": {
+          "questPoints": 3,
+          "coins": 2400,
+          "xp": 9900
+        },
+        "long": {
+          "questPoints": 4,
+          "coins": 5600,
+          "xp": 23100
+        }
+      }
+    },
+    {
+      "id": "draelford",
+      "name": "Draelford",
+      "tier": 5,
+      "x": 6672,
+      "y": 6879,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "realtor"
+      ],
+      "sewer": "draelford",
+      "wildDungeons": [
+        "mountain",
+        "wilderness"
+      ],
+      "neighbours": [
+        "brackenholt",
+        "aldmere",
+        "narustead",
+        "velneir",
+        "kelanreach",
+        "arelburn",
+        "renudale",
+        "dunhollow",
+        "lorowick",
+        "selendale",
+        "pelenstead",
+        "sarnwick",
+        "uludale",
+        "varenhollow",
+        "fenoburn",
+        "eloreach",
+        "yarengate",
+        "orandale",
+        "seluford"
+      ],
+      "localMobs": [
+        "bat",
+        "spider",
+        "giant spider",
+        "zombie",
+        "snake",
+        "earth warrior",
+        "ghost",
+        "giant rat"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 2,
+          "coins": 500,
+          "xp": 1500
+        },
+        "medium": {
+          "questPoints": 3,
+          "coins": 1500,
+          "xp": 4500
+        },
+        "long": {
+          "questPoints": 4,
+          "coins": 3500,
+          "xp": 10500
+        }
+      }
+    },
+    {
+      "id": "uludale",
+      "name": "Uludale",
+      "tier": 9,
+      "x": 5853,
+      "y": 8682,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "uludale",
+      "wildDungeons": [
+        "mountain",
+        "winter"
+      ],
+      "neighbours": [
+        "orandale",
+        "dunhollow",
+        "aldmere",
+        "eloreach",
+        "sarnwick",
+        "velneir",
+        "kelanreach",
+        "draelford",
+        "brackenholt",
+        "yarengate",
+        "lorowick",
+        "selendale",
+        "pelenstead",
+        "narustead",
+        "renudale",
+        "arelburn",
+        "varenhollow",
+        "fenoburn",
+        "seluford"
+      ],
+      "localMobs": [
+        "spider",
+        "giant rat",
+        "bat",
+        "snake"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 2,
+          "coins": 900,
+          "xp": 4050
+        },
+        "medium": {
+          "questPoints": 3,
+          "coins": 2700,
+          "xp": 12150
+        },
+        "long": {
+          "questPoints": 4,
+          "coins": 6300,
+          "xp": 28350
+        }
+      }
+    },
+    {
+      "id": "selendale",
+      "name": "Selendale",
+      "tier": 7,
+      "x": 8314,
+      "y": 6263,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "selendale",
+      "wildDungeons": [
+        "volcano",
+        "desert"
+      ],
+      "neighbours": [
+        "lorowick",
+        "arelburn",
+        "fenoburn",
+        "brackenholt",
+        "velneir",
+        "aldmere",
+        "draelford",
+        "pelenstead",
+        "seluford",
+        "narustead",
+        "dunhollow",
+        "sarnwick",
+        "uludale",
+        "kelanreach",
+        "renudale",
+        "varenhollow",
+        "eloreach",
+        "yarengate",
+        "orandale"
+      ],
+      "localMobs": [
+        "spider",
+        "giant rat",
+        "zombie",
+        "ghost",
+        "bat"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 2,
+          "coins": 700,
+          "xp": 2625
+        },
+        "medium": {
+          "questPoints": 3,
+          "coins": 2100,
+          "xp": 7875
+        },
+        "long": {
+          "questPoints": 4,
+          "coins": 4900,
+          "xp": 18375
+        }
+      }
+    },
+    {
+      "id": "kelanreach",
+      "name": "Kelanreach",
+      "tier": 9,
+      "x": 5831,
+      "y": 6931,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "kelanreach",
+      "wildDungeons": [
+        "wilderness",
+        "mountain"
+      ],
+      "neighbours": [
+        "narustead",
+        "draelford",
+        "renudale",
+        "aldmere",
+        "dunhollow",
+        "brackenholt",
+        "arelburn",
+        "sarnwick",
+        "velneir",
+        "uludale",
+        "lorowick",
+        "eloreach",
+        "yarengate",
+        "orandale",
+        "selendale",
+        "pelenstead",
+        "varenhollow",
+        "fenoburn",
+        "seluford"
+      ],
+      "localMobs": [
+        "spider",
+        "giant spider",
+        "bat",
+        "earth warrior",
+        "zombie",
+        "ghost",
+        "giant rat",
+        "adolescent white wolf"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 2,
+          "coins": 900,
+          "xp": 4050
+        },
+        "medium": {
+          "questPoints": 3,
+          "coins": 2700,
+          "xp": 12150
+        },
+        "long": {
+          "questPoints": 4,
+          "coins": 6300,
+          "xp": 28350
+        }
+      }
+    },
+    {
+      "id": "yarengate",
+      "name": "Yarengate",
+      "tier": 9,
+      "x": 7833,
+      "y": 9279,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "yarengate",
+      "wildDungeons": [
+        "winter",
+        "forest"
+      ],
+      "neighbours": [
+        "eloreach",
+        "sarnwick",
+        "varenhollow",
+        "pelenstead",
+        "seluford",
+        "aldmere",
+        "dunhollow",
+        "orandale",
+        "velneir",
+        "uludale",
+        "fenoburn",
+        "lorowick",
+        "kelanreach",
+        "draelford",
+        "brackenholt",
+        "selendale",
+        "narustead",
+        "renudale",
+        "arelburn"
+      ],
+      "localMobs": [
+        "spider",
+        "giant spider",
+        "snake",
+        "zombie",
+        "ghost",
+        "bat",
+        "earth warrior",
+        "imp"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 2,
+          "coins": 900,
+          "xp": 4050
+        },
+        "medium": {
+          "questPoints": 3,
+          "coins": 2700,
+          "xp": 12150
+        },
+        "long": {
+          "questPoints": 4,
+          "coins": 6300,
+          "xp": 28350
+        }
+      }
+    },
+    {
+      "id": "pelenstead",
+      "name": "Pelenstead",
+      "tier": 5,
+      "x": 8331,
+      "y": 7920,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "pelenstead",
+      "wildDungeons": [
+        "winter",
+        "plains"
+      ],
+      "neighbours": [
+        "fenoburn",
+        "velneir",
+        "sarnwick",
+        "lorowick",
+        "seluford",
+        "brackenholt",
+        "varenhollow",
+        "eloreach",
+        "yarengate",
+        "aldmere",
+        "selendale",
+        "draelford",
+        "arelburn",
+        "narustead",
+        "dunhollow",
+        "orandale",
+        "uludale",
+        "kelanreach",
+        "renudale"
+      ],
+      "localMobs": [
+        "spider",
+        "bat",
+        "snake",
+        "zombie",
+        "ghost"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 2,
+          "coins": 500,
+          "xp": 1500
+        },
+        "medium": {
+          "questPoints": 3,
+          "coins": 1500,
+          "xp": 4500
+        },
+        "long": {
+          "questPoints": 4,
+          "coins": 3500,
+          "xp": 10500
+        }
+      }
+    },
+    {
+      "id": "narustead",
+      "name": "Narustead",
+      "tier": 7,
+      "x": 6337,
+      "y": 6111,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "narustead",
+      "wildDungeons": [
+        "wilderness",
+        "mountain"
+      ],
+      "neighbours": [
+        "renudale",
+        "draelford",
+        "kelanreach",
+        "brackenholt",
+        "arelburn",
+        "velneir",
+        "aldmere",
+        "lorowick",
+        "dunhollow",
+        "selendale",
+        "pelenstead",
+        "sarnwick",
+        "uludale",
+        "fenoburn",
+        "seluford",
+        "varenhollow",
+        "eloreach",
+        "yarengate",
+        "orandale"
+      ],
+      "localMobs": [
+        "spider",
+        "snake",
+        "zombie",
+        "ghost",
+        "bat",
+        "earth warrior"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 2,
+          "coins": 700,
+          "xp": 2625
+        },
+        "medium": {
+          "questPoints": 3,
+          "coins": 2100,
+          "xp": 7875
+        },
+        "long": {
+          "questPoints": 4,
+          "coins": 4900,
+          "xp": 18375
+        }
+      }
+    },
+    {
+      "id": "fenoburn",
+      "name": "Fenoburn",
+      "tier": 8,
+      "x": 9027,
+      "y": 7122,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "fenoburn",
+      "wildDungeons": [
+        "plains",
+        "forest"
+      ],
+      "neighbours": [
+        "pelenstead",
+        "selendale",
+        "lorowick",
+        "seluford",
+        "velneir",
+        "sarnwick",
+        "arelburn",
+        "brackenholt",
+        "varenhollow",
+        "eloreach",
+        "yarengate",
+        "aldmere",
+        "draelford",
+        "narustead",
+        "dunhollow",
+        "orandale",
+        "uludale",
+        "kelanreach",
+        "renudale"
+      ],
+      "localMobs": [
+        "zombie",
+        "ghost",
+        "spider",
+        "giant rat",
+        "bat"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 2,
+          "coins": 800,
+          "xp": 3300
+        },
+        "medium": {
+          "questPoints": 3,
+          "coins": 2400,
+          "xp": 9900
+        },
+        "long": {
+          "questPoints": 4,
+          "coins": 5600,
+          "xp": 23100
+        }
+      }
+    },
+    {
+      "id": "eloreach",
+      "name": "Eloreach",
+      "tier": 9,
+      "x": 7133,
+      "y": 9240,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "eloreach",
+      "wildDungeons": [
+        "winter",
+        "plains"
+      ],
+      "neighbours": [
+        "sarnwick",
+        "yarengate",
+        "orandale",
+        "dunhollow",
+        "uludale",
+        "pelenstead",
+        "aldmere",
+        "velneir",
+        "varenhollow",
+        "fenoburn",
+        "seluford",
+        "lorowick",
+        "kelanreach",
+        "draelford",
+        "brackenholt",
+        "selendale",
+        "narustead",
+        "renudale",
+        "arelburn"
+      ],
+      "localMobs": [
+        "spider",
+        "giant spider",
+        "imp",
+        "snake",
+        "zombie",
+        "ghost",
+        "bat",
+        "earth warrior"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 2,
+          "coins": 900,
+          "xp": 4050
+        },
+        "medium": {
+          "questPoints": 3,
+          "coins": 2700,
+          "xp": 12150
+        },
+        "long": {
+          "questPoints": 4,
+          "coins": 6300,
+          "xp": 28350
+        }
+      }
+    },
+    {
+      "id": "varenhollow",
+      "name": "Varenhollow",
+      "tier": 9,
+      "x": 8876,
+      "y": 9198,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "varenhollow",
+      "wildDungeons": [
+        "winter",
+        "forest"
+      ],
+      "neighbours": [
+        "seluford",
+        "yarengate",
+        "pelenstead",
+        "sarnwick",
+        "velneir",
+        "eloreach",
+        "aldmere",
+        "fenoburn",
+        "lorowick",
+        "draelford",
+        "brackenholt",
+        "dunhollow",
+        "orandale",
+        "selendale",
+        "uludale",
+        "kelanreach",
+        "narustead",
+        "renudale",
+        "arelburn"
+      ],
+      "localMobs": [
+        "spider",
+        "giant spider",
+        "snake",
+        "bat",
+        "earth warrior",
+        "imp"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 2,
+          "coins": 900,
+          "xp": 4050
+        },
+        "medium": {
+          "questPoints": 3,
+          "coins": 2700,
+          "xp": 12150
+        },
+        "long": {
+          "questPoints": 4,
+          "coins": 6300,
+          "xp": 28350
+        }
+      }
+    },
+    {
+      "id": "seluford",
+      "name": "Seluford",
+      "tier": 10,
+      "x": 9325,
+      "y": 8221,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "seluford",
+      "wildDungeons": [
+        "forest",
+        "plains"
+      ],
+      "neighbours": [
+        "varenhollow",
+        "pelenstead",
+        "fenoburn",
+        "lorowick",
+        "yarengate",
+        "velneir",
+        "sarnwick",
+        "brackenholt",
+        "selendale",
+        "eloreach",
+        "arelburn",
+        "aldmere",
+        "draelford",
+        "narustead",
+        "dunhollow",
+        "orandale",
+        "uludale",
+        "kelanreach",
+        "renudale"
+      ],
+      "localMobs": [
+        "spider",
+        "giant spider",
+        "giant rat",
+        "bat",
+        "snake"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 3,
+          "coins": 1000,
+          "xp": 4875
+        },
+        "medium": {
+          "questPoints": 4,
+          "coins": 3000,
+          "xp": 14625
+        },
+        "long": {
+          "questPoints": 5,
+          "coins": 7000,
+          "xp": 34125
+        }
+      }
+    },
+    {
+      "id": "lorowick",
+      "name": "Lorowick",
+      "tier": 4,
+      "x": 8118,
+      "y": 6969,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "lorowick",
+      "wildDungeons": [
+        "plains",
+        "winter"
+      ],
+      "neighbours": [
+        "velneir",
+        "selendale",
+        "brackenholt",
+        "fenoburn",
+        "pelenstead",
+        "arelburn",
+        "seluford",
+        "aldmere",
+        "draelford",
+        "sarnwick",
+        "narustead",
+        "dunhollow",
+        "varenhollow",
+        "uludale",
+        "eloreach",
+        "kelanreach",
+        "yarengate",
+        "orandale",
+        "renudale"
+      ],
+      "localMobs": [
+        "zombie",
+        "spider",
+        "giant rat",
+        "ghost",
+        "bat"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 1,
+          "coins": 400,
+          "xp": 1050
+        },
+        "medium": {
+          "questPoints": 2,
+          "coins": 1200,
+          "xp": 3150
+        },
+        "long": {
+          "questPoints": 3,
+          "coins": 2800,
+          "xp": 7350
+        }
+      }
+    },
+    {
+      "id": "arelburn",
+      "name": "Arelburn",
+      "tier": 8,
+      "x": 7476,
+      "y": 5949,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "arelburn",
+      "wildDungeons": [
+        "mountain",
+        "desert"
+      ],
+      "neighbours": [
+        "brackenholt",
+        "selendale",
+        "draelford",
+        "lorowick",
+        "narustead",
+        "velneir",
+        "fenoburn",
+        "kelanreach",
+        "aldmere",
+        "renudale",
+        "pelenstead",
+        "dunhollow",
+        "seluford",
+        "sarnwick",
+        "uludale",
+        "varenhollow",
+        "eloreach",
+        "yarengate",
+        "orandale"
+      ],
+      "localMobs": [
+        "spider",
+        "bat",
+        "zombie",
+        "ghost",
+        "snake",
+        "earth warrior",
+        "giant rat",
+        "giant spider"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 2,
+          "coins": 800,
+          "xp": 3300
+        },
+        "medium": {
+          "questPoints": 3,
+          "coins": 2400,
+          "xp": 9900
+        },
+        "long": {
+          "questPoints": 4,
+          "coins": 5600,
+          "xp": 23100
+        }
+      }
+    },
+    {
+      "id": "renudale",
+      "name": "Renudale",
+      "tier": 10,
+      "x": 5628,
+      "y": 5982,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "renudale",
+      "wildDungeons": [
+        "wilderness",
+        "mountain"
+      ],
+      "neighbours": [
+        "narustead",
+        "kelanreach",
+        "draelford",
+        "aldmere",
+        "brackenholt",
+        "arelburn",
+        "velneir",
+        "dunhollow",
+        "lorowick",
+        "sarnwick",
+        "selendale",
+        "uludale",
+        "pelenstead",
+        "varenhollow",
+        "eloreach",
+        "yarengate",
+        "orandale",
+        "fenoburn",
+        "seluford"
+      ],
+      "localMobs": [
+        "zombie",
+        "ghost",
+        "spider",
+        "giant rat",
+        "bat",
+        "earth warrior"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 3,
+          "coins": 1000,
+          "xp": 4875
+        },
+        "medium": {
+          "questPoints": 4,
+          "coins": 3000,
+          "xp": 14625
+        },
+        "long": {
+          "questPoints": 5,
+          "coins": 7000,
+          "xp": 34125
+        }
+      }
+    },
+    {
+      "id": "orandale",
+      "name": "Orandale",
+      "tier": 10,
+      "x": 6056,
+      "y": 9338,
+      "givers": [
+        "banker",
+        "general_store",
+        "barber",
+        "sword_shop",
+        "archery_shop",
+        "magic_shop",
+        "clothes_shop",
+        "food_shop",
+        "armour_shop",
+        "fishing_shop",
+        "staff_shop",
+        "realtor"
+      ],
+      "sewer": "orandale",
+      "wildDungeons": [
+        "winter",
+        "plains"
+      ],
+      "neighbours": [
+        "uludale",
+        "eloreach",
+        "dunhollow",
+        "sarnwick",
+        "aldmere",
+        "yarengate",
+        "velneir",
+        "pelenstead",
+        "lorowick",
+        "kelanreach",
+        "draelford",
+        "brackenholt",
+        "varenhollow",
+        "fenoburn",
+        "selendale",
+        "narustead",
+        "seluford",
+        "renudale",
+        "arelburn"
+      ],
+      "localMobs": [
+        "spider",
+        "giant rat",
+        "bat",
+        "earth warrior",
+        "zombie",
+        "ghost"
+      ],
+      "rewards": {
+        "short": {
+          "questPoints": 3,
+          "coins": 1000,
+          "xp": 4875
+        },
+        "medium": {
+          "questPoints": 4,
+          "coins": 3000,
+          "xp": 14625
+        },
+        "long": {
+          "questPoints": 5,
+          "coins": 7000,
+          "xp": 34125
+        }
+      }
     }
   ],
   "dungeons": [
     {
+      "id": "velneir",
+      "name": "Velneir Sewers",
+      "origin": "city:velneir",
+      "x": 7503,
+      "y": 7511,
+      "level": 1,
+      "boss": "The Ooze Mother",
+      "mobs": [
+        "giant rat",
+        "rogue",
+        "giant spider",
+        "crawling hand",
+        "spider",
+        "snake",
+        "rat",
+        "bat"
+      ]
+    },
+    {
       "id": "aldmere",
       "name": "Aldmere Sewers",
       "origin": "city:aldmere",
-      "x": 7664,
-      "y": 9100,
-      "level": 9,
-      "boss": "The Rat King",
+      "x": 6784,
+      "y": 7654,
+      "level": 4,
+      "boss": "The Plague Warden",
       "mobs": [
         "giant rat",
-        "rat",
-        "king scorpion",
-        "crawling hand",
+        "bat",
         "giant spider",
-        "cave slime",
-        "spider",
-        "snake",
-        "zombie",
         "rogue",
-        "pyrefiend",
-        "moss giant",
-        "bat"
+        "crawling hand",
+        "king scorpion",
+        "snake",
+        "spider",
+        "cave slime",
+        "rat",
+        "zombie"
       ]
     },
     {
       "id": "brackenholt",
       "name": "Brackenholt Sewers",
       "origin": "city:brackenholt",
-      "x": 9206,
-      "y": 7656,
-      "level": 9,
+      "x": 7393,
+      "y": 6763,
+      "level": 4,
       "boss": "The Rat King",
       "mobs": [
-        "giant spider",
-        "snake",
         "giant rat",
-        "cave slime",
-        "pyrefiend",
-        "rat",
+        "giant spider",
         "zombie",
-        "moss giant",
         "rogue",
+        "rat",
+        "crawling hand",
+        "snake",
+        "king scorpion",
+        "cave slime",
         "spider",
         "bat"
       ]
     },
     {
-      "id": "desert",
-      "name": "Sunken Bastion",
-      "origin": "biome:desert",
-      "x": 8014,
-      "y": 5541,
-      "level": 10,
-      "boss": "The Fallen Warden",
+      "id": "sarnwick",
+      "name": "Sarnwick Sewers",
+      "origin": "city:sarnwick",
+      "x": 7479,
+      "y": 8569,
+      "level": 6,
+      "boss": "The Plague Warden",
       "mobs": [
-        "skeleton",
+        "giant spider",
+        "snake",
+        "cave slime",
         "zombie",
-        "rogue",
-        "mugger",
-        "guard dog",
-        "black knight",
-        "hill giant",
-        "chaos druid",
-        "fire giant",
-        "ghost"
+        "king scorpion",
+        "bat",
+        "crawling hand",
+        "spider",
+        "giant rat",
+        "rat"
       ]
     },
     {
       "id": "dunhollow",
       "name": "Dunhollow Sewers",
       "origin": "city:dunhollow",
-      "x": 6031,
-      "y": 7356,
+      "x": 6096,
+      "y": 8044,
       "level": 8,
+      "boss": "The Plague Warden",
+      "mobs": [
+        "giant spider",
+        "spider",
+        "rat",
+        "rogue",
+        "giant rat",
+        "crawling hand",
+        "king scorpion",
+        "snake",
+        "bat",
+        "cave slime",
+        "pyrefiend",
+        "moss giant",
+        "zombie"
+      ]
+    },
+    {
+      "id": "draelford",
+      "name": "Draelford Sewers",
+      "origin": "city:draelford",
+      "x": 6683,
+      "y": 6855,
+      "level": 5,
+      "boss": "The Ooze Mother",
+      "mobs": [
+        "giant spider",
+        "king scorpion",
+        "giant rat",
+        "cave slime",
+        "bat",
+        "zombie",
+        "crawling hand",
+        "snake",
+        "rat",
+        "spider",
+        "rogue"
+      ]
+    },
+    {
+      "id": "uludale",
+      "name": "Uludale Sewers",
+      "origin": "city:uludale",
+      "x": 5877,
+      "y": 8686,
+      "level": 9,
+      "boss": "The Plague Warden",
+      "mobs": [
+        "giant rat",
+        "zombie",
+        "king scorpion",
+        "bat",
+        "snake",
+        "cave slime",
+        "rogue",
+        "pyrefiend",
+        "spider",
+        "giant spider",
+        "moss giant",
+        "crawling hand",
+        "rat"
+      ]
+    },
+    {
+      "id": "selendale",
+      "name": "Selendale Sewers",
+      "origin": "city:selendale",
+      "x": 8295,
+      "y": 6258,
+      "level": 7,
       "boss": "The Rat King",
       "mobs": [
         "giant spider",
-        "rat",
+        "bat",
         "giant rat",
+        "zombie",
+        "rat",
+        "crawling hand",
+        "spider",
         "rogue",
         "snake",
         "cave slime",
-        "crawling hand",
         "pyrefiend",
+        "king scorpion"
+      ]
+    },
+    {
+      "id": "kelanreach",
+      "name": "Kelanreach Sewers",
+      "origin": "city:kelanreach",
+      "x": 5819,
+      "y": 6935,
+      "level": 9,
+      "boss": "The Ooze Mother",
+      "mobs": [
+        "giant spider",
+        "giant rat",
+        "cave slime",
+        "moss giant",
         "zombie",
+        "rogue",
+        "spider",
+        "snake",
+        "king scorpion",
+        "crawling hand",
+        "rat",
+        "bat"
+      ]
+    },
+    {
+      "id": "yarengate",
+      "name": "Yarengate Sewers",
+      "origin": "city:yarengate",
+      "x": 7815,
+      "y": 9265,
+      "level": 9,
+      "boss": "The Plague Warden",
+      "mobs": [
+        "giant rat",
+        "giant spider",
+        "snake",
+        "crawling hand",
+        "rat",
+        "rogue",
+        "spider",
+        "pyrefiend",
+        "cave slime",
+        "moss giant",
+        "zombie",
+        "king scorpion",
+        "bat"
+      ]
+    },
+    {
+      "id": "pelenstead",
+      "name": "Pelenstead Sewers",
+      "origin": "city:pelenstead",
+      "x": 8328,
+      "y": 7891,
+      "level": 5,
+      "boss": "The Ooze Mother",
+      "mobs": [
+        "giant rat",
+        "rogue",
+        "crawling hand",
+        "snake",
+        "giant spider",
+        "zombie",
+        "spider",
+        "cave slime",
+        "rat",
         "bat",
         "king scorpion"
+      ]
+    },
+    {
+      "id": "narustead",
+      "name": "Narustead Sewers",
+      "origin": "city:narustead",
+      "x": 6330,
+      "y": 6117,
+      "level": 7,
+      "boss": "The Rat King",
+      "mobs": [
+        "giant spider",
+        "giant rat",
+        "rat",
+        "bat",
+        "crawling hand",
+        "zombie",
+        "king scorpion",
+        "rogue",
+        "spider",
+        "cave slime",
+        "snake",
+        "pyrefiend"
+      ]
+    },
+    {
+      "id": "fenoburn",
+      "name": "Fenoburn Sewers",
+      "origin": "city:fenoburn",
+      "x": 9045,
+      "y": 7119,
+      "level": 8,
+      "boss": "The Plague Warden",
+      "mobs": [
+        "giant rat",
+        "giant spider",
+        "zombie",
+        "snake",
+        "rogue",
+        "king scorpion",
+        "spider",
+        "crawling hand",
+        "cave slime",
+        "rat",
+        "bat",
+        "moss giant",
+        "pyrefiend"
+      ]
+    },
+    {
+      "id": "eloreach",
+      "name": "Eloreach Sewers",
+      "origin": "city:eloreach",
+      "x": 7126,
+      "y": 9245,
+      "level": 9,
+      "boss": "The Rat King",
+      "mobs": [
+        "giant rat",
+        "giant spider",
+        "crawling hand",
+        "pyrefiend",
+        "snake",
+        "rat",
+        "spider",
+        "bat",
+        "rogue",
+        "king scorpion",
+        "moss giant",
+        "zombie",
+        "cave slime"
+      ]
+    },
+    {
+      "id": "varenhollow",
+      "name": "Varenhollow Sewers",
+      "origin": "city:varenhollow",
+      "x": 8880,
+      "y": 9184,
+      "level": 9,
+      "boss": "The Ooze Mother",
+      "mobs": [
+        "spider",
+        "giant rat",
+        "giant spider",
+        "crawling hand",
+        "rat",
+        "rogue",
+        "king scorpion",
+        "pyrefiend",
+        "cave slime",
+        "snake",
+        "zombie",
+        "bat",
+        "moss giant"
+      ]
+    },
+    {
+      "id": "seluford",
+      "name": "Seluford Sewers",
+      "origin": "city:seluford",
+      "x": 9318,
+      "y": 8216,
+      "level": 10,
+      "boss": "The Plague Warden",
+      "mobs": [
+        "king scorpion",
+        "giant spider",
+        "giant rat",
+        "snake",
+        "zombie",
+        "bat",
+        "moss giant",
+        "cave slime",
+        "pyrefiend",
+        "rogue",
+        "spider",
+        "crawling hand",
+        "rat"
+      ]
+    },
+    {
+      "id": "lorowick",
+      "name": "Lorowick Sewers",
+      "origin": "city:lorowick",
+      "x": 8115,
+      "y": 6983,
+      "level": 4,
+      "boss": "The Rat King",
+      "mobs": [
+        "giant rat",
+        "giant spider",
+        "spider",
+        "zombie",
+        "bat",
+        "snake",
+        "rat",
+        "rogue",
+        "crawling hand",
+        "cave slime",
+        "king scorpion"
+      ]
+    },
+    {
+      "id": "arelburn",
+      "name": "Arelburn Sewers",
+      "origin": "city:arelburn",
+      "x": 7459,
+      "y": 5953,
+      "level": 8,
+      "boss": "The Ooze Mother",
+      "mobs": [
+        "giant spider",
+        "king scorpion",
+        "snake",
+        "cave slime",
+        "rat",
+        "moss giant",
+        "giant rat",
+        "spider",
+        "zombie",
+        "crawling hand",
+        "bat",
+        "rogue",
+        "pyrefiend"
+      ]
+    },
+    {
+      "id": "renudale",
+      "name": "Renudale Sewers",
+      "origin": "city:renudale",
+      "x": 5603,
+      "y": 5978,
+      "level": 10,
+      "boss": "The Ooze Mother",
+      "mobs": [
+        "giant spider",
+        "rogue",
+        "zombie",
+        "moss giant",
+        "pyrefiend",
+        "bat",
+        "crawling hand",
+        "rat",
+        "king scorpion",
+        "snake",
+        "cave slime",
+        "giant rat",
+        "spider"
+      ]
+    },
+    {
+      "id": "orandale",
+      "name": "Orandale Sewers",
+      "origin": "city:orandale",
+      "x": 6031,
+      "y": 9330,
+      "level": 10,
+      "boss": "The Rat King",
+      "mobs": [
+        "giant rat",
+        "giant spider",
+        "bat",
+        "moss giant",
+        "spider",
+        "king scorpion",
+        "rat",
+        "cave slime",
+        "snake",
+        "crawling hand",
+        "zombie",
+        "rogue",
+        "pyrefiend"
+      ]
+    },
+    {
+      "id": "plains",
+      "name": "Meadow Keep",
+      "origin": "biome:plains",
+      "x": 8996,
+      "y": 7570,
+      "level": 8,
+      "boss": "The Fallen Warden",
+      "mobs": [
+        "skeleton",
+        "zombie",
+        "ghost",
+        "rogue",
+        "black knight",
+        "mugger",
+        "hill giant",
+        "fire giant",
+        "chaos druid",
+        "guard dog"
       ]
     },
     {
@@ -374,119 +1930,39 @@
       "level": 9,
       "boss": "The Broodmother",
       "mobs": [
-        "bat",
         "giant spider",
-        "giant bat",
-        "cave slime",
-        "spider",
-        "cave crawler",
-        "baby blue dragon",
-        "black bear",
-        "hobgoblin",
-        "cave goblin",
-        "moss giant"
-      ]
-    },
-    {
-      "id": "mountain",
-      "name": "Stonejaw Depths",
-      "origin": "biome:mountain",
-      "x": 7100,
-      "y": 6271,
-      "level": 7,
-      "boss": "The Broodmother",
-      "mobs": [
-        "hobgoblin",
         "earth warrior",
-        "cave crawler",
-        "bat",
         "giant bat",
         "black bear",
-        "giant spider",
         "spider",
+        "bat",
         "moss giant",
+        "cave crawler",
         "cave slime",
-        "cave goblin"
+        "cave goblin",
+        "hobgoblin"
       ]
     },
     {
-      "id": "plains",
-      "name": "Meadow Keep",
-      "origin": "biome:plains",
-      "x": 8304,
-      "y": 6181,
-      "level": 7,
-      "boss": "The Fallen Warden",
+      "id": "desert",
+      "name": "Sunken Bastion",
+      "origin": "biome:desert",
+      "x": 8014,
+      "y": 5541,
+      "level": 10,
+      "boss": "The Pyre Baron",
       "mobs": [
         "skeleton",
-        "ghost",
+        "zombie",
+        "chaos druid",
         "guard dog",
+        "black knight",
+        "ghost",
+        "hill giant",
+        "fire giant",
         "mugger",
         "rogue",
-        "fire giant",
-        "black knight",
-        "chaos druid",
-        "zombie"
-      ]
-    },
-    {
-      "id": "sarnwick",
-      "name": "Sarnwick Sewers",
-      "origin": "city:sarnwick",
-      "x": 7673,
-      "y": 6168,
-      "level": 7,
-      "boss": "The Rat King",
-      "mobs": [
-        "giant spider",
-        "giant rat",
-        "snake",
-        "spider",
-        "bat",
-        "king scorpion",
-        "zombie",
-        "rogue",
-        "pyrefiend"
-      ]
-    },
-    {
-      "id": "velneir",
-      "name": "Velneir Sewers",
-      "origin": "city:velneir",
-      "x": 7483,
-      "y": 7475,
-      "level": 1,
-      "boss": "The Rat King",
-      "mobs": [
-        "rat",
-        "giant spider",
-        "snake",
-        "rogue",
-        "spider",
-        "bat",
-        "giant rat"
-      ]
-    },
-    {
-      "id": "volcano",
-      "name": "Cinder Maw",
-      "origin": "biome:volcano",
-      "x": 8523,
-      "y": 5644,
-      "level": 10,
-      "boss": "The Broodmother",
-      "mobs": [
-        "cave crawler",
-        "giant bat",
-        "bat",
-        "baby blue dragon",
-        "hobgoblin",
-        "cave goblin",
-        "giant spider",
-        "moss giant",
-        "spider",
-        "black bear",
-        "cave slime"
+        "lesser demon"
       ]
     },
     {
@@ -498,16 +1974,16 @@
       "level": 8,
       "boss": "The Fallen Warden",
       "mobs": [
-        "mugger",
-        "ghost",
-        "black knight",
-        "fire giant",
-        "zombie",
         "skeleton",
+        "ghost",
+        "zombie",
+        "mugger",
+        "hill giant",
         "guard dog",
-        "rogue",
+        "fire giant",
         "chaos druid",
-        "hill giant"
+        "black knight",
+        "rogue"
       ]
     },
     {
@@ -519,15 +1995,60 @@
       "level": 5,
       "boss": "The Broodmother",
       "mobs": [
-        "giant spider",
-        "bat",
-        "black bear",
-        "cave goblin",
         "giant bat",
         "spider",
+        "giant spider",
+        "bat",
+        "cave goblin",
+        "earth warrior",
+        "cave slime",
+        "black bear",
+        "cave crawler",
+        "hobgoblin"
+      ]
+    },
+    {
+      "id": "mountain",
+      "name": "Stonejaw Depths",
+      "origin": "biome:mountain",
+      "x": 7100,
+      "y": 6271,
+      "level": 7,
+      "boss": "The Broodmother",
+      "mobs": [
+        "giant spider",
+        "giant bat",
+        "bat",
+        "black bear",
+        "hobgoblin",
+        "cave slime",
+        "spider",
+        "cave goblin",
+        "earth warrior",
+        "cave crawler",
+        "moss giant"
+      ]
+    },
+    {
+      "id": "volcano",
+      "name": "Cinder Maw",
+      "origin": "biome:volcano",
+      "x": 8523,
+      "y": 5644,
+      "level": 10,
+      "boss": "The Broodmother",
+      "mobs": [
+        "cave goblin",
+        "bat",
+        "giant spider",
+        "giant bat",
         "cave crawler",
         "cave slime",
-        "earth warrior"
+        "spider",
+        "moss giant",
+        "baby blue dragon",
+        "hobgoblin",
+        "black bear"
       ]
     }
   ],
