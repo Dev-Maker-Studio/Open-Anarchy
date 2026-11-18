@@ -77,6 +77,8 @@ object WorldServer {
     private val botIpWhitelist = IpAllowList(EnvVars.botIpWhitelist)
 
     private const val MAX_LOGINS_IN_FLIGHT = 20
+    private const val MAX_SESSIONS_PER_IP = 3
+    private val sessionLimitExemptIps = EnvVars.multiLogWhitelist.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
     private const val INDEX_CRCS_CHECKED = 32
 
     private lateinit var js5: JS5Server
@@ -207,8 +209,10 @@ object WorldServer {
             return output.finish(ResponseOpcode.WORLD_FULL)
         if (World.containsPlayer(username))
             return output.finish(ResponseOpcode.ACCOUNT_ONLINE)
-        if (!pendingLogins.add(username))
+        if (!pendingLogins.add(username)) {
+            logWarn("Refused login for $username from $ip: a login for this account is already in progress")
             return output.finish(ResponseOpcode.LOGIN_LIMIT_EXCEEDED)
+        }
 
         val claimed = hashSetOf(username)
         val admitted = try {
@@ -283,8 +287,11 @@ object WorldServer {
             logWarn("Headless override login for ${account.username} from $ip on bot-prohibited world ${EnvVars.worldId}: ${machine.cpuData}")
             DiscordWebhook.sendStaffMessage("Real player **${account.username}** logged in headlessly to bot-prohibited world ${EnvVars.worldId} from $ip (`${machine.cpuData}`)")
         } else if (headless) logInfo("Headless client login for ${account.username} from $ip: ${machine.cpuData}")
-        if (AccountLimiter.getSessionsIP(ip) >= 3)
+        val sessions = AccountLimiter.getSessionsIP(ip)
+        if (sessions >= MAX_SESSIONS_PER_IP && ip !in sessionLimitExemptIps) {
+            logWarn("Refused login for ${account.username} from $ip: $sessions sessions already online from this address")
             return ResponseOpcode.LOGIN_LIMIT_EXCEEDED
+        }
         return null
     }
 
