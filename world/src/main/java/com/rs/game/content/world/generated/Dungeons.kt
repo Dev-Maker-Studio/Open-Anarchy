@@ -6,6 +6,8 @@ import com.rs.game.World
 import com.rs.game.map.Chunk
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
+import com.rs.game.tasks.WorldTasks
+import com.rs.utils.Ticks
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 import org.darkan.core.EnvVars
@@ -28,6 +30,8 @@ private const val BOSS_ARGUMENT = "boss"
 private const val BOSS_STANDOFF = 5
 private const val OPTION_CLIMB_DOWN = "Climb-down"
 private const val OPTION_CLOSE = "Close"
+private const val OPTION_OPEN = "Open"
+private const val MANHOLE_OPEN_MINUTES = 1
 
 object Dungeons {
 
@@ -58,6 +62,20 @@ object Dungeons {
         return ring.firstOrNull { World.floorAndWallsFree(it, 1) } ?: ring.first()
     }
 
+    private fun swap(obj: GameObject, id: Int): GameObject {
+        val swapped = GameObject(id, obj.type, obj.rotation, obj.x, obj.y, obj.plane)
+        World.spawnObject(swapped)
+        return swapped
+    }
+
+    private fun open(player: Player, obj: GameObject) {
+        val opened = swap(obj, Loc.manholeopen)
+        player.faceObject(opened)
+        WorldTasks.schedule(Ticks.fromMinutes(MANHOLE_OPEN_MINUTES)) {
+            if (World.isSpawnedObject(opened)) swap(opened, Loc.manholeclosed)
+        }
+    }
+
     private fun enter(player: Player, obj: GameObject) {
         val dungeon = entranceAt(obj.x, obj.y) ?: return
         player.useStairs(arrival(dungeon))
@@ -83,11 +101,14 @@ object Dungeons {
             if (theme.entrance != Loc.manholeclosed) onObjectClick(theme.entrance) { e -> enter(e.player, e.obj) }
             onObjectClick(theme.exit) { e -> leave(e.player, e.obj) }
         }
+        onObjectClick(Loc.manholeclosed) { e ->
+            if (entranceAt(e.obj.x, e.obj.y) != null && e.option.equals(OPTION_OPEN, ignoreCase = true)) open(e.player, e.obj)
+        }
         onObjectClick(Loc.manholeopen) { e ->
             if (entranceAt(e.obj.x, e.obj.y) == null) return@onObjectClick
             when {
                 e.option.equals(OPTION_CLIMB_DOWN, ignoreCase = true) -> enter(e.player, e.obj)
-                e.option.equals(OPTION_CLOSE, ignoreCase = true) -> World.removeObject(e.obj)
+                e.option.equals(OPTION_CLOSE, ignoreCase = true) -> swap(e.obj, Loc.manholeclosed)
             }
         }
         onObjectClick(Loc.rd_portal_room2_exit) { e -> leave(e.player, e.obj) }

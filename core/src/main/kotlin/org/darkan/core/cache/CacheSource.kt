@@ -6,6 +6,7 @@ import world.gregs.voidps.cache.source.BuildResult
 import world.gregs.voidps.cache.source.Builder
 import world.gregs.voidps.cache.source.PackThreads
 import world.gregs.voidps.cache.source.SourceTree
+import org.darkan.core.dungeon.DungeonSites
 import org.darkan.core.map.GeneratedWorld
 import world.gregs.voidps.cache.source.codec.MapCodec
 import java.io.File
@@ -40,7 +41,7 @@ object CacheSource {
         if (EnvVars.generateMaps) {
             val generator = GeneratedWorld.generator
             MapCodec.generator = generator
-            CityTerrain.write(directory, generator, GeneratedWorld.cities)
+            CityTerrain.write(directory, generator, GeneratedWorld.cities, GeneratedWorld.dungeons.filter { it.origin.startsWith(DungeonSites.CITY_ORIGIN) }.map { it.entranceX to it.entranceY })
             WorldMapImage.write(directory, generator, GeneratedWorld.cities)
             CityLabels.write(directory, GeneratedWorld.cities)
             MapCodec.reserved = DungeonTerrain.regions(GeneratedWorld.dungeons) + DungeonTerrain.templateRegions(directory)
