@@ -34,10 +34,11 @@ private const val RESET_TICKS = 100
 private const val PERCENT = 100
 private const val GROUND_LEVEL = 0
 private const val MISSING = -1
+private const val DEFAULT_MAX_ALIVE = 12
 
 class BossAbility(
     val type: String, val everyTicks: Int?, val radius: Int?, val damage: Double?, val atHealth: List<Int>?, val belowHealth: Int?,
-    val npc: String?, val count: Int?, val percent: Int?, val shout: String?
+    val npc: String?, val count: Int?, val percent: Int?, val shout: String?, val maxAlive: Int?
 )
 
 class BossDrop(val item: String, val min: Int?, val max: Int?, val chance: Double?, val perLevel: Boolean?)
@@ -132,7 +133,10 @@ class DungeonBoss(private val definition: BossDefinition, id: Int, home: Tile, s
         for (ability in abilities) when (ability.type) {
             SLAM -> if (fightTicks % (ability.everyTicks ?: DEFAULT_EVERY) == 0) slam(ability)
             HEAL -> if (fightTicks % (ability.everyTicks ?: DEFAULT_EVERY) == 0) mend(ability)
-            SUMMON -> ability.atHealth.orEmpty().forEach { threshold -> if (health <= threshold && used.add(ability to threshold)) summon(ability) }
+            SUMMON -> {
+                ability.atHealth.orEmpty().forEach { threshold -> if (health <= threshold && used.add(ability to threshold)) summon(ability) }
+                ability.everyTicks?.let { if (fightTicks % it == 0) summon(ability) }
+            }
             ENRAGE -> if (health <= (ability.belowHealth ?: 0) && used.add(ability to 0)) enrage(ability)
         }
     }
@@ -165,12 +169,18 @@ class DungeonBoss(private val definition: BossDefinition, id: Int, home: Tile, s
 
     private fun summon(ability: BossAbility) {
         val id = ability.npc?.let(DungeonBosses::npcId) ?: return
+        minions.removeAll { it.hasFinished() || it.isDead }
+        val room = (ability.maxAlive ?: DEFAULT_MAX_ALIVE) - minions.size
+        if (ability.everyTicks != null && room <= 0) return
         shout(ability)
         val minionLevel = (level * MINION_FACTOR).toInt().coerceAtLeast(1)
+        val target = combat.target
         repeat(ability.count ?: DEFAULT_COUNT) {
             val spot = (0 until MINION_ATTEMPTS).map { tile.transform(Utils.randomInclusive(-MINION_REACH, MINION_REACH), Utils.randomInclusive(-MINION_REACH, MINION_REACH), 0) }
                 .firstOrNull { World.floorAndWallsFree(it, 1) } ?: return@repeat
-            minions += DungeonMob(id, spot, minionLevel.toDouble() / DungeonMobs.native(id), minionLevel, null)
+            val minion = DungeonMob(id, spot, minionLevel.toDouble() / DungeonMobs.native(id), minionLevel, null)
+            if (target != null) minion.combat.setTarget(target)
+            minions += minion
         }
     }
 
