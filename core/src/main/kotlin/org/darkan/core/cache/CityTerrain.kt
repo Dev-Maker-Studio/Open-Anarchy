@@ -15,7 +15,7 @@ object CityTerrain {
     private const val SQUARE_TILES = MapDefinition.SIZE
     private const val BLEND = 13
 
-    fun write(tree: File, generator: MapGenerator, cities: List<City>) {
+    fun write(tree: File, generator: MapGenerator, cities: List<City>, manholes: List<Pair<Int, Int>> = emptyList()) {
         var written = 0
         for (city in cities) {
             val reach = city.halfSize + BLEND
@@ -23,7 +23,7 @@ object CityTerrain {
                 for (regionY in (city.centerY - reach) / SQUARE_TILES..(city.centerY + reach) / SQUARE_TILES) {
                     val square = MapSquare.Square(MapSquare.Shape.TERRAIN, regionX, regionY)
                     val file = File(tree, "$MAPS/${MapCodec.path(square)}")
-                    val terrain = generator.terrain(regionX, regionY)
+                    val terrain = ManholeGround.apply(generator.terrain(regionX, regionY), regionX, regionY, manholes)
                     if (file.isFile && file.readBytes().contentEquals(terrain)) continue
                     file.parentFile.mkdirs()
                     val temporary = File(file.parentFile, "${file.name}.tmp")
