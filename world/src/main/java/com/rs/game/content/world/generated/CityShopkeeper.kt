@@ -50,16 +50,17 @@ private class SavedItem(val id: Int, val amount: Int)
 
 private class SavedShop(val coins: Int, val items: List<SavedItem>, val restocked: Long)
 
-class CityShop(val key: String) : CoinTrader {
+/** One shopkeeper's ledger: [key] identifies the keeper, [kind] (a shop key ending in the service name) picks the wares it sells. */
+class CityShop(val key: String, kind: String = key) : CoinTrader {
     private val file = File("./data/city-shops/sector-${EnvVars.worldId}/$key.json")
     private var loading = true
 
     override var coins = STARTING_COINS
         private set
 
-    val name = key.split('_').joinToString(" ") { word -> word.replaceFirstChar { it.uppercase() } }
-    val sellsDeeds = key.endsWith(GENERAL_STORE_SUFFIX)
-    val shop = MerchantShop(this, name, defaultStock(key))
+    val name = kind.split('_').joinToString(" ") { word -> word.replaceFirstChar { it.uppercase() } }
+    val sellsDeeds = kind.endsWith(GENERAL_STORE_SUFFIX)
+    val shop = MerchantShop(this, name, defaultStock(kind))
     private var restocked = System.currentTimeMillis()
 
     init {
@@ -110,12 +111,13 @@ class CityShop(val key: String) : CoinTrader {
         private val gson = Gson()
         private val shops = ConcurrentHashMap<String, CityShop>()
 
-        fun of(key: String): CityShop = shops.computeIfAbsent(key, ::CityShop)
+        fun of(key: String, kind: String = key): CityShop = shops.computeIfAbsent(key) { CityShop(it, kind) }
     }
 }
 
-class CityShopkeeper(id: Int, tile: Tile, key: String) : CityResident(id, tile) {
-    private val ledger = CityShop.of(key)
+/** Every keeper has his own stock and purse, saved under his own tile; [kind] only decides what he sells. */
+class CityShopkeeper(id: Int, tile: Tile, kind: String) : CityResident(id, tile) {
+    private val ledger = CityShop.of("${kind}_${tile.x}_${tile.y}_${tile.plane}", kind)
 
     fun trade(player: Player) {
         if (player.bank.checkPin()) ledger.shop.addPlayer(player)
