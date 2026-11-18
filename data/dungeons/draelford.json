@@ -1,0 +1,10 @@
+{
+  "id": "draelford",
+  "name": "Draelford Sewers",
+  "theme": "sewer",
+  "seed": 8570038368285785909,
+  "slot": 5,
+  "entranceX": 6683,
+  "entranceY": 6855,
+  "origin": "city:draelford"
+}

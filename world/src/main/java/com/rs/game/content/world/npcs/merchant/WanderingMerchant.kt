@@ -21,6 +21,7 @@ import com.rs.plugin.kts.npcCombat
 import com.rs.plugin.kts.onNpcClick
 import org.darkan.core.Utils
 import org.darkan.core.gameval.gen.Npc
+import org.darkan.core.map.GeneratedWorld
 import org.darkan.core.model.Rights
 import org.darkan.core.util.MapUtils
 import org.darkan.core.util.Structure
@@ -152,13 +153,19 @@ private fun nearPlayerChunks(): List<Int> = World.players
     .flatMap { World.getChunkRadius(it.chunkId, NEAR_PLAYER_CHUNK_RADIUS) }
     .distinct()
     .filter { ChunkManager.findChunk(it).let { chunk -> chunk != null && chunk !is InstancedChunk } }
+    .filter { !inDungeonChunk(it) }
+
+private fun inDungeonChunk(chunkId: Int): Boolean {
+    val (chunkX, chunkY, _) = MapUtils.decode(Structure.CHUNK, chunkId)
+    return GeneratedWorld.inDungeon(chunkX * CHUNK_TILES, chunkY * CHUNK_TILES)
+}
 
 private fun spawnInChunk(chunkId: Int) {
     val (chunkX, chunkY, plane) = MapUtils.decode(Structure.CHUNK, chunkId)
     repeat(SPAWN_ATTEMPTS) {
         val tile = Tile.of(chunkX * CHUNK_TILES + (0 until CHUNK_TILES).random(), chunkY * CHUNK_TILES + (0 until CHUNK_TILES).random(), plane)
         val nearPlayer = World.players.any { !it.hasFinished() && it.plane == plane && Utils.getDistance(it.tile, tile) <= NEAR_PLAYER_TILES }
-        if (!nearPlayer || !World.floorAndWallsFree(tile, 1)) return@repeat
+        if (!nearPlayer || GeneratedWorld.inDungeon(tile.x, tile.y) || !World.floorAndWallsFree(tile, 1)) return@repeat
         if (activeMerchants.count { !it.hasFinished() && it.plane == plane && Utils.getDistance(it.tile, tile) <= AREA_CAP_TILES } >= MAX_MERCHANTS_PER_AREA) return
         (World.spawnNPC(MERCHANT_IDS.random() as Int, tile, true) as? MerchantNPC)?.let { activeMerchants.add(it) }
         return

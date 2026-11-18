@@ -1,0 +1,1041 @@
+{
+  "area": "narustead",
+  "seed": 5764395,
+  "generatorVersion": 1,
+  "quests": [
+    {
+      "id": "narustead_banker_cull",
+      "name": "Trouble with Zombies",
+      "area": "narustead",
+      "giver": "banker",
+      "length": "short",
+      "summary": "The banker wants the zombie near Narustead thinned out.",
+      "intro": [
+        "The zombie beyond the walls grow bolder every week. Customers will not walk the road.",
+        "Put down 11 of them close to Narustead and I will make it worth your while."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "The road is quieter already. Here, as promised."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "zombie",
+          "amount": 11,
+          "where": {
+            "area": "narustead",
+            "radius": 300
+          }
+        }
+      ]
+    },
+    {
+      "id": "narustead_general_store_stock",
+      "name": "Short on Raw Tuna",
+      "area": "narustead",
+      "giver": "general_store",
+      "length": "short",
+      "summary": "The general store keeper of Narustead has run out of raw tuna.",
+      "intro": [
+        "My stores are bare. I need 18 raw tuna and nobody in Narustead has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "fishing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 18,
+          "item": "raw_tuna"
+        }
+      ]
+    },
+    {
+      "id": "narustead_barber_parcel",
+      "name": "A Parcel for the Realtor",
+      "area": "narustead",
+      "giver": "barber",
+      "length": "short",
+      "summary": "Carry a parcel across Narustead to the realtor.",
+      "intro": [
+        "This should have gone to the realtor days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "narustead",
+            "giver": "realtor"
+          },
+          "lines": [
+            "player: A delivery from the barber.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "narustead_sword_shop_word",
+      "name": "Word to the Armour Shop Keeper",
+      "area": "narustead",
+      "giver": "sword_shop",
+      "length": "short",
+      "summary": "Call on the armour shop keeper of Narustead and bring back their answer.",
+      "intro": [
+        "I need an answer from the armour shop keeper and I would rather not shout it across the street.",
+        "Call on them as a customer, then ask how our accounts stand."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Balanced? Then I can sleep tonight. My thanks."
+      ],
+      "rewards": {},
+      "steps": [
+        {
+          "id": "s1",
+          "type": "service",
+          "to": {
+            "area": "narustead",
+            "giver": "armour_shop"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "talk",
+          "to": {
+            "area": "narustead",
+            "giver": "armour_shop"
+          },
+          "lines": [
+            "player: The sword shop keeper sent me to ask after the ledgers.",
+            "Tell them the figures balance, for once. There is nothing owed between us this season."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "narustead_archery_shop_scout",
+      "name": "Eyes on the Narustead Sewers",
+      "area": "narustead",
+      "giver": "archery_shop",
+      "length": "short",
+      "summary": "Climb down into Narustead Sewers and report what you see.",
+      "intro": [
+        "Something has been scratching under the streets at night. It comes from Narustead Sewers.",
+        "Go down the entrance, take a look around and come back in one piece."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "So it is as bad as I feared. Thank you for looking, that took nerve."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "narustead"
+          }
+        }
+      ]
+    },
+    {
+      "id": "narustead_magic_shop_cull",
+      "name": "Trouble with Zombies (Magic Shop Keeper)",
+      "area": "narustead",
+      "giver": "magic_shop",
+      "length": "short",
+      "summary": "The magic shop keeper wants the zombie near Narustead thinned out.",
+      "intro": [
+        "The zombie beyond the walls grow bolder every week. Customers will not walk the road.",
+        "Put down 11 of them close to Narustead and I will make it worth your while."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "The road is quieter already. Here, as promised."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "zombie",
+          "amount": 11,
+          "where": {
+            "area": "narustead",
+            "radius": 300
+          }
+        }
+      ]
+    },
+    {
+      "id": "narustead_clothes_shop_stock",
+      "name": "Short on Raw Tuna (Clothes Shop Keeper)",
+      "area": "narustead",
+      "giver": "clothes_shop",
+      "length": "short",
+      "summary": "The clothes shop keeper of Narustead has run out of raw tuna.",
+      "intro": [
+        "My stores are bare. I need 18 raw tuna and nobody in Narustead has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "fishing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 18,
+          "item": "raw_tuna"
+        }
+      ]
+    },
+    {
+      "id": "narustead_food_shop_parcel",
+      "name": "A Parcel for the Clothes Shop Keeper",
+      "area": "narustead",
+      "giver": "food_shop",
+      "length": "short",
+      "summary": "Carry a parcel across Narustead to the clothes shop keeper.",
+      "intro": [
+        "This should have gone to the clothes shop keeper days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "narustead",
+            "giver": "clothes_shop"
+          },
+          "lines": [
+            "player: A delivery from the food shop keeper.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "narustead_banker_sweep",
+      "name": "Sweeping the Narustead Sewers",
+      "area": "narustead",
+      "giver": "banker",
+      "length": "medium",
+      "summary": "Clear giant rat out of Narustead Sewers and tell the barber.",
+      "intro": [
+        "Narustead Sewers is crawling with giant rat, and they come up through the drains.",
+        "Go down, kill 18 of them, then let the barber know their cellar is safe."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Both done? Narustead owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "narustead"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant rat",
+          "amount": 18,
+          "where": {
+            "dungeon": "narustead"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "narustead",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: Narustead Sewers is clearer than it was. 18 giant rat fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "narustead_general_store_supply",
+      "name": "Supply Run to Renudale",
+      "area": "narustead",
+      "giver": "general_store",
+      "length": "medium",
+      "summary": "Gather coal for the general store keeper, then carry a shipment to Renudale.",
+      "intro": [
+        "I have an order from Renudale and nothing to fill it with.",
+        "Bring me 22 coal, then take the packed shipment to the general store keeper there and do some business while you are in town."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "mining",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 22,
+          "item": "coal"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "renudale",
+            "giver": "general_store"
+          },
+          "lines": [
+            "player: Goods from the general store keeper in Narustead.",
+            "From Narustead? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "renudale",
+            "giver": "general_store"
+          }
+        }
+      ]
+    },
+    {
+      "id": "narustead_barber_hunt",
+      "name": "The Long Hunt",
+      "area": "narustead",
+      "giver": "barber",
+      "length": "medium",
+      "summary": "Hunt the creatures around Narustead and bring back coal.",
+      "intro": [
+        "The wilds around Narustead need a firm hand. Start with 11 zombie outside the walls, then 18 giant spider down in Narustead Sewers.",
+        "When that is done, bring me 22 coal to show for it."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "mining"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "zombie",
+          "amount": 11,
+          "where": {
+            "area": "narustead",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 18,
+          "where": {
+            "dungeon": "narustead"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 22,
+          "item": "coal"
+        }
+      ]
+    },
+    {
+      "id": "narustead_sword_shop_council",
+      "name": "Votes for the Council",
+      "area": "narustead",
+      "giver": "sword_shop",
+      "length": "medium",
+      "summary": "Gather support around Narustead for the sword shop keeper.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the realtor, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "narustead",
+            "giver": "realtor"
+          },
+          "lines": [
+            "player: The sword shop keeper asks whether you will stand with them at the next council.",
+            "I will, if the magic shop keeper does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "narustead",
+            "giver": "magic_shop"
+          },
+          "lines": [
+            "player: A sealed note, from the realtor.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "narustead",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "narustead_archery_shop_sweep",
+      "name": "Sweeping the Narustead Sewers (Archery Shop Keeper)",
+      "area": "narustead",
+      "giver": "archery_shop",
+      "length": "medium",
+      "summary": "Clear giant spider out of Narustead Sewers and tell the staff shop keeper.",
+      "intro": [
+        "Narustead Sewers is crawling with giant spider, and they come up through the drains.",
+        "Go down, kill 18 of them, then let the staff shop keeper know their cellar is safe."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Both done? Narustead owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "narustead"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 18,
+          "where": {
+            "dungeon": "narustead"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "narustead",
+            "giver": "staff_shop"
+          },
+          "lines": [
+            "player: Narustead Sewers is clearer than it was. 18 giant spider fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "narustead_magic_shop_supply",
+      "name": "Supply Run to Renudale (Magic Shop Keeper)",
+      "area": "narustead",
+      "giver": "magic_shop",
+      "length": "medium",
+      "summary": "Gather bones for the magic shop keeper, then carry a shipment to Renudale.",
+      "intro": [
+        "I have an order from Renudale and nothing to fill it with.",
+        "Bring me 13 bones, then take the packed shipment to the magic shop keeper there and do some business while you are in town."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "prayer",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 13,
+          "item": "bones"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "renudale",
+            "giver": "magic_shop"
+          },
+          "lines": [
+            "player: Goods from the magic shop keeper in Narustead.",
+            "From Narustead? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "renudale",
+            "giver": "magic_shop"
+          }
+        }
+      ]
+    },
+    {
+      "id": "narustead_clothes_shop_hunt",
+      "name": "The Long Hunt (Clothes Shop Keeper)",
+      "area": "narustead",
+      "giver": "clothes_shop",
+      "length": "medium",
+      "summary": "Hunt the creatures around Narustead and bring back raw tuna.",
+      "intro": [
+        "The wilds around Narustead need a firm hand. Start with 11 snake outside the walls, then 18 rat down in Narustead Sewers.",
+        "When that is done, bring me 18 raw tuna to show for it."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "fishing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "snake",
+          "amount": 11,
+          "where": {
+            "area": "narustead",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "rat",
+          "amount": 18,
+          "where": {
+            "dungeon": "narustead"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 18,
+          "item": "raw_tuna"
+        }
+      ]
+    },
+    {
+      "id": "narustead_food_shop_council",
+      "name": "Votes for the Council (Food Shop Keeper)",
+      "area": "narustead",
+      "giver": "food_shop",
+      "length": "medium",
+      "summary": "Gather support around Narustead for the food shop keeper.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the barber, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "narustead",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: The food shop keeper asks whether you will stand with them at the next council.",
+            "I will, if the fishing shop keeper does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "royal_letter",
+          "to": {
+            "area": "narustead",
+            "giver": "fishing_shop"
+          },
+          "lines": [
+            "player: A sealed note, from the barber.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "narustead",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "narustead_banker_expedition",
+      "name": "The Fall of the Fallen Warden",
+      "area": "narustead",
+      "giver": "banker",
+      "length": "long",
+      "summary": "March on Ashen Redoubt, break its creatures and bring down The Fallen Warden.",
+      "intro": [
+        "Ashen Redoubt has stood against Narustead for too long. The Fallen Warden sits at the bottom of it.",
+        "Learn what you can from the barber, fight your way through 26 ghost and end The Fallen Warden.",
+        "Bring 11 steel bar back so the town can rebuild."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "It is done, then. They will sing about this in every tavern from here to the coast.",
+        "Take your reward. You have more than earned it."
+      ],
+      "requires": {
+        "quests": [
+          "narustead_banker_cull"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "constitution",
+          "smithing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "narustead",
+            "giver": "barber"
+          },
+          "lines": [
+            "player: What do you know of Ashen Redoubt?",
+            "Only that those who go in come back thin and quiet. The Fallen Warden rules it now."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "wilderness"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "ghost",
+          "amount": 26,
+          "where": {
+            "dungeon": "wilderness"
+          }
+        },
+        {
+          "id": "s4",
+          "type": "boss",
+          "dungeon": "wilderness"
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 11,
+          "item": "steel_bar"
+        },
+        {
+          "id": "s6",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "renudale",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Word from Narustead: The Fallen Warden is dead.",
+            "Dead? Then the caravans can leave at dawn. This news is worth more than gold."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "narustead_sword_shop_route",
+      "name": "The Narustead Trade Route",
+      "area": "narustead",
+      "giver": "sword_shop",
+      "length": "long",
+      "summary": "Open a trade route between Narustead and Renudale.",
+      "intro": [
+        "I mean to open a trade route to Renudale. It needs a contract carried, a road made safe and a courier who is proven underground.",
+        "Deliver the contract, trade there, cut down 26 spider near our walls and prove yourself in the dungeoneering caves.",
+        "Then have the banker underwrite the venture."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Signed, safe and funded. You have changed the fortunes of this town.",
+        "Here is your cut of the first season."
+      ],
+      "requires": {
+        "quests": [
+          "narustead_sword_shop_word"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "dungeoneering"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "renudale",
+            "giver": "sword_shop"
+          },
+          "lines": [
+            "player: A contract from the sword shop keeper in Narustead.",
+            "A fair offer. But the road between us is not safe, and you know it."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "service",
+          "to": {
+            "area": "renudale",
+            "giver": "sword_shop"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "spider",
+          "amount": 26,
+          "where": {
+            "area": "narustead",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s4",
+          "type": "dungeoneering",
+          "amount": 2
+        },
+        {
+          "id": "s5",
+          "type": "talk",
+          "to": {
+            "area": "narustead",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The route to Renudale is open and the contract is signed.",
+            "Then I will underwrite it. Narustead has not had news this good in years."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "narustead_clothes_shop_nest",
+      "name": "The Thing Beneath Narustead",
+      "area": "narustead",
+      "giver": "clothes_shop",
+      "length": "long",
+      "summary": "Find what rules Narustead Sewers, weaken its nest and destroy The Rat King.",
+      "intro": [
+        "Something rules Narustead Sewers and it is getting stronger. I want it gone.",
+        "Ask the realtor what they have heard, see it for yourself, then come back and we will decide how to break the nest.",
+        "When it is weak, kill it and tell the banker."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "I felt the ground go still. Narustead is yours to walk freely, friend.",
+        "Take this. It is everything I promised and a little more."
+      ],
+      "requires": {
+        "quests": [
+          "narustead_clothes_shop_stock"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "smithing",
+          "constitution"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "narustead",
+            "giver": "realtor"
+          },
+          "lines": [
+            "player: Have you heard anything from below the streets?",
+            "Every night. Something large is down there, and the small ones answer to it. They call it The Rat King."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "narustead"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "choice",
+          "lines": [
+            "So you have seen it. We can thin them by force, or I can have the guard hold the drains if they are supplied."
+          ],
+          "prompt": "How will you weaken the nest?",
+          "options": [
+            {
+              "text": "I will cut them down myself.",
+              "next": "s4"
+            },
+            {
+              "text": "Supply the guard and let them hold the drains.",
+              "next": "s5"
+            }
+          ]
+        },
+        {
+          "id": "s4",
+          "type": "kill",
+          "next": "s6",
+          "mob": "giant rat",
+          "amount": 26,
+          "where": {
+            "dungeon": "narustead"
+          }
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 11,
+          "item": "steel_bar"
+        },
+        {
+          "id": "s6",
+          "type": "boss",
+          "dungeon": "narustead"
+        },
+        {
+          "id": "s7",
+          "type": "talk",
+          "to": {
+            "area": "narustead",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The Rat King is dead. Narustead Sewers is quiet.",
+            "Then the vaults are safe and so is everyone above them. The town will hear of this."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "narustead_general_store_expedition",
+      "name": "The Fall of the Fallen Warden (General Store Keeper)",
+      "area": "narustead",
+      "giver": "general_store",
+      "length": "long",
+      "summary": "March on Ashen Redoubt, break its creatures and bring down The Fallen Warden.",
+      "intro": [
+        "Ashen Redoubt has stood against Narustead for too long. The Fallen Warden sits at the bottom of it.",
+        "Learn what you can from the realtor, fight your way through 26 ghost and end The Fallen Warden.",
+        "Bring 11 steel bar back so the town can rebuild."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "It is done, then. They will sing about this in every tavern from here to the coast.",
+        "Take your reward. You have more than earned it."
+      ],
+      "requires": {
+        "quests": [
+          "narustead_general_store_stock"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "constitution",
+          "smithing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "narustead",
+            "giver": "realtor"
+          },
+          "lines": [
+            "player: What do you know of Ashen Redoubt?",
+            "Only that those who go in come back thin and quiet. The Fallen Warden rules it now."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "wilderness"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "ghost",
+          "amount": 26,
+          "where": {
+            "dungeon": "wilderness"
+          }
+        },
+        {
+          "id": "s4",
+          "type": "boss",
+          "dungeon": "wilderness"
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 11,
+          "item": "steel_bar"
+        },
+        {
+          "id": "s6",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "renudale",
+            "giver": "general_store"
+          },
+          "lines": [
+            "player: Word from Narustead: The Fallen Warden is dead.",
+            "Dead? Then the caravans can leave at dawn. This news is worth more than gold."
+          ]
+        }
+      ]
+    }
+  ]
+}

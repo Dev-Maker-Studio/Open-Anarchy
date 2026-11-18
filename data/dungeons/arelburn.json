@@ -1,0 +1,10 @@
+{
+  "id": "arelburn",
+  "name": "Arelburn Sewers",
+  "theme": "sewer",
+  "seed": 8465458578469615227,
+  "slot": 17,
+  "entranceX": 7459,
+  "entranceY": 5953,
+  "origin": "city:arelburn"
+}

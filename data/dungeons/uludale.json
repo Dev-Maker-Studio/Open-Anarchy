@@ -1,0 +1,10 @@
+{
+  "id": "uludale",
+  "name": "Uludale Sewers",
+  "theme": "sewer",
+  "seed": -2563421245377218126,
+  "slot": 6,
+  "entranceX": 5877,
+  "entranceY": 8686,
+  "origin": "city:uludale"
+}

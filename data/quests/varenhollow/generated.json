@@ -1,0 +1,1042 @@
+{
+  "area": "varenhollow",
+  "seed": 5764398,
+  "generatorVersion": 1,
+  "quests": [
+    {
+      "id": "varenhollow_banker_stock",
+      "name": "Short on Raw Lobster",
+      "area": "varenhollow",
+      "giver": "banker",
+      "length": "short",
+      "summary": "The banker of Varenhollow has run out of raw lobster.",
+      "intro": [
+        "My stores are bare. I need 21 raw lobster and nobody in Varenhollow has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "fishing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 21,
+          "item": "raw_lobster"
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_general_store_parcel",
+      "name": "A Parcel for the Fishing Shop Keeper",
+      "area": "varenhollow",
+      "giver": "general_store",
+      "length": "short",
+      "summary": "Carry a parcel across Varenhollow to the fishing shop keeper.",
+      "intro": [
+        "This should have gone to the fishing shop keeper days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "ra3_package",
+          "to": {
+            "area": "varenhollow",
+            "giver": "fishing_shop"
+          },
+          "lines": [
+            "player: A delivery from the general store keeper.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_barber_word",
+      "name": "Word to the Magic Shop Keeper",
+      "area": "varenhollow",
+      "giver": "barber",
+      "length": "short",
+      "summary": "Call on the magic shop keeper of Varenhollow and bring back their answer.",
+      "intro": [
+        "I need an answer from the magic shop keeper and I would rather not shout it across the street.",
+        "Call on them as a customer, then ask how our accounts stand."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Balanced? Then I can sleep tonight. My thanks."
+      ],
+      "rewards": {},
+      "steps": [
+        {
+          "id": "s1",
+          "type": "service",
+          "to": {
+            "area": "varenhollow",
+            "giver": "magic_shop"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "talk",
+          "to": {
+            "area": "varenhollow",
+            "giver": "magic_shop"
+          },
+          "lines": [
+            "player: The barber sent me to ask after the ledgers.",
+            "Tell them the figures balance, for once. There is nothing owed between us this season."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_sword_shop_scout",
+      "name": "Eyes on the Varenhollow Sewers",
+      "area": "varenhollow",
+      "giver": "sword_shop",
+      "length": "short",
+      "summary": "Climb down into Varenhollow Sewers and report what you see.",
+      "intro": [
+        "Something has been scratching under the streets at night. It comes from Varenhollow Sewers.",
+        "Go down the entrance, take a look around and come back in one piece."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "So it is as bad as I feared. Thank you for looking, that took nerve."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "varenhollow"
+          }
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_archery_shop_cull",
+      "name": "Trouble with Giant Spiders",
+      "area": "varenhollow",
+      "giver": "archery_shop",
+      "length": "short",
+      "summary": "The archery shop keeper wants the giant spider near Varenhollow thinned out.",
+      "intro": [
+        "The giant spider beyond the walls grow bolder every week. Customers will not walk the road.",
+        "Put down 13 of them close to Varenhollow and I will make it worth your while."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "The road is quieter already. Here, as promised."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 13,
+          "where": {
+            "area": "varenhollow",
+            "radius": 300
+          }
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_magic_shop_stock",
+      "name": "Short on Bones",
+      "area": "varenhollow",
+      "giver": "magic_shop",
+      "length": "short",
+      "summary": "The magic shop keeper of Varenhollow has run out of bones.",
+      "intro": [
+        "My stores are bare. I need 16 bones and nobody in Varenhollow has any to spare.",
+        "Bring them to me, however you come by them."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "That will keep me going for a good while. Take this for your trouble."
+      ],
+      "rewards": {
+        "xp": [
+          "prayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 16,
+          "item": "bones"
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_clothes_shop_parcel",
+      "name": "A Parcel for the General Store Keeper",
+      "area": "varenhollow",
+      "giver": "clothes_shop",
+      "length": "short",
+      "summary": "Carry a parcel across Varenhollow to the general store keeper.",
+      "intro": [
+        "This should have gone to the general store keeper days ago and I cannot leave my post.",
+        "Take it over for me and come back when it is done."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Delivered and settled? Good. Here is something for the legwork."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "varenhollow",
+            "giver": "general_store"
+          },
+          "lines": [
+            "player: A delivery from the clothes shop keeper.",
+            "At last. I had begun to think it lost. Tell them the account is settled."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_food_shop_word",
+      "name": "Word to the Fishing Shop Keeper",
+      "area": "varenhollow",
+      "giver": "food_shop",
+      "length": "short",
+      "summary": "Call on the fishing shop keeper of Varenhollow and bring back their answer.",
+      "intro": [
+        "I need an answer from the fishing shop keeper and I would rather not shout it across the street.",
+        "Call on them as a customer, then ask how our accounts stand."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Balanced? Then I can sleep tonight. My thanks."
+      ],
+      "rewards": {},
+      "steps": [
+        {
+          "id": "s1",
+          "type": "service",
+          "to": {
+            "area": "varenhollow",
+            "giver": "fishing_shop"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "talk",
+          "to": {
+            "area": "varenhollow",
+            "giver": "fishing_shop"
+          },
+          "lines": [
+            "player: The food shop keeper sent me to ask after the ledgers.",
+            "Tell them the figures balance, for once. There is nothing owed between us this season."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_banker_supply",
+      "name": "Supply Run to Seluford",
+      "area": "varenhollow",
+      "giver": "banker",
+      "length": "medium",
+      "summary": "Gather maple logs for the banker, then carry a shipment to Seluford.",
+      "intro": [
+        "I have an order from Seluford and nothing to fill it with.",
+        "Bring me 26 maple logs, then take the packed shipment to the banker there and do some business while you are in town."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "woodcutting",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 26,
+          "item": "maple_logs"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "ra3_package",
+          "to": {
+            "area": "seluford",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Goods from the banker in Varenhollow.",
+            "From Varenhollow? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "seluford",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_general_store_hunt",
+      "name": "The Long Hunt",
+      "area": "varenhollow",
+      "giver": "general_store",
+      "length": "medium",
+      "summary": "Hunt the creatures around Varenhollow and bring back mithril ore.",
+      "intro": [
+        "The wilds around Varenhollow need a firm hand. Start with 13 snake outside the walls, then 21 spider down in Varenhollow Sewers.",
+        "When that is done, bring me 21 mithril ore to show for it."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "mining"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "snake",
+          "amount": 13,
+          "where": {
+            "area": "varenhollow",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "spider",
+          "amount": 21,
+          "where": {
+            "dungeon": "varenhollow"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 21,
+          "item": "mithril_ore"
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_barber_council",
+      "name": "Votes for the Council",
+      "area": "varenhollow",
+      "giver": "barber",
+      "length": "medium",
+      "summary": "Gather support around Varenhollow for the barber.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the sword shop keeper, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "varenhollow",
+            "giver": "sword_shop"
+          },
+          "lines": [
+            "player: The barber asks whether you will stand with them at the next council.",
+            "I will, if the realtor does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "burgh_generalstore_crate",
+          "to": {
+            "area": "varenhollow",
+            "giver": "realtor"
+          },
+          "lines": [
+            "player: A sealed note, from the sword shop keeper.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "varenhollow",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_sword_shop_sweep",
+      "name": "Sweeping the Varenhollow Sewers",
+      "area": "varenhollow",
+      "giver": "sword_shop",
+      "length": "medium",
+      "summary": "Clear spider out of Varenhollow Sewers and tell the archery shop keeper.",
+      "intro": [
+        "Varenhollow Sewers is crawling with spider, and they come up through the drains.",
+        "Go down, kill 21 of them, then let the archery shop keeper know their cellar is safe."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Both done? Varenhollow owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "varenhollow"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "spider",
+          "amount": 21,
+          "where": {
+            "dungeon": "varenhollow"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "varenhollow",
+            "giver": "archery_shop"
+          },
+          "lines": [
+            "player: Varenhollow Sewers is clearer than it was. 21 spider fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_archery_shop_supply",
+      "name": "Supply Run to Seluford (Archery Shop Keeper)",
+      "area": "varenhollow",
+      "giver": "archery_shop",
+      "length": "medium",
+      "summary": "Gather willow logs for the archery shop keeper, then carry a shipment to Seluford.",
+      "intro": [
+        "I have an order from Seluford and nothing to fill it with.",
+        "Bring me 26 willow logs, then take the packed shipment to the archery shop keeper there and do some business while you are in town."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "They took the lot? Then we have a trade route. Your share, as agreed."
+      ],
+      "rewards": {
+        "xp": [
+          "woodcutting",
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "gather",
+          "amount": 26,
+          "item": "willow_logs"
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "seluford",
+            "giver": "archery_shop"
+          },
+          "lines": [
+            "player: Goods from the archery shop keeper in Varenhollow.",
+            "From Varenhollow? Then the roads are open after all. Set it down there."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "seluford",
+            "giver": "archery_shop"
+          }
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_magic_shop_hunt",
+      "name": "The Long Hunt (Magic Shop Keeper)",
+      "area": "varenhollow",
+      "giver": "magic_shop",
+      "length": "medium",
+      "summary": "Hunt the creatures around Varenhollow and bring back big bones.",
+      "intro": [
+        "The wilds around Varenhollow need a firm hand. Start with 13 spider outside the walls, then 21 giant spider down in Varenhollow Sewers.",
+        "When that is done, bring me 16 big bones to show for it."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "A proper hunt. The town will eat and sleep easier for it."
+      ],
+      "rewards": {
+        "xp": [
+          "slayer",
+          "prayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "kill",
+          "mob": "spider",
+          "amount": 13,
+          "where": {
+            "area": "varenhollow",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "giant spider",
+          "amount": 21,
+          "where": {
+            "dungeon": "varenhollow"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "gather",
+          "amount": 16,
+          "item": "big_bones"
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_clothes_shop_council",
+      "name": "Votes for the Council (Clothes Shop Keeper)",
+      "area": "varenhollow",
+      "giver": "clothes_shop",
+      "length": "medium",
+      "summary": "Gather support around Varenhollow for the clothes shop keeper.",
+      "intro": [
+        "The council meets soon and I am short of friends.",
+        "Speak to the food shop keeper, carry whatever they give you, and see that the paperwork is lodged."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "Agreed, all of them? You have a talent for this. Here."
+      ],
+      "rewards": {
+        "xp": [
+          "agility"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "varenhollow",
+            "giver": "food_shop"
+          },
+          "lines": [
+            "player: The clothes shop keeper asks whether you will stand with them at the next council.",
+            "I will, if the staff shop keeper does. Take this sealed note over and we shall see."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "varenhollow",
+            "giver": "staff_shop"
+          },
+          "lines": [
+            "player: A sealed note, from the food shop keeper.",
+            "Hm. They want my vote. Very well, tell your employer it is agreed."
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "service",
+          "to": {
+            "area": "varenhollow",
+            "giver": "banker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_food_shop_sweep",
+      "name": "Sweeping the Varenhollow Sewers (Food Shop Keeper)",
+      "area": "varenhollow",
+      "giver": "food_shop",
+      "length": "medium",
+      "summary": "Clear spider out of Varenhollow Sewers and tell the archery shop keeper.",
+      "intro": [
+        "Varenhollow Sewers is crawling with spider, and they come up through the drains.",
+        "Go down, kill 21 of them, then let the archery shop keeper know their cellar is safe."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Both done? Varenhollow owes you more than I can pay, but take this."
+      ],
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "visit",
+          "place": {
+            "dungeon": "varenhollow"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "kill",
+          "mob": "spider",
+          "amount": 21,
+          "where": {
+            "dungeon": "varenhollow"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "to": {
+            "area": "varenhollow",
+            "giver": "archery_shop"
+          },
+          "lines": [
+            "player: Varenhollow Sewers is clearer than it was. 21 spider fewer.",
+            "Then the cellars on this street are safe a while longer. I will tell the others."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_general_store_route",
+      "name": "The Varenhollow Trade Route",
+      "area": "varenhollow",
+      "giver": "general_store",
+      "length": "long",
+      "summary": "Open a trade route between Varenhollow and Seluford.",
+      "intro": [
+        "I mean to open a trade route to Seluford. It needs a contract carried, a road made safe and a courier who is proven underground.",
+        "Deliver the contract, trade there, cut down 31 snake near our walls and prove yourself in the dungeoneering caves.",
+        "Then have the banker underwrite the venture."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "Signed, safe and funded. You have changed the fortunes of this town.",
+        "Here is your cut of the first season."
+      ],
+      "requires": {
+        "quests": [
+          "varenhollow_general_store_parcel"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "dungeoneering"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "seluford",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: A contract from the general store keeper in Varenhollow.",
+            "A fair offer. But the road between us is not safe, and you know it."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "service",
+          "to": {
+            "area": "seluford",
+            "giver": "banker"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "snake",
+          "amount": 31,
+          "where": {
+            "area": "varenhollow",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s4",
+          "type": "dungeoneering",
+          "amount": 3
+        },
+        {
+          "id": "s5",
+          "type": "talk",
+          "to": {
+            "area": "varenhollow",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The route to Seluford is open and the contract is signed.",
+            "Then I will underwrite it. Varenhollow has not had news this good in years."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_archery_shop_nest",
+      "name": "The Thing Beneath Varenhollow",
+      "area": "varenhollow",
+      "giver": "archery_shop",
+      "length": "long",
+      "summary": "Find what rules Varenhollow Sewers, weaken its nest and destroy The Ooze Mother.",
+      "intro": [
+        "Something rules Varenhollow Sewers and it is getting stronger. I want it gone.",
+        "Ask the magic shop keeper what they have heard, see it for yourself, then come back and we will decide how to break the nest.",
+        "When it is weak, kill it and tell the banker."
+      ],
+      "accept": "Leave it with me.",
+      "outro": [
+        "I felt the ground go still. Varenhollow is yours to walk freely, friend.",
+        "Take this. It is everything I promised and a little more."
+      ],
+      "requires": {
+        "quests": [
+          "varenhollow_archery_shop_cull"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "woodcutting",
+          "constitution"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "varenhollow",
+            "giver": "magic_shop"
+          },
+          "lines": [
+            "player: Have you heard anything from below the streets?",
+            "Every night. Something large is down there, and the small ones answer to it. They call it The Ooze Mother."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "varenhollow"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "choice",
+          "lines": [
+            "So you have seen it. We can thin them by force, or I can have the guard hold the drains if they are supplied."
+          ],
+          "prompt": "How will you weaken the nest?",
+          "options": [
+            {
+              "text": "I will cut them down myself.",
+              "next": "s4"
+            },
+            {
+              "text": "Supply the guard and let them hold the drains.",
+              "next": "s5"
+            }
+          ]
+        },
+        {
+          "id": "s4",
+          "type": "kill",
+          "next": "s6",
+          "mob": "giant rat",
+          "amount": 31,
+          "where": {
+            "dungeon": "varenhollow"
+          }
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 21,
+          "item": "oak_logs"
+        },
+        {
+          "id": "s6",
+          "type": "boss",
+          "dungeon": "varenhollow"
+        },
+        {
+          "id": "s7",
+          "type": "talk",
+          "to": {
+            "area": "varenhollow",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The Ooze Mother is dead. Varenhollow Sewers is quiet.",
+            "Then the vaults are safe and so is everyone above them. The town will hear of this."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_food_shop_expedition",
+      "name": "The Fall of the Broodmother",
+      "area": "varenhollow",
+      "giver": "food_shop",
+      "length": "long",
+      "summary": "March on Frostbite Cavern, break its creatures and bring down The Broodmother.",
+      "intro": [
+        "Frostbite Cavern has stood against Varenhollow for too long. The Broodmother sits at the bottom of it.",
+        "Learn what you can from the clothes shop keeper, fight your way through 31 spider and end The Broodmother.",
+        "Bring 21 raw salmon back so the town can rebuild."
+      ],
+      "accept": "I'll see it done.",
+      "outro": [
+        "It is done, then. They will sing about this in every tavern from here to the coast.",
+        "Take your reward. You have more than earned it."
+      ],
+      "requires": {
+        "quests": [
+          "varenhollow_food_shop_word"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "constitution",
+          "fishing"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "to": {
+            "area": "varenhollow",
+            "giver": "clothes_shop"
+          },
+          "lines": [
+            "player: What do you know of Frostbite Cavern?",
+            "Only that those who go in come back thin and quiet. The Broodmother rules it now."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "visit",
+          "place": {
+            "dungeon": "winter"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "spider",
+          "amount": 31,
+          "where": {
+            "dungeon": "winter"
+          }
+        },
+        {
+          "id": "s4",
+          "type": "boss",
+          "dungeon": "winter"
+        },
+        {
+          "id": "s5",
+          "type": "gather",
+          "amount": 21,
+          "item": "raw_salmon"
+        },
+        {
+          "id": "s6",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "seluford",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: Word from Varenhollow: The Broodmother is dead.",
+            "Dead? Then the caravans can leave at dawn. This news is worth more than gold."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "varenhollow_barber_route",
+      "name": "The Varenhollow Trade Route (Barber)",
+      "area": "varenhollow",
+      "giver": "barber",
+      "length": "long",
+      "summary": "Open a trade route between Varenhollow and Seluford.",
+      "intro": [
+        "I mean to open a trade route to Seluford. It needs a contract carried, a road made safe and a courier who is proven underground.",
+        "Deliver the contract, trade there, cut down 31 snake near our walls and prove yourself in the dungeoneering caves.",
+        "Then have the banker underwrite the venture."
+      ],
+      "accept": "Consider it handled.",
+      "outro": [
+        "Signed, safe and funded. You have changed the fortunes of this town.",
+        "Here is your cut of the first season."
+      ],
+      "requires": {
+        "quests": [
+          "varenhollow_barber_word"
+        ]
+      },
+      "rewards": {
+        "xp": [
+          "agility",
+          "slayer",
+          "dungeoneering"
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "type": "deliver",
+          "item": "sailing_courier_crate",
+          "to": {
+            "area": "seluford",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: A contract from the barber in Varenhollow.",
+            "A fair offer. But the road between us is not safe, and you know it."
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "service",
+          "to": {
+            "area": "seluford",
+            "giver": "banker"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "kill",
+          "mob": "snake",
+          "amount": 31,
+          "where": {
+            "area": "varenhollow",
+            "radius": 300
+          }
+        },
+        {
+          "id": "s4",
+          "type": "dungeoneering",
+          "amount": 3
+        },
+        {
+          "id": "s5",
+          "type": "talk",
+          "to": {
+            "area": "varenhollow",
+            "giver": "banker"
+          },
+          "lines": [
+            "player: The route to Seluford is open and the contract is signed.",
+            "Then I will underwrite it. Varenhollow has not had news this good in years."
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -3,7 +3,7 @@
   "name": "Frostbite Cavern",
   "theme": "cave",
   "seed": -1193370778494247024,
-  "slot": 9,
+  "slot": 24,
   "entranceX": 8482,
   "entranceY": 7911,
   "origin": "biome:winter"

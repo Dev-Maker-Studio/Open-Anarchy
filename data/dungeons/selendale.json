@@ -1,0 +1,10 @@
+{
+  "id": "selendale",
+  "name": "Selendale Sewers",
+  "theme": "sewer",
+  "seed": -6038259585911249500,
+  "slot": 7,
+  "entranceX": 8295,
+  "entranceY": 6258,
+  "origin": "city:selendale"
+}

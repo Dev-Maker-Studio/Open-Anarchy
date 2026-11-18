@@ -1,0 +1,10 @@
+{
+  "id": "renudale",
+  "name": "Renudale Sewers",
+  "theme": "sewer",
+  "seed": -283330763488264143,
+  "slot": 18,
+  "entranceX": 5603,
+  "entranceY": 5978,
+  "origin": "city:renudale"
+}

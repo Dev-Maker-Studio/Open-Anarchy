@@ -1,0 +1,10 @@
+{
+  "id": "varenhollow",
+  "name": "Varenhollow Sewers",
+  "theme": "sewer",
+  "seed": 3073143328607833026,
+  "slot": 14,
+  "entranceX": 8880,
+  "entranceY": 9184,
+  "origin": "city:varenhollow"
+}

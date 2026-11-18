@@ -16,8 +16,6 @@ object CityPlanner {
     private const val ATTEMPTS = 60
     private const val HOUSES = 14
     private const val SCAN_STEP = 6
-    private const val SEARCH_STEP = 25
-    private const val SEARCH_SPAN = 600
     private const val MAP_MARGIN = 80
     private const val GUARD_OFFSET = 3
     private const val ARMS = 4
@@ -33,9 +31,6 @@ object CityPlanner {
     private const val SEED_STEP = 7919L
     private const val CITY_SALT = 7271L
     private const val NAME_SALT = 131L
-    private const val BASE_DISTANCE = 1100
-    private const val DISTANCE_SPREAD = 400
-    private const val LAP_DISTANCE = 1500
     private const val MIN_HOME_STYLES = 2
     private const val HOME_STYLE_SPREAD = 2
     private const val MIN_ROOF_STYLES = 3
@@ -46,9 +41,17 @@ object CityPlanner {
     private const val HOME_SALT = 2713L
     private const val MIN_HOMES = 2
     private const val HOME_SPREAD = 2
-    const val CITIES = 5
+    const val CITIES = 40
+    const val MIN_BIOMES = 2
+    const val MAX_BIOMES = 5
+    private const val BIOME_TILES = WorldGenerator.BIOME_SPACING
+    private const val EDGE_BIOMES = 0.05
+    private const val NEAR_BIOMES = 3.5
+    private const val NEAR_ATTEMPTS = 50
+    private const val PLACE_ATTEMPTS = 100
+    private const val CHILDREN = 3
+    private const val EXPAND_SALT = 5113L
 
-    private val armOrder = listOf(0, 2, 1, 3)
     private val names = listOf("Velneir", "Aldmere", "Brackenholt", "Sarnwick", "Dunhollow")
     private val nameStarts = listOf("Ar", "Bel", "Cor", "Dra", "El", "Fen", "Gar", "Hal", "Ist", "Kel", "Lor", "Mor", "Nar", "Or", "Pel", "Ren", "Sel", "Tar", "Ul", "Var", "Wen", "Yar")
     private val nameMiddles = listOf("a", "an", "e", "en", "i", "o", "ow", "u", "ar", "el")
@@ -82,14 +85,31 @@ object CityPlanner {
     fun isStub(city: City): Boolean = city.streets.isEmpty() && city.buildings.isEmpty()
 
     fun plan(generator: WorldGenerator, worldSeed: Long, spawnX: Int, spawnY: Int, mapMin: Int, mapMax: Int, count: Int = CITIES): List<City> {
+        val centres = arrayListOf(spawnX to spawnY)
+        val random = Random(worldSeed * SEED_STEP + EXPAND_SALT)
+        var parent = 0
+        while (parent < centres.size && centres.size < count) {
+            val (px, py) = centres[parent++]
+            var children = 0
+            for (attempt in 0 until PLACE_ATTEMPTS) {
+                if (children >= CHILDREN || centres.size >= count) break
+                val ceiling = if (attempt < NEAR_ATTEMPTS) NEAR_BIOMES else MAX_BIOMES.toDouble()
+                val biomes = MIN_BIOMES + EDGE_BIOMES + random.nextDouble() * (ceiling - MIN_BIOMES - EDGE_BIOMES)
+                val angle = random.nextDouble() * 2 * Math.PI
+                val x = px + Math.round(Math.cos(angle) * biomes * BIOME_TILES).toInt()
+                val y = py + Math.round(Math.sin(angle) * biomes * BIOME_TILES).toInt()
+                if (x - HALF < mapMin + MAP_MARGIN || y - HALF < mapMin + MAP_MARGIN || x + HALF > mapMax - MAP_MARGIN || y + HALF > mapMax - MAP_MARGIN) continue
+                if (centres.any { (cx, cy) -> Math.hypot((cx - x).toDouble(), (cy - y).toDouble()) < MIN_BIOMES * BIOME_TILES }) continue
+                if (!suitable(generator, x, y, HALF)) continue
+                centres += x to y
+                children++
+            }
+        }
         val taken = HashSet<String>()
-        return (0 until count).mapNotNull { index ->
+        return centres.mapIndexed { index, (x, y) ->
             val seed = citySeed(worldSeed, index)
             val name = cityName(seed, index).let { if (taken.add(it)) it else "$it ${index + 1}" }
-            if (index == 0) return@mapNotNull make(generator, stub(name, seed, spawnX, spawnY, SPAWN_HALF))
-            val arm = armOrder[(index - 1) % ARMS]
-            val distance = BASE_DISTANCE + Random(seed).nextInt(DISTANCE_SPREAD) + (index - 1) / ARMS * LAP_DISTANCE
-            locate(generator, arm, distance, mapMin, mapMax)?.let { (x, y) -> make(generator, stub(name, seed, x, y, HALF)) }
+            make(generator, stub(name, seed, x, y, if (index == 0) SPAWN_HALF else HALF))
         }
     }
 
@@ -190,15 +210,6 @@ object CityPlanner {
             }
         }
         return best
-    }
-
-    private fun locate(generator: WorldGenerator, arm: Int, distance: Int, mapMin: Int, mapMax: Int): Pair<Int, Int>? {
-        for (step in 0..SEARCH_SPAN / SEARCH_STEP) {
-            val (x, y) = generator.roadCentreAt(arm, distance + step * SEARCH_STEP)
-            if (x - HALF < mapMin + MAP_MARGIN || y - HALF < mapMin + MAP_MARGIN || x + HALF > mapMax - MAP_MARGIN || y + HALF > mapMax - MAP_MARGIN) continue
-            if (suitable(generator, x, y, HALF)) return x to y
-        }
-        return null
     }
 
     private fun suitable(generator: WorldGenerator, cx: Int, cy: Int, half: Int): Boolean {

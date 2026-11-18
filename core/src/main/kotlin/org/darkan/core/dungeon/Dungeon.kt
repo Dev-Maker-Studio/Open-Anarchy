@@ -1,6 +1,7 @@
 package org.darkan.core.dungeon
 
 import org.darkan.core.city.Piece
+import java.util.Random
 
 data class Dungeon(
     val id: String,
@@ -18,7 +19,7 @@ data class Dungeon(
     val baseX get() = DungeonGrid.baseX(slot)
     val baseY get() = DungeonGrid.baseY(slot)
     val layout get() = DungeonGenerator.layout(this)
-    val bossId get() = boss ?: style.boss
+    val bossId get() = boss ?: style.bosses.let { it[Random(seed xor BOSS_SALT).nextInt(it.size)] }
 
     fun covers(x: Int, y: Int) = x >= baseX && x < baseX + DungeonGrid.SIZE && y >= baseY && y < baseY + DungeonGrid.SIZE
 
@@ -28,14 +29,16 @@ data class Dungeon(
         x >= entranceX - margin && x < entranceX + style.entranceWidth + margin && y >= entranceY - margin && y < entranceY + style.entranceDepth + margin
 }
 
+private const val BOSS_SALT = 0x626F7373L
+
 object DungeonGrid {
-    const val SIZE = 128
+    const val SIZE = 192
     const val REGION = 64
     const val REGIONS = SIZE / REGION
     private const val FIRST_REGION_X = 238
     private const val FIRST_REGION_Y = 2
-    private const val PITCH = 3
-    private const val COLUMNS = 5
+    private const val PITCH = REGIONS + 1
+    private const val COLUMNS = 4
     const val ORIGIN_X = FIRST_REGION_X * REGION
 
     fun baseX(slot: Int) = (FIRST_REGION_X + slot % COLUMNS * PITCH) * REGION

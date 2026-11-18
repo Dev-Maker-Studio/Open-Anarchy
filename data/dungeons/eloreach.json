@@ -1,0 +1,10 @@
+{
+  "id": "eloreach",
+  "name": "Eloreach Sewers",
+  "theme": "sewer",
+  "seed": -8843805655220849241,
+  "slot": 13,
+  "entranceX": 7126,
+  "entranceY": 9245,
+  "origin": "city:eloreach"
+}

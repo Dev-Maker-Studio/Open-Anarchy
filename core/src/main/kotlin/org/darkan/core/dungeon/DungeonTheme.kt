@@ -20,7 +20,7 @@ enum class DungeonTheme(
     val decor: List<Int>,
     val arenaDecor: Int,
     val mobs: List<Int>,
-    val boss: String,
+    val bosses: List<String>,
 ) {
     CAVE(
         Loc.troll_mad_eadgar_entrance, 3, 2, Loc.godwars_rock_rope_bottom1,
@@ -35,7 +35,7 @@ enum class DungeonTheme(
             Npc.rand_cave_crawler, Npc.giantspider2, Npc.bat, Npc.rand_cave_slime, Npc.rand_hobgoblin_3, Npc.mossgiant,
             Npc.babybluedragon, Npc.ice_spider, Npc.troll
         ),
-        "broodmother"
+        listOf("broodmother", "stone_tyrant", "hollow_wyrm")
     ),
     FORTRESS(
         Loc.win05_trapdoor, 1, 1, Loc.elid_ladder_up,
@@ -50,7 +50,7 @@ enum class DungeonTheme(
             Npc.rand_skeleton_melee_lvl1_1, Npc.rogue, Npc.ghost, Npc.skeleton_unarmed, Npc.zombie_armed, Npc.skeleton_armed,
             Npc.black_knight, Npc.rand_fire_giant_1, Npc.rand_lesser_demon_1, Npc.rand_greater_demon_1, Npc.hellhound
         ),
-        "warden"
+        listOf("warden", "pyre_baron", "pitmaster")
     ),
     SEWER(
         Loc.manholeclosed, 1, 1, Loc.contact_ladder,
@@ -65,7 +65,7 @@ enum class DungeonTheme(
             Npc.rand_giant_rat_3, Npc.rogue, Npc.zombie_armed_sewer4, Npc.giantspider2, Npc.rand_cave_slime, Npc.kingscorpion,
             Npc.mossgiant, Npc.rand_pyrefiend, Npc.rand_jelly
         ),
-        "rat_king"
+        listOf("rat_king", "ooze_mother", "plague_warden")
     ),
     ;
 
