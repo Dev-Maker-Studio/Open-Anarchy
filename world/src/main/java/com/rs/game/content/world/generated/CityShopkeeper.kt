@@ -51,7 +51,7 @@ private class SavedItem(val id: Int, val amount: Int)
 private class SavedShop(val coins: Int, val items: List<SavedItem>, val restocked: Long)
 
 /** One shopkeeper's ledger: [key] identifies the keeper, [kind] (a shop key ending in the service name) picks the wares it sells. */
-class CityShop(val key: String, kind: String = key) : CoinTrader {
+class CityShop(val key: String, private val kind: String = key) : CoinTrader {
     private val file = File("./data/city-shops/sector-${EnvVars.worldId}/$key.json")
     private var loading = true
 
@@ -64,6 +64,7 @@ class CityShop(val key: String, kind: String = key) : CoinTrader {
     private var restocked = System.currentTimeMillis()
 
     init {
+        adoptLegacyFile()
         if (file.isFile) {
             val saved = gson.fromJson(file.readText(), SavedShop::class.java)
             coins = saved.coins
@@ -71,6 +72,13 @@ class CityShop(val key: String, kind: String = key) : CoinTrader {
             if (saved.restocked > 0) restocked = saved.restocked
         } else if (sellsDeeds) shop.addItem(Obj.estate_deed, DEED_STOCK)
         loading = false
+    }
+
+    /** Ledgers used to be saved per city and shop kind; the keeper standing there first takes that file over. */
+    private fun adoptLegacyFile() {
+        val legacy = File(file.parentFile, "$kind.json")
+        if (kind == key || file.isFile || !legacy.isFile) return
+        Files.move(legacy.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
     }
 
     override fun canTrade() = true
