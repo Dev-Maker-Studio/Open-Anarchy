@@ -23,6 +23,7 @@ import com.rs.plugin.kts.onButtonClick
 import com.rs.plugin.kts.onNpcClick
 import com.rs.plugin.kts.onObjectClick
 import com.rs.utils.Ticks
+import com.rs.game.content.world.generated.Dungeons
 import org.darkan.core.Constants
 import org.darkan.core.gameval.gen.Component
 import org.darkan.core.gameval.gen.Interface
@@ -173,6 +174,7 @@ private fun mapArdougneDungeons() {
     }
 
     onObjectClick(Loc.manholeclosed, Loc.manholeopen) { (player, obj, option) ->
+        if (Dungeons.entranceAt(obj.x, obj.y) != null) return@onObjectClick
         if (option.equals("Open", ignoreCase = true)) {
             val openedHole = GameObject(obj.id + 1, obj.type, obj.rotation, obj.x, obj.y, obj.plane)
             player.faceObject(openedHole)
