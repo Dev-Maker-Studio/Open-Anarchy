@@ -26,6 +26,8 @@ private const val GROUND_LEVEL = 0
 private const val VIEW_DIRECTORY = "./data/dungeon-views"
 private const val BOSS_ARGUMENT = "boss"
 private const val BOSS_STANDOFF = 5
+private const val OPTION_CLIMB_DOWN = "Climb-down"
+private const val OPTION_CLOSE = "Close"
 
 object Dungeons {
 
@@ -78,8 +80,15 @@ object Dungeons {
     fun init() {
         if (!EnvVars.generateMaps) return
         DungeonTheme.entries.forEach { theme ->
-            onObjectClick(theme.entrance) { e -> enter(e.player, e.obj) }
+            if (theme.entrance != Loc.manholeclosed) onObjectClick(theme.entrance) { e -> enter(e.player, e.obj) }
             onObjectClick(theme.exit) { e -> leave(e.player, e.obj) }
+        }
+        onObjectClick(Loc.manholeopen) { e ->
+            if (entranceAt(e.obj.x, e.obj.y) == null) return@onObjectClick
+            when {
+                e.option.equals(OPTION_CLIMB_DOWN, ignoreCase = true) -> enter(e.player, e.obj)
+                e.option.equals(OPTION_CLOSE, ignoreCase = true) -> World.removeObject(e.obj)
+            }
         }
         onObjectClick(Loc.rd_portal_room2_exit) { e -> leave(e.player, e.obj) }
         Commands.add(Rights.PLAYER, "dungeon [id] [boss]", "Lists the dungeons, or teleports to one or to its boss room. Debug worlds only.") { player, args ->
