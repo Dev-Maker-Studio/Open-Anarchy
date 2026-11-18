@@ -53,7 +53,7 @@ enum class DungeonTheme(
         "warden"
     ),
     SEWER(
-        Loc.vc_manhole_open, 1, 1, Loc.contact_ladder,
+        Loc.manholeclosed, 1, 1, Loc.contact_ladder,
         Underlay.underlay_55, Overlay.overlay_171, Overlay.overlay_11, Overlay.overlay_112, Loc.brickwall, false, 3,
         listOf(
             Loc.slug2_rotten_barrel_broken, Loc.luc2_bf_barrel_empty, Loc.di2_boxes1, Loc.chickenquest_bones_small_01,
