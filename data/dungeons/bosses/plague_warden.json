@@ -7,6 +7,7 @@
   "damage": 1.2,
   "respawnMinutes": 5,
   "abilities": [
+    {"type": "summon", "everyTicks": 8, "maxAlive": 8, "npc": "rand_crawling_hand", "count": 2},
     {"type": "slam", "everyTicks": 20, "radius": 3, "damage": 1.15, "shout": "Breathe deep."},
     {"type": "summon", "atHealth": [65, 35], "npc": "rand_crawling_hand", "count": 4, "shout": "Rise, my wretched ones!"},
     {"type": "enrage", "belowHealth": 20, "damage": 1.4, "shout": "Rot with me!"}

@@ -7,6 +7,7 @@
   "damage": 1.15,
   "respawnMinutes": 5,
   "abilities": [
+    {"type": "summon", "everyTicks": 8, "maxAlive": 10, "npc": "rat", "count": 2},
     {"type": "summon", "atHealth": [80, 60, 40, 20], "npc": "rat", "count": 4, "shout": "Squeeeak!"},
     {"type": "heal", "everyTicks": 30, "percent": 5},
     {"type": "enrage", "belowHealth": 15, "damage": 1.3}

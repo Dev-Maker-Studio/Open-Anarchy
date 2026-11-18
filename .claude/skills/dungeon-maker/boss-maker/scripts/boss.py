@@ -7,7 +7,7 @@ BOSSES = os.path.join(ROOT, "data", "dungeons", "bosses")
 DUNGEONS = os.path.join(ROOT, "data", "dungeons")
 ABILITIES = {
     "slam": ("everyTicks", "radius", "damage", "shout"),
-    "summon": ("atHealth", "npc", "count", "shout"),
+    "summon": ("atHealth", "everyTicks", "maxAlive", "npc", "count", "shout"),
     "enrage": ("belowHealth", "damage", "shout"),
     "heal": ("everyTicks", "percent", "shout"),
 }
