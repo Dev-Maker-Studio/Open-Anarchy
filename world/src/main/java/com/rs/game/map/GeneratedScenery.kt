@@ -18,6 +18,7 @@ import com.rs.game.content.world.generated.Cities
 import com.rs.game.content.world.generated.Dungeons
 import com.rs.game.content.world.generated.DungeoneeringCaves
 import com.rs.game.content.world.generated.RoadMenu
+import com.rs.game.content.world.generated.CarpetRiders
 
 private const val REGION_SIZE = 64
 private const val REGION_CACHE_LIMIT = 64
@@ -41,7 +42,7 @@ object GeneratedScenery {
             val x = baseX + scenery.x
             val y = baseY + scenery.y
             if (scenery.level != chunk.plane || x shr 3 != chunk.x || y shr 3 != chunk.y) continue
-            if (Cities.covers(x, y) || DungeoneeringCaves.covers(x, y)) continue
+            if (Cities.covers(x, y) || DungeoneeringCaves.covers(x, y) || CarpetRiders.covers(x, y)) continue
             val shape = ObjectShape.forId(scenery.shape) ?: continue
             chunk.addGeneratedObject(GameObject(scenery.id, shape, scenery.rotation, x, y, scenery.level))
         }
@@ -51,6 +52,7 @@ object GeneratedScenery {
         Dungeons.spawn(chunk)
         DungeoneeringCaves.spawn(chunk)
         RoadMenu.spawn(chunk)
+        CarpetRiders.spawn(chunk)
     }
 
     private fun scenery(generator: WorldGenerator, regionX: Int, regionY: Int): List<MapObject> {
