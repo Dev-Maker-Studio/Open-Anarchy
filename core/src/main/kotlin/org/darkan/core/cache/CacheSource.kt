@@ -43,6 +43,7 @@ object CacheSource {
             MapCodec.generator = generator
             CityTerrain.write(directory, generator, GeneratedWorld.cities, GeneratedWorld.dungeons.filter { it.origin.startsWith(DungeonSites.CITY_ORIGIN) }.map { it.entranceX to it.entranceY })
             WorldMapImage.write(directory, generator, GeneratedWorld.cities)
+            WorldMapStream.write(directory, generator, GeneratedWorld.cities)
             CityLabels.write(directory, GeneratedWorld.cities)
             MapCodec.reserved = DungeonTerrain.regions(GeneratedWorld.dungeons) + DungeonTerrain.templateRegions(directory)
             DungeonTerrain.write(directory, GeneratedWorld.dungeons)

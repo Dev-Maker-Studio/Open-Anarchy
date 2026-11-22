@@ -74,35 +74,45 @@ object WorldMapImage {
         var rebuilt = 0
         for (regionX in FIRST_SQUARE until FIRST_SQUARE + AREA_SQUARES) {
             for (regionY in FIRST_SQUARE until FIRST_SQUARE + AREA_SQUARES) {
-                val square = MapSquare.Square(MapSquare.Shape.TERRAIN, regionX, regionY)
-                val saved = File(tree, "$MAPS/${MapCodec.path(square)}")
-                val cache = File(SQUARE_CACHE, "$regionX-$regionY.${if (saved.isFile) SAVED_SUFFIX else GENERATED_SUFFIX}")
-                val baseX = regionX * SQUARE_TILES
-                val baseY = regionY * SQUARE_TILES
-                val reusable = !full
-                    && cache.isFile
-                    && squareKey(regionX, regionY) !in visitedNow
-                    && (!saved.isFile || cache.lastModified() >= saved.lastModified())
-                    && cities.none { it.touches(baseX, baseY, baseX + SQUARE_TILES - 1, baseY + SQUARE_TILES - 1) }
-                if (reusable) {
-                    out.write(cache.readBytes())
-                    continue
-                }
-                val data = squareBytes(saved, square, generator, cities, regionX, regionY)
-                cache.parentFile.mkdirs()
-                File(SQUARE_CACHE).listFiles { file -> file.name.startsWith("$regionX-$regionY.") && file != cache }?.forEach { it.delete() }
-                cache.writeBytes(data)
+                val (data, fresh) = square(tree, generator, cities, regionX, regionY, visitedNow, full)
                 out.write(data)
-                rebuilt++
+                if (fresh) rebuilt++
             }
         }
         logInfo("World map image: rebuilt $rebuilt of ${AREA_SQUARES * AREA_SQUARES} squares, the rest came from the square cache")
         return out.toByteArray()
     }
 
+    internal fun square(tree: File, generator: MapGenerator, cities: List<City>, regionX: Int, regionY: Int, visitedNow: Set<Long>, full: Boolean): Pair<ByteArray, Boolean> {
+        val square = MapSquare.Square(MapSquare.Shape.TERRAIN, regionX, regionY)
+        val saved = File(tree, "$MAPS/${MapCodec.path(square)}")
+        val cache = File(SQUARE_CACHE, "$regionX-$regionY.${if (saved.isFile) SAVED_SUFFIX else GENERATED_SUFFIX}")
+        val stale = File(SQUARE_CACHE, "$regionX-$regionY.${if (saved.isFile) GENERATED_SUFFIX else SAVED_SUFFIX}")
+        val baseX = regionX * SQUARE_TILES
+        val baseY = regionY * SQUARE_TILES
+        val reusable = !full
+            && cache.isFile
+            && squareKey(regionX, regionY) !in visitedNow
+            && (!saved.isFile || cache.lastModified() >= saved.lastModified())
+            && cities.none { it.touches(baseX, baseY, baseX + SQUARE_TILES - 1, baseY + SQUARE_TILES - 1) }
+        if (reusable) return cache.readBytes() to false
+        val data = squareBytes(saved, square, generator, cities, regionX, regionY)
+        cache.parentFile.mkdirs()
+        stale.delete()
+        cache.writeBytes(data)
+        return data to true
+    }
+
+    internal fun visitedSquares(): Set<Long> = visited
+
+    internal fun fullRebuild(): Boolean = System.getenv(REBUILD_VARIABLE) == "true"
+
+    internal fun hasSaved(tree: File, regionX: Int, regionY: Int): Boolean =
+        File(tree, "$MAPS/${MapCodec.path(MapSquare.Square(MapSquare.Shape.TERRAIN, regionX, regionY))}").isFile
+
     fun markVisited(squareX: Int, squareY: Int) {
         val key = squareKey(squareX, squareY)
-        if (squareX !in FIRST_SQUARE until FIRST_SQUARE + AREA_SQUARES || squareY !in FIRST_SQUARE until FIRST_SQUARE + AREA_SQUARES) return
+        if (squareX !in 0 until WorldMapStream.SECTOR_SQUARES || squareY !in 0 until WorldMapStream.SECTOR_SQUARES) return
         if (!visited.add(key)) return
         val file = File(VISITED_FILE)
         file.parentFile?.mkdirs()

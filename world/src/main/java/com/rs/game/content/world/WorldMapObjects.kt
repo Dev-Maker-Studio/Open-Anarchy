@@ -22,7 +22,7 @@ private const val DESERT_GROUND = 1
 private const val SNOW_GROUND = 2
 private const val ADDED = 3
 private const val NO_MAP_SCENE = -1
-private val MAP_RANGE = WorldWindow.MAP_ORIGIN until WorldWindow.MAP_ORIGIN + WorldWindow.MAP_TILES
+private val MAP_RANGE = 0 until WorldWindow.WINDOW_TILES
 
 private val OBJECT_VARPS = IntArray(SLOTS) { Varp.worldmap_object_0 + it }
 
