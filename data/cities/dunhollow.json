@@ -219,6 +219,10 @@
         {"loc": "chair", "x": 4, "y": 5, "rotation": 1},
         {"loc": "bench", "x": 1, "y": 5, "rotation": 1}
       ]
+    },
+    {
+      "kind": "church", "x": 6097, "y": 8033, "width": 12, "depth": 14, "door": "WEST", "floors": 3, "wall": "stone", "floor": "flagstone", "roof": "none",
+      "furniture": []
     }
   ],
   "residents": [
@@ -241,6 +245,14 @@
     {"npc": 15697, "x": 6047, "y": 8011, "role": "shopkeeper", "shop": "dunhollow_armour_shop"},
     {"npc": 15711, "x": 6102, "y": 8027, "role": "shopkeeper", "shop": "dunhollow_fishing_shop"},
     {"npc": 15708, "x": 6067, "y": 8008, "role": "shopkeeper", "shop": "dunhollow_staff_shop"},
-    {"npc": 15718, "x": 6095, "y": 7992, "role": "realtor"}
+    {"npc": 15718, "x": 6095, "y": 7992, "role": "realtor"},
+    {"npc": 456, "x": 6104, "y": 8035, "role": "priest"},
+    {"npc": 2899, "x": 6097, "y": 8038, "role": "greeter"},
+    {"npc": 0, "x": 6107, "y": 8037, "role": "congregant"},
+    {"npc": 668, "x": 6101, "y": 8039, "role": "congregant"},
+    {"npc": 7969, "x": 6105, "y": 8041, "role": "congregant"},
+    {"npc": 8864, "x": 6102, "y": 8041, "role": "congregant"},
+    {"npc": 758, "x": 6105, "y": 8039, "role": "congregant"},
+    {"npc": 4589, "x": 6101, "y": 8037, "role": "congregant"}
   ]
 }

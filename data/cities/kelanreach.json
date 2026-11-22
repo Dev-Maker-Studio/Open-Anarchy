@@ -61,13 +61,6 @@
       ]
     },
     {
-      "kind": "house", "x": 5853, "y": 6922, "width": 7, "depth": 7, "door": "WEST", "floors": 2, "wall": "plaster", "floor": "sandstone", "roof": "blueslate", "forSale": true,
-      "furniture": [
-        {"loc": "ladder", "x": 5, "y": 1, "rotation": 0},
-        {"loc": "laddertop", "x": 5, "y": 1, "rotation": 0, "level": 1}
-      ]
-    },
-    {
       "kind": "house", "x": 5843, "y": 6901, "width": 11, "depth": 8, "door": "NORTH", "floors": 1, "wall": "darkwood", "floor": "planks", "roof": "reed", "forSale": true,
       "furniture": []
     },
@@ -230,6 +223,17 @@
         {"loc": "chair", "x": 6, "y": 5, "rotation": 1},
         {"loc": "bench", "x": 1, "y": 5, "rotation": 1}
       ]
+    },
+    {
+      "kind": "church", "x": 5853, "y": 6916, "width": 12, "depth": 14, "door": "WEST", "floors": 3, "wall": "stone", "floor": "flagstone", "roof": "none",
+      "furniture": []
+    },
+    {
+      "kind": "house", "x": 5853, "y": 6947, "width": 7, "depth": 7, "door": "WEST", "floors": 2, "wall": "plaster", "floor": "sandstone", "roof": "blueslate", "forSale": true,
+      "furniture": [
+        {"loc": "ladder", "x": 5, "y": 1, "rotation": 0},
+        {"loc": "laddertop", "x": 5, "y": 1, "rotation": 0, "level": 1}
+      ]
     }
   ],
   "residents": [
@@ -251,6 +255,14 @@
     {"npc": 15699, "x": 5820, "y": 6944, "role": "shopkeeper", "shop": "kelanreach_armour_shop"},
     {"npc": 15695, "x": 5846, "y": 6940, "role": "shopkeeper", "shop": "kelanreach_fishing_shop"},
     {"npc": 15711, "x": 5811, "y": 6960, "role": "shopkeeper", "shop": "kelanreach_staff_shop"},
-    {"npc": 15718, "x": 5845, "y": 6924, "role": "realtor"}
+    {"npc": 15718, "x": 5845, "y": 6924, "role": "realtor"},
+    {"npc": 456, "x": 5860, "y": 6918, "role": "priest"},
+    {"npc": 2899, "x": 5853, "y": 6921, "role": "greeter"},
+    {"npc": 0, "x": 5863, "y": 6920, "role": "congregant"},
+    {"npc": 668, "x": 5857, "y": 6922, "role": "congregant"},
+    {"npc": 7969, "x": 5861, "y": 6924, "role": "congregant"},
+    {"npc": 8864, "x": 5858, "y": 6924, "role": "congregant"},
+    {"npc": 758, "x": 5861, "y": 6922, "role": "congregant"},
+    {"npc": 4589, "x": 5857, "y": 6920, "role": "congregant"}
   ]
 }

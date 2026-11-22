@@ -69,13 +69,6 @@
       ]
     },
     {
-      "kind": "house", "x": 5833, "y": 8662, "width": 10, "depth": 11, "door": "SOUTH", "floors": 2, "wall": "darkwood", "floor": "sandstone", "roof": "reed", "forSale": true,
-      "furniture": [
-        {"loc": "ladder", "x": 1, "y": 9, "rotation": 3},
-        {"loc": "laddertop", "x": 1, "y": 9, "rotation": 3, "level": 1}
-      ]
-    },
-    {
       "kind": "general_store", "x": 5843, "y": 8691, "width": 7, "depth": 11, "door": "NORTH", "floors": 1, "wall": "lightwood", "floor": "planks", "roof": "reed",
       "furniture": [
         {"loc": "table", "x": 4, "y": 2, "rotation": 1},
@@ -217,6 +210,17 @@
         {"loc": "chair", "x": 1, "y": 4, "rotation": 1},
         {"loc": "bench", "x": 1, "y": 1, "rotation": 0}
       ]
+    },
+    {
+      "kind": "church", "x": 5833, "y": 8667, "width": 12, "depth": 14, "door": "WEST", "floors": 3, "wall": "stone", "floor": "flagstone", "roof": "none",
+      "furniture": []
+    },
+    {
+      "kind": "house", "x": 5831, "y": 8650, "width": 11, "depth": 10, "door": "NORTH", "floors": 2, "wall": "darkwood", "floor": "sandstone", "roof": "reed", "forSale": true,
+      "furniture": [
+        {"loc": "ladder", "x": 1, "y": 1, "rotation": 1},
+        {"loc": "laddertop", "x": 1, "y": 1, "rotation": 1, "level": 1}
+      ]
     }
   ],
   "residents": [
@@ -227,7 +231,6 @@
     {"npc": 9, "x": 5845, "y": 8709, "role": "guard"},
     {"npc": 9, "x": 5843, "y": 8702, "role": "patrol"},
     {"npc": 9, "x": 5863, "y": 8662, "role": "patrol"},
-    {"npc": 9, "x": 5833, "y": 8672, "role": "patrol"},
     {"npc": 9, "x": 5873, "y": 8692, "role": "patrol"},
     {"npc": 15670, "x": 5846, "y": 8692, "role": "shopkeeper", "shop": "uludale_general_store"},
     {"npc": 598, "x": 5836, "y": 8689, "role": "barber"},
@@ -239,6 +242,14 @@
     {"npc": 15696, "x": 5865, "y": 8675, "role": "shopkeeper", "shop": "uludale_armour_shop"},
     {"npc": 15696, "x": 5825, "y": 8692, "role": "shopkeeper", "shop": "uludale_fishing_shop"},
     {"npc": 15707, "x": 5884, "y": 8663, "role": "shopkeeper", "shop": "uludale_staff_shop"},
-    {"npc": 15718, "x": 5838, "y": 8698, "role": "realtor"}
+    {"npc": 15718, "x": 5838, "y": 8698, "role": "realtor"},
+    {"npc": 456, "x": 5840, "y": 8669, "role": "priest"},
+    {"npc": 2899, "x": 5833, "y": 8672, "role": "greeter"},
+    {"npc": 0, "x": 5843, "y": 8671, "role": "congregant"},
+    {"npc": 668, "x": 5837, "y": 8673, "role": "congregant"},
+    {"npc": 7969, "x": 5841, "y": 8675, "role": "congregant"},
+    {"npc": 8864, "x": 5838, "y": 8675, "role": "congregant"},
+    {"npc": 758, "x": 5841, "y": 8673, "role": "congregant"},
+    {"npc": 4589, "x": 5837, "y": 8671, "role": "congregant"}
   ]
 }

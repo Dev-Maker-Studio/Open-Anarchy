@@ -64,10 +64,6 @@
       ]
     },
     {
-      "kind": "house", "x": 9034, "y": 7132, "width": 9, "depth": 10, "door": "NORTH", "floors": 1, "wall": "brick", "floor": "terracotta", "roof": "straw", "forSale": true,
-      "furniture": []
-    },
-    {
       "kind": "house", "x": 9049, "y": 7124, "width": 10, "depth": 9, "door": "WEST", "floors": 1, "wall": "brick", "floor": "sandstone", "roof": "hay", "forSale": true,
       "furniture": []
     },
@@ -232,6 +228,14 @@
         {"loc": "chair", "x": 2, "y": 1, "rotation": 1},
         {"loc": "bench", "x": 5, "y": 1, "rotation": 3}
       ]
+    },
+    {
+      "kind": "church", "x": 9029, "y": 7127, "width": 12, "depth": 14, "door": "WEST", "floors": 3, "wall": "stone", "floor": "flagstone", "roof": "none",
+      "furniture": []
+    },
+    {
+      "kind": "house", "x": 9008, "y": 7133, "width": 10, "depth": 9, "door": "NORTH", "floors": 1, "wall": "brick", "floor": "terracotta", "roof": "straw", "forSale": true,
+      "furniture": []
     }
   ],
   "residents": [
@@ -254,6 +258,14 @@
     {"npc": 15684, "x": 9011, "y": 7110, "role": "shopkeeper", "shop": "fenoburn_armour_shop"},
     {"npc": 15697, "x": 9010, "y": 7130, "role": "shopkeeper", "shop": "fenoburn_fishing_shop"},
     {"npc": 15680, "x": 9054, "y": 7102, "role": "shopkeeper", "shop": "fenoburn_staff_shop"},
-    {"npc": 15718, "x": 9009, "y": 7149, "role": "realtor"}
+    {"npc": 15718, "x": 9009, "y": 7149, "role": "realtor"},
+    {"npc": 456, "x": 9036, "y": 7129, "role": "priest"},
+    {"npc": 2899, "x": 9029, "y": 7132, "role": "greeter"},
+    {"npc": 0, "x": 9039, "y": 7131, "role": "congregant"},
+    {"npc": 668, "x": 9033, "y": 7133, "role": "congregant"},
+    {"npc": 7969, "x": 9037, "y": 7135, "role": "congregant"},
+    {"npc": 8864, "x": 9034, "y": 7135, "role": "congregant"},
+    {"npc": 758, "x": 9037, "y": 7133, "role": "congregant"},
+    {"npc": 4589, "x": 9033, "y": 7131, "role": "congregant"}
   ]
 }

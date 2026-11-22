@@ -144,6 +144,14 @@ Every city has one `realtor` building and two or three homes for sale. Both are 
 - Ownership, asking prices and unpaid sales are saved in `data/city-homes/sector-<world>.json` on every change. The key is `<city>_<x>_<y>` of the house, so moving a home's building in the JSON orphans its owner; deleting the file returns every home to the realtor.
 - Interface rows are pushed by the server, one `Cs2.realtor_home_add(title, status, button, button, button)` per home; each row is five ccs (title, status, three buttons), so the clicked row is `slotId / 5` and the button `slotId % 5 - 2`.
 
+## Church
+
+Every city has one `church`: the Lumbridge church stamped from `core/src/main/resources/city/lumbridge_church.json` (`ChurchTemplate`), 12 by 14, always with `door` `WEST`, so it needs a street on its west side at rows 6 and 7 of its footprint.
+
+- Its `wall`, `floor`, `roof` and `furniture` fields are not used: every object and the floor tiles of all four levels come from the template. To move a church by hand change only `x` and `y`, and move its eight residents (`priest`, `greeter`, `congregant`) by the same amount.
+- `CityPlanner.withChurch` adds it to a city that has none: the free lot nearest the centre, or else the lot whose buildings are cheapest to move (house, market, home for sale, guardhouse, smithy, barber, realtor, bank). Each moved building is built again by `rebuilt` on the nearest free street front. Shops are never moved. A moved home for sale changes its key in `data/city-homes`, so check that file before the church is first added to a world where homes are owned.
+- The service, the sermon and the tithe are in `ChurchService.kt`, `Sermon.kt` and `Tithes.kt` beside the other city code. A tithe is shared between the city's shopkeepers with `CityShop.receive`.
+
 ## City shops are merchants
 
 A city shopkeeper is a wandering merchant that cannot be hurt and stays in its shop (`CityShopkeeper.kt`). It uses a merchant look (`wandering_merchant_01` to `_50`, picked from the city seed) and the merchant shop window.
