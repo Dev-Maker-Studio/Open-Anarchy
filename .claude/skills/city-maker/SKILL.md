@@ -121,6 +121,8 @@ Roofs follow the vanilla towns (Ardougne, Varrock, Falador): one roof kit loc pl
 |---|---|---|
 | `bank` | Bank | booths and bankers |
 | `smithy` | Furnace and Anvil | furnace and anvil |
+| `herblore_shop` | Herbalist | a counter and three shopkeepers: `potion_ingredients`, `rare_ingredients`, `exotic_ingredients` |
+| `farming_shop` | Farming shop | a counter and two shopkeepers: `master_farmer_seeds`, `master_farmer_herb_seeds` |
 | `general_store`, `sword_shop`, `archery_shop`, `magic_shop`, `clothes_shop`, `food_shop`, `armour_shop`, `fishing_shop`, `staff_shop` | the matching shop icon | a counter and a shopkeeper |
 | `barber` | Hairdresser | chairs, mirrors and the barber |
 | `realtor` | Estate agent | a desk, bookcases and the realtor |
@@ -152,6 +154,15 @@ Every city has one `church`: the Lumbridge church stamped from `core/src/main/re
 - `CityPlanner.withChurch` adds it to a city that has none: the free lot nearest the centre, or else the lot whose buildings are cheapest to move (house, market, home for sale, guardhouse, smithy, barber, realtor, bank). Each moved building is built again by `rebuilt` on the nearest free street front. Shops are never moved. A moved home for sale changes its key in `data/city-homes`, so check that file before the church is first added to a world where homes are owned.
 - The service, the sermon and the tithe are in `ChurchService.kt`, `Sermon.kt` and `Tithes.kt` beside the other city code. The lectern (`church_lectern`, ops Tithe and Attend-service) replaces the altar in the template; the hourly blessing is `ChurchBlessing` and the prayer book tooltip lines are `PrayerBoosts.kt` with the clientscript `prayer_tooltip`. A tithe is shared between the city's shopkeepers with `CityShop.receive`.
 
+## Farm
+
+Every second city has one `farm` (`FarmTemplate.inCity`: the cities with an even seed): the Catherby farm stamped from `core/src/main/resources/city/catherby_farm.json` (`FarmTemplate`), 12 by 12, with two allotments, a flower patch, a herb patch, a compost bin, the farming patch map icon and a tool leprechaun (resident role `leprechaun`). It has no walls, door or roof, so it needs no street.
+
+- Its `wall`, `floor`, `roof`, `door` and `furniture` fields are not used. To move a farm by hand change only `x` and `y`, and move its leprechaun by the same amount. To give a city with an odd seed a farm, add the building and the leprechaun by hand.
+- `CityPlanner.withFarm` adds it: the free lot farthest from the centre, or else the lot whose buildings are cheapest to move (house, market, guardhouse, smithy, barber). The church is never moved for it. Only when no such lot exists may it also move a home for sale, the bank or the realtor, as the church does, and only when that fails too a shop (whose saved stock in `data/city-shops` then starts again, because the keeper's tile changed). A moved building is built again on the nearest free street front; a plain house or market with no front left is dropped.
+- Every farm uses the Catherby patch locs, and each city's crops are the player's own for that city: `Player.cityPatches` holds one patch map per city id, `Player.getPatches` returns the map of the farm city the player is in or within 16 tiles of (`CityFarms.cityOf`), and every map grows on every farming tick wherever the player is. The patch varbits show one farm at a time; `CityFarms.refresh` sends them again when the player comes near another farm.
+- The soil under the patches is overlay 89, written by `WorldGenerator.buildingFloors`. Raking, harvesting and clearing a patch are allowed inside the city (`ClaimManager.allowObjectOption`).
+
 ## City shops are merchants
 
 A city shopkeeper is a wandering merchant that cannot be hurt and stays in its shop (`CityShopkeeper.kt`). It uses a merchant look (`wandering_merchant_01` to `_50`, picked from the city seed) and the merchant shop window.
@@ -170,7 +181,10 @@ A city shopkeeper is a wandering merchant that cannot be hurt and stays in its s
 | `armour_shop` | `horviks_armour_shop` |
 | `fishing_shop` | `gerrants_fishy_business` |
 | `staff_shop` | `zaffs_superior_staves` |
+| `potion_ingredients`, `rare_ingredients`, `exotic_ingredients` | `city_potion_ingredients`, `city_rare_ingredients`, `city_exotic_ingredients`: every secondary ingredient of `CraftablePotion`, 24 each, 10 of each |
+| `master_farmer_seeds`, `master_farmer_herb_seeds` | `city_master_farmer_seeds`, `city_master_farmer_herb_seeds`: every seed of `ProduceType` but the tree saplings, 10 of each |
 
+- A shop window holds 40 items, so a service with more wares has several keepers, one per ledger name in `Service.ledgers`; each keeper's `shop` key is `<city>_<ledger>`.
 - A key with none of these endings gets no default stock. To change what a kind sells, point it at another file in `data/items/shops` or edit that file's `items`.
 - It buys anything for the item's value while it has coins, and sells at 1.2 times the value. Coins it is paid go into its purse.
 - Default stock below its starting amount comes back one at a time every 50 ticks, as in a vanilla shop. It never drops back down: extra a player sold stays.
@@ -213,6 +227,7 @@ The harness covers looks. To walk a city, use the web client (`https://devmakers
 | Realtor, the homes interface and its dialogue | `world/.../content/world/generated/CityRealtor.kt` |
 | Home ownership, prices and the saved ledger | `world/.../content/claims/CityHomes.kt`, read by `ClaimManager.claimAt` and `canConstruct` |
 | Realtor office and homes for sale | `CityPlanner.withRealtor`, `withHomes` |
+| Farm | `core/.../city/FarmTemplate.kt`, `CityPlanner.withFarm` |
 | City shops and their saved stock | `world/.../content/world/generated/CityShopkeeper.kt`, on top of `npcs/merchant/MerchantShop.kt` |
 | Making a city from a seed | `CityPlanner.make`, `plan`, `stub`; stubs are filled in by `CityRegistry.load` |
 | Floor tiles | `WorldGenerator.buildingFloors`, written to the tree by `core/.../cache/CityTerrain.kt` |

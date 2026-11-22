@@ -35,6 +35,8 @@ object BuildingBuilder {
     private const val FURNACE_WIDTH = 2
     private const val FURNACE_DEPTH = 3
     private const val ENTRY_CLEARANCE = 2
+    private const val KEEPER_ROW = 2
+    private val KEEPER_SPREAD = listOf(0, -1, 1, -2, 2)
     private const val LADDER_STAGGER = 2
     private const val GROUND = 0
     private const val SHELVES = "shelves1"
@@ -70,7 +72,13 @@ object BuildingBuilder {
     }
 
     fun pieces(building: Building): List<Piece> =
-        built.computeIfAbsent(building) { if (it.kind == ChurchTemplate.KIND) ChurchTemplate.pieces(it) else walls(it) + furniture(it) + roof(it) + icons(it) }
+        built.computeIfAbsent(building) {
+            when (it.kind) {
+                ChurchTemplate.KIND -> ChurchTemplate.pieces(it)
+                FarmTemplate.KIND -> FarmTemplate.pieces(it)
+                else -> walls(it) + furniture(it) + roof(it) + icons(it)
+            }
+        }
 
     fun pieces(city: City): List<Piece> = cityPieces.computeIfAbsent(city) {
         val roofed = HashSet<Triple<Int, Int, Int>>()
@@ -219,15 +227,19 @@ object BuildingBuilder {
             return true
         }
 
-        private fun resident(npc: Int, tile: Pair<Int, Int>, role: String, shop: String? = null) {
-            if (Triple(tile.first, tile.second, GROUND) in taken || tile.first !in x + 1..maxX - 1 || tile.second !in y + 1..maxY - 1) return
+        private fun resident(npc: Int, tile: Pair<Int, Int>, role: String, shop: String? = null): Boolean {
+            if (Triple(tile.first, tile.second, GROUND) in taken || tile.first !in x + 1..maxX - 1 || tile.second !in y + 1..maxY - 1) return false
             taken += Triple(tile.first, tile.second, GROUND)
             residents += Resident(npc, tile.first, tile.second, role, shop = shop)
+            return true
         }
 
         private fun shop(service: Service) {
             for (across in -1..1) place(TABLE, at(across, inward - 3))
-            resident(CityPlanner.keeperNpc(seed, service.kind), at(0, inward - 2), SHOPKEEPER, if (city.isEmpty()) service.kind else "${city}_${service.kind}")
+            val spots = (KEEPER_ROW downTo 1).flatMap { back -> KEEPER_SPREAD.map { across -> at(across, inward - back) } }
+            for (ledger in service.ledgers) {
+                spots.firstOrNull { resident(CityPlanner.keeperNpc(seed, ledger), it, SHOPKEEPER, if (city.isEmpty()) ledger else "${city}_$ledger") }
+            }
             place(SHELVES, at(-lateral / 2 + 1, inward - 2))
             place(SHELVES, at(lateral / 2 - 1, inward - 2))
             place(CRATE, at(-lateral / 2 + 1, 1))

@@ -1,0 +1,177 @@
+{
+  "name": "Master Farmer's Herb Seeds",
+  "generalStore": true,
+  "buyOnly": false,
+  "currency": 995,
+  "items": [
+    {
+      "item": {
+        "id": 5291,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5292,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5293,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5294,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5295,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 12176,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5296,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5297,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5298,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5299,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5300,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5301,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5302,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5303,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5304,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 21621,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 14870,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 6311,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19897,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19907,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19902,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19912,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19917,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19922,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19927,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19932,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19937,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19942,
+        "amount": 10
+      }
+    }
+  ],
+  "npcIds": []
+}

@@ -35,6 +35,11 @@ private val DEFAULT_STOCK = mapOf(
     "armour_shop" to "horviks_armour_shop",
     "fishing_shop" to "gerrants_fishy_business",
     "staff_shop" to "zaffs_superior_staves",
+    "potion_ingredients" to "city_potion_ingredients",
+    "rare_ingredients" to "city_rare_ingredients",
+    "exotic_ingredients" to "city_exotic_ingredients",
+    "master_farmer_seeds" to "city_master_farmer_seeds",
+    "master_farmer_herb_seeds" to "city_master_farmer_herb_seeds",
 )
 
 private fun defaultStock(key: String): List<Item> {

@@ -2,6 +2,7 @@ package world.gregs.voidps.cache.source.codec
 
 import org.darkan.core.city.City
 import org.darkan.core.city.ChurchTemplate
+import org.darkan.core.city.FarmTemplate
 import org.darkan.core.city.FloorStyle
 import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.gameval.gen.Npc
@@ -251,6 +252,12 @@ class WorldGenerator(
             if (!city.touches(baseX, baseY, baseX + SIZE - 1, baseY + SIZE - 1)) continue
             for (building in city.buildings) {
                 val church = building.kind == ChurchTemplate.KIND
+                if (building.kind == FarmTemplate.KIND) {
+                    for (x in maxOf(building.x, baseX)..minOf(building.maxX, baseX + SIZE - 1)) for (y in maxOf(building.y, baseY)..minOf(building.maxY, baseY + SIZE - 1)) {
+                        FarmTemplate.tile(x - building.x, y - building.y)?.let { result[floorKey(x - baseX, y - baseY, GROUND_LEVEL)] = it }
+                    }
+                    continue
+                }
                 val floor = "o${FloorStyle.overlayOf(building.floor)}/0/0,s$ROOFED_TILE"
                 for (x in maxOf(building.x, baseX)..minOf(building.maxX, baseX + SIZE - 1)) for (y in maxOf(building.y, baseY)..minOf(building.maxY, baseY + SIZE - 1)) {
                     for (level in 0 until if (church) ChurchTemplate.LEVELS else building.levels) {
