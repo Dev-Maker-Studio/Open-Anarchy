@@ -1,7 +1,7 @@
 package com.rs.utils.music
 
 enum class Biome {
-    PLAINS, CITY, FOREST, DESERT, JUNGLE, SWAMP, SNOW, WILDERNESS, DUNGEON, VOLCANIC, OCEAN, MOUNTAIN, RUNE_ESSENCE;
+    PLAINS, CITY, FOREST, DESERT, JUNGLE, SWAMP, SNOW, WILDERNESS, DUNGEON, VOLCANIC, OCEAN, MOUNTAIN, RUNE_ESSENCE, CAVE, FORTRESS, SEWER;
 
     companion object {
         private val CITY_GENRES = setOf("varrock", "falador", "ardougne", "grand exchange", "edgeville", "taverly & burthorpe", "thieves guild", "dominion lobby")
