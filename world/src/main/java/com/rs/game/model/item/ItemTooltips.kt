@@ -16,6 +16,7 @@ fun interface MetadataTooltip {
 
 object ItemTooltips {
     const val METADATA_KEY = "tooltip"
+    const val TEXT_KEY = "tooltipText"
     private const val NAME_COLOUR = "ff9040"
     private const val VALUE_COLOUR = "2dc3ff"
 
@@ -58,6 +59,7 @@ object ItemTooltips {
     @JvmStatic
     fun of(player: Player, item: Item?): String? {
         if (item == null) return null
+        (item.getMetaData(TEXT_KEY) as? String)?.let { return it.ifEmpty { null } }
         val lines = ArrayList<Pair<TooltipSection, String>>()
         byObj[item.id]?.forEach { entry -> entry.provider.text(player, item)?.let { lines += entry.section to it } }
         global.forEach { entry -> entry.provider.text(player, item)?.let { lines += entry.section to it } }

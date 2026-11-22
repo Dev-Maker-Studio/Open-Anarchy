@@ -7,10 +7,13 @@ import com.rs.engine.dialogue.HeadE
 import com.rs.game.content.skills.magic.TeleType
 import com.rs.game.model.entity.player.Controller
 import com.rs.game.model.entity.player.Player
-import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.WorldTasks
 import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.plugin.kts.onObjectClick
 import com.rs.plugin.kts.onPlayerStep
+import com.rs.game.content.skills.prayer.PrayerBoosts
+import com.rs.game.model.entity.npc.NPC
+import java.util.Random
 import com.rs.utils.Ticks
 import org.darkan.core.Utils
 import org.darkan.core.city.Building
@@ -34,6 +37,7 @@ private const val GROUND = 0
 private const val PRAISE_START_TICKS = 6
 private const val PRAISE_SECONDS = 10
 private const val SERVICE_MINUTES = 2
+private const val PASTOR_SALT = 3391L
 
 private val PRAISES = arrayOf(
     "Hallelujah.", "Thank you Jesus.", "Have mercy on us.", "We praise you Lord.", "Praise God.", "In Jesus name.",
@@ -44,10 +48,14 @@ private val PRAISES = arrayOf(
     "You are the King of kings.", "All glory to your name.",
 )
 
+private val PASTOR_NAMES = arrayOf(
+    "Abel", "Amos", "Asher", "Boaz", "Caleb", "Cyrus", "Daniel", "Elias", "Enoch", "Ezra", "Gideon", "Isaac", "Jonah", "Josiah", "Levi",
+    "Micah", "Nathan", "Noah", "Obed", "Phineas", "Reuben", "Samuel", "Silas", "Simeon", "Thaddeus", "Titus", "Tobias", "Uriah", "Zadok", "Zane",
+)
+
 private class Look(val name: String, val facing: Direction)
 
 private val LOOKS = mapOf(
-    Npc.father_aereck to Look("Father Aereck", Direction.NORTH),
     Npc.agrith_reen to Look("Father John", Direction.NORTH),
     Npc.hans to Look("Hans", Direction.SOUTHWEST),
     Npc.johnathon_fitzharmon to Look("Johnathan", Direction.SOUTH),
@@ -63,6 +71,7 @@ class Church(val city: City, private val building: Building) {
     val serviceTile: Tile = Tile.of(building.x + ChurchTemplate.SERVICE_X, building.y + ChurchTemplate.SERVICE_Y, GROUND)
     val entrance = Array(ChurchTemplate.ENTRANCE_ROWS) { Tile.of(building.x, building.y + ChurchTemplate.ENTRANCE_Y + it, GROUND) }
     private val pews = CopyOnWriteArrayList<ChurchNpc>()
+    private val pastor = Look("Pastor ${PASTOR_NAMES[Random(city.seed + PASTOR_SALT).nextInt(PASTOR_NAMES.size)]}", Direction.NORTH)
     var priest: ChurchNpc? = null
         private set
     var serviceStarted = false
@@ -74,7 +83,7 @@ class Church(val city: City, private val building: Building) {
     fun merchants(): List<CityShop> = city.residents.filter { it.role == BuildingBuilder.SHOPKEEPER }.map(CityShop::of)
 
     fun spawn(resident: Resident) {
-        val look = LOOKS[resident.npc] ?: return
+        val look = if (resident.role == ChurchTemplate.PRIEST) pastor else LOOKS[resident.npc] ?: return
         val npc = ChurchNpc(resident.npc, Tile.of(resident.x, resident.y, resident.plane), look.facing)
         npc.setPermName(look.name)
         when (resident.role) {
@@ -108,6 +117,14 @@ fun mapChurchService() {
     WorldTasks.scheduleTimer(PRAISE_START_TICKS, Ticks.fromSeconds(PRAISE_SECONDS)) {
         Churches.all.values.forEach(Church::praise)
         true
+    }
+    onObjectClick(Loc.church_lectern) { (player, obj, option) ->
+        val church = Churches.all.values.firstOrNull { it.contains(obj.tile) } ?: return@onObjectClick
+        val priest = church.priest ?: return@onObjectClick
+        if (option == "Tithe")
+            player.startConversation(Dialogue().addNPC(priest, HeadE.CALM_TALK, "How much will you give to the Lord?").addNext { askTithe(player, church, priest) })
+        else if (option == "Attend-service")
+            startService(player, church)
     }
     for (church in Churches.all.values) {
         onPlayerStep(church.entrance) { (player) ->
@@ -147,43 +164,62 @@ class ChurchService(private val cityId: String) : Controller() {
     }
 
     override fun onTeleported(type: TeleType) = removeController()
+}
 
-    override fun processObjectClick1(obj: GameObject): Boolean {
-        val church = church
-        if (obj.id != Loc.loc_36972 || church == null) return true
-        player.startConversation(Dialogue().addOptions("Pray") { options ->
-            if (!player.getDailyB("HasDoneSermon"))
-                options.add("Service").addNext { startService(church) }
-            options.add("Tithe")
-                .addNPC(Npc.father_aereck, HeadE.CALM_TALK, "How much will you give to the Lord?")
-                .addNext { askTithe(church) }
-        })
-        return false
+private fun startService(player: Player, church: Church) {
+    if (church.serviceStarted) {
+        player.startConversation(Dialogue().addPlayer(HeadE.HAPPY_TALKING, "There is a service right now. I will get my blessing at the end..."))
+        return
     }
-
-    private fun startService(church: Church) {
-        if (church.serviceStarted) {
-            player.startConversation(Dialogue().addPlayer(HeadE.HAPPY_TALKING, "There is a service right now. I will get my blessing at the end..."))
-            return
-        }
-        if (church.priest == null || Churches.sermons.isEmpty()) return
-        church.serviceStarted = true
-        WorldTasks.delay(Ticks.fromMinutes(SERVICE_MINUTES)) { church.serviceStarted = false }
-        player.playCutscene(Sermon(church, Churches.sermons[Utils.random(Churches.sermons.size)]))
+    if (!ChurchBlessing.ready(player)) {
+        player.sendMessage("You have attended a service within the hour. Come back in ${ChurchBlessing.minutesLeft(player)} minutes.")
+        return
     }
+    if (church.priest == null || Churches.sermons.isEmpty()) return
+    church.serviceStarted = true
+    WorldTasks.delay(Ticks.fromMinutes(SERVICE_MINUTES)) { church.serviceStarted = false }
+    player.playCutscene(Sermon(church, Churches.sermons[Utils.random(Churches.sermons.size)]))
+}
 
-    private fun askTithe(church: Church) {
-        player.sendInputInteger("How many coins would you like to give?") { coins ->
-            when {
-                coins < 1 -> player.sendMessage("The priest expects a real offering.")
-                coins > MAX_TITHE -> player.startConversation(Dialogue()
-                    .addNPC(Npc.father_aereck, HeadE.ANGRY, "Are you trying to bribe Christ?") {
-                        player.sendMessage("The priest rejects too high an amount")
-                    })
-                coins > player.inventory.getCoins() -> player.sendMessage("You don't have ${Utils.formatNumber(coins)} coins")
-                !Tithes.give(player, church, coins) -> player.sendMessage("${church.city.name} has no merchants to share your offering with.")
-                else -> player.sendMessage("You have now tithed ${Utils.formatLong(Tithes.total(player))} coins. The merchants of ${church.city.name} share your offering.")
-            }
+private fun askTithe(player: Player, church: Church, priest: NPC) {
+    player.sendInputInteger("How many coins would you like to give?") { coins ->
+        when {
+            coins < 1 -> player.sendMessage("The priest expects a real offering.")
+            coins > MAX_TITHE -> player.startConversation(Dialogue()
+                .addNPC(priest, HeadE.ANGRY, "Are you trying to bribe Christ?") {
+                    player.sendMessage("The priest rejects too high an amount")
+                })
+            coins > player.inventory.getCoins() -> player.sendMessage("You don't have ${Utils.formatNumber(coins)} coins")
+            !Tithes.give(player, church, coins) -> player.sendMessage("${church.city.name} has no merchants to share your offering with.")
+            else -> player.sendMessage("You have now tithed ${Utils.formatLong(Tithes.total(player))} coins. The merchants of ${church.city.name} share your offering.")
         }
+    }
+}
+
+object ChurchBlessing {
+    private const val LAST_SERVICE = "churchLastService"
+    private const val SERVICES = "ServicesAttended"
+    private const val HOUR_MILLIS = 3_600_000L
+    private const val MINUTE_MILLIS = 60_000L
+    private const val POINT_BOOST = 100
+    private const val BONUS_PER_SERVICE = 0.001
+
+    private fun sinceService(player: Player) = System.currentTimeMillis() - player.getL(LAST_SERVICE, 0)
+
+    fun ready(player: Player) = sinceService(player) >= HOUR_MILLIS
+
+    fun minutesLeft(player: Player) = (HOUR_MILLIS - sinceService(player) + MINUTE_MILLIS - 1) / MINUTE_MILLIS
+
+    fun pointBoost(player: Player) = if (ready(player)) 0 else POINT_BOOST
+
+    fun prayerBonus(player: Player) = BONUS_PER_SERVICE * player.getCounterValue(SERVICES)
+
+    fun bless(player: Player): Boolean {
+        if (!ready(player)) return false
+        player.set(LAST_SERVICE, System.currentTimeMillis())
+        player.incrementCount(SERVICES)
+        player.prayer.points = player.prayer.maxPoints.toDouble()
+        PrayerBoosts.send(player)
+        return true
     }
 }

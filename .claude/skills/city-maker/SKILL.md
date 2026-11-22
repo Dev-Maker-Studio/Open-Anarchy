@@ -150,7 +150,7 @@ Every city has one `church`: the Lumbridge church stamped from `core/src/main/re
 
 - Its `wall`, `floor`, `roof` and `furniture` fields are not used: every object and the floor tiles of all four levels come from the template. To move a church by hand change only `x` and `y`, and move its eight residents (`priest`, `greeter`, `congregant`) by the same amount.
 - `CityPlanner.withChurch` adds it to a city that has none: the free lot nearest the centre, or else the lot whose buildings are cheapest to move (house, market, home for sale, guardhouse, smithy, barber, realtor, bank). Each moved building is built again by `rebuilt` on the nearest free street front. Shops are never moved. A moved home for sale changes its key in `data/city-homes`, so check that file before the church is first added to a world where homes are owned.
-- The service, the sermon and the tithe are in `ChurchService.kt`, `Sermon.kt` and `Tithes.kt` beside the other city code. A tithe is shared between the city's shopkeepers with `CityShop.receive`.
+- The service, the sermon and the tithe are in `ChurchService.kt`, `Sermon.kt` and `Tithes.kt` beside the other city code. The lectern (`church_lectern`, ops Tithe and Attend-service) replaces the altar in the template; the hourly blessing is `ChurchBlessing` and the prayer book tooltip lines are `PrayerBoosts.kt` with the clientscript `prayer_tooltip`. A tithe is shared between the city's shopkeepers with `CityShop.receive`.
 
 ## City shops are merchants
 

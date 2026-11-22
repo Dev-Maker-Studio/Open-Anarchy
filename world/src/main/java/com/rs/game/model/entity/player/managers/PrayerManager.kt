@@ -5,6 +5,8 @@ import com.rs.engine.quest.Quest
 import com.rs.game.World
 import com.rs.game.content.skills.prayer.Leech
 import com.rs.game.content.skills.prayer.Prayer
+import com.rs.game.content.skills.prayer.PrayerBoosts
+import com.rs.game.content.world.generated.ChurchBlessing
 import com.rs.game.content.skills.prayer.Sap
 import com.rs.game.content.skills.prayer.Turmoil
 import com.rs.game.model.entity.Entity
@@ -596,104 +598,30 @@ class PrayerManager {
         for (m in StatMod.entries) updateStatMod(m)
     }
 
-    val mageMultiplier: Double
-        get() {
-            if (active.isEmpty()) return 1.0
-            var value = 1.0
+    val mageMultiplier: Double get() = multiplier(StatMod.MAGE)
 
-            if (active(Prayer.MAG_T1)) value += 0.05
-            else if (active(Prayer.MAG_T2)) value += 0.10
-            else if (active(Prayer.MAG_T3)) value += 0.15
-            else if (active(Prayer.AUGURY)) value += 0.20
-            else if (active(Prayer.LEECH_MAGIC)) {
-                val d = (5 + getStatMod(StatMod.MAGE)).toDouble()
-                value += d / 100
-            }
-            return value
-        }
+    val rangeMultiplier: Double get() = multiplier(StatMod.RANGE)
 
-    val rangeMultiplier: Double
-        get() {
-            if (active.isEmpty()) return 1.0
-            var value = 1.0
+    val attackMultiplier: Double get() = multiplier(StatMod.ATTACK)
 
-            if (active(Prayer.RNG_T1)) value += 0.05
-            else if (active(Prayer.RNG_T2)) value += 0.10
-            else if (active(Prayer.RNG_T3)) value += 0.15
-            else if (active(Prayer.RIGOUR)) value += 0.20
-            else if (active(Prayer.LEECH_RANGE)) {
-                val d = (5 + getStatMod(StatMod.RANGE)).toDouble()
-                value += d / 100
-            }
-            return value
-        }
+    val strengthMultiplier: Double get() = multiplier(StatMod.STRENGTH)
 
-    val attackMultiplier: Double
-        get() {
-            if (active.isEmpty()) return 1.0
-            var value = 1.0
+    val defenceMultiplier: Double get() = multiplier(StatMod.DEFENSE)
 
-            if (active(Prayer.ATK_T1)) value += 0.05
-            else if (active(Prayer.ATK_T2)) value += 0.10
-            else if (active(Prayer.ATK_T3)) value += 0.15
-            else if (active(Prayer.CHIVALRY)) value += 0.15
-            else if (active(Prayer.PIETY)) value += 0.20
-            else if (active(Prayer.LEECH_ATTACK)) {
-                val d = (5 + getStatMod(StatMod.ATTACK)).toDouble()
-                value += d / 100
-            } else if (active(Prayer.TURMOIL)) {
-                val d = (15 + getStatMod(StatMod.ATTACK)).toDouble()
-                value += d / 100
-            }
-            return value
-        }
+    private fun multiplier(mod: StatMod): Double {
+        if (active.isEmpty()) return 1.0
+        val boost = active.firstNotNullOfOrNull { prayer -> PrayerBoosts.percent(prayer, mod)?.let { if (prayer.isCurse) it + getStatMod(mod) else it } } ?: 0
+        return 1.0 + boost / PERCENT + PrayerBoosts.serviceBonus(player)
+    }
 
-    val strengthMultiplier: Double
-        get() {
-            if (active.isEmpty()) return 1.0
-            var value = 1.0
-
-            if (active(Prayer.STR_T1)) value += 0.05
-            else if (active(Prayer.STR_T2)) value += 0.10
-            else if (active(Prayer.STR_T3)) value += 0.15
-            else if (active(Prayer.CHIVALRY)) value += 0.18
-            else if (active(Prayer.PIETY)) value += 0.23
-            else if (active(Prayer.LEECH_STRENGTH)) {
-                val d = (5 + getStatMod(StatMod.STRENGTH)).toDouble()
-                value += d / 100
-            } else if (active(Prayer.TURMOIL)) {
-                val d = (23 + getStatMod(StatMod.STRENGTH)).toDouble()
-                value += d / 100
-            }
-            return value
-        }
-
-    val defenceMultiplier: Double
-        get() {
-            if (active.isEmpty()) return 1.0
-            var value = 1.0
-
-            if (active(Prayer.DEF_T1)) value += 0.05
-            else if (active(Prayer.DEF_T2)) value += 0.10
-            else if (active(Prayer.DEF_T3)) value += 0.15
-            else if (active(Prayer.CHIVALRY)) value += 0.20
-            else if (active(Prayer.PIETY) || active(Prayer.RIGOUR) || active(Prayer.AUGURY)) value += 0.25
-            else if (active(Prayer.LEECH_DEFENSE)) {
-                val d = (6 + getStatMod(StatMod.DEFENSE)).toDouble()
-                value += d / 100
-            } else if (active(Prayer.TURMOIL)) {
-                val d = (15 + getStatMod(StatMod.DEFENSE)).toDouble()
-                value += d / 100
-            }
-            return value
-        }
+    val maxPoints: Int get() = player.skills.getLevelForXp(Constants.PRAYER) * POINTS_PER_LEVEL + ChurchBlessing.pointBoost(player)
 
     fun refreshPoints() {
         player.vars.setVar(Varp.prayer_points_var, points.toInt())
     }
 
     fun hasFullPoints(): Boolean {
-        return points >= player.skills.getLevelForXp(Constants.PRAYER) * 10
+        return points >= maxPoints
     }
 
     fun drainPrayer(amount: Double) {
@@ -711,7 +639,7 @@ class PrayerManager {
 
     fun restorePrayer(amount: Double) {
         var amount = amount
-        val maxPrayer = player.skills.getLevelForXp(Constants.PRAYER) * 10
+        val maxPrayer = maxPoints
         amount *= player.auraManager.getPrayerResMul()
         if ((points + amount) <= maxPrayer) points += amount
         else points = maxPrayer.toDouble()
@@ -750,7 +678,7 @@ class PrayerManager {
 
     fun reset() {
         closeAllPrayers()
-        points = (player.skills.getLevelForXp(Constants.PRAYER) * 10).toDouble()
+        points = maxPoints.toDouble()
         refreshPoints()
     }
 
@@ -763,7 +691,7 @@ class PrayerManager {
 
     @JvmOverloads
     fun worshipAltar(multiplier: Double = 1.0) {
-        var maxPray = player.skills.getLevelForXp(Constants.PRAYER) * 10.0
+        var maxPray = maxPoints.toDouble()
         maxPray = (maxPray * multiplier).toInt().toDouble()
         if (points < maxPray) {
             player.lock()
@@ -779,6 +707,9 @@ class PrayerManager {
     }
 
     companion object {
+        private const val PERCENT = 100.0
+        private const val POINTS_PER_LEVEL = 10
+
         fun isOverhead(p: Prayer): Boolean {
             return when (p) {
                 Prayer.PROTECT_MAGIC, Prayer.PROTECT_SUMMONING, Prayer.PROTECT_RANGE, Prayer.PROTECT_MELEE, Prayer.RETRIBUTION, Prayer.REDEMPTION, Prayer.SMITE, Prayer.DEFLECT_MELEE, Prayer.DEFLECT_SUMMONING, Prayer.DEFLECT_MAGIC, Prayer.DEFLECT_RANGE, Prayer.WRATH, Prayer.SOUL_SPLIT -> true
