@@ -60,6 +60,18 @@ class Appearance {
         generateAppearanceData()
     }
 
+    @Transient
+    private var hiddenSlots: MutableSet<Int>? = null
+
+    fun hideWorn(slot: Int) {
+        val hidden = hiddenSlots ?: HashSet<Int>().also { hiddenSlots = it }
+        if (hidden.add(slot)) generateAppearanceData()
+    }
+
+    fun showWorn(slot: Int) {
+        if (hiddenSlots?.remove(slot) == true) generateAppearanceData()
+    }
+
     fun clearWornOverride(slot: Int) {
         if (wornOverrides?.remove(slot) != null) generateAppearanceData()
     }
@@ -149,7 +161,7 @@ class Appearance {
         val slots = ArrayList<AppearanceSlot>(13)
 
         for (index in 0 until 4)
-            slots.add(wornOrEmpty(player.equipment[index]))
+            slots.add(if (hiddenSlots?.contains(index) == true) AppearanceSlot.Empty else wornOrEmpty(player.equipment[index]))
 
         val chest: Item? = player.equipment[Equipment.CHEST]
         slots.add(chest?.let { AppearanceSlot.Worn(it.id) } ?: AppearanceSlot.Body(lookI[2]))
