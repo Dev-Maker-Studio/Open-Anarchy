@@ -266,7 +266,6 @@
     {"npc": 15704, "x": 7163, "y": 9247, "role": "shopkeeper", "shop": "eloreach_staff_shop"},
     {"npc": 15718, "x": 7141, "y": 9232, "role": "realtor"},
     {"npc": 456, "x": 7142, "y": 9247, "role": "priest"},
-    {"npc": 2899, "x": 7135, "y": 9250, "role": "greeter"},
     {"npc": 0, "x": 7145, "y": 9249, "role": "congregant"},
     {"npc": 668, "x": 7139, "y": 9251, "role": "congregant"},
     {"npc": 7969, "x": 7143, "y": 9253, "role": "congregant"},

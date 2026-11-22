@@ -13,9 +13,7 @@ import java.util.Locale
 
 private const val BOOK_SLOTS = 30
 private const val CURSE_SLOTS = 20
-private const val PERCENT = 100.0
 private const val VALUE_COLOUR = "2dc3ff"
-private const val BLESSING_COLOUR = "ffff80"
 
 object PrayerBoosts {
     private val boosts: Map<Prayer, Map<StatMod, Int>> = mapOf(
@@ -50,20 +48,18 @@ object PrayerBoosts {
 
     fun percent(prayer: Prayer, mod: StatMod): Int? = boosts[prayer]?.get(mod)
 
-    fun serviceBonus(player: Player): Double = ChurchBlessing.prayerBonus(player)
+    fun serviceScale(player: Player): Double = ChurchBlessing.prayerScale(player)
 
-    private fun percentText(value: Double) = "+" + (if (value % 1.0 == 0.0) value.toInt().toString() else String.format(Locale.US, "%.1f", value)) + "%"
+    private fun percentText(value: Double) = "+" + String.format(Locale.US, "%.2f", value).trimEnd('0').trimEnd('.') + "%"
 
-    private fun tooltip(prayer: Prayer?, bonus: Double): String {
-        val lines = boosts[prayer].orEmpty().map { (mod, percent) -> "${names[mod]}: <col=$VALUE_COLOUR>${percentText(percent + bonus)}</col>" }
-        return if (bonus > 0) (lines + "<col=$BLESSING_COLOUR>Services: ${percentText(bonus)} to every stat while praying</col>").joinToString("<br>") else lines.joinToString("<br>")
-    }
+    private fun tooltip(prayer: Prayer?, scale: Double): String =
+        boosts[prayer].orEmpty().map { (mod, percent) -> "${names[mod]}: <col=$VALUE_COLOUR>${percentText(percent * scale)}</col>" }.joinToString("<br>")
 
     fun send(player: Player) {
-        val bonus = serviceBonus(player) * PERCENT
+        val scale = serviceScale(player)
         player.packets.sendItems(Inv.prayer_boosts, Array<Item?>(BOOK_SLOTS + CURSE_SLOTS) { slot ->
             val prayer = if (slot < BOOK_SLOTS) Prayer.forSlot(slot, false) else Prayer.forSlot(slot - BOOK_SLOTS, true)
-            Item(Obj.coins, 1).addMetaData(ItemTooltips.TEXT_KEY, tooltip(prayer, bonus))
+            Item(Obj.coins, 1).addMetaData(ItemTooltips.TEXT_KEY, tooltip(prayer, scale))
         })
     }
 }

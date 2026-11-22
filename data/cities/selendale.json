@@ -247,7 +247,6 @@
     {"npc": 15685, "x": 8329, "y": 6235, "role": "shopkeeper", "shop": "selendale_staff_shop"},
     {"npc": 15718, "x": 8319, "y": 6235, "role": "realtor"},
     {"npc": 456, "x": 8343, "y": 6239, "role": "priest"},
-    {"npc": 2899, "x": 8336, "y": 6242, "role": "greeter"},
     {"npc": 0, "x": 8346, "y": 6241, "role": "congregant"},
     {"npc": 668, "x": 8340, "y": 6243, "role": "congregant"},
     {"npc": 7969, "x": 8344, "y": 6245, "role": "congregant"},

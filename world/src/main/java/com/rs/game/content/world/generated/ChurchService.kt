@@ -34,19 +34,8 @@ const val CHURCH_MUSIC = Midi.midi_999
 private const val SERMONS_PATH = "data/church/sermons"
 private const val MAX_TITHE = 2_000_000_000
 private const val GROUND = 0
-private const val PRAISE_START_TICKS = 6
-private const val PRAISE_SECONDS = 10
 private const val SERVICE_MINUTES = 2
 private const val PASTOR_SALT = 3391L
-
-private val PRAISES = arrayOf(
-    "Hallelujah.", "Thank you Jesus.", "Have mercy on us.", "We praise you Lord.", "Praise God.", "In Jesus name.",
-    "I will dance like David.", "Amen", "Glory to God.", "Bless the Lord, O my soul.", "Holy, holy, holy.", "Jesus is Lord.",
-    "We exalt your name.", "Your grace is sufficient.", "The Lord is my shepherd.", "He is worthy of all praise.",
-    "The Lord reigns forever.", "Blessed be your name.", "Great is your faithfulness.", "Thank you for your mercy.",
-    "The Lord is my rock and salvation.", "Your love endures forever.", "We lift your name on high.",
-    "You are the King of kings.", "All glory to your name.",
-)
 
 private val PASTOR_NAMES = arrayOf(
     "Abel", "Amos", "Asher", "Boaz", "Caleb", "Cyrus", "Daniel", "Elias", "Enoch", "Ezra", "Gideon", "Isaac", "Jonah", "Josiah", "Levi",
@@ -56,7 +45,6 @@ private val PASTOR_NAMES = arrayOf(
 private class Look(val name: String, val facing: Direction)
 
 private val LOOKS = mapOf(
-    Npc.agrith_reen to Look("Father John", Direction.NORTH),
     Npc.hans to Look("Hans", Direction.SOUTHWEST),
     Npc.johnathon_fitzharmon to Look("Johnathan", Direction.SOUTH),
     Npc.atlum_explorer_jack to Look("Jack", Direction.SOUTH),
@@ -94,10 +82,6 @@ class Church(val city: City, private val building: Building) {
             }
         }
     }
-
-    fun praise() {
-        if (!serviceStarted) congregation().randomOrNull()?.forceTalk(PRAISES[Utils.random(PRAISES.size)])
-    }
 }
 
 object Churches {
@@ -114,10 +98,6 @@ object Churches {
 @ServerStartupEvent
 fun mapChurchService() {
     Churches.sermons = loadSermons(File(SERMONS_PATH))
-    WorldTasks.scheduleTimer(PRAISE_START_TICKS, Ticks.fromSeconds(PRAISE_SECONDS)) {
-        Churches.all.values.forEach(Church::praise)
-        true
-    }
     onObjectClick(Loc.church_lectern) { (player, obj, option) ->
         val church = Churches.all.values.firstOrNull { it.contains(obj.tile) } ?: return@onObjectClick
         val priest = church.priest ?: return@onObjectClick
@@ -202,7 +182,7 @@ object ChurchBlessing {
     private const val HOUR_MILLIS = 3_600_000L
     private const val MINUTE_MILLIS = 60_000L
     private const val POINT_BOOST = 100
-    private const val BONUS_PER_SERVICE = 0.001
+    private const val SCALE_PER_SERVICE = 0.003
 
     private fun sinceService(player: Player) = System.currentTimeMillis() - player.getL(LAST_SERVICE, 0)
 
@@ -212,7 +192,7 @@ object ChurchBlessing {
 
     fun pointBoost(player: Player) = if (ready(player)) 0 else POINT_BOOST
 
-    fun prayerBonus(player: Player) = BONUS_PER_SERVICE * player.getCounterValue(SERVICES)
+    fun prayerScale(player: Player) = 1.0 + SCALE_PER_SERVICE * player.getCounterValue(SERVICES)
 
     fun bless(player: Player): Boolean {
         if (!ready(player)) return false

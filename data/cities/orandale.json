@@ -248,7 +248,6 @@
     {"npc": 15709, "x": 6039, "y": 9309, "role": "shopkeeper", "shop": "orandale_staff_shop"},
     {"npc": 15718, "x": 6051, "y": 9352, "role": "realtor"},
     {"npc": 456, "x": 6043, "y": 9325, "role": "priest"},
-    {"npc": 2899, "x": 6036, "y": 9328, "role": "greeter"},
     {"npc": 0, "x": 6046, "y": 9327, "role": "congregant"},
     {"npc": 668, "x": 6040, "y": 9329, "role": "congregant"},
     {"npc": 7969, "x": 6044, "y": 9331, "role": "congregant"},

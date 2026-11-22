@@ -260,7 +260,6 @@
     {"npc": 15679, "x": 8883, "y": 9169, "role": "shopkeeper", "shop": "varenhollow_staff_shop"},
     {"npc": 15718, "x": 8869, "y": 9168, "role": "realtor"},
     {"npc": 456, "x": 8905, "y": 9211, "role": "priest"},
-    {"npc": 2899, "x": 8898, "y": 9214, "role": "greeter"},
     {"npc": 0, "x": 8908, "y": 9213, "role": "congregant"},
     {"npc": 668, "x": 8902, "y": 9215, "role": "congregant"},
     {"npc": 7969, "x": 8906, "y": 9217, "role": "congregant"},

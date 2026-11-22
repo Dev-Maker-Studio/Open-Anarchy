@@ -151,7 +151,7 @@ object CityPlanner {
     )
 
     private fun withChurch(generator: WorldGenerator, city: City): City {
-        if (city.buildings.any { it.kind == ChurchTemplate.KIND }) return city
+        if (city.buildings.any { it.kind == ChurchTemplate.KIND }) return city.copy(residents = city.residents.filterNot { it.role == ChurchTemplate.GREETER })
         for (site in churchSites(generator, city).sortedWith(compareBy({ it.cost }, { it.distance }, { it.x }, { it.y }))) {
             val cleared = city.copy(
                 buildings = city.buildings - site.cleared.toSet() + ChurchTemplate.building(site.x, site.y),
