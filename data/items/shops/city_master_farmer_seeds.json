@@ -1,0 +1,195 @@
+{
+  "name": "Master Farmer's Seeds",
+  "generalStore": true,
+  "buyOnly": false,
+  "currency": 995,
+  "items": [
+    {
+      "item": {
+        "id": 5318,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5319,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5324,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5322,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5320,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5323,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5321,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5096,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5097,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5098,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5099,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5100,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 14589,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5305,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5307,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5308,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5306,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5309,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5310,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5311,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5101,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5102,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5103,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5104,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5105,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5106,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5282,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 21620,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 12148,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5281,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5280,
+        "amount": 10
+      }
+    }
+  ],
+  "npcIds": []
+}

@@ -10,7 +10,7 @@ GAMEVALS = ROOT / "cache-source" / "gamevals" / "loc.json"
 WALLS = ["farmhouse", "brick", "plaster", "stone", "whitestone", "lightwood", "darkwood", "greyplaster"]
 FLOORS = ["planks", "darkwood", "sandstone", "cobble", "flagstone", "stone", "slate", "marble", "cream", "terracotta", "golden"]
 ROOFS = ["slate", "blueslate", "greyslate", "darkslate", "redslate", "thatch", "straw", "reed", "hay", "wood", "none"]
-SERVICES = ["bank", "smithy", "general_store", "barber", "sword_shop", "archery_shop", "magic_shop", "clothes_shop", "food_shop", "armour_shop", "fishing_shop", "staff_shop", "realtor"]
+SERVICES = ["bank", "smithy", "general_store", "herblore_shop", "farming_shop", "barber", "sword_shop", "archery_shop", "magic_shop", "clothes_shop", "food_shop", "armour_shop", "fishing_shop", "staff_shop", "realtor"]
 SIDES = {"WEST": (-1, 0), "NORTH": (0, 1), "EAST": (1, 0), "SOUTH": (0, -1)}
 GATE_MARGIN = 6
 BLEND = 13
@@ -127,6 +127,10 @@ def problems(c, locs):
                 out.append(f"{tag}: touches building {j}, leave one tile between buildings")
         dx, dy = door(b)
         sx, sy = SIDES[b["door"]]
+        if b["kind"] == "farm":
+            if (b["width"], b["depth"]) != (12, 12):
+                out.append(f"{tag}: a farm is 12x12")
+            continue
         if not on_street(c, dx + sx, dy + sy):
             out.append(f"{tag}: the door at {dx},{dy} does not open onto a street")
         used = {}

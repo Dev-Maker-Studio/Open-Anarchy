@@ -2,7 +2,7 @@ package com.rs.game.content.skills.woodcutting
 
 import com.rs.game.World
 import com.rs.game.content.claims.ClaimManager
-import com.rs.game.content.skills.construction.TreeRoot
+import com.rs.game.content.skills.construction.uproot
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.actions.Action
 import com.rs.game.model.entity.player.Player
@@ -70,7 +70,7 @@ private class TreePunch(private val tree: GameObject) : Action() {
         if (++punches < PUNCHES_TO_FELL) return PUNCH_DELAY_TICKS
         val player = entity as Player
         player.inventory.addItem(Obj.logs)
-        player.inventory.addItem(TreeRoot.forTreeName(tree.definitions.name).root, TreeRoot.ROOTS_PER_TREE)
+        uproot(player, tree)
         player.skills.addXp(Constants.WOODCUTTING, TreeType.NORMAL.xp)
         destroyTree(tree)
         player.sendMessage("You punch the tree down completely and find tree roots.")

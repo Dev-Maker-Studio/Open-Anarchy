@@ -11,6 +11,14 @@
   ],
   "buildings": [
     {
+      "kind": "church", "x": 8333, "y": 7902, "width": 12, "depth": 14, "door": "WEST", "floors": 3, "wall": "stone", "floor": "flagstone", "roof": "none",
+      "furniture": []
+    },
+    {
+      "kind": "farm", "x": 8353, "y": 7942, "width": 12, "depth": 12, "door": "WEST", "floors": 1, "wall": "farmhouse", "floor": "planks", "roof": "none",
+      "furniture": []
+    },
+    {
       "kind": "bank", "x": 8319, "y": 7900, "width": 9, "depth": 11, "door": "SOUTH", "floors": 2, "wall": "whitestone", "floor": "marble", "roof": "slate",
       "furniture": [
         {"loc": "ladder", "x": 7, "y": 9, "rotation": 3},
@@ -28,7 +36,7 @@
       ]
     },
     {
-      "kind": "smithy", "x": 8341, "y": 7888, "width": 7, "depth": 10, "door": "NORTH", "floors": 1, "wall": "whitestone", "floor": "slate", "roof": "thatch",
+      "kind": "smithy", "x": 8341, "y": 7888, "width": 7, "depth": 10, "door": "NORTH", "floors": 1, "wall": "whitestone", "floor": "slate", "roof": "blueslate",
       "furniture": [
         {"loc": "built_furnace", "x": 1, "y": 1, "rotation": 0},
         {"loc": "loc_2783", "x": 4, "y": 2, "rotation": 1},
@@ -47,79 +55,47 @@
       ]
     },
     {
-      "kind": "guardhouse", "x": 8342, "y": 7910, "width": 9, "depth": 8, "door": "EAST", "floors": 2, "wall": "whitestone", "floor": "flagstone", "roof": "slate",
+      "kind": "guardhouse", "x": 8353, "y": 7922, "width": 9, "depth": 9, "door": "WEST", "floors": 2, "wall": "whitestone", "floor": "flagstone", "roof": "slate",
       "furniture": [
-        {"loc": "ladder", "x": 1, "y": 1, "rotation": 2},
-        {"loc": "laddertop", "x": 1, "y": 1, "rotation": 2, "level": 1},
-        {"loc": "bench", "x": 1, "y": 4, "rotation": 2},
-        {"loc": "barrel", "x": 7, "y": 1, "rotation": 2},
-        {"loc": "bed", "x": 2, "y": 1, "rotation": 2, "level": 1},
-        {"loc": "table", "x": 4, "y": 4, "rotation": 2, "level": 1},
-        {"loc": "chair", "x": 4, "y": 3, "rotation": 1, "level": 1},
-        {"loc": "bookcase", "x": 7, "y": 1, "rotation": 2, "level": 1}
+        {"loc": "ladder", "x": 7, "y": 1, "rotation": 0},
+        {"loc": "laddertop", "x": 7, "y": 1, "rotation": 0, "level": 1},
+        {"loc": "bench", "x": 7, "y": 4, "rotation": 0},
+        {"loc": "barrel", "x": 1, "y": 7, "rotation": 0},
+        {"loc": "crate", "x": 1, "y": 1, "rotation": 0},
+        {"loc": "bed", "x": 6, "y": 7, "rotation": 0, "level": 1},
+        {"loc": "table", "x": 4, "y": 4, "rotation": 0, "level": 1},
+        {"loc": "chair", "x": 4, "y": 5, "rotation": 1, "level": 1},
+        {"loc": "bookcase", "x": 1, "y": 7, "rotation": 0, "level": 1},
+        {"loc": "crate", "x": 1, "y": 1, "rotation": 0, "level": 1}
       ]
     },
     {
-      "kind": "house", "x": 8353, "y": 7922, "width": 9, "depth": 9, "door": "WEST", "floors": 1, "wall": "plaster", "floor": "planks", "roof": "thatch", "forSale": true,
-      "furniture": []
-    },
-    {
-      "kind": "house", "x": 8341, "y": 7901, "width": 10, "depth": 7, "door": "EAST", "floors": 1, "wall": "greyplaster", "floor": "darkwood", "roof": "redslate", "forSale": true,
-      "furniture": []
-    },
-    {
-      "kind": "general_store", "x": 8323, "y": 7942, "width": 7, "depth": 7, "door": "EAST", "floors": 1, "wall": "greyplaster", "floor": "planks", "roof": "straw",
+      "kind": "realtor", "x": 8301, "y": 7902, "width": 8, "depth": 11, "door": "EAST", "floors": 1, "wall": "whitestone", "floor": "darkwood", "roof": "slate",
       "furniture": [
-        {"loc": "table", "x": 2, "y": 2, "rotation": 2},
-        {"loc": "table", "x": 2, "y": 3, "rotation": 2},
-        {"loc": "table", "x": 2, "y": 4, "rotation": 2},
-        {"loc": "shelves1", "x": 1, "y": 1, "rotation": 2},
-        {"loc": "shelves1", "x": 1, "y": 5, "rotation": 2},
-        {"loc": "crate", "x": 5, "y": 1, "rotation": 2},
-        {"loc": "barrel", "x": 5, "y": 5, "rotation": 2}
-      ]
-    },
-    {
-      "kind": "barber", "x": 8301, "y": 7922, "width": 7, "depth": 11, "door": "SOUTH", "floors": 1, "wall": "plaster", "floor": "cream", "roof": "blueslate",
-      "furniture": [
-        {"loc": "fai_falador_barbers_chair", "x": 2, "y": 8, "rotation": 3},
-        {"loc": "fai_falador_barbers_mirror", "x": 2, "y": 9, "rotation": 3},
-        {"loc": "fai_falador_barbers_chair", "x": 4, "y": 8, "rotation": 3},
-        {"loc": "fai_falador_barbers_mirror", "x": 4, "y": 9, "rotation": 3},
-        {"loc": "bench", "x": 1, "y": 1, "rotation": 3},
-        {"loc": "crate", "x": 5, "y": 1, "rotation": 3}
-      ]
-    },
-    {
-      "kind": "sword_shop", "x": 8301, "y": 7906, "width": 8, "depth": 8, "door": "EAST", "floors": 1, "wall": "greyplaster", "floor": "flagstone", "roof": "thatch",
-      "furniture": [
-        {"loc": "table", "x": 2, "y": 3, "rotation": 2},
-        {"loc": "table", "x": 2, "y": 4, "rotation": 2},
         {"loc": "table", "x": 2, "y": 5, "rotation": 2},
-        {"loc": "shelves1", "x": 1, "y": 1, "rotation": 2},
-        {"loc": "crate", "x": 6, "y": 1, "rotation": 2}
+        {"loc": "bookcase", "x": 1, "y": 1, "rotation": 2},
+        {"loc": "bookcase", "x": 1, "y": 9, "rotation": 2},
+        {"loc": "chair", "x": 6, "y": 4, "rotation": 1},
+        {"loc": "bench", "x": 6, "y": 9, "rotation": 2}
       ]
     },
     {
-      "kind": "archery_shop", "x": 8342, "y": 7942, "width": 7, "depth": 8, "door": "SOUTH", "floors": 2, "wall": "plaster", "floor": "darkwood", "roof": "straw",
+      "kind": "house", "x": 8323, "y": 7942, "width": 7, "depth": 7, "door": "EAST", "floors": 1, "wall": "plaster", "floor": "planks", "roof": "straw", "forSale": true,
+      "furniture": []
+    },
+    {
+      "kind": "house", "x": 8301, "y": 7922, "width": 7, "depth": 11, "door": "SOUTH", "floors": 2, "wall": "plaster", "floor": "sandstone", "roof": "blueslate", "forSale": true,
       "furniture": [
-        {"loc": "ladder", "x": 5, "y": 6, "rotation": 3},
-        {"loc": "laddertop", "x": 5, "y": 6, "rotation": 3, "level": 1},
-        {"loc": "table", "x": 2, "y": 5, "rotation": 3},
-        {"loc": "table", "x": 3, "y": 5, "rotation": 3},
-        {"loc": "table", "x": 4, "y": 5, "rotation": 3},
-        {"loc": "shelves1", "x": 1, "y": 6, "rotation": 3},
-        {"loc": "crate", "x": 1, "y": 1, "rotation": 3},
-        {"loc": "barrel", "x": 5, "y": 1, "rotation": 3},
-        {"loc": "bed", "x": 1, "y": 5, "rotation": 3, "level": 1},
-        {"loc": "table", "x": 3, "y": 4, "rotation": 3, "level": 1},
-        {"loc": "chair", "x": 2, "y": 4, "rotation": 1, "level": 1},
-        {"loc": "bookcase", "x": 1, "y": 1, "rotation": 3, "level": 1},
-        {"loc": "crate", "x": 5, "y": 1, "rotation": 3, "level": 1}
+        {"loc": "ladder", "x": 5, "y": 9, "rotation": 3},
+        {"loc": "laddertop", "x": 5, "y": 9, "rotation": 3, "level": 1}
       ]
     },
     {
-      "kind": "magic_shop", "x": 8342, "y": 7928, "width": 9, "depth": 9, "door": "EAST", "floors": 1, "wall": "plaster", "floor": "slate", "roof": "blueslate",
+      "kind": "house", "x": 8342, "y": 7942, "width": 7, "depth": 8, "door": "SOUTH", "floors": 1, "wall": "greyplaster", "floor": "darkwood", "roof": "thatch", "forSale": true,
+      "furniture": []
+    },
+    {
+      "kind": "general_store", "x": 8342, "y": 7928, "width": 9, "depth": 9, "door": "EAST", "floors": 1, "wall": "greyplaster", "floor": "planks", "roof": "straw",
       "furniture": [
         {"loc": "table", "x": 2, "y": 3, "rotation": 2},
         {"loc": "table", "x": 2, "y": 4, "rotation": 2},
@@ -131,55 +107,60 @@
       ]
     },
     {
-      "kind": "clothes_shop", "x": 8314, "y": 7922, "width": 9, "depth": 8, "door": "SOUTH", "floors": 2, "wall": "greyplaster", "floor": "terracotta", "roof": "straw",
+      "kind": "herblore_shop", "x": 8353, "y": 7934, "width": 8, "depth": 7, "door": "WEST", "floors": 1, "wall": "plaster", "floor": "stone", "roof": "blueslate",
       "furniture": [
-        {"loc": "ladder", "x": 7, "y": 6, "rotation": 3},
-        {"loc": "laddertop", "x": 7, "y": 6, "rotation": 3, "level": 1},
+        {"loc": "table", "x": 5, "y": 4, "rotation": 0},
+        {"loc": "table", "x": 5, "y": 3, "rotation": 0},
+        {"loc": "table", "x": 5, "y": 2, "rotation": 0},
+        {"loc": "shelves1", "x": 6, "y": 5, "rotation": 0},
+        {"loc": "shelves1", "x": 6, "y": 1, "rotation": 0},
+        {"loc": "crate", "x": 1, "y": 5, "rotation": 0},
+        {"loc": "barrel", "x": 1, "y": 1, "rotation": 0}
+      ]
+    },
+    {
+      "kind": "farming_shop", "x": 8314, "y": 7922, "width": 9, "depth": 8, "door": "SOUTH", "floors": 1, "wall": "greyplaster", "floor": "sandstone", "roof": "straw",
+      "furniture": [
         {"loc": "table", "x": 3, "y": 5, "rotation": 3},
         {"loc": "table", "x": 4, "y": 5, "rotation": 3},
         {"loc": "table", "x": 5, "y": 5, "rotation": 3},
         {"loc": "shelves1", "x": 1, "y": 6, "rotation": 3},
+        {"loc": "shelves1", "x": 7, "y": 6, "rotation": 3},
         {"loc": "crate", "x": 1, "y": 1, "rotation": 3},
-        {"loc": "barrel", "x": 7, "y": 1, "rotation": 3},
-        {"loc": "bed", "x": 1, "y": 5, "rotation": 3, "level": 1},
-        {"loc": "table", "x": 4, "y": 4, "rotation": 3, "level": 1},
-        {"loc": "chair", "x": 3, "y": 4, "rotation": 1, "level": 1},
-        {"loc": "bookcase", "x": 1, "y": 1, "rotation": 3, "level": 1},
-        {"loc": "crate", "x": 7, "y": 1, "rotation": 3, "level": 1}
+        {"loc": "barrel", "x": 7, "y": 1, "rotation": 3}
       ]
     },
     {
-      "kind": "food_shop", "x": 8315, "y": 7889, "width": 7, "depth": 9, "door": "NORTH", "floors": 1, "wall": "plaster", "floor": "sandstone", "roof": "straw",
+      "kind": "barber", "x": 8315, "y": 7889, "width": 7, "depth": 9, "door": "NORTH", "floors": 2, "wall": "plaster", "floor": "cream", "roof": "straw",
       "furniture": [
-        {"loc": "table", "x": 4, "y": 2, "rotation": 1},
-        {"loc": "table", "x": 3, "y": 2, "rotation": 1},
-        {"loc": "table", "x": 2, "y": 2, "rotation": 1},
-        {"loc": "shelves1", "x": 5, "y": 1, "rotation": 1},
-        {"loc": "shelves1", "x": 1, "y": 1, "rotation": 1},
-        {"loc": "crate", "x": 5, "y": 7, "rotation": 1},
-        {"loc": "barrel", "x": 1, "y": 7, "rotation": 1}
+        {"loc": "ladder", "x": 1, "y": 1, "rotation": 1},
+        {"loc": "laddertop", "x": 1, "y": 1, "rotation": 1, "level": 1},
+        {"loc": "fai_falador_barbers_chair", "x": 4, "y": 2, "rotation": 1},
+        {"loc": "fai_falador_barbers_mirror", "x": 4, "y": 1, "rotation": 1},
+        {"loc": "fai_falador_barbers_chair", "x": 2, "y": 2, "rotation": 1},
+        {"loc": "bench", "x": 5, "y": 7, "rotation": 1},
+        {"loc": "crate", "x": 1, "y": 7, "rotation": 1},
+        {"loc": "bed", "x": 5, "y": 2, "rotation": 1, "level": 1},
+        {"loc": "table", "x": 3, "y": 4, "rotation": 1, "level": 1},
+        {"loc": "chair", "x": 4, "y": 4, "rotation": 1, "level": 1},
+        {"loc": "bookcase", "x": 5, "y": 7, "rotation": 1, "level": 1},
+        {"loc": "crate", "x": 1, "y": 7, "rotation": 1, "level": 1}
       ]
     },
     {
-      "kind": "armour_shop", "x": 8310, "y": 7942, "width": 7, "depth": 10, "door": "SOUTH", "floors": 2, "wall": "greyplaster", "floor": "stone", "roof": "blueslate",
+      "kind": "sword_shop", "x": 8310, "y": 7942, "width": 7, "depth": 10, "door": "SOUTH", "floors": 1, "wall": "plaster", "floor": "flagstone", "roof": "blueslate",
       "furniture": [
-        {"loc": "ladder", "x": 5, "y": 8, "rotation": 3},
-        {"loc": "laddertop", "x": 5, "y": 8, "rotation": 3, "level": 1},
         {"loc": "table", "x": 2, "y": 7, "rotation": 3},
         {"loc": "table", "x": 3, "y": 7, "rotation": 3},
         {"loc": "table", "x": 4, "y": 7, "rotation": 3},
         {"loc": "shelves1", "x": 1, "y": 8, "rotation": 3},
+        {"loc": "shelves1", "x": 5, "y": 8, "rotation": 3},
         {"loc": "crate", "x": 1, "y": 1, "rotation": 3},
-        {"loc": "barrel", "x": 5, "y": 1, "rotation": 3},
-        {"loc": "bed", "x": 1, "y": 7, "rotation": 3, "level": 1},
-        {"loc": "table", "x": 3, "y": 5, "rotation": 3, "level": 1},
-        {"loc": "chair", "x": 2, "y": 5, "rotation": 1, "level": 1},
-        {"loc": "bookcase", "x": 1, "y": 1, "rotation": 3, "level": 1},
-        {"loc": "crate", "x": 5, "y": 1, "rotation": 3, "level": 1}
+        {"loc": "barrel", "x": 5, "y": 1, "rotation": 3}
       ]
     },
     {
-      "kind": "fishing_shop", "x": 8311, "y": 7904, "width": 7, "depth": 11, "door": "WEST", "floors": 2, "wall": "greyplaster", "floor": "planks", "roof": "thatch",
+      "kind": "archery_shop", "x": 8311, "y": 7904, "width": 7, "depth": 11, "door": "WEST", "floors": 2, "wall": "greyplaster", "floor": "darkwood", "roof": "thatch",
       "furniture": [
         {"loc": "ladder", "x": 5, "y": 1, "rotation": 0},
         {"loc": "laddertop", "x": 5, "y": 1, "rotation": 0, "level": 1},
@@ -197,7 +178,7 @@
       ]
     },
     {
-      "kind": "staff_shop", "x": 8353, "y": 7900, "width": 8, "depth": 8, "door": "WEST", "floors": 1, "wall": "plaster", "floor": "golden", "roof": "thatch",
+      "kind": "magic_shop", "x": 8353, "y": 7900, "width": 8, "depth": 8, "door": "WEST", "floors": 1, "wall": "plaster", "floor": "slate", "roof": "thatch",
       "furniture": [
         {"loc": "table", "x": 5, "y": 5, "rotation": 0},
         {"loc": "table", "x": 5, "y": 4, "rotation": 0},
@@ -207,62 +188,141 @@
       ]
     },
     {
-      "kind": "house", "x": 8333, "y": 7929, "width": 7, "depth": 8, "door": "WEST", "floors": 1, "wall": "plaster", "floor": "terracotta", "roof": "thatch",
+      "kind": "clothes_shop", "x": 8333, "y": 7929, "width": 7, "depth": 8, "door": "WEST", "floors": 2, "wall": "greyplaster", "floor": "terracotta", "roof": "thatch",
       "furniture": [
+        {"loc": "ladder", "x": 5, "y": 1, "rotation": 0},
+        {"loc": "laddertop", "x": 5, "y": 1, "rotation": 0, "level": 1},
+        {"loc": "table", "x": 4, "y": 5, "rotation": 0},
+        {"loc": "table", "x": 4, "y": 4, "rotation": 0},
+        {"loc": "table", "x": 4, "y": 3, "rotation": 0},
+        {"loc": "barrel", "x": 1, "y": 1, "rotation": 0},
+        {"loc": "table", "x": 3, "y": 4, "rotation": 0, "level": 1},
+        {"loc": "chair", "x": 3, "y": 5, "rotation": 1, "level": 1},
+        {"loc": "crate", "x": 1, "y": 1, "rotation": 0, "level": 1}
+      ]
+    },
+    {
+      "kind": "food_shop", "x": 8323, "y": 7890, "width": 7, "depth": 8, "door": "NORTH", "floors": 2, "wall": "greyplaster", "floor": "sandstone", "roof": "redslate",
+      "furniture": [
+        {"loc": "ladder", "x": 1, "y": 1, "rotation": 1},
+        {"loc": "laddertop", "x": 1, "y": 1, "rotation": 1, "level": 1},
+        {"loc": "table", "x": 4, "y": 2, "rotation": 1},
+        {"loc": "table", "x": 3, "y": 2, "rotation": 1},
+        {"loc": "table", "x": 2, "y": 2, "rotation": 1},
+        {"loc": "shelves1", "x": 5, "y": 1, "rotation": 1},
+        {"loc": "crate", "x": 5, "y": 6, "rotation": 1},
+        {"loc": "barrel", "x": 1, "y": 6, "rotation": 1},
+        {"loc": "bed", "x": 5, "y": 2, "rotation": 1, "level": 1},
+        {"loc": "table", "x": 3, "y": 3, "rotation": 1, "level": 1},
+        {"loc": "chair", "x": 4, "y": 3, "rotation": 1, "level": 1},
+        {"loc": "bookcase", "x": 5, "y": 6, "rotation": 1, "level": 1},
+        {"loc": "crate", "x": 1, "y": 6, "rotation": 1, "level": 1}
+      ]
+    },
+    {
+      "kind": "armour_shop", "x": 8301, "y": 7935, "width": 8, "depth": 10, "door": "EAST", "floors": 1, "wall": "plaster", "floor": "stone", "roof": "thatch",
+      "furniture": [
+        {"loc": "table", "x": 2, "y": 4, "rotation": 2},
+        {"loc": "table", "x": 2, "y": 5, "rotation": 2},
+        {"loc": "table", "x": 2, "y": 6, "rotation": 2},
+        {"loc": "shelves1", "x": 1, "y": 1, "rotation": 2},
+        {"loc": "crate", "x": 6, "y": 1, "rotation": 2}
+      ]
+    },
+    {
+      "kind": "fishing_shop", "x": 8334, "y": 7942, "width": 7, "depth": 7, "door": "SOUTH", "floors": 1, "wall": "plaster", "floor": "planks", "roof": "redslate",
+      "furniture": [
+        {"loc": "table", "x": 2, "y": 4, "rotation": 3},
+        {"loc": "table", "x": 3, "y": 4, "rotation": 3},
+        {"loc": "table", "x": 4, "y": 4, "rotation": 3},
+        {"loc": "shelves1", "x": 1, "y": 5, "rotation": 3},
+        {"loc": "shelves1", "x": 5, "y": 5, "rotation": 3},
+        {"loc": "crate", "x": 1, "y": 1, "rotation": 3},
+        {"loc": "barrel", "x": 5, "y": 1, "rotation": 3}
+      ]
+    },
+    {
+      "kind": "staff_shop", "x": 8353, "y": 7909, "width": 11, "depth": 10, "door": "NORTH", "floors": 1, "wall": "greyplaster", "floor": "golden", "roof": "blueslate",
+      "furniture": [
+        {"loc": "table", "x": 6, "y": 2, "rotation": 1},
+        {"loc": "table", "x": 5, "y": 2, "rotation": 1},
+        {"loc": "table", "x": 4, "y": 2, "rotation": 1},
+        {"loc": "shelves1", "x": 9, "y": 1, "rotation": 1},
+        {"loc": "shelves1", "x": 1, "y": 1, "rotation": 1},
+        {"loc": "crate", "x": 9, "y": 8, "rotation": 1},
+        {"loc": "barrel", "x": 1, "y": 8, "rotation": 1}
+      ]
+    },
+    {
+      "kind": "house", "x": 8333, "y": 7889, "width": 7, "depth": 9, "door": "WEST", "floors": 2, "wall": "greyplaster", "floor": "terracotta", "roof": "straw",
+      "furniture": [
+        {"loc": "ladder", "x": 5, "y": 1, "rotation": 0},
+        {"loc": "laddertop", "x": 5, "y": 1, "rotation": 0, "level": 1},
         {"loc": "table", "x": 3, "y": 4, "rotation": 0},
         {"loc": "chair", "x": 3, "y": 5, "rotation": 1},
         {"loc": "chair", "x": 3, "y": 3, "rotation": 3},
-        {"loc": "crate", "x": 1, "y": 1, "rotation": 0}
+        {"loc": "bookcase", "x": 5, "y": 7, "rotation": 0},
+        {"loc": "barrel", "x": 1, "y": 7, "rotation": 0},
+        {"loc": "crate", "x": 1, "y": 1, "rotation": 0},
+        {"loc": "bed", "x": 4, "y": 7, "rotation": 0, "level": 1},
+        {"loc": "table", "x": 3, "y": 4, "rotation": 0, "level": 1},
+        {"loc": "chair", "x": 3, "y": 5, "rotation": 1, "level": 1},
+        {"loc": "bookcase", "x": 1, "y": 7, "rotation": 0, "level": 1},
+        {"loc": "crate", "x": 1, "y": 1, "rotation": 0, "level": 1}
       ]
     },
     {
-      "kind": "realtor", "x": 8354, "y": 7909, "width": 8, "depth": 10, "door": "NORTH", "floors": 1, "wall": "whitestone", "floor": "darkwood", "roof": "slate",
+      "kind": "house", "x": 8349, "y": 7889, "width": 7, "depth": 9, "door": "NORTH", "floors": 2, "wall": "greyplaster", "floor": "planks", "roof": "thatch",
       "furniture": [
-        {"loc": "table", "x": 4, "y": 2, "rotation": 1},
-        {"loc": "bookcase", "x": 1, "y": 1, "rotation": 1},
-        {"loc": "chair", "x": 5, "y": 8, "rotation": 1},
-        {"loc": "bench", "x": 1, "y": 8, "rotation": 1}
-      ]
-    },
-    {
-      "kind": "church", "x": 8353, "y": 7932, "width": 12, "depth": 14, "door": "WEST", "floors": 3, "wall": "stone", "floor": "flagstone", "roof": "none",
-      "furniture": []
-    },
-    {
-      "kind": "house", "x": 8300, "y": 7934, "width": 9, "depth": 10, "door": "EAST", "floors": 2, "wall": "plaster", "floor": "sandstone", "roof": "blueslate", "forSale": true,
-      "furniture": [
-        {"loc": "ladder", "x": 1, "y": 1, "rotation": 2},
-        {"loc": "laddertop", "x": 1, "y": 1, "rotation": 2, "level": 1}
+        {"loc": "ladder", "x": 1, "y": 1, "rotation": 1},
+        {"loc": "laddertop", "x": 1, "y": 1, "rotation": 1, "level": 1},
+        {"loc": "table", "x": 3, "y": 4, "rotation": 1},
+        {"loc": "chair", "x": 4, "y": 4, "rotation": 1},
+        {"loc": "chair", "x": 2, "y": 4, "rotation": 3},
+        {"loc": "bookcase", "x": 5, "y": 1, "rotation": 1},
+        {"loc": "barrel", "x": 5, "y": 7, "rotation": 1},
+        {"loc": "crate", "x": 1, "y": 7, "rotation": 1},
+        {"loc": "bed", "x": 5, "y": 2, "rotation": 1, "level": 1},
+        {"loc": "table", "x": 3, "y": 4, "rotation": 1, "level": 1},
+        {"loc": "chair", "x": 4, "y": 4, "rotation": 1, "level": 1},
+        {"loc": "bookcase", "x": 5, "y": 7, "rotation": 1, "level": 1},
+        {"loc": "crate", "x": 1, "y": 7, "rotation": 1, "level": 1}
       ]
     }
   ],
   "residents": [
+    {"npc": 456, "x": 8340, "y": 7904, "role": "priest"},
+    {"npc": 0, "x": 8343, "y": 7906, "role": "congregant"},
+    {"npc": 668, "x": 8337, "y": 7908, "role": "congregant"},
+    {"npc": 7969, "x": 8341, "y": 7910, "role": "congregant"},
+    {"npc": 8864, "x": 8338, "y": 7910, "role": "congregant"},
+    {"npc": 758, "x": 8341, "y": 7908, "role": "congregant"},
+    {"npc": 4589, "x": 8337, "y": 7906, "role": "congregant"},
+    {"npc": 3021, "x": 8355, "y": 7948, "role": "leprechaun"},
     {"npc": 494, "x": 8322, "y": 7909, "role": "banker"},
     {"npc": 494, "x": 8323, "y": 7909, "role": "banker"},
     {"npc": 494, "x": 8324, "y": 7909, "role": "banker"},
-    {"npc": 9, "x": 8346, "y": 7913, "role": "guard"},
-    {"npc": 9, "x": 8346, "y": 7915, "role": "guard"},
+    {"npc": 9, "x": 8357, "y": 7927, "role": "guard"},
+    {"npc": 9, "x": 8357, "y": 7925, "role": "guard"},
+    {"npc": 15718, "x": 8302, "y": 7907, "role": "realtor"},
     {"npc": 9, "x": 8321, "y": 7940, "role": "patrol"},
     {"npc": 9, "x": 8341, "y": 7900, "role": "patrol"},
     {"npc": 9, "x": 8311, "y": 7910, "role": "patrol"},
     {"npc": 9, "x": 8351, "y": 7930, "role": "patrol"},
-    {"npc": 15672, "x": 8324, "y": 7945, "role": "shopkeeper", "shop": "pelenstead_general_store"},
-    {"npc": 598, "x": 8304, "y": 7927, "role": "barber"},
-    {"npc": 15690, "x": 8302, "y": 7910, "role": "shopkeeper", "shop": "pelenstead_sword_shop"},
-    {"npc": 15681, "x": 8345, "y": 7948, "role": "shopkeeper", "shop": "pelenstead_archery_shop"},
-    {"npc": 15663, "x": 8343, "y": 7932, "role": "shopkeeper", "shop": "pelenstead_magic_shop"},
-    {"npc": 15676, "x": 8318, "y": 7928, "role": "shopkeeper", "shop": "pelenstead_clothes_shop"},
-    {"npc": 15696, "x": 8318, "y": 7890, "role": "shopkeeper", "shop": "pelenstead_food_shop"},
-    {"npc": 15698, "x": 8313, "y": 7950, "role": "shopkeeper", "shop": "pelenstead_armour_shop"},
-    {"npc": 15698, "x": 8316, "y": 7909, "role": "shopkeeper", "shop": "pelenstead_fishing_shop"},
-    {"npc": 15710, "x": 8359, "y": 7904, "role": "shopkeeper", "shop": "pelenstead_staff_shop"},
-    {"npc": 15718, "x": 8358, "y": 7910, "role": "realtor"},
-    {"npc": 456, "x": 8360, "y": 7934, "role": "priest"},
-    {"npc": 0, "x": 8363, "y": 7936, "role": "congregant"},
-    {"npc": 668, "x": 8357, "y": 7938, "role": "congregant"},
-    {"npc": 7969, "x": 8361, "y": 7940, "role": "congregant"},
-    {"npc": 8864, "x": 8358, "y": 7940, "role": "congregant"},
-    {"npc": 758, "x": 8361, "y": 7938, "role": "congregant"},
-    {"npc": 4589, "x": 8357, "y": 7936, "role": "congregant"}
+    {"npc": 15672, "x": 8343, "y": 7932, "role": "shopkeeper", "shop": "pelenstead_general_store"},
+    {"npc": 15690, "x": 8359, "y": 7937, "role": "shopkeeper", "shop": "pelenstead_potion_ingredients"},
+    {"npc": 15683, "x": 8359, "y": 7938, "role": "shopkeeper", "shop": "pelenstead_rare_ingredients"},
+    {"npc": 15687, "x": 8359, "y": 7936, "role": "shopkeeper", "shop": "pelenstead_exotic_ingredients"},
+    {"npc": 15662, "x": 8318, "y": 7928, "role": "shopkeeper", "shop": "pelenstead_master_farmer_seeds"},
+    {"npc": 15679, "x": 8317, "y": 7928, "role": "shopkeeper", "shop": "pelenstead_master_farmer_herb_seeds"},
+    {"npc": 598, "x": 8318, "y": 7893, "role": "barber"},
+    {"npc": 15690, "x": 8313, "y": 7950, "role": "shopkeeper", "shop": "pelenstead_sword_shop"},
+    {"npc": 15681, "x": 8316, "y": 7909, "role": "shopkeeper", "shop": "pelenstead_archery_shop"},
+    {"npc": 15663, "x": 8359, "y": 7904, "role": "shopkeeper", "shop": "pelenstead_magic_shop"},
+    {"npc": 15676, "x": 8338, "y": 7933, "role": "shopkeeper", "shop": "pelenstead_clothes_shop"},
+    {"npc": 15696, "x": 8326, "y": 7891, "role": "shopkeeper", "shop": "pelenstead_food_shop"},
+    {"npc": 15698, "x": 8302, "y": 7940, "role": "shopkeeper", "shop": "pelenstead_armour_shop"},
+    {"npc": 15698, "x": 8337, "y": 7947, "role": "shopkeeper", "shop": "pelenstead_fishing_shop"},
+    {"npc": 15710, "x": 8358, "y": 7910, "role": "shopkeeper", "shop": "pelenstead_staff_shop"}
   ]
 }

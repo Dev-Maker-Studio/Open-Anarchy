@@ -1,0 +1,153 @@
+{
+  "name": "Potion Ingredients",
+  "generalStore": true,
+  "buyOnly": false,
+  "currency": 995,
+  "items": [
+    {
+      "item": {
+        "id": 221,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 235,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 225,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 592,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 223,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 1975,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 948,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 231,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 239,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 245,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 247,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 241,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 2970,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 2152,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 3138,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 6693,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 9017,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 9018,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 9736,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 10111,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 10937,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 12109,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 12630,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 5004,
+        "amount": 10
+      }
+    }
+  ],
+  "npcIds": []
+}
