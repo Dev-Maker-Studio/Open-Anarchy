@@ -2,12 +2,16 @@ package com.rs.game.content.world.generated
 
 import com.rs.engine.cutscene.Cutscene
 import com.rs.game.World
+import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.player.Player
+import org.darkan.core.gameval.gen.Seq
 import org.darkan.core.Utils
 import org.darkan.core.map.pathfinder.Direction
 import org.darkan.core.model.MoveType
 
 private const val SERMON_SHARE = 2
+private const val CLOSING_PRAYER_START = 1
+private const val STOP_ANIM = -1
 private val PRAISES = arrayOf("Amen.", "Preach", "Praise the Lord.")
 private val CLOSING_PRAYER = listOf(
     "That concludes our service..." to 4,
@@ -19,6 +23,10 @@ private val CLOSING_PRAYER = listOf(
     "And give you peace." to 3,
 )
 
+private fun bow(worshippers: List<Entity>) = worshippers.forEach { it.anim(Seq.human_idle_head_down) }
+
+private fun rise(worshippers: List<Entity>) = worshippers.forEach { it.anim(STOP_ANIM) }
+
 class Sermon(private val church: Church, private val sermon: Array<String>) : Cutscene() {
     private val start = church.serviceTile
 
@@ -28,6 +36,7 @@ class Sermon(private val church: Church, private val sermon: Array<String>) : Cu
         music(CHURCH_MUSIC)
         action {
             priest.forceTalk("Let us pray.")
+            bow(church.congregation() + priest)
         }
         delay(1)
         playerMove(start.x, start.y, start.level, MoveType.WALK)
@@ -35,6 +44,7 @@ class Sermon(private val church: Church, private val sermon: Array<String>) : Cu
         action {
             priest.forceTalk("Father in heaven...")
             priest.faceDir(Direction.NORTH)
+            bow(listOf(player))
         }
         delay(3)
         action { priest.forceTalk("Grant me the wisdom to preach...") }
@@ -44,7 +54,10 @@ class Sermon(private val church: Church, private val sermon: Array<String>) : Cu
         delay(4)
         action { priest.forceTalk("Have mercy on us..") }
         delay(3)
-        action { priest.forceTalk("Amen...") }
+        action {
+            rise(church.congregation() + priest + player)
+            priest.forceTalk("Amen...")
+        }
         delay(2)
         action {
             for (npc in church.congregation()) {
@@ -63,11 +76,15 @@ class Sermon(private val church: Church, private val sermon: Array<String>) : Cu
             }
             delay(sentence.length / 5 / 2)
         }
-        for ((line, pause) in CLOSING_PRAYER) {
-            action { priest.forceTalk(line) }
-            delay(pause)
+        for ((index, entry) in CLOSING_PRAYER.withIndex()) {
+            action {
+                priest.forceTalk(entry.first)
+                if (index == CLOSING_PRAYER_START) bow(church.congregation() + priest + player)
+            }
+            delay(entry.second)
         }
         action {
+            rise(church.congregation() + priest + player)
             church.congregation().forEach { it.forceTalk("Amen.") }
             for (congregate in World.players) {
                 if ((congregate.controllerManager.controller as? ChurchService)?.church !== church)
