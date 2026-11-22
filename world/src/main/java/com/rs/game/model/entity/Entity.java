@@ -35,7 +35,6 @@ import com.rs.game.model.entity.interactions.PlayerCombatInteraction;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions;
 import com.rs.game.model.entity.player.Equipment;
-import com.rs.game.content.world.generated.GeneratedWorldRulesKt;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
 import com.rs.game.model.entity.player.actions.ActionManager;
@@ -492,8 +491,6 @@ public abstract class Entity {
 		if (hit.getDamage() > hitpoints)
 			hit.setDamage(hitpoints);
 		addReceivedDamage(hit.getSource(), hit.getDamage());
-		if (this instanceof Player victim)
-			GeneratedWorldRulesKt.recordDamage(victim, hit.getSource(), hit.getDamage());
 		setHitpoints(hitpoints - hit.getDamage());
 
 		if (this instanceof Player p)
