@@ -87,9 +87,7 @@ object CityPlanner {
 
     fun isStub(city: City): Boolean = city.streets.isEmpty() && city.buildings.isEmpty()
 
-    fun plan(generator: WorldGenerator, worldSeed: Long, spawnX: Int, spawnY: Int, mapMin: Int, mapMax: Int, count: Int = CITIES): List<City> {
-        val centres = arrayListOf(spawnX to spawnY)
-        val random = Random(worldSeed * SEED_STEP + EXPAND_SALT)
+    private fun grow(generator: WorldGenerator, random: Random, centres: MutableList<Pair<Int, Int>>, mapMin: Int, mapMax: Int, count: Int) {
         var parent = 0
         while (parent < centres.size && centres.size < count) {
             val (px, py) = centres[parent++]
@@ -108,12 +106,26 @@ object CityPlanner {
                 children++
             }
         }
-        val taken = HashSet<String>()
-        return centres.mapIndexed { index, (x, y) ->
+    }
+
+    private fun founded(generator: WorldGenerator, worldSeed: Long, centres: List<Pair<Int, Int>>, first: Int, taken: MutableSet<String>): List<City> =
+        centres.drop(first).mapIndexed { offset, (x, y) ->
+            val index = first + offset
             val seed = citySeed(worldSeed, index)
-            val name = cityName(seed, index).let { if (taken.add(it)) it else "$it ${index + 1}" }
+            val name = cityName(seed, index).let { if (taken.add(it)) it else "$it ${index + 1}".also(taken::add) }
             make(generator, stub(name, seed, x, y, if (index == 0) SPAWN_HALF else HALF))
         }
+
+    fun plan(generator: WorldGenerator, worldSeed: Long, spawnX: Int, spawnY: Int, mapMin: Int, mapMax: Int, count: Int = CITIES): List<City> {
+        val centres = arrayListOf(spawnX to spawnY)
+        grow(generator, Random(worldSeed * SEED_STEP + EXPAND_SALT), centres, mapMin, mapMax, count)
+        return founded(generator, worldSeed, centres, 0, HashSet())
+    }
+
+    fun extend(generator: WorldGenerator, worldSeed: Long, cities: List<City>, mapMin: Int, mapMax: Int, count: Int): List<City> {
+        val centres = cities.mapTo(ArrayList()) { it.centerX to it.centerY }
+        grow(generator, Random(worldSeed * SEED_STEP + EXPAND_SALT + cities.size), centres, mapMin, mapMax, count)
+        return founded(generator, worldSeed, centres, cities.size, cities.mapTo(HashSet()) { it.name })
     }
 
     fun make(generator: WorldGenerator, stub: City): City {

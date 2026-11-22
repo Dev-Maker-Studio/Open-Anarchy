@@ -3,6 +3,7 @@ package com.rs.game.content.bosses.godwars.factions
 import com.rs.engine.pathfinder.RouteEvent
 import com.rs.game.World
 import com.rs.game.content.bosses.godwars.GWDBoss
+import com.rs.game.content.bosses.godwars.GodwarsController
 import com.rs.game.content.bosses.godwars.GWDFactionNPC
 import com.rs.game.content.bosses.MinionSpawn
 import com.rs.game.content.bosses.godwars.factions.zaros.ZarosFactionNPC
@@ -40,13 +41,14 @@ fun mapZamorakGodwars() {
     onObjectClick(26439, checkDistance = false) { (player, obj) ->
         player.setRouteEvent(RouteEvent(obj.tile) {
             if (player.withinDistance(obj.tile, 3)) {
-                if (player.y < 5334) {
+                val dungeon = player.controllerManager.controller as? GodwarsController ?: return@RouteEvent
+                if (dungeon.sourceY < 5334) {
                     if (player.skills.getLevel(Constants.HITPOINTS) >= 70) {
-                        player.useStairs(6999, Tile.of(2885, 5347, 2), 1, 1)
+                        player.useStairs(6999, dungeon.tile(2885, 5347, 2), 1, 1)
                         player.prayer.drainPrayer(player.prayer.points)
                         player.sendMessage("You jump over the broken bridge. You feel the power of Zamorak take sap away at your prayer points.")
                     } else player.sendMessage("You need a Constitution level of 70 to enter this area.")
-                } else player.useStairs(6999, Tile.of(2885, 5330, 2), 1, 1)
+                } else player.useStairs(6999, dungeon.tile(2885, 5330, 2), 1, 1)
             }
         })
     }

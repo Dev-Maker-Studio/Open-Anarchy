@@ -77,8 +77,9 @@ object DungeonMobs {
 
     fun mobId(dungeon: Dungeon, point: SpawnPoint): Int {
         val level = mobLevel(dungeon, point)
-        val mobs = dungeon.style.mobs
-        val fitting = mobs.filter { native(it) <= level * NATIVE_REACH + NATIVE_HEADROOM }.ifEmpty { listOf(mobs.minBy(::native)) }
+        val mobs = SpawnAreas.kept(dungeon.style.name, dungeon.style.mobs).ifEmpty { dungeon.style.mobs }
+        val fitting = SpawnAreas.ids(dungeon.style.name, dungeon.entranceX, dungeon.entranceY)?.takeIf { it.isNotEmpty() }?.asList()
+            ?: mobs.filter { native(it) <= level * NATIVE_REACH + NATIVE_HEADROOM }.ifEmpty { listOf(mobs.minBy(::native)) }
         return fitting[Random(point.roll).nextInt(fitting.size)]
     }
 

@@ -53,6 +53,8 @@ object EnvVars {
     val cacheBuildPath: String = dotenv.get("CACHE_BUILD_PATH", "./data/cache")
     val generateMaps: Boolean = dotenv.get("CACHE_GENERATE_MAPS", "false").toBooleanStrict()
     val generateSize: Int = dotenv.get("CACHE_GENERATE_SIZE", "0").toInt()
+    val cityCount: Int = dotenv.get("CITY_COUNT", "0").toInt()
+    val dungeonsPerBiome: Int = dotenv.get("DUNGEONS_PER_BIOME", "1").toInt()
     val cachePackThreads: Int = dotenv.get("CACHE_PACK_THREADS", null)?.toIntOrNull() ?: if (generateMaps) 1 else 0
     val cachePackLock: String = dotenv.get("CACHE_PACK_LOCK", System.getProperty("java.io.tmpdir") + "/darkan-cache-pack.lock")
     val worldWindowX: Int? = dotenv.get("WORLD_WINDOW_X", null)?.toIntOrNull()

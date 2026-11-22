@@ -17,6 +17,7 @@ import com.rs.game.content.world.generated.StartLodestone
 import com.rs.game.content.world.generated.Cities
 import com.rs.game.content.world.generated.Dungeons
 import com.rs.game.content.world.generated.DungeoneeringCaves
+import com.rs.game.content.world.generated.GodwarsDungeons
 import com.rs.game.content.world.generated.RoadMenu
 import com.rs.game.content.world.generated.CarpetRiders
 
@@ -42,7 +43,7 @@ object GeneratedScenery {
             val x = baseX + scenery.x
             val y = baseY + scenery.y
             if (scenery.level != chunk.plane || x shr 3 != chunk.x || y shr 3 != chunk.y) continue
-            if (Cities.covers(x, y) || DungeoneeringCaves.covers(x, y) || CarpetRiders.covers(x, y)) continue
+            if (Cities.covers(x, y) || DungeoneeringCaves.covers(x, y) || GodwarsDungeons.covers(x, y) || CarpetRiders.covers(x, y)) continue
             val shape = ObjectShape.forId(scenery.shape) ?: continue
             chunk.addGeneratedObject(GameObject(scenery.id, shape, scenery.rotation, x, y, scenery.level))
         }
@@ -51,6 +52,7 @@ object GeneratedScenery {
         Cities.spawn(chunk)
         Dungeons.spawn(chunk)
         DungeoneeringCaves.spawn(chunk)
+        GodwarsDungeons.spawn(chunk)
         RoadMenu.spawn(chunk)
         CarpetRiders.spawn(chunk)
     }
