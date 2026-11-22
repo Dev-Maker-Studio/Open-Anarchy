@@ -4659,14 +4659,6 @@
     "regionIds": []
   },
   {
-    "name": "Bubble and Squeak",
-    "hint": "at the Keldagrim Rat Pits.",
-    "comment": "",
-    "allowAmbient": false,
-    "id": 489,
-    "regionIds": []
-  },
-  {
     "name": "Sarim's Vermin",
     "hint": "at Port Sarim Rat Pits.",
     "comment": "Port pirate",
