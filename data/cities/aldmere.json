@@ -209,25 +209,29 @@
       ]
     },
     {
-      "kind": "house", "x": 6825, "y": 7639, "width": 11, "depth": 7, "door": "SOUTH", "floors": 1, "wall": "plaster", "floor": "darkwood", "roof": "thatch",
+      "kind": "church", "x": 6825, "y": 7639, "width": 12, "depth": 14, "door": "WEST", "floors": 3, "wall": "stone", "floor": "flagstone", "roof": "none",
+      "furniture": []
+    },
+    {
+      "kind": "house", "x": 6811, "y": 7608, "width": 11, "depth": 7, "door": "NORTH", "floors": 1, "wall": "plaster", "floor": "darkwood", "roof": "thatch",
       "furniture": [
-        {"loc": "table", "x": 5, "y": 3, "rotation": 3},
-        {"loc": "chair", "x": 4, "y": 3, "rotation": 1},
-        {"loc": "chair", "x": 6, "y": 3, "rotation": 3},
-        {"loc": "bed", "x": 1, "y": 4, "rotation": 3},
-        {"loc": "bookcase", "x": 1, "y": 5, "rotation": 3},
-        {"loc": "barrel", "x": 1, "y": 1, "rotation": 3},
-        {"loc": "crate", "x": 9, "y": 1, "rotation": 3}
+        {"loc": "table", "x": 5, "y": 3, "rotation": 1},
+        {"loc": "chair", "x": 6, "y": 3, "rotation": 1},
+        {"loc": "chair", "x": 4, "y": 3, "rotation": 3},
+        {"loc": "bed", "x": 9, "y": 2, "rotation": 1},
+        {"loc": "bookcase", "x": 9, "y": 1, "rotation": 1},
+        {"loc": "barrel", "x": 9, "y": 5, "rotation": 1},
+        {"loc": "crate", "x": 1, "y": 5, "rotation": 1}
       ]
     },
     {
-      "kind": "realtor", "x": 6825, "y": 7648, "width": 9, "depth": 7, "door": "WEST", "floors": 1, "wall": "whitestone", "floor": "darkwood", "roof": "slate",
+      "kind": "realtor", "x": 6784, "y": 7648, "width": 7, "depth": 9, "door": "NORTH", "floors": 1, "wall": "whitestone", "floor": "darkwood", "roof": "slate",
       "furniture": [
-        {"loc": "table", "x": 6, "y": 3, "rotation": 0},
-        {"loc": "bookcase", "x": 7, "y": 5, "rotation": 0},
-        {"loc": "bookcase", "x": 7, "y": 1, "rotation": 0},
-        {"loc": "chair", "x": 1, "y": 4, "rotation": 1},
-        {"loc": "bench", "x": 1, "y": 1, "rotation": 0}
+        {"loc": "table", "x": 3, "y": 2, "rotation": 1},
+        {"loc": "bookcase", "x": 5, "y": 1, "rotation": 1},
+        {"loc": "bookcase", "x": 1, "y": 1, "rotation": 1},
+        {"loc": "chair", "x": 4, "y": 7, "rotation": 1},
+        {"loc": "bench", "x": 1, "y": 7, "rotation": 1}
       ]
     }
   ],
@@ -251,6 +255,14 @@
     {"npc": 15668, "x": 6775, "y": 7627, "role": "shopkeeper", "shop": "aldmere_armour_shop"},
     {"npc": 15686, "x": 6818, "y": 7627, "role": "shopkeeper", "shop": "aldmere_fishing_shop"},
     {"npc": 15680, "x": 6787, "y": 7665, "role": "shopkeeper", "shop": "aldmere_staff_shop"},
-    {"npc": 15718, "x": 6832, "y": 7651, "role": "realtor"}
+    {"npc": 456, "x": 6832, "y": 7641, "role": "priest"},
+    {"npc": 2899, "x": 6825, "y": 7644, "role": "greeter"},
+    {"npc": 0, "x": 6835, "y": 7643, "role": "congregant"},
+    {"npc": 668, "x": 6829, "y": 7645, "role": "congregant"},
+    {"npc": 7969, "x": 6833, "y": 7647, "role": "congregant"},
+    {"npc": 8864, "x": 6830, "y": 7647, "role": "congregant"},
+    {"npc": 758, "x": 6833, "y": 7645, "role": "congregant"},
+    {"npc": 4589, "x": 6829, "y": 7643, "role": "congregant"},
+    {"npc": 15718, "x": 6787, "y": 7649, "role": "realtor"}
   ]
 }

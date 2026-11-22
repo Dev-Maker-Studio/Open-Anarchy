@@ -69,7 +69,8 @@ object BuildingBuilder {
         Side.NORTH -> x + width / 2 to y + depth - 1
     }
 
-    fun pieces(building: Building): List<Piece> = built.computeIfAbsent(building) { walls(it) + furniture(it) + roof(it) + icons(it) }
+    fun pieces(building: Building): List<Piece> =
+        built.computeIfAbsent(building) { if (it.kind == ChurchTemplate.KIND) ChurchTemplate.pieces(it) else walls(it) + furniture(it) + roof(it) + icons(it) }
 
     fun pieces(city: City): List<Piece> = cityPieces.computeIfAbsent(city) {
         val roofed = HashSet<Triple<Int, Int, Int>>()

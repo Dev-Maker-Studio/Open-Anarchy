@@ -87,6 +87,7 @@ enum class Service(val icons: List<Int>, val keeper: Boolean = true, val floor: 
     FISHING_SHOP(listOf(Loc.fishing_store_icon)),
     STAFF_SHOP(listOf(Loc.staff_store_icon), floor = FloorStyle.GOLDEN),
     REALTOR(listOf(Loc.poh_estateagent_icon), false, FloorStyle.DARKWOOD),
+    CHURCH(listOf(Loc.altar_icon), false, FloorStyle.FLAGSTONE),
     ;
 
     val kind = name.lowercase()

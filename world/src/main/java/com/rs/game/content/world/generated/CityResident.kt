@@ -6,7 +6,7 @@ import com.rs.game.model.entity.player.Player
 import org.darkan.core.map.pathfinder.Direction
 import world.gregs.voidps.type.Tile
 
-open class CityResident(id: Int, tile: Tile) : NPC(id, tile, Direction.SOUTH, true) {
+open class CityResident(id: Int, tile: Tile, facing: Direction = Direction.SOUTH) : NPC(id, tile, facing, true) {
 
     init {
         setRandomWalk(false)

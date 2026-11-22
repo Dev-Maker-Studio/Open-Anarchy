@@ -19,6 +19,9 @@ object CityPlanner {
     private const val MAP_MARGIN = 80
     private const val GUARD_OFFSET = 3
     private const val ARMS = 4
+    private const val EDGE_MARGIN = 2
+    private const val CHURCH_EDGE = 1
+    private const val HOME_COST = 4
 
     private const val STYLE_SALT = 9001L
     private const val TWO_FLOOR_HOUSE_PERCENT = 40
@@ -136,7 +139,72 @@ object CityPlanner {
         return upgrade(generator, stub.copy(halfSize = half, baseHeight = generator.heightAt(stub.centerX, stub.centerY), streets = streets, buildings = buildings, residents = residents))
     }
 
-    fun upgrade(generator: WorldGenerator, city: City): City = withHomes(withRealtor(generator, upgrade(city)))
+    fun upgrade(generator: WorldGenerator, city: City): City = withChurch(generator, withHomes(withRealtor(generator, upgrade(city))))
+
+    private class ChurchSite(val x: Int, val y: Int, val cleared: List<Building>, val cost: Int, val distance: Int)
+
+    private class Lot(val x: Int, val y: Int, val width: Int, val depth: Int, val door: Side, val distance: Int)
+
+    private val movableCosts = mapOf(
+        BuildingBuilder.HOUSE to 1, BuildingBuilder.MARKET to 2, BuildingBuilder.GUARDHOUSE to 6, BuildingBuilder.SMITHY to 6,
+        Service.BARBER.kind to 8, Service.REALTOR.kind to 10, BuildingBuilder.BANK to 10,
+    )
+
+    private fun withChurch(generator: WorldGenerator, city: City): City {
+        if (city.buildings.any { it.kind == ChurchTemplate.KIND }) return city
+        for (site in churchSites(generator, city).sortedWith(compareBy({ it.cost }, { it.distance }, { it.x }, { it.y }))) {
+            val cleared = city.copy(
+                buildings = city.buildings - site.cleared.toSet() + ChurchTemplate.building(site.x, site.y),
+                residents = city.residents.filterNot { resident -> site.cleared.any { it.touches(resident.x, resident.y, resident.x, resident.y) } } + ChurchTemplate.residents(site.x, site.y),
+            )
+            return site.cleared.fold<Building, City?>(cleared) { moved, building -> moved?.let { rebuilt(generator, it, building) } } ?: continue
+        }
+        return city
+    }
+
+    private fun churchSites(generator: WorldGenerator, city: City): List<ChurchSite> {
+        val width = ChurchTemplate.width
+        val depth = ChurchTemplate.depth
+        val reach = city.halfSize - CHURCH_EDGE
+        val sites = ArrayList<ChurchSite>()
+        for (x in city.centerX - reach..city.centerX + reach - width + 1) for (y in city.centerY - reach..city.centerY + reach - depth + 1) {
+            val maxX = x + width - 1
+            val maxY = y + depth - 1
+            val entrance = y + ChurchTemplate.ENTRANCE_Y
+            if ((entrance until entrance + ChurchTemplate.ENTRANCE_ROWS).any { row -> city.streets.none { it.touches(x - 1, row, x - 1, row) } }) continue
+            if (city.streets.any { it.touches(x, y, maxX, maxY) } || generator.roadTouches(x, y - 1, maxX + 1, maxY + 1)) continue
+            val cleared = city.buildings.filter { it.touches(x, y, maxX, maxY, 1) }
+            val costs = cleared.map { (if (it.isForSale) HOME_COST else movableCosts[it.kind]) ?: return@map null }
+            if (null in costs) continue
+            sites += ChurchSite(x, y, cleared, costs.sumOf { it ?: 0 }, Math.abs(x + width / 2 - city.centerX) + Math.abs(y + depth / 2 - city.centerY))
+        }
+        return sites
+    }
+
+    private fun rebuilt(generator: WorldGenerator, city: City, old: Building): City? {
+        val reach = city.halfSize - EDGE_MARGIN
+        val lots = ArrayList<Lot>()
+        for ((width, depth) in setOf(old.width to old.depth, old.depth to old.width)) {
+            for (x in city.centerX - reach..city.centerX + reach - width + 1) for (y in city.centerY - reach..city.centerY + reach - depth + 1) {
+                val maxX = x + width - 1
+                val maxY = y + depth - 1
+                if (city.streets.any { it.touches(x, y, maxX, maxY) } || city.buildings.any { it.touches(x, y, maxX, maxY, 1) }) continue
+                if (generator.roadTouches(x - 1, y - 1, maxX + 1, maxY + 1)) continue
+                val door = Side.entries.firstOrNull { side ->
+                    val (doorX, doorY) = BuildingBuilder.doorTile(x, y, width, depth, side)
+                    city.streets.any { it.touches(doorX + side.dx, doorY + side.dy, doorX + side.dx, doorY + side.dy) }
+                } ?: continue
+                lots += Lot(x, y, width, depth, door, Math.abs(x - old.x) + Math.abs(y - old.y))
+            }
+        }
+        val lot = lots.minWithOrNull(compareBy({ it.distance }, { it.x }, { it.y }, { it.width })) ?: return null
+        val plan = BuildingBuilder.plan(old.kind, lot.x, lot.y, lot.width, lot.depth, lot.door, old.levels, city.id, city.seed)
+        val furniture = if (old.isForSale) plan.furniture.filter { it.loc == BuildingBuilder.LADDER || it.loc == BuildingBuilder.LADDER_TOP } else plan.furniture
+        return city.copy(
+            buildings = city.buildings + old.copy(x = lot.x, y = lot.y, width = lot.width, depth = lot.depth, door = lot.door.name, furniture = furniture),
+            residents = city.residents + plan.residents,
+        )
+    }
 
     private fun withRealtor(generator: WorldGenerator, city: City): City {
         val kind = Service.REALTOR.kind

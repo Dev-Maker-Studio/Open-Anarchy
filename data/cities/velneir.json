@@ -67,18 +67,6 @@
       "furniture": []
     },
     {
-      "kind": "house", "x": 7512, "y": 7509, "width": 8, "depth": 11, "door": "EAST", "floors": 1, "wall": "farmhouse", "floor": "terracotta", "roof": "thatch",
-      "furniture": [
-        {"loc": "table", "x": 3, "y": 5, "rotation": 2},
-        {"loc": "chair", "x": 3, "y": 4, "rotation": 1},
-        {"loc": "chair", "x": 3, "y": 6, "rotation": 3},
-        {"loc": "bed", "x": 2, "y": 1, "rotation": 2},
-        {"loc": "bookcase", "x": 1, "y": 1, "rotation": 2},
-        {"loc": "barrel", "x": 6, "y": 1, "rotation": 2},
-        {"loc": "crate", "x": 6, "y": 9, "rotation": 2}
-      ]
-    },
-    {
       "kind": "general_store", "x": 7471, "y": 7481, "width": 7, "depth": 10, "door": "EAST", "floors": 1, "wall": "plaster", "floor": "planks", "roof": "thatch",
       "furniture": [
         {"loc": "table", "x": 2, "y": 4, "rotation": 2},
@@ -226,6 +214,22 @@
         {"loc": "chair", "x": 6, "y": 5, "rotation": 1},
         {"loc": "bench", "x": 1, "y": 5, "rotation": 1}
       ]
+    },
+    {
+      "kind": "church", "x": 7502, "y": 7505, "width": 12, "depth": 14, "door": "WEST", "floors": 3, "wall": "stone", "floor": "flagstone", "roof": "none",
+      "furniture": []
+    },
+    {
+      "kind": "house", "x": 7491, "y": 7480, "width": 8, "depth": 11, "door": "EAST", "floors": 1, "wall": "farmhouse", "floor": "terracotta", "roof": "thatch",
+      "furniture": [
+        {"loc": "table", "x": 3, "y": 5, "rotation": 2},
+        {"loc": "chair", "x": 3, "y": 4, "rotation": 1},
+        {"loc": "chair", "x": 3, "y": 6, "rotation": 3},
+        {"loc": "bed", "x": 2, "y": 1, "rotation": 2},
+        {"loc": "bookcase", "x": 1, "y": 1, "rotation": 2},
+        {"loc": "barrel", "x": 6, "y": 1, "rotation": 2},
+        {"loc": "crate", "x": 6, "y": 9, "rotation": 2}
+      ]
     }
   ],
   "residents": [
@@ -256,6 +260,14 @@
     {"npc": 15695, "x": 7530, "y": 7508, "role": "shopkeeper", "shop": "velneir_armour_shop"},
     {"npc": 15708, "x": 7485, "y": 7513, "role": "shopkeeper", "shop": "velneir_fishing_shop"},
     {"npc": 15706, "x": 7481, "y": 7531, "role": "shopkeeper", "shop": "velneir_staff_shop"},
-    {"npc": 15718, "x": 7471, "y": 7493, "role": "realtor"}
+    {"npc": 15718, "x": 7471, "y": 7493, "role": "realtor"},
+    {"npc": 456, "x": 7509, "y": 7507, "role": "priest"},
+    {"npc": 2899, "x": 7502, "y": 7510, "role": "greeter"},
+    {"npc": 0, "x": 7512, "y": 7509, "role": "congregant"},
+    {"npc": 668, "x": 7506, "y": 7511, "role": "congregant"},
+    {"npc": 7969, "x": 7510, "y": 7513, "role": "congregant"},
+    {"npc": 8864, "x": 7507, "y": 7513, "role": "congregant"},
+    {"npc": 758, "x": 7510, "y": 7511, "role": "congregant"},
+    {"npc": 4589, "x": 7506, "y": 7509, "role": "congregant"}
   ]
 }

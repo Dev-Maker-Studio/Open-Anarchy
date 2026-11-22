@@ -56,13 +56,6 @@
       ]
     },
     {
-      "kind": "house", "x": 7846, "y": 9285, "width": 7, "depth": 11, "door": "EAST", "floors": 2, "wall": "darkwood", "floor": "planks", "roof": "redslate", "forSale": true,
-      "furniture": [
-        {"loc": "ladder", "x": 1, "y": 9, "rotation": 2},
-        {"loc": "laddertop", "x": 1, "y": 9, "rotation": 2, "level": 1}
-      ]
-    },
-    {
       "kind": "house", "x": 7813, "y": 9248, "width": 8, "depth": 9, "door": "NORTH", "floors": 2, "wall": "darkwood", "floor": "terracotta", "roof": "redslate", "forSale": true,
       "furniture": [
         {"loc": "ladder", "x": 1, "y": 1, "rotation": 1},
@@ -217,6 +210,17 @@
         {"loc": "bookcase", "x": 1, "y": 1, "rotation": 2},
         {"loc": "chair", "x": 7, "y": 4, "rotation": 1}
       ]
+    },
+    {
+      "kind": "church", "x": 7835, "y": 9284, "width": 12, "depth": 14, "door": "WEST", "floors": 3, "wall": "stone", "floor": "flagstone", "roof": "none",
+      "furniture": []
+    },
+    {
+      "kind": "house", "x": 7818, "y": 9281, "width": 11, "depth": 7, "door": "SOUTH", "floors": 2, "wall": "darkwood", "floor": "planks", "roof": "redslate", "forSale": true,
+      "furniture": [
+        {"loc": "ladder", "x": 9, "y": 5, "rotation": 3},
+        {"loc": "laddertop", "x": 9, "y": 5, "rotation": 3, "level": 1}
+      ]
     }
   ],
   "residents": [
@@ -239,6 +243,14 @@
     {"npc": 15672, "x": 7860, "y": 9289, "role": "shopkeeper", "shop": "yarengate_armour_shop"},
     {"npc": 15673, "x": 7802, "y": 9272, "role": "shopkeeper", "shop": "yarengate_fishing_shop"},
     {"npc": 15684, "x": 7846, "y": 9307, "role": "shopkeeper", "shop": "yarengate_staff_shop"},
-    {"npc": 15718, "x": 7803, "y": 9259, "role": "realtor"}
+    {"npc": 15718, "x": 7803, "y": 9259, "role": "realtor"},
+    {"npc": 456, "x": 7842, "y": 9286, "role": "priest"},
+    {"npc": 2899, "x": 7835, "y": 9289, "role": "greeter"},
+    {"npc": 0, "x": 7845, "y": 9288, "role": "congregant"},
+    {"npc": 668, "x": 7839, "y": 9290, "role": "congregant"},
+    {"npc": 7969, "x": 7843, "y": 9292, "role": "congregant"},
+    {"npc": 8864, "x": 7840, "y": 9292, "role": "congregant"},
+    {"npc": 758, "x": 7843, "y": 9290, "role": "congregant"},
+    {"npc": 4589, "x": 7839, "y": 9288, "role": "congregant"}
   ]
 }

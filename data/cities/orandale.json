@@ -59,10 +59,6 @@
       ]
     },
     {
-      "kind": "house", "x": 6036, "y": 9325, "width": 11, "depth": 9, "door": "WEST", "floors": 1, "wall": "lightwood", "floor": "darkwood", "roof": "darkslate", "forSale": true,
-      "furniture": []
-    },
-    {
       "kind": "house", "x": 6078, "y": 9340, "width": 9, "depth": 8, "door": "WEST", "floors": 2, "wall": "lightwood", "floor": "planks", "roof": "darkslate", "forSale": true,
       "furniture": [
         {"loc": "ladder", "x": 7, "y": 1, "rotation": 0},
@@ -221,6 +217,14 @@
         {"loc": "chair", "x": 4, "y": 5, "rotation": 1},
         {"loc": "bench", "x": 1, "y": 5, "rotation": 1}
       ]
+    },
+    {
+      "kind": "church", "x": 6036, "y": 9323, "width": 12, "depth": 14, "door": "WEST", "floors": 3, "wall": "stone", "floor": "flagstone", "roof": "none",
+      "furniture": []
+    },
+    {
+      "kind": "house", "x": 6044, "y": 9307, "width": 11, "depth": 9, "door": "NORTH", "floors": 1, "wall": "lightwood", "floor": "darkwood", "roof": "darkslate", "forSale": true,
+      "furniture": []
     }
   ],
   "residents": [
@@ -231,7 +235,6 @@
     {"npc": 9, "x": 6069, "y": 9311, "role": "guard"},
     {"npc": 9, "x": 6046, "y": 9358, "role": "patrol"},
     {"npc": 9, "x": 6066, "y": 9318, "role": "patrol"},
-    {"npc": 9, "x": 6036, "y": 9328, "role": "patrol"},
     {"npc": 9, "x": 6076, "y": 9348, "role": "patrol"},
     {"npc": 15702, "x": 6067, "y": 9365, "role": "shopkeeper", "shop": "orandale_general_store"},
     {"npc": 598, "x": 6043, "y": 9363, "role": "barber"},
@@ -243,6 +246,14 @@
     {"npc": 15662, "x": 6044, "y": 9344, "role": "shopkeeper", "shop": "orandale_armour_shop"},
     {"npc": 15676, "x": 6069, "y": 9325, "role": "shopkeeper", "shop": "orandale_fishing_shop"},
     {"npc": 15709, "x": 6039, "y": 9309, "role": "shopkeeper", "shop": "orandale_staff_shop"},
-    {"npc": 15718, "x": 6051, "y": 9352, "role": "realtor"}
+    {"npc": 15718, "x": 6051, "y": 9352, "role": "realtor"},
+    {"npc": 456, "x": 6043, "y": 9325, "role": "priest"},
+    {"npc": 2899, "x": 6036, "y": 9328, "role": "greeter"},
+    {"npc": 0, "x": 6046, "y": 9327, "role": "congregant"},
+    {"npc": 668, "x": 6040, "y": 9329, "role": "congregant"},
+    {"npc": 7969, "x": 6044, "y": 9331, "role": "congregant"},
+    {"npc": 8864, "x": 6041, "y": 9331, "role": "congregant"},
+    {"npc": 758, "x": 6044, "y": 9329, "role": "congregant"},
+    {"npc": 4589, "x": 6040, "y": 9327, "role": "congregant"}
   ]
 }

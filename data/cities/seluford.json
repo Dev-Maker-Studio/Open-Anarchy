@@ -61,10 +61,6 @@
       "furniture": []
     },
     {
-      "kind": "house", "x": 9341, "y": 8190, "width": 7, "depth": 9, "door": "NORTH", "floors": 1, "wall": "plaster", "floor": "planks", "roof": "reed", "forSale": true,
-      "furniture": []
-    },
-    {
       "kind": "house", "x": 9305, "y": 8229, "width": 7, "depth": 7, "door": "WEST", "floors": 2, "wall": "farmhouse", "floor": "sandstone", "roof": "darkslate", "forSale": true,
       "furniture": [
         {"loc": "ladder", "x": 5, "y": 1, "rotation": 0},
@@ -246,6 +242,14 @@
         {"loc": "chair", "x": 1, "y": 5, "rotation": 1},
         {"loc": "bench", "x": 1, "y": 1, "rotation": 0}
       ]
+    },
+    {
+      "kind": "church", "x": 9347, "y": 8197, "width": 12, "depth": 14, "door": "WEST", "floors": 3, "wall": "stone", "floor": "flagstone", "roof": "none",
+      "furniture": []
+    },
+    {
+      "kind": "house", "x": 9317, "y": 8201, "width": 7, "depth": 9, "door": "EAST", "floors": 1, "wall": "plaster", "floor": "planks", "roof": "reed", "forSale": true,
+      "furniture": []
     }
   ],
   "residents": [
@@ -268,6 +272,14 @@
     {"npc": 15710, "x": 9310, "y": 8193, "role": "shopkeeper", "shop": "seluford_armour_shop"},
     {"npc": 15674, "x": 9333, "y": 8214, "role": "shopkeeper", "shop": "seluford_fishing_shop"},
     {"npc": 15707, "x": 9308, "y": 8248, "role": "shopkeeper", "shop": "seluford_staff_shop"},
-    {"npc": 15718, "x": 9353, "y": 8216, "role": "realtor"}
+    {"npc": 15718, "x": 9353, "y": 8216, "role": "realtor"},
+    {"npc": 456, "x": 9354, "y": 8199, "role": "priest"},
+    {"npc": 2899, "x": 9347, "y": 8202, "role": "greeter"},
+    {"npc": 0, "x": 9357, "y": 8201, "role": "congregant"},
+    {"npc": 668, "x": 9351, "y": 8203, "role": "congregant"},
+    {"npc": 7969, "x": 9355, "y": 8205, "role": "congregant"},
+    {"npc": 8864, "x": 9352, "y": 8205, "role": "congregant"},
+    {"npc": 758, "x": 9355, "y": 8203, "role": "congregant"},
+    {"npc": 4589, "x": 9351, "y": 8201, "role": "congregant"}
   ]
 }
