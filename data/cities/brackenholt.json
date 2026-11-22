@@ -242,7 +242,6 @@
     {"npc": 15705, "x": 7362, "y": 6798, "role": "shopkeeper", "shop": "brackenholt_staff_shop"},
     {"npc": 15718, "x": 7391, "y": 6741, "role": "realtor"},
     {"npc": 456, "x": 7399, "y": 6781, "role": "priest"},
-    {"npc": 2899, "x": 7392, "y": 6784, "role": "greeter"},
     {"npc": 0, "x": 7402, "y": 6783, "role": "congregant"},
     {"npc": 668, "x": 7396, "y": 6785, "role": "congregant"},
     {"npc": 7969, "x": 7400, "y": 6787, "role": "congregant"},

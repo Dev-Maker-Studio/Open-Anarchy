@@ -256,7 +256,6 @@
     {"npc": 15686, "x": 6818, "y": 7627, "role": "shopkeeper", "shop": "aldmere_fishing_shop"},
     {"npc": 15680, "x": 6787, "y": 7665, "role": "shopkeeper", "shop": "aldmere_staff_shop"},
     {"npc": 456, "x": 6832, "y": 7641, "role": "priest"},
-    {"npc": 2899, "x": 6825, "y": 7644, "role": "greeter"},
     {"npc": 0, "x": 6835, "y": 7643, "role": "congregant"},
     {"npc": 668, "x": 6829, "y": 7645, "role": "congregant"},
     {"npc": 7969, "x": 6833, "y": 7647, "role": "congregant"},

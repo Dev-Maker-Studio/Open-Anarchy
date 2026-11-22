@@ -611,7 +611,7 @@ class PrayerManager {
     private fun multiplier(mod: StatMod): Double {
         if (active.isEmpty()) return 1.0
         val boost = active.firstNotNullOfOrNull { prayer -> PrayerBoosts.percent(prayer, mod)?.let { if (prayer.isCurse) it + getStatMod(mod) else it } } ?: 0
-        return 1.0 + boost / PERCENT + PrayerBoosts.serviceBonus(player)
+        return 1.0 + boost * PrayerBoosts.serviceScale(player) / PERCENT
     }
 
     val maxPoints: Int get() = player.skills.getLevelForXp(Constants.PRAYER) * POINTS_PER_LEVEL + ChurchBlessing.pointBoost(player)

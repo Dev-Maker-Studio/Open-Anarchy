@@ -262,7 +262,6 @@
     {"npc": 15706, "x": 7481, "y": 7531, "role": "shopkeeper", "shop": "velneir_staff_shop"},
     {"npc": 15718, "x": 7471, "y": 7493, "role": "realtor"},
     {"npc": 456, "x": 7509, "y": 7507, "role": "priest"},
-    {"npc": 2899, "x": 7502, "y": 7510, "role": "greeter"},
     {"npc": 0, "x": 7512, "y": 7509, "role": "congregant"},
     {"npc": 668, "x": 7506, "y": 7511, "role": "congregant"},
     {"npc": 7969, "x": 7510, "y": 7513, "role": "congregant"},

@@ -38,7 +38,6 @@ object ChurchTemplate {
 
     fun residents(x: Int, y: Int): List<Resident> = listOf(
         Resident(Npc.father_aereck, x + 7, y + 2, PRIEST),
-        Resident(Npc.agrith_reen, x, y + 5, GREETER),
         Resident(Npc.hans, x + 10, y + 4, CONGREGANT),
         Resident(Npc.johnathon_fitzharmon, x + 4, y + 6, CONGREGANT),
         Resident(Npc.atlum_explorer_jack, x + 8, y + 8, CONGREGANT),

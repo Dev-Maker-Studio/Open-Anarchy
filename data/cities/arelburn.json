@@ -258,7 +258,6 @@
     {"npc": 15706, "x": 7502, "y": 5958, "role": "shopkeeper", "shop": "arelburn_staff_shop"},
     {"npc": 15718, "x": 7485, "y": 5977, "role": "realtor"},
     {"npc": 456, "x": 7485, "y": 5933, "role": "priest"},
-    {"npc": 2899, "x": 7478, "y": 5936, "role": "greeter"},
     {"npc": 0, "x": 7488, "y": 5935, "role": "congregant"},
     {"npc": 668, "x": 7482, "y": 5937, "role": "congregant"},
     {"npc": 7969, "x": 7486, "y": 5939, "role": "congregant"},

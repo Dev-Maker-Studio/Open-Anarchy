@@ -252,7 +252,6 @@
     {"npc": 15681, "x": 5617, "y": 5976, "role": "shopkeeper", "shop": "renudale_staff_shop"},
     {"npc": 15718, "x": 5642, "y": 5951, "role": "realtor"},
     {"npc": 456, "x": 5657, "y": 5969, "role": "priest"},
-    {"npc": 2899, "x": 5650, "y": 5972, "role": "greeter"},
     {"npc": 0, "x": 5660, "y": 5971, "role": "congregant"},
     {"npc": 668, "x": 5654, "y": 5973, "role": "congregant"},
     {"npc": 7969, "x": 5658, "y": 5975, "role": "congregant"},

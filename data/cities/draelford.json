@@ -242,7 +242,6 @@
     {"npc": 15671, "x": 6665, "y": 6909, "role": "shopkeeper", "shop": "draelford_fishing_shop"},
     {"npc": 15718, "x": 6679, "y": 6891, "role": "realtor"},
     {"npc": 456, "x": 6701, "y": 6883, "role": "priest"},
-    {"npc": 2899, "x": 6694, "y": 6886, "role": "greeter"},
     {"npc": 0, "x": 6704, "y": 6885, "role": "congregant"},
     {"npc": 668, "x": 6698, "y": 6887, "role": "congregant"},
     {"npc": 7969, "x": 6702, "y": 6889, "role": "congregant"},
