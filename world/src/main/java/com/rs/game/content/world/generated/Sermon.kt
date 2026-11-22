@@ -28,7 +28,6 @@ class Sermon(private val church: Church, private val sermon: Array<String>) : Cu
         music(CHURCH_MUSIC)
         action {
             priest.forceTalk("Let us pray.")
-            player.setDailyB("HasDoneSermon", true)
         }
         delay(1)
         playerMove(start.x, start.y, start.level, MoveType.WALK)
@@ -74,8 +73,8 @@ class Sermon(private val church: Church, private val sermon: Array<String>) : Cu
                 if ((congregate.controllerManager.controller as? ChurchService)?.church !== church)
                     continue
                 congregate.forceTalk("Amen.")
-                congregate.sendMessage("<col=00FFFF>You have increased in knowledge of prayer...")
-                congregate.incrementCount("ServicesAttended")
+                if (ChurchBlessing.bless(congregate))
+                    congregate.sendMessage("<col=00FFFF>You have increased in knowledge of prayer...")
             }
         }
     }
