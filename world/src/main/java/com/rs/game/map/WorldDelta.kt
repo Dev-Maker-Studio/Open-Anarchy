@@ -24,7 +24,6 @@ object WorldDelta {
     const val DIRECTORY = "./data/world-delta"
     private const val SAVE_DEBOUNCE_MS = 5000L
     private const val TICK_MS = 600L
-    private const val PERSIST_MIN_TICKS = 100
     private const val MISSING = -1
     private const val COORD_BITS = 24
     private const val COORD_MASK = (1L shl COORD_BITS) - 1
@@ -105,8 +104,6 @@ object WorldDelta {
                 added[k] = entry
                 byChunk.getOrPut(chunkOf(entry.x, entry.y, entry.plane)) { HashSet() }.add(k)
             }
-            for (entry in stored.removed) removed[key(entry.x, entry.y, entry.plane, ObjectShape.forId(entry.shape)?.slot ?: continue)] = entry
-            for (entry in stored.timed) timed[key(entry.x, entry.y, entry.plane, ObjectShape.forId(entry.shape)?.slot ?: continue)] = entry
             for (entry in stored.spots.orEmpty()) spots[key(entry.x, entry.y, entry.plane, 0)] = entry
             Logger.info(WorldDelta::class.java, "load", "Sector ${EnvVars.worldId}: ${added.size} added, ${removed.size} removed, ${timed.size} timed objects, ${spots.size} depleted spots")
         }
@@ -160,10 +157,7 @@ object WorldDelta {
         synchronized(this) {
             val previous = added.remove(k)
             previous?.let { byChunk[chunkOf(it.x, it.y, it.plane)]?.remove(k) }
-            val timedEntry = timed.remove(k)
-            if (ofTheMap)
-                removed[k] = Removed(obj.x, obj.y, obj.plane, obj.id, obj.type.id, obj.rotation)
-            if (ofTheMap || previous != null || timedEntry != null)
+            if (previous != null)
                 scheduleSave()
         }
     }
@@ -179,68 +173,21 @@ object WorldDelta {
 
     @JvmStatic
     fun regrow(obj: GameObject, ticks: Int) {
-        if (!enabled(obj) || ticks < PERSIST_MIN_TICKS) return
-        ensureLoaded()
-        synchronized(this) {
-            val entry = removed[key(obj)]?.takeIf { it.id == obj.id } ?: return
-            entry.regrowAt = now() + ticks * TICK_MS
-            scheduleSave()
-        }
     }
 
     @JvmStatic
-    fun hides(chunk: Chunk, obj: GameObject): Boolean {
-        if (!enabled(chunk)) return false
-        ensureLoaded()
-        val k = key(obj)
-        val entry = synchronized(this) { removed[k]?.takeIf { it.id == obj.id } } ?: return false
-        if (entry.regrowAt == 0L) return true
-        if (entry.regrowAt <= now()) {
-            synchronized(this) { removed.remove(k) }
-            scheduleSave()
-            return false
-        }
-        WorldTasks.schedule(ticksUntil(entry.regrowAt)) {
-            if (synchronized(this) { removed[k]?.id == obj.id }) World.spawnObject(obj)
-        }
-        return true
-    }
+    fun hides(chunk: Chunk, obj: GameObject): Boolean = false
 
     @JvmStatic
     fun timed(obj: GameObject, newId: Int, ticks: Int) {
-        if (restoring.get() || !enabled(obj) || ticks < PERSIST_MIN_TICKS) return
-        ensureLoaded()
-        synchronized(this) {
-            timed[key(obj)] = Timed(obj.x, obj.y, obj.plane, obj.type.id, obj.originalId, newId, now() + ticks * TICK_MS)
-            scheduleSave()
-        }
     }
 
     @JvmStatic
     fun timedCleared(obj: GameObject) {
-        if (!loaded) return
-        synchronized(this) {
-            if (timed.isEmpty()) return
-            if (timed.remove(key(obj)) != null) scheduleSave()
-        }
     }
 
     @JvmStatic
     fun restoreTimed(obj: GameObject) {
-        ensureLoaded()
-        val k = key(obj)
-        val entry = synchronized(this) { timed[k]?.takeIf { it.originalId == obj.id && obj.id != it.currentId } } ?: return
-        if (entry.regrowAt <= now()) {
-            synchronized(this) { timed.remove(k) }
-            scheduleSave()
-            return
-        }
-        restoring.set(true)
-        try {
-            obj.setIdTemporary(entry.currentId, ticksUntil(entry.regrowAt))
-        } finally {
-            restoring.set(false)
-        }
     }
 
     @JvmStatic
