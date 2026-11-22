@@ -53,6 +53,7 @@ import com.rs.game.content.skills.cooking.Foods;
 import com.rs.game.content.skills.dungeoneering.DungManager;
 import com.rs.game.content.skills.dungeoneering.DungeonRewards.HerbicideSetting;
 import com.rs.game.content.skills.farming.FarmPatch;
+import com.rs.game.content.world.generated.CityFarms;
 import com.rs.game.content.skills.farming.PatchLocation;
 import com.rs.game.content.skills.farming.ProduceType;
 import com.rs.game.content.skills.farming.StorableItem;
@@ -389,6 +390,7 @@ public class Player extends Entity {
 	private transient boolean cantWalk;
 
 	private Map<PatchLocation, FarmPatch> patches;
+	private Map<String, Map<PatchLocation, FarmPatch>> cityPatches;
 
 	public boolean isCantWalk() {
 		return cantWalk;
@@ -944,6 +946,7 @@ public class Player extends Entity {
 			processTimedRestorations();
 			processMusic();
 			com.rs.game.content.claims.ClaimManager.refreshPvp(this);
+			CityFarms.refresh(this);
 			processItemDegrades();
 			auraManager.process();
 			prayer.processPrayer();
@@ -1080,17 +1083,27 @@ public class Player extends Entity {
 	}
 
 	public void tickFarming() {
+		Map<PatchLocation, FarmPatch> shown = getPatches();
+		if (patches != null)
+			tickFarming(patches, shown);
+		if (cityPatches != null)
+			for (Map<PatchLocation, FarmPatch> farm : cityPatches.values())
+				tickFarming(farm, shown);
+	}
+
+	private void tickFarming(Map<PatchLocation, FarmPatch> farm, Map<PatchLocation, FarmPatch> shown) {
 		List<PatchLocation> toRemove = new ArrayList<>();
-		for (FarmPatch patch : getPatches().values()) {
+		for (FarmPatch patch : farm.values()) {
 			if (patch == null)
 				continue;
 			patch.tick(this);
-			patch.updateVars(this);
+			if (farm == shown)
+				patch.updateVars(this);
 			if (patch.needsRemove())
 				toRemove.add(patch.location);
 		}
 		for (PatchLocation p : toRemove)
-			getPatches().remove(p);
+			farm.remove(p);
 	}
 
 	@Override
@@ -1143,7 +1156,7 @@ public class Player extends Entity {
 	}
 
 	public double getMaxRunEnergy() {
-		return 100.0 + getSkills().getLevel(Constants.AGILITY);
+		return 100.0 + getSkills().getLevelForXp(Constants.AGILITY);
 	}
 
 	public void restoreRunEnergy(double energy) {
@@ -1162,7 +1175,7 @@ public class Player extends Entity {
 		double whole = Math.floor(runEnergyXpCarry);
 		if (whole >= 1.0) {
 			runEnergyXpCarry -= whole;
-			getSkills().addXpSilent(Constants.AGILITY, whole);
+			getSkills().addXp(Constants.AGILITY, whole);
 		}
 	}
 
@@ -3778,9 +3791,15 @@ public class Player extends Entity {
 	}
 
 	public Map<PatchLocation, FarmPatch> getPatches() {
-		if (patches == null)
-			patches = new HashMap<>();
-		return patches;
+		String city = CityFarms.cityOf(this);
+		if (city == null) {
+			if (patches == null)
+				patches = new HashMap<>();
+			return patches;
+		}
+		if (cityPatches == null)
+			cityPatches = new HashMap<>();
+		return cityPatches.computeIfAbsent(city, key -> new HashMap<>());
 	}
 
 	public boolean isGrowing(PatchLocation loc, ProduceType produce) {

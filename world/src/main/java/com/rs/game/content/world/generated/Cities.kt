@@ -5,6 +5,7 @@ import com.rs.game.model.gameobject.GameObject
 import org.darkan.core.EnvVars
 import org.darkan.core.city.BuildingBuilder
 import org.darkan.core.city.ChurchTemplate
+import org.darkan.core.city.FarmTemplate
 import org.darkan.core.city.Resident
 import org.darkan.core.map.GeneratedWorld
 import org.darkan.core.model.ObjectShape
@@ -43,7 +44,7 @@ object Cities {
             BuildingBuilder.REALTOR -> CityRealtor(tile)
             BuildingBuilder.SHOPKEEPER -> CityShopkeeper(resident.npc, tile, CityShop.of(resident))
             ChurchTemplate.PRIEST, ChurchTemplate.CONGREGANT -> Churches.spawn(resident)
-            BuildingBuilder.BANKER -> CityResident(resident.npc, tile)
+            BuildingBuilder.BANKER, FarmTemplate.LEPRECHAUN -> CityResident(resident.npc, tile)
             else -> CityGuard(resident.npc, tile, if (resident.role == BuildingBuilder.PATROL) PATROL_RADIUS else POST_RADIUS)
         }
     }

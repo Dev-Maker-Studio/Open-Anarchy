@@ -4,6 +4,8 @@ import org.darkan.core.Logger.logInfo
 import org.darkan.core.city.City
 import org.darkan.core.city.DugRoads
 import org.darkan.core.city.Service
+import org.darkan.core.gameval.gen.Loc
+import org.darkan.core.map.CarpetStops
 import org.darkan.core.model.ObjectShape
 import world.gregs.voidps.cache.source.codec.WorldGenerator
 import org.darkan.core.map.WorldWindow
@@ -47,7 +49,7 @@ object WorldMapImage {
     private const val MAX_LOCS = 255
     private const val SHAPE_ROTATION_NONE = 0
 
-    private val mapIcons = Service.entries.flatMapTo(HashSet()) { it.icons }
+    private val mapIcons = Service.entries.flatMapTo(HashSet()) { it.icons } + Loc.farming_patch_icon + Loc.transportation_icon
     private val UNDERLAY_TILE = FLOOR_EXPLICIT shl FLOOR_SHIFT
     private val OVERLAY_TILE = (FLOOR_EXPLICIT shl FLOOR_SHIFT) or OVERLAY_FLAG
     private val SKIPPED_TILE = FLOOR_SKIPPED shl FLOOR_SHIFT
@@ -95,6 +97,7 @@ object WorldMapImage {
             && squareKey(regionX, regionY) !in visitedNow
             && (!saved.isFile || cache.lastModified() >= saved.lastModified())
             && cities.none { it.touches(baseX, baseY, baseX + SQUARE_TILES - 1, baseY + SQUARE_TILES - 1) }
+            && CarpetStops.all.none { it.iconX - baseX in 0 until SQUARE_TILES && it.iconY - baseY in 0 until SQUARE_TILES }
         if (reusable) return cache.readBytes() to false
         val data = squareBytes(saved, square, generator, cities, regionX, regionY)
         cache.parentFile.mkdirs()
@@ -183,6 +186,10 @@ object WorldMapImage {
                 if (piece.level != GROUND_LEVEL || piece.x - baseX !in 0 until SQUARE_TILES || piece.y - baseY !in 0 until SQUARE_TILES) continue
                 add(piece.loc, piece.shape, piece.rotation, piece.x - baseX, piece.y - baseY)
             }
+        }
+        for (stop in CarpetStops.all) {
+            if (stop.iconX - baseX !in 0 until SQUARE_TILES || stop.iconY - baseY !in 0 until SQUARE_TILES) continue
+            add(Loc.transportation_icon, ObjectShape.GROUND_DECORATION.id, CarpetStops.ICON_ROTATION, stop.iconX - baseX, stop.iconY - baseY)
         }
         return result
     }

@@ -73,10 +73,12 @@ enum class RoofStyle(val loc: Int) {
     }
 }
 
-enum class Service(val icons: List<Int>, val keeper: Boolean = true, val floor: FloorStyle = FloorStyle.PLANKS) {
+enum class Service(val icons: List<Int>, val keeper: Boolean = true, val floor: FloorStyle = FloorStyle.PLANKS, ledgers: List<String>? = null) {
     BANK(listOf(Loc.bank_store_icon), false),
     SMITHY(listOf(Loc.furnace_icon, Loc.anvil_icon), false),
     GENERAL_STORE(listOf(Loc.general_store_icon)),
+    HERBLORE_SHOP(listOf(Loc.herbalist_store_icon), floor = FloorStyle.STONE, ledgers = listOf("potion_ingredients", "rare_ingredients", "exotic_ingredients")),
+    FARMING_SHOP(listOf(Loc.farm_shop_icon), floor = FloorStyle.SANDSTONE, ledgers = listOf("master_farmer_seeds", "master_farmer_herb_seeds")),
     BARBER(listOf(Loc.hairdresser_icon), false, FloorStyle.CREAM),
     SWORD_SHOP(listOf(Loc.sword_store_icon), floor = FloorStyle.FLAGSTONE),
     ARCHERY_SHOP(listOf(Loc.archery_store_icon), floor = FloorStyle.DARKWOOD),
@@ -91,6 +93,7 @@ enum class Service(val icons: List<Int>, val keeper: Boolean = true, val floor: 
     ;
 
     val kind = name.lowercase()
+    val ledgers = ledgers ?: listOf(kind)
 
     companion object {
         private val byKind = entries.associateBy { it.kind }

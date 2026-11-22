@@ -421,7 +421,7 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
 
 
     fun sendRunEnergy(energy: Double) {
-        session.queuePacket(RunEnergy((energy * PERCENT / player.maxRunEnergy).toInt().coerceIn(0, PERCENT)))
+        session.queuePacket(RunEnergy(energy.toInt().coerceIn(0, UBYTE_MAX)))
     }
 
     fun refreshWeight(weight: Double) {
@@ -944,7 +944,7 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
     }
 
     companion object {
-        private const val PERCENT = 100
+        private const val UBYTE_MAX = 255
         private const val SCENE_RADIUS_SHIFT = 4
         private val EMPTY_XTEAS = intArrayOf(0, 0, 0, 0)
         private const val PARTIAL_SLOT_BYTES = 4

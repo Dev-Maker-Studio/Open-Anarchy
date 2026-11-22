@@ -1,6 +1,7 @@
 package com.rs.game.content.claims
 
 import com.rs.engine.command.Commands
+import com.rs.game.content.skills.farming.PatchLocation
 import com.rs.game.World
 import com.rs.game.content.skills.sailing.PortSites
 import com.rs.game.map.WorldDelta
@@ -169,6 +170,7 @@ object ClaimManager {
 
     @JvmStatic
     fun allowObjectOption(player: Player, obj: GameObject, opNum: Int): Boolean {
+        if (PatchLocation.forObject(obj.id) != null) return true
         val option = obj.getDefinitions(player).getOption(opNum)?.lowercase() ?: return true
         if (option in CITY_PROTECTED_OPTIONS && GeneratedWorld.inCity(obj.tile.x, obj.tile.y)) {
             player.sendMessage(CITY_PROTECTED_MESSAGE)

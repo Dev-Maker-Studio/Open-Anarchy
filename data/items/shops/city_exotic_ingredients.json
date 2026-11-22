@@ -1,0 +1,153 @@
+{
+  "name": "Exotic Ingredients",
+  "generalStore": true,
+  "buyOnly": false,
+  "currency": 995,
+  "items": [
+    {
+      "item": {
+        "id": 2466,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 2468,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 2470,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 2472,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 2474,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 2476,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19973,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19975,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19980,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19972,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19976,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19979,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19977,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19981,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19982,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 19983,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 11326,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 11807,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 17530,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 17532,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 17534,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 17536,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 4241,
+        "amount": 10
+      }
+    },
+    {
+      "item": {
+        "id": 3264,
+        "amount": 10
+      }
+    }
+  ],
+  "npcIds": []
+}

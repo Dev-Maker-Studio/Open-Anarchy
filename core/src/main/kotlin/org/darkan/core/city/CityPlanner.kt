@@ -13,8 +13,9 @@ object CityPlanner {
     private const val RING_WIDTH = 2
     private const val MIN_SIDE = 5
     private const val SIDE_SPREAD = 5
-    private const val ATTEMPTS = 60
-    private const val HOUSES = 14
+    private const val ATTEMPTS = 200
+    private const val COMPACT_ATTEMPTS = 400
+    private const val HOUSES = 18
     private const val SCAN_STEP = 6
     private const val MAP_MARGIN = 80
     private const val GUARD_OFFSET = 3
@@ -22,6 +23,7 @@ object CityPlanner {
     private const val EDGE_MARGIN = 2
     private const val CHURCH_EDGE = 1
     private const val HOME_COST = 4
+    private const val SHOP_COST = 12
 
     private const val STYLE_SALT = 9001L
     private const val TWO_FLOOR_HOUSE_PERCENT = 40
@@ -136,24 +138,29 @@ object CityPlanner {
         val styles = Random(stub.seed + STYLE_SALT)
         val palette = Palette(stub.seed)
         val streets = streets(stub.centerX, stub.centerY, half, road?.arm?.takeUnless { crossroads })
-        val buildings = ArrayList<Building>()
-        val residents = ArrayList<Resident>()
-        val kinds = listOf(BuildingBuilder.BANK, BuildingBuilder.SMITHY, BuildingBuilder.MARKET, BuildingBuilder.GUARDHOUSE) + List(HOUSES) { BuildingBuilder.HOUSE }
-        for (kind in kinds) {
-            for (attempt in 0 until ATTEMPTS) {
-                val candidate = candidate(generator, random, styles, palette, stub.id, kind, stub.centerX, stub.centerY, half, streets, buildings) ?: continue
+        val landmarks = withFarm(generator, withChurch(generator, stub.copy(halfSize = half, streets = streets)))
+        val buildings = ArrayList(landmarks.buildings)
+        val residents = ArrayList(landmarks.residents)
+        fun place(kind: String) {
+            for (attempt in 0 until ATTEMPTS + COMPACT_ATTEMPTS) {
+                val candidate = candidate(generator, random, styles, palette, stub.id, kind, stub.centerX, stub.centerY, half, streets, buildings, attempt >= ATTEMPTS) ?: continue
                 buildings += candidate.first
                 residents += candidate.second
                 break
             }
         }
+        listOf(BuildingBuilder.BANK, BuildingBuilder.SMITHY, BuildingBuilder.MARKET, BuildingBuilder.GUARDHOUSE).forEach(::place)
+        val civic = withRealtor(generator, landmarks.copy(buildings = buildings.toList(), residents = residents.toList()))
+        buildings += civic.buildings - buildings.toSet()
+        residents += civic.residents - residents.toSet()
+        repeat(HOUSES) { place(BuildingBuilder.HOUSE) }
         residents += guards(generator, road, crossroads, stub.centerX, stub.centerY, half)
         return upgrade(generator, stub.copy(halfSize = half, baseHeight = generator.heightAt(stub.centerX, stub.centerY), streets = streets, buildings = buildings, residents = residents))
     }
 
-    fun upgrade(generator: WorldGenerator, city: City): City = withChurch(generator, withHomes(withRealtor(generator, upgrade(city))))
+    fun upgrade(generator: WorldGenerator, city: City): City = withFarm(generator, withChurch(generator, withHomes(withRealtor(generator, upgrade(city)))))
 
-    private class ChurchSite(val x: Int, val y: Int, val cleared: List<Building>, val cost: Int, val distance: Int)
+    private class Site(val x: Int, val y: Int, val cleared: List<Building>, val cost: Int, val distance: Int)
 
     private class Lot(val x: Int, val y: Int, val width: Int, val depth: Int, val door: Side, val distance: Int)
 
@@ -174,11 +181,56 @@ object CityPlanner {
         return city
     }
 
-    private fun churchSites(generator: WorldGenerator, city: City): List<ChurchSite> {
+    private val farmMovableCosts = movableCosts - setOf(Service.REALTOR.kind, BuildingBuilder.BANK)
+
+    private fun moveCost(building: Building): Int? = if (building.isForSale) HOME_COST else movableCosts[building.kind]
+
+    private val droppableKinds = setOf(BuildingBuilder.HOUSE, BuildingBuilder.MARKET)
+
+    private fun withFarm(generator: WorldGenerator, city: City): City {
+        if (!FarmTemplate.inCity(city.seed) || city.buildings.any { it.kind == FarmTemplate.KIND }) return city
+        val tiers = sequenceOf<(Building) -> Int?>(
+            { building -> farmMovableCosts[building.kind].takeUnless { building.isForSale } },
+            ::moveCost,
+            { building -> moveCost(building) ?: SHOP_COST.takeIf { Service.of(building.kind)?.keeper == true } },
+        )
+        for (cost in tiers) placedFarm(generator, city, farmSites(generator, city, cost))?.let { return it }
+        return city
+    }
+
+    private fun placedFarm(generator: WorldGenerator, city: City, sites: List<Site>): City? {
+        for (site in sites.sortedWith(compareBy({ it.cost }, { -it.distance }, { it.x }, { it.y }))) {
+            val cleared = city.copy(
+                buildings = city.buildings - site.cleared.toSet() + FarmTemplate.building(site.x, site.y),
+                residents = city.residents.filterNot { resident -> site.cleared.any { it.touches(resident.x, resident.y, resident.x, resident.y) } } + FarmTemplate.residents(site.x, site.y),
+            )
+            return site.cleared.fold<Building, City?>(cleared) { moved, building -> moved?.let { rebuilt(generator, it, building) ?: it.takeIf { building.kind in droppableKinds && !building.isForSale } } } ?: continue
+        }
+        return null
+    }
+
+    private fun farmSites(generator: WorldGenerator, city: City, cost: (Building) -> Int?): List<Site> {
+        val width = FarmTemplate.width
+        val depth = FarmTemplate.depth
+        val reach = city.halfSize - CHURCH_EDGE
+        val sites = ArrayList<Site>()
+        for (x in city.centerX - reach..city.centerX + reach - width + 1) for (y in city.centerY - reach..city.centerY + reach - depth + 1) {
+            val maxX = x + width - 1
+            val maxY = y + depth - 1
+            if (city.streets.any { it.touches(x, y, maxX, maxY) } || generator.roadTouches(x - 1, y - 1, maxX + 1, maxY + 1)) continue
+            val cleared = city.buildings.filter { it.touches(x, y, maxX, maxY, 1) }
+            val costs = cleared.map { cost(it) ?: -1 }
+            if (costs.any { it < 0 }) continue
+            sites += Site(x, y, cleared, costs.sum(), Math.abs(x + width / 2 - city.centerX) + Math.abs(y + depth / 2 - city.centerY))
+        }
+        return sites
+    }
+
+    private fun churchSites(generator: WorldGenerator, city: City): List<Site> {
         val width = ChurchTemplate.width
         val depth = ChurchTemplate.depth
         val reach = city.halfSize - CHURCH_EDGE
-        val sites = ArrayList<ChurchSite>()
+        val sites = ArrayList<Site>()
         for (x in city.centerX - reach..city.centerX + reach - width + 1) for (y in city.centerY - reach..city.centerY + reach - depth + 1) {
             val maxX = x + width - 1
             val maxY = y + depth - 1
@@ -188,7 +240,7 @@ object CityPlanner {
             val cleared = city.buildings.filter { it.touches(x, y, maxX, maxY, 1) }
             val costs = cleared.map { (if (it.isForSale) HOME_COST else movableCosts[it.kind]) ?: return@map null }
             if (null in costs) continue
-            sites += ChurchSite(x, y, cleared, costs.sumOf { it ?: 0 }, Math.abs(x + width / 2 - city.centerX) + Math.abs(y + depth / 2 - city.centerY))
+            sites += Site(x, y, cleared, costs.sumOf { it ?: 0 }, Math.abs(x + width / 2 - city.centerX) + Math.abs(y + depth / 2 - city.centerY))
         }
         return sites
     }
@@ -323,10 +375,11 @@ object CityPlanner {
 
     private fun candidate(
         generator: WorldGenerator, random: Random, styles: Random, palette: Palette, city: String, kind: String, cx: Int, cy: Int, half: Int, streets: List<Street>, placed: List<Building>,
+        compact: Boolean = false,
     ): Pair<Building, List<Resident>>? {
         val street = streets[random.nextInt(streets.size)]
-        val width = MIN_SIDE + 2 + random.nextInt(SIDE_SPREAD)
-        val depth = MIN_SIDE + 2 + random.nextInt(SIDE_SPREAD)
+        val width = MIN_SIDE + 2 + if (compact) 0 else random.nextInt(SIDE_SPREAD)
+        val depth = MIN_SIDE + 2 + if (compact) 0 else random.nextInt(SIDE_SPREAD)
         val sides = if (street.width > street.depth * 2) listOf(Side.SOUTH, Side.NORTH) else if (street.depth > street.width * 2) listOf(Side.WEST, Side.EAST) else Side.entries
         val door = sides[random.nextInt(sides.size)]
         val (bx, by) = when (door) {
