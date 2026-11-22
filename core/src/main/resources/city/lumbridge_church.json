@@ -49,7 +49,7 @@
     {"loc": "fai_lumbridge_church_posh_floor_02", "x": 6, "y": 1, "level": 0, "shape": 22, "rotation": 1},
     {"loc": "fai_lumbridge_church_posh_floor_02", "x": 6, "y": 2, "level": 0, "shape": 22, "rotation": 1},
     {"loc": "fai_lumbridge_church_posh_floor_01", "x": 6, "y": 3, "level": 0, "shape": 22, "rotation": 1},
-    {"loc": "loc_36972", "x": 6, "y": 3, "level": 0, "shape": 10, "rotation": 2},
+    {"loc": "church_lectern", "x": 7, "y": 3, "level": 0, "shape": 10, "rotation": 0},
     {"loc": "fai_lumbridge_church_window_light2_mirror", "x": 6, "y": 6, "level": 0, "shape": 22, "rotation": 1},
     {"loc": "randomsound_chuch_organ", "x": 6, "y": 6, "level": 0, "shape": 4, "rotation": 0},
     {"loc": "fai_lumbridge_church_window_light_mirror", "x": 6, "y": 7, "level": 0, "shape": 22, "rotation": 1},
