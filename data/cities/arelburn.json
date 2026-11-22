@@ -66,10 +66,6 @@
       ]
     },
     {
-      "kind": "house", "x": 7486, "y": 5930, "width": 10, "depth": 11, "door": "EAST", "floors": 1, "wall": "farmhouse", "floor": "sandstone", "roof": "slate", "forSale": true,
-      "furniture": []
-    },
-    {
       "kind": "house", "x": 7457, "y": 5919, "width": 10, "depth": 8, "door": "NORTH", "floors": 1, "wall": "darkwood", "floor": "terracotta", "roof": "wood",
       "furniture": [
         {"loc": "table", "x": 5, "y": 3, "rotation": 1},
@@ -230,6 +226,14 @@
         {"loc": "chair", "x": 1, "y": 5, "rotation": 1},
         {"loc": "bench", "x": 1, "y": 1, "rotation": 0}
       ]
+    },
+    {
+      "kind": "church", "x": 7478, "y": 5931, "width": 12, "depth": 14, "door": "WEST", "floors": 3, "wall": "stone", "floor": "flagstone", "roof": "none",
+      "furniture": []
+    },
+    {
+      "kind": "house", "x": 7488, "y": 5971, "width": 10, "depth": 11, "door": "SOUTH", "floors": 1, "wall": "farmhouse", "floor": "sandstone", "roof": "slate", "forSale": true,
+      "furniture": []
     }
   ],
   "residents": [
@@ -252,6 +256,14 @@
     {"npc": 15709, "x": 7468, "y": 5958, "role": "shopkeeper", "shop": "arelburn_armour_shop"},
     {"npc": 15677, "x": 7468, "y": 5964, "role": "shopkeeper", "shop": "arelburn_fishing_shop"},
     {"npc": 15706, "x": 7502, "y": 5958, "role": "shopkeeper", "shop": "arelburn_staff_shop"},
-    {"npc": 15718, "x": 7485, "y": 5977, "role": "realtor"}
+    {"npc": 15718, "x": 7485, "y": 5977, "role": "realtor"},
+    {"npc": 456, "x": 7485, "y": 5933, "role": "priest"},
+    {"npc": 2899, "x": 7478, "y": 5936, "role": "greeter"},
+    {"npc": 0, "x": 7488, "y": 5935, "role": "congregant"},
+    {"npc": 668, "x": 7482, "y": 5937, "role": "congregant"},
+    {"npc": 7969, "x": 7486, "y": 5939, "role": "congregant"},
+    {"npc": 8864, "x": 7483, "y": 5939, "role": "congregant"},
+    {"npc": 758, "x": 7486, "y": 5937, "role": "congregant"},
+    {"npc": 4589, "x": 7482, "y": 5935, "role": "congregant"}
   ]
 }

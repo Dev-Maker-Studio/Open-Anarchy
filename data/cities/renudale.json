@@ -64,13 +64,6 @@
       "furniture": []
     },
     {
-      "kind": "house", "x": 5650, "y": 5963, "width": 10, "depth": 11, "door": "WEST", "floors": 2, "wall": "lightwood", "floor": "darkwood", "roof": "straw", "forSale": true,
-      "furniture": [
-        {"loc": "ladder", "x": 8, "y": 1, "rotation": 0},
-        {"loc": "laddertop", "x": 8, "y": 1, "rotation": 0, "level": 1}
-      ]
-    },
-    {
       "kind": "house", "x": 5608, "y": 5984, "width": 8, "depth": 10, "door": "WEST", "floors": 1, "wall": "lightwood", "floor": "darkwood", "roof": "wood",
       "furniture": [
         {"loc": "table", "x": 4, "y": 5, "rotation": 0},
@@ -224,6 +217,17 @@
         {"loc": "chair", "x": 4, "y": 8, "rotation": 1},
         {"loc": "bench", "x": 1, "y": 8, "rotation": 1}
       ]
+    },
+    {
+      "kind": "church", "x": 5650, "y": 5967, "width": 12, "depth": 14, "door": "WEST", "floors": 3, "wall": "stone", "floor": "flagstone", "roof": "none",
+      "furniture": []
+    },
+    {
+      "kind": "house", "x": 5650, "y": 5956, "width": 11, "depth": 10, "door": "WEST", "floors": 2, "wall": "lightwood", "floor": "darkwood", "roof": "straw", "forSale": true,
+      "furniture": [
+        {"loc": "ladder", "x": 9, "y": 1, "rotation": 0},
+        {"loc": "laddertop", "x": 9, "y": 1, "rotation": 0, "level": 1}
+      ]
     }
   ],
   "residents": [
@@ -246,6 +250,14 @@
     {"npc": 15685, "x": 5617, "y": 5996, "role": "shopkeeper", "shop": "renudale_armour_shop"},
     {"npc": 15703, "x": 5635, "y": 5969, "role": "shopkeeper", "shop": "renudale_fishing_shop"},
     {"npc": 15681, "x": 5617, "y": 5976, "role": "shopkeeper", "shop": "renudale_staff_shop"},
-    {"npc": 15718, "x": 5642, "y": 5951, "role": "realtor"}
+    {"npc": 15718, "x": 5642, "y": 5951, "role": "realtor"},
+    {"npc": 456, "x": 5657, "y": 5969, "role": "priest"},
+    {"npc": 2899, "x": 5650, "y": 5972, "role": "greeter"},
+    {"npc": 0, "x": 5660, "y": 5971, "role": "congregant"},
+    {"npc": 668, "x": 5654, "y": 5973, "role": "congregant"},
+    {"npc": 7969, "x": 5658, "y": 5975, "role": "congregant"},
+    {"npc": 8864, "x": 5655, "y": 5975, "role": "congregant"},
+    {"npc": 758, "x": 5658, "y": 5973, "role": "congregant"},
+    {"npc": 4589, "x": 5654, "y": 5971, "role": "congregant"}
   ]
 }

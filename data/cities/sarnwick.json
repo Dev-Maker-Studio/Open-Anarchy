@@ -11,23 +11,6 @@
   ],
   "buildings": [
     {
-      "kind": "bank", "x": 7514, "y": 8549, "width": 8, "depth": 9, "door": "WEST", "floors": 2, "wall": "whitestone", "floor": "marble", "roof": "thatch",
-      "furniture": [
-        {"loc": "ladder", "x": 6, "y": 1, "rotation": 0},
-        {"loc": "laddertop", "x": 6, "y": 1, "rotation": 0, "level": 1},
-        {"loc": "bankbooth", "x": 5, "y": 5, "rotation": 1},
-        {"loc": "bankbooth", "x": 5, "y": 4, "rotation": 1},
-        {"loc": "bankbooth", "x": 5, "y": 3, "rotation": 1},
-        {"loc": "barrel", "x": 1, "y": 7, "rotation": 0},
-        {"loc": "crate", "x": 1, "y": 1, "rotation": 0},
-        {"loc": "bed", "x": 5, "y": 7, "rotation": 0, "level": 1},
-        {"loc": "table", "x": 4, "y": 4, "rotation": 0, "level": 1},
-        {"loc": "chair", "x": 4, "y": 5, "rotation": 1, "level": 1},
-        {"loc": "bookcase", "x": 1, "y": 7, "rotation": 0, "level": 1},
-        {"loc": "crate", "x": 1, "y": 1, "rotation": 0, "level": 1}
-      ]
-    },
-    {
       "kind": "smithy", "x": 7479, "y": 8574, "width": 7, "depth": 11, "door": "NORTH", "floors": 1, "wall": "whitestone", "floor": "slate", "roof": "blueslate",
       "furniture": [
         {"loc": "built_furnace", "x": 1, "y": 1, "rotation": 0},
@@ -230,12 +213,30 @@
         {"loc": "chair", "x": 2, "y": 1, "rotation": 1},
         {"loc": "bench", "x": 5, "y": 1, "rotation": 3}
       ]
+    },
+    {
+      "kind": "church", "x": 7514, "y": 8550, "width": 12, "depth": 14, "door": "WEST", "floors": 3, "wall": "stone", "floor": "flagstone", "roof": "none",
+      "furniture": []
+    },
+    {
+      "kind": "bank", "x": 7462, "y": 8567, "width": 8, "depth": 9, "door": "EAST", "floors": 2, "wall": "whitestone", "floor": "marble", "roof": "thatch",
+      "furniture": [
+        {"loc": "ladder", "x": 1, "y": 7, "rotation": 2},
+        {"loc": "laddertop", "x": 1, "y": 7, "rotation": 2, "level": 1},
+        {"loc": "bankbooth", "x": 2, "y": 3, "rotation": 3},
+        {"loc": "bankbooth", "x": 2, "y": 4, "rotation": 3},
+        {"loc": "bankbooth", "x": 2, "y": 5, "rotation": 3},
+        {"loc": "barrel", "x": 6, "y": 1, "rotation": 2},
+        {"loc": "crate", "x": 6, "y": 7, "rotation": 2},
+        {"loc": "bed", "x": 2, "y": 1, "rotation": 2, "level": 1},
+        {"loc": "table", "x": 3, "y": 4, "rotation": 2, "level": 1},
+        {"loc": "chair", "x": 3, "y": 3, "rotation": 1, "level": 1},
+        {"loc": "bookcase", "x": 6, "y": 1, "rotation": 2, "level": 1},
+        {"loc": "crate", "x": 6, "y": 7, "rotation": 2, "level": 1}
+      ]
     }
   ],
   "residents": [
-    {"npc": 494, "x": 7520, "y": 8554, "role": "banker"},
-    {"npc": 494, "x": 7520, "y": 8553, "role": "banker"},
-    {"npc": 494, "x": 7520, "y": 8552, "role": "banker"},
     {"npc": 9, "x": 7507, "y": 8554, "role": "guard"},
     {"npc": 9, "x": 7507, "y": 8556, "role": "guard"},
     {"npc": 9, "x": 7482, "y": 8585, "role": "patrol"},
@@ -252,6 +253,17 @@
     {"npc": 15671, "x": 7520, "y": 8580, "role": "shopkeeper", "shop": "sarnwick_armour_shop"},
     {"npc": 15685, "x": 7482, "y": 8549, "role": "shopkeeper", "shop": "sarnwick_fishing_shop"},
     {"npc": 15683, "x": 7487, "y": 8592, "role": "shopkeeper", "shop": "sarnwick_staff_shop"},
-    {"npc": 15718, "x": 7521, "y": 8573, "role": "realtor"}
+    {"npc": 15718, "x": 7521, "y": 8573, "role": "realtor"},
+    {"npc": 456, "x": 7521, "y": 8552, "role": "priest"},
+    {"npc": 2899, "x": 7514, "y": 8555, "role": "greeter"},
+    {"npc": 0, "x": 7524, "y": 8554, "role": "congregant"},
+    {"npc": 668, "x": 7518, "y": 8556, "role": "congregant"},
+    {"npc": 7969, "x": 7522, "y": 8558, "role": "congregant"},
+    {"npc": 8864, "x": 7519, "y": 8558, "role": "congregant"},
+    {"npc": 758, "x": 7522, "y": 8556, "role": "congregant"},
+    {"npc": 4589, "x": 7518, "y": 8554, "role": "congregant"},
+    {"npc": 494, "x": 7463, "y": 8570, "role": "banker"},
+    {"npc": 494, "x": 7463, "y": 8571, "role": "banker"},
+    {"npc": 494, "x": 7463, "y": 8572, "role": "banker"}
   ]
 }

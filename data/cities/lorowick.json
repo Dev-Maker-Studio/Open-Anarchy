@@ -68,10 +68,6 @@
       ]
     },
     {
-      "kind": "house", "x": 8120, "y": 6977, "width": 9, "depth": 11, "door": "WEST", "floors": 1, "wall": "lightwood", "floor": "terracotta", "roof": "blueslate", "forSale": true,
-      "furniture": []
-    },
-    {
       "kind": "house", "x": 8088, "y": 6947, "width": 8, "depth": 11, "door": "EAST", "floors": 1, "wall": "greyplaster", "floor": "planks", "roof": "blueslate", "forSale": true,
       "furniture": []
     },
@@ -204,6 +200,14 @@
         {"loc": "bookcase", "x": 1, "y": 1, "rotation": 2},
         {"loc": "chair", "x": 7, "y": 4, "rotation": 1}
       ]
+    },
+    {
+      "kind": "church", "x": 8120, "y": 6974, "width": 12, "depth": 14, "door": "WEST", "floors": 3, "wall": "stone", "floor": "flagstone", "roof": "none",
+      "furniture": []
+    },
+    {
+      "kind": "house", "x": 8140, "y": 6979, "width": 9, "depth": 11, "door": "WEST", "floors": 1, "wall": "lightwood", "floor": "terracotta", "roof": "blueslate", "forSale": true,
+      "furniture": []
     }
   ],
   "residents": [
@@ -225,6 +229,14 @@
     {"npc": 15686, "x": 8138, "y": 6939, "role": "shopkeeper", "shop": "lorowick_armour_shop"},
     {"npc": 15700, "x": 8112, "y": 6996, "role": "shopkeeper", "shop": "lorowick_fishing_shop"},
     {"npc": 15683, "x": 8127, "y": 6954, "role": "shopkeeper", "shop": "lorowick_staff_shop"},
-    {"npc": 15718, "x": 8088, "y": 6976, "role": "realtor"}
+    {"npc": 15718, "x": 8088, "y": 6976, "role": "realtor"},
+    {"npc": 456, "x": 8127, "y": 6976, "role": "priest"},
+    {"npc": 2899, "x": 8120, "y": 6979, "role": "greeter"},
+    {"npc": 0, "x": 8130, "y": 6978, "role": "congregant"},
+    {"npc": 668, "x": 8124, "y": 6980, "role": "congregant"},
+    {"npc": 7969, "x": 8128, "y": 6982, "role": "congregant"},
+    {"npc": 8864, "x": 8125, "y": 6982, "role": "congregant"},
+    {"npc": 758, "x": 8128, "y": 6980, "role": "congregant"},
+    {"npc": 4589, "x": 8124, "y": 6978, "role": "congregant"}
   ]
 }

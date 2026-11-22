@@ -9,6 +9,7 @@ import com.rs.game.model.entity.player.Player
 import org.darkan.core.Logger
 import com.rs.utils.shop.ShopsHandler
 import org.darkan.core.EnvVars
+import org.darkan.core.city.Resident
 import org.darkan.core.gameval.gen.Obj
 import org.darkan.core.model.Item
 import world.gregs.voidps.type.Tile
@@ -93,6 +94,12 @@ class CityShop(val key: String, private val kind: String = key) : CoinTrader {
 
     override fun stockChanged() = save()
 
+    fun receive(amount: Int) {
+        earn(amount)
+        save()
+        shop.showCoinsToViewers()
+    }
+
     fun restock() {
         val due = ((System.currentTimeMillis() - restocked) / RESTOCK_MILLIS).coerceIn(0, Int.MAX_VALUE.toLong()).toInt()
         if (due < 1) return
@@ -120,12 +127,15 @@ class CityShop(val key: String, private val kind: String = key) : CoinTrader {
         private val shops = ConcurrentHashMap<String, CityShop>()
 
         fun of(key: String, kind: String = key): CityShop = shops.computeIfAbsent(key) { CityShop(it, kind) }
+
+        fun of(keeper: Resident): CityShop {
+            val kind = keeper.shop ?: "${keeper.x}_${keeper.y}"
+            return of("${kind}_${keeper.x}_${keeper.y}_${keeper.plane}", kind)
+        }
     }
 }
 
-/** Every keeper has his own stock and purse, saved under his own tile; [kind] only decides what he sells. */
-class CityShopkeeper(id: Int, tile: Tile, kind: String) : CityResident(id, tile) {
-    private val ledger = CityShop.of("${kind}_${tile.x}_${tile.y}_${tile.plane}", kind)
+class CityShopkeeper(id: Int, tile: Tile, private val ledger: CityShop) : CityResident(id, tile) {
 
     fun trade(player: Player) {
         if (player.bank.checkPin()) ledger.shop.addPlayer(player)

@@ -61,10 +61,6 @@
       ]
     },
     {
-      "kind": "house", "x": 7392, "y": 6783, "width": 9, "depth": 9, "door": "WEST", "floors": 1, "wall": "stone", "floor": "planks", "roof": "straw", "forSale": true,
-      "furniture": []
-    },
-    {
       "kind": "house", "x": 7361, "y": 6779, "width": 8, "depth": 7, "door": "EAST", "floors": 2, "wall": "darkwood", "floor": "planks", "roof": "blueslate", "forSale": true,
       "furniture": [
         {"loc": "ladder", "x": 1, "y": 5, "rotation": 2},
@@ -215,6 +211,14 @@
         {"loc": "chair", "x": 6, "y": 5, "rotation": 1},
         {"loc": "bench", "x": 1, "y": 5, "rotation": 1}
       ]
+    },
+    {
+      "kind": "church", "x": 7392, "y": 6779, "width": 12, "depth": 14, "door": "WEST", "floors": 3, "wall": "stone", "floor": "flagstone", "roof": "none",
+      "furniture": []
+    },
+    {
+      "kind": "house", "x": 7339, "y": 6783, "width": 9, "depth": 9, "door": "EAST", "floors": 1, "wall": "stone", "floor": "planks", "roof": "straw", "forSale": true,
+      "furniture": []
     }
   ],
   "residents": [
@@ -236,6 +240,14 @@
     {"npc": 15694, "x": 7380, "y": 6796, "role": "shopkeeper", "shop": "brackenholt_armour_shop"},
     {"npc": 15662, "x": 7355, "y": 6797, "role": "shopkeeper", "shop": "brackenholt_fishing_shop"},
     {"npc": 15705, "x": 7362, "y": 6798, "role": "shopkeeper", "shop": "brackenholt_staff_shop"},
-    {"npc": 15718, "x": 7391, "y": 6741, "role": "realtor"}
+    {"npc": 15718, "x": 7391, "y": 6741, "role": "realtor"},
+    {"npc": 456, "x": 7399, "y": 6781, "role": "priest"},
+    {"npc": 2899, "x": 7392, "y": 6784, "role": "greeter"},
+    {"npc": 0, "x": 7402, "y": 6783, "role": "congregant"},
+    {"npc": 668, "x": 7396, "y": 6785, "role": "congregant"},
+    {"npc": 7969, "x": 7400, "y": 6787, "role": "congregant"},
+    {"npc": 8864, "x": 7397, "y": 6787, "role": "congregant"},
+    {"npc": 758, "x": 7400, "y": 6785, "role": "congregant"},
+    {"npc": 4589, "x": 7396, "y": 6783, "role": "congregant"}
   ]
 }

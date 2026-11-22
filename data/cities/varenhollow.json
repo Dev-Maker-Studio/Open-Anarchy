@@ -214,24 +214,28 @@
       ]
     },
     {
-      "kind": "house", "x": 8898, "y": 9215, "width": 10, "depth": 7, "door": "WEST", "floors": 1, "wall": "darkwood", "floor": "terracotta", "roof": "greyslate",
-      "furniture": [
-        {"loc": "table", "x": 5, "y": 3, "rotation": 0},
-        {"loc": "chair", "x": 5, "y": 4, "rotation": 1},
-        {"loc": "chair", "x": 5, "y": 2, "rotation": 3},
-        {"loc": "bed", "x": 7, "y": 5, "rotation": 0},
-        {"loc": "bookcase", "x": 8, "y": 5, "rotation": 0},
-        {"loc": "barrel", "x": 1, "y": 5, "rotation": 0},
-        {"loc": "crate", "x": 1, "y": 1, "rotation": 0}
-      ]
-    },
-    {
       "kind": "realtor", "x": 8864, "y": 9167, "width": 10, "depth": 9, "door": "NORTH", "floors": 1, "wall": "whitestone", "floor": "darkwood", "roof": "darkslate",
       "furniture": [
         {"loc": "table", "x": 5, "y": 2, "rotation": 1},
         {"loc": "bookcase", "x": 1, "y": 1, "rotation": 1},
         {"loc": "chair", "x": 6, "y": 7, "rotation": 1},
         {"loc": "bench", "x": 1, "y": 7, "rotation": 1}
+      ]
+    },
+    {
+      "kind": "church", "x": 8898, "y": 9209, "width": 12, "depth": 14, "door": "WEST", "floors": 3, "wall": "stone", "floor": "flagstone", "roof": "none",
+      "furniture": []
+    },
+    {
+      "kind": "house", "x": 8890, "y": 9220, "width": 7, "depth": 10, "door": "SOUTH", "floors": 1, "wall": "darkwood", "floor": "terracotta", "roof": "greyslate",
+      "furniture": [
+        {"loc": "table", "x": 3, "y": 5, "rotation": 3},
+        {"loc": "chair", "x": 2, "y": 5, "rotation": 1},
+        {"loc": "chair", "x": 4, "y": 5, "rotation": 3},
+        {"loc": "bed", "x": 1, "y": 7, "rotation": 3},
+        {"loc": "bookcase", "x": 1, "y": 8, "rotation": 3},
+        {"loc": "barrel", "x": 1, "y": 1, "rotation": 3},
+        {"loc": "crate", "x": 5, "y": 1, "rotation": 3}
       ]
     }
   ],
@@ -254,6 +258,14 @@
     {"npc": 15683, "x": 8907, "y": 9179, "role": "shopkeeper", "shop": "varenhollow_armour_shop"},
     {"npc": 15701, "x": 8861, "y": 9203, "role": "shopkeeper", "shop": "varenhollow_fishing_shop"},
     {"npc": 15679, "x": 8883, "y": 9169, "role": "shopkeeper", "shop": "varenhollow_staff_shop"},
-    {"npc": 15718, "x": 8869, "y": 9168, "role": "realtor"}
+    {"npc": 15718, "x": 8869, "y": 9168, "role": "realtor"},
+    {"npc": 456, "x": 8905, "y": 9211, "role": "priest"},
+    {"npc": 2899, "x": 8898, "y": 9214, "role": "greeter"},
+    {"npc": 0, "x": 8908, "y": 9213, "role": "congregant"},
+    {"npc": 668, "x": 8902, "y": 9215, "role": "congregant"},
+    {"npc": 7969, "x": 8906, "y": 9217, "role": "congregant"},
+    {"npc": 8864, "x": 8903, "y": 9217, "role": "congregant"},
+    {"npc": 758, "x": 8906, "y": 9215, "role": "congregant"},
+    {"npc": 4589, "x": 8902, "y": 9213, "role": "congregant"}
   ]
 }

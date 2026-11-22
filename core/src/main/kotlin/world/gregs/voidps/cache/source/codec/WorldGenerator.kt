@@ -1,6 +1,7 @@
 package world.gregs.voidps.cache.source.codec
 
 import org.darkan.core.city.City
+import org.darkan.core.city.ChurchTemplate
 import org.darkan.core.city.FloorStyle
 import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.gameval.gen.Npc
@@ -229,7 +230,7 @@ class WorldGenerator(
         val surface = rows { localX -> row { localY -> floors[floorKey(localX, localY, GROUND_LEVEL)]?.let { groundFloorTile(grid, localX, localY, it) } ?: tile(grid, localX, localY) } }
         val upper = (1 until UPPER_LEVELS + 1).map { level ->
             if (floors.keys.none { it shr FLOOR_LEVEL_SHIFT == level }) void
-            else rows { localX -> row { localY -> floors[floorKey(localX, localY, level)]?.let { "o$it/0/0,s$ROOFED_TILE,h$UPPER_FLOOR_HEIGHT" } ?: VOID_TILE } }
+            else rows { localX -> row { localY -> floors[floorKey(localX, localY, level)] ?: VOID_TILE } }
         }
         val text = StringBuilder(TEXT_CAPACITY)
         text.append("{\n  \"region\": \"").append(square.directory).append("\",\n  \"levels\": 4,\n  \"tiles\": [\n")
@@ -240,24 +241,28 @@ class WorldGenerator(
 
     private fun floorKey(localX: Int, localY: Int, level: Int) = level shl FLOOR_LEVEL_SHIFT or (localX shl FLOOR_AXIS_SHIFT) or localY
 
-    private fun buildingFloors(regionX: Int, regionY: Int): Map<Int, Int> {
+    private fun buildingFloors(regionX: Int, regionY: Int): Map<Int, String> {
         val baseX = regionX * SIZE
         val baseY = regionY * SIZE
-        val result = HashMap<Int, Int>()
+        val result = HashMap<Int, String>()
         for (city in cities) {
             if (!city.touches(baseX, baseY, baseX + SIZE - 1, baseY + SIZE - 1)) continue
             for (building in city.buildings) {
-                val overlay = FloorStyle.overlayOf(building.floor)
+                val church = building.kind == ChurchTemplate.KIND
+                val floor = "o${FloorStyle.overlayOf(building.floor)}/0/0,s$ROOFED_TILE"
                 for (x in maxOf(building.x, baseX)..minOf(building.maxX, baseX + SIZE - 1)) for (y in maxOf(building.y, baseY)..minOf(building.maxY, baseY + SIZE - 1)) {
-                    for (level in 0 until building.levels) result[floorKey(x - baseX, y - baseY, level)] = overlay
+                    for (level in 0 until if (church) ChurchTemplate.LEVELS else building.levels) {
+                        val tile = if (church) ChurchTemplate.tile(level, x - building.x, y - building.y) else if (level == GROUND_LEVEL) floor else "$floor,h$UPPER_FLOOR_HEIGHT"
+                        if (tile != null) result[floorKey(x - baseX, y - baseY, level)] = tile
+                    }
                 }
             }
         }
         return result
     }
 
-    private fun groundFloorTile(grid: Grid, localX: Int, localY: Int, overlay: Int) =
-        "o$overlay/0/0,s$ROOFED_TILE,u${grid.underlays[localX][localY]},h${grid.heights[localX][localY]}"
+    private fun groundFloorTile(grid: Grid, localX: Int, localY: Int, floor: String) =
+        "$floor,u${grid.underlays[localX][localY]},h${grid.heights[localX][localY]}"
 
     fun underwaterTerrain(regionX: Int, regionY: Int, surface: ByteArray? = null): ByteArray? {
         val grid = grid(originX / SIZE + regionX, originY / SIZE + regionY, true)

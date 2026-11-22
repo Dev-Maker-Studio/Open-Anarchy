@@ -144,7 +144,7 @@ def problems(c, locs):
             used[key] = f["loc"]
         feet = {(f["x"], f["y"], f.get("level", 0)) for f in b["furniture"] if f["loc"] == "ladder"}
         tops = {(f["x"], f["y"], f.get("level", 0)) for f in b["furniture"] if f["loc"] == "laddertop"}
-        for level in range(floors - 1):
+        for level in range(0 if b["kind"] == "church" else floors - 1):
             if not any(l == level and (x, y, level + 1) in tops for x, y, l in feet):
                 out.append(f"{tag}: level {level + 1} needs a ladder on level {level} with a laddertop on the same tile one level up")
         for x, y, level in feet:
