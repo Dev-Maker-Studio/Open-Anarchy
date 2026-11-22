@@ -240,7 +240,6 @@
     {"npc": 15705, "x": 6352, "y": 6083, "role": "shopkeeper", "shop": "narustead_staff_shop"},
     {"npc": 15718, "x": 6307, "y": 6094, "role": "realtor"},
     {"npc": 456, "x": 6346, "y": 6118, "role": "priest"},
-    {"npc": 2899, "x": 6339, "y": 6121, "role": "greeter"},
     {"npc": 0, "x": 6349, "y": 6120, "role": "congregant"},
     {"npc": 668, "x": 6343, "y": 6122, "role": "congregant"},
     {"npc": 7969, "x": 6347, "y": 6124, "role": "congregant"},

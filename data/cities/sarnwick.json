@@ -255,7 +255,6 @@
     {"npc": 15683, "x": 7487, "y": 8592, "role": "shopkeeper", "shop": "sarnwick_staff_shop"},
     {"npc": 15718, "x": 7521, "y": 8573, "role": "realtor"},
     {"npc": 456, "x": 7521, "y": 8552, "role": "priest"},
-    {"npc": 2899, "x": 7514, "y": 8555, "role": "greeter"},
     {"npc": 0, "x": 7524, "y": 8554, "role": "congregant"},
     {"npc": 668, "x": 7518, "y": 8556, "role": "congregant"},
     {"npc": 7969, "x": 7522, "y": 8558, "role": "congregant"},

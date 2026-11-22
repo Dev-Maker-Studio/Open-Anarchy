@@ -23,10 +23,19 @@ object DungeonRegistry {
         File(directory, "${dungeon.id}.$EXTENSION").writeText(encode(dungeon))
     }
 
+    private fun moved(dungeon: Dungeon, generator: WorldGenerator, cities: List<City>): Dungeon {
+        if (!dungeon.origin.startsWith(DungeonSites.CITY_ORIGIN)) return dungeon
+        val city = cities.firstOrNull { it.id == dungeon.origin.removePrefix(DungeonSites.CITY_ORIGIN) } ?: return dungeon
+        if (!DungeonSites.underBuilding(city, dungeon.entranceX, dungeon.entranceY)) return dungeon
+        val site = DungeonSites.find(dungeon.origin, generator, cities, emptyList(), 0, 0, 0, 0) ?: return dungeon
+        logInfo("Moved the entrance of ${dungeon.name} from ${dungeon.entranceX},${dungeon.entranceY} to ${site.x},${site.y}, clear of the buildings")
+        return dungeon.copy(entranceX = site.x, entranceY = site.y).also { write(it) }
+    }
+
     fun load(
         generator: WorldGenerator, cities: List<City>, lodestones: () -> List<Pair<Int, Int>>, spawnX: Int, spawnY: Int, low: Int, high: Int
     ): List<Dungeon> {
-        val saved = readAll()
+        val saved = readAll().map { moved(it, generator, cities) }
         val missing = DungeonSites.origins(cities).filter { origin -> saved.none { it.origin == origin } }
         if (missing.isEmpty()) return saved
         val sites = lodestones()

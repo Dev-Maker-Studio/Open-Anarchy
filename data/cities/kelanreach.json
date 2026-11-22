@@ -257,7 +257,6 @@
     {"npc": 15711, "x": 5811, "y": 6960, "role": "shopkeeper", "shop": "kelanreach_staff_shop"},
     {"npc": 15718, "x": 5845, "y": 6924, "role": "realtor"},
     {"npc": 456, "x": 5860, "y": 6918, "role": "priest"},
-    {"npc": 2899, "x": 5853, "y": 6921, "role": "greeter"},
     {"npc": 0, "x": 5863, "y": 6920, "role": "congregant"},
     {"npc": 668, "x": 5857, "y": 6922, "role": "congregant"},
     {"npc": 7969, "x": 5861, "y": 6924, "role": "congregant"},

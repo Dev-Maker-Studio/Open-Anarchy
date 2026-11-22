@@ -244,7 +244,6 @@
     {"npc": 15707, "x": 5884, "y": 8663, "role": "shopkeeper", "shop": "uludale_staff_shop"},
     {"npc": 15718, "x": 5838, "y": 8698, "role": "realtor"},
     {"npc": 456, "x": 5840, "y": 8669, "role": "priest"},
-    {"npc": 2899, "x": 5833, "y": 8672, "role": "greeter"},
     {"npc": 0, "x": 5843, "y": 8671, "role": "congregant"},
     {"npc": 668, "x": 5837, "y": 8673, "role": "congregant"},
     {"npc": 7969, "x": 5841, "y": 8675, "role": "congregant"},

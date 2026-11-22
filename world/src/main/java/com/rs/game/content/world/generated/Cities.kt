@@ -42,7 +42,7 @@ object Cities {
             BuildingBuilder.BARBER -> BarberNPC(tile)
             BuildingBuilder.REALTOR -> CityRealtor(tile)
             BuildingBuilder.SHOPKEEPER -> CityShopkeeper(resident.npc, tile, CityShop.of(resident))
-            ChurchTemplate.PRIEST, ChurchTemplate.GREETER, ChurchTemplate.CONGREGANT -> Churches.spawn(resident)
+            ChurchTemplate.PRIEST, ChurchTemplate.CONGREGANT -> Churches.spawn(resident)
             BuildingBuilder.BANKER -> CityResident(resident.npc, tile)
             else -> CityGuard(resident.npc, tile, if (resident.role == BuildingBuilder.PATROL) PATROL_RADIUS else POST_RADIUS)
         }

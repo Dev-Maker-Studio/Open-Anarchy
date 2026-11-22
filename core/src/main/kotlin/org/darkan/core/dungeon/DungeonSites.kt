@@ -54,6 +54,8 @@ object DungeonSites {
         return biomeSite(origin, biome, generator, cities, lodestones, spawnX, spawnY, low, high)
     }
 
+    fun underBuilding(city: City, x: Int, y: Int): Boolean = city.buildings.any { it.touches(x, y, x, y, BUILDING_MARGIN) }
+
     private fun citySite(origin: String, generator: WorldGenerator, city: City): DungeonSite? {
         val random = Random(city.seed xor SALT)
         val span = 2 * (city.halfSize - CITY_INSET) + 1
@@ -61,7 +63,7 @@ object DungeonSites {
         repeat(CITY_ATTEMPTS) {
             val x = city.centerX - city.halfSize + CITY_INSET + random.nextInt(span)
             val y = city.centerY - city.halfSize + CITY_INSET + random.nextInt(span)
-            if (city.buildings.any { it.touches(x, y, x, y, BUILDING_MARGIN) }) return@repeat
+            if (underBuilding(city, x, y)) return@repeat
             if (city.streetTouches(x - 1, y - 1, x + 1, y + 1) || generator.onRoad(x, y)) return@repeat
             if (!city.streetTouches(x - STREET_REACH, y - STREET_REACH, x + STREET_REACH, y + STREET_REACH)) return@repeat
             if (generator.liquidTileAt(x, y) != null || (x to y) in pieces) return@repeat

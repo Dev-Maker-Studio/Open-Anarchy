@@ -260,7 +260,6 @@
     {"npc": 15680, "x": 9054, "y": 7102, "role": "shopkeeper", "shop": "fenoburn_staff_shop"},
     {"npc": 15718, "x": 9009, "y": 7149, "role": "realtor"},
     {"npc": 456, "x": 9036, "y": 7129, "role": "priest"},
-    {"npc": 2899, "x": 9029, "y": 7132, "role": "greeter"},
     {"npc": 0, "x": 9039, "y": 7131, "role": "congregant"},
     {"npc": 668, "x": 9033, "y": 7133, "role": "congregant"},
     {"npc": 7969, "x": 9037, "y": 7135, "role": "congregant"},

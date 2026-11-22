@@ -258,7 +258,6 @@
     {"npc": 15710, "x": 8359, "y": 7904, "role": "shopkeeper", "shop": "pelenstead_staff_shop"},
     {"npc": 15718, "x": 8358, "y": 7910, "role": "realtor"},
     {"npc": 456, "x": 8360, "y": 7934, "role": "priest"},
-    {"npc": 2899, "x": 8353, "y": 7937, "role": "greeter"},
     {"npc": 0, "x": 8363, "y": 7936, "role": "congregant"},
     {"npc": 668, "x": 8357, "y": 7938, "role": "congregant"},
     {"npc": 7969, "x": 8361, "y": 7940, "role": "congregant"},

@@ -274,7 +274,6 @@
     {"npc": 15707, "x": 9308, "y": 8248, "role": "shopkeeper", "shop": "seluford_staff_shop"},
     {"npc": 15718, "x": 9353, "y": 8216, "role": "realtor"},
     {"npc": 456, "x": 9354, "y": 8199, "role": "priest"},
-    {"npc": 2899, "x": 9347, "y": 8202, "role": "greeter"},
     {"npc": 0, "x": 9357, "y": 8201, "role": "congregant"},
     {"npc": 668, "x": 9351, "y": 8203, "role": "congregant"},
     {"npc": 7969, "x": 9355, "y": 8205, "role": "congregant"},

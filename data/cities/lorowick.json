@@ -231,7 +231,6 @@
     {"npc": 15683, "x": 8127, "y": 6954, "role": "shopkeeper", "shop": "lorowick_staff_shop"},
     {"npc": 15718, "x": 8088, "y": 6976, "role": "realtor"},
     {"npc": 456, "x": 8127, "y": 6976, "role": "priest"},
-    {"npc": 2899, "x": 8120, "y": 6979, "role": "greeter"},
     {"npc": 0, "x": 8130, "y": 6978, "role": "congregant"},
     {"npc": 668, "x": 8124, "y": 6980, "role": "congregant"},
     {"npc": 7969, "x": 8128, "y": 6982, "role": "congregant"},

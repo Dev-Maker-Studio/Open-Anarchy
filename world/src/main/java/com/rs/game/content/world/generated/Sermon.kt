@@ -36,7 +36,7 @@ class Sermon(private val church: Church, private val sermon: Array<String>) : Cu
         music(CHURCH_MUSIC)
         action {
             priest.forceTalk("Let us pray.")
-            bow(church.congregation() + priest)
+            bow(church.congregation())
         }
         delay(1)
         playerMove(start.x, start.y, start.level, MoveType.WALK)
@@ -55,7 +55,7 @@ class Sermon(private val church: Church, private val sermon: Array<String>) : Cu
         action { priest.forceTalk("Have mercy on us..") }
         delay(3)
         action {
-            rise(church.congregation() + priest + player)
+            rise(church.congregation() + player)
             priest.forceTalk("Amen...")
         }
         delay(2)
@@ -79,15 +79,15 @@ class Sermon(private val church: Church, private val sermon: Array<String>) : Cu
         for ((index, entry) in CLOSING_PRAYER.withIndex()) {
             action {
                 priest.forceTalk(entry.first)
-                if (index == CLOSING_PRAYER_START) bow(church.congregation() + priest + player)
+                if (index == CLOSING_PRAYER_START) bow(church.congregation() + player)
             }
             delay(entry.second)
         }
         action {
-            rise(church.congregation() + priest + player)
+            rise(church.congregation() + player)
             church.congregation().forEach { it.forceTalk("Amen.") }
             for (congregate in World.players) {
-                if ((congregate.controllerManager.controller as? ChurchService)?.church !== church)
+                if (!church.contains(congregate.tile))
                     continue
                 congregate.forceTalk("Amen.")
                 if (ChurchBlessing.bless(congregate))
