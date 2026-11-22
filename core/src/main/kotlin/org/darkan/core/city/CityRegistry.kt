@@ -12,9 +12,16 @@ object CityRegistry {
     fun load(plain: () -> WorldGenerator, worldSeed: Long, spawnX: Int, spawnY: Int): List<City> {
         val directory = File(DIRECTORY)
         val saved = CityJson.readAll(directory)
-        if (saved.isNotEmpty()) return saved.map { city ->
-            val ready = if (CityPlanner.isStub(city)) CityPlanner.make(plain(), city).also { logInfo("Made ${it.name} from seed ${it.seed}: ${it.buildings.size} buildings") } else CityPlanner.upgrade(plain(), city)
-            ready.also { if (it != city) CityJson.write(directory, it) }
+        if (saved.isNotEmpty()) {
+            val kept = saved.map { city ->
+                val ready = if (CityPlanner.isStub(city)) CityPlanner.make(plain(), city).also { logInfo("Made ${it.name} from seed ${it.seed}: ${it.buildings.size} buildings") } else CityPlanner.upgrade(plain(), city)
+                ready.also { if (it != city) CityJson.write(directory, it) }
+            }
+            if (kept.size >= EnvVars.cityCount) return kept
+            val added = CityPlanner.extend(plain(), worldSeed, kept, 0, WorldWindow.WINDOW_TILES, EnvVars.cityCount)
+            added.forEach { CityJson.write(directory, it) }
+            logInfo("Spread ${added.size} more cities across the world: ${added.joinToString { "${it.name} at ${it.centerX},${it.centerY}" }}")
+            return kept + added
         }
         val reach = EnvVars.generateSize.takeIf { it > 0 }?.let { it / 2 }
         val low = maxOf(WorldWindow.MAP_ORIGIN, reach?.let { minOf(spawnX, spawnY) - it } ?: WorldWindow.MAP_ORIGIN)

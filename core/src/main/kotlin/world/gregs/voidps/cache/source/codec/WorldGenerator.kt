@@ -126,6 +126,8 @@ class WorldGenerator(
 
     class FishingSite(val x: Int, val y: Int, val kind: FishingKind)
 
+    class GodwarsSite(val cellX: Int, val cellY: Int, val x: Int, val y: Int)
+
     private inner class Site(val cellX: Int, val cellY: Int, val x: Double, val y: Double, val stretchX: Double, val stretchY: Double, val biome: Biome) {
         val centreHeight: Double by lazy { land(x.toInt(), y.toInt()) }
         val chambers: List<Pair<Int, Int>> by lazy {
@@ -870,11 +872,51 @@ class WorldGenerator(
         return findSpot(site, hash, CAVE_START_RADIUS, CAVE_SEARCH_RINGS, CAVE_STEP) { x, y ->
             spotClear(site.biome, x - CAVE_MARGIN, y - CAVE_MARGIN, span, span, others) &&
                 ores.none { abs(it.centreX - x) < CLUSTER_GAP && abs(it.centreY - y) < CLUSTER_GAP } &&
-                caveGroundFlat(x - CAVE_MARGIN, y - CAVE_MARGIN, span)
+                groundFlat(x - CAVE_MARGIN, y - CAVE_MARGIN, span, CAVE_MAX_SLOPE)
         }
     }
 
-    private fun caveGroundFlat(x: Int, y: Int, span: Int): Boolean {
+    fun godwarsSites(): List<GodwarsSite> {
+        val sites = mutableListOf<GodwarsSite>()
+        for (cellX in cellOf(originX) - 1..cellOf(originX + WorldWindow.WINDOW_TILES - 1) + 1) {
+            for (cellY in cellOf(originY) - 1..cellOf(originY + WorldWindow.WINDOW_TILES - 1) + 1) {
+                val site = site(cellX, cellY)
+                if (site.biome != Biome.RUNE_ESSENCE || !nearArea(site)) continue
+                val hole = findGodwars(site) ?: continue
+                val localX = hole.first - originX
+                val localY = hole.second - originY
+                val reach = GODWARS_SIZE + GODWARS_MARGIN
+                if (localX - GODWARS_MARGIN < 0 || localY - GODWARS_MARGIN < 0 || localX + reach >= WorldWindow.WINDOW_TILES || localY + reach >= WorldWindow.WINDOW_TILES) continue
+                if (inArea((localX - GODWARS_MARGIN) / SIZE, (localY - GODWARS_MARGIN) / SIZE) && inArea((localX + reach) / SIZE, (localY + reach) / SIZE)) {
+                    sites.add(GodwarsSite(site.cellX, site.cellY, localX, localY))
+                }
+            }
+        }
+        return sites
+    }
+
+    private fun findGodwars(site: Site): Pair<Int, Int>? {
+        val hash = hash(site.cellX, site.cellY, GODWARS_SALT)
+        if (hash % GODWARS_ONE_IN != 0L) return null
+        val others = fixturesOf(site.cellX, site.cellY)
+        val ores = clustersOf(site.cellX, site.cellY)
+        val span = GODWARS_SIZE + 2 * GODWARS_MARGIN
+        return findSpot(site, hash, GODWARS_START_RADIUS, GODWARS_SEARCH_RINGS, GODWARS_STEP) { x, y ->
+            spotClear(site.biome, x - GODWARS_MARGIN, y - GODWARS_MARGIN, span, span, others) &&
+                ores.none { abs(it.centreX - x) < CLUSTER_GAP && abs(it.centreY - y) < CLUSTER_GAP } &&
+                outsideMines(site, x - GODWARS_MARGIN, y - GODWARS_MARGIN, span) &&
+                groundFlat(x - GODWARS_MARGIN, y - GODWARS_MARGIN, span, GODWARS_MAX_SLOPE)
+        }
+    }
+
+    private fun outsideMines(site: Site, x: Int, y: Int, span: Int): Boolean {
+        for (tx in x until x + span) for (ty in y until y + span) {
+            if (mineField(site, tx, ty) <= 1 + MINE_FLAT_SPAN) return false
+        }
+        return true
+    }
+
+    private fun groundFlat(x: Int, y: Int, span: Int, maxSlope: Int): Boolean {
         var lowest = Int.MAX_VALUE
         var highest = Int.MIN_VALUE
         for (tx in x until x + span) for (ty in y until y + span) {
@@ -882,7 +924,7 @@ class WorldGenerator(
             lowest = minOf(lowest, height)
             highest = maxOf(highest, height)
         }
-        return highest - lowest <= CAVE_MAX_SLOPE
+        return highest - lowest <= maxSlope
     }
 
     private fun findTrees(site: Site, loc: Int, count: Int, size: Int, salt: Long, found: MutableList<Fixture> = mutableListOf()): List<Fixture> {
@@ -1758,6 +1800,14 @@ class WorldGenerator(
         private const val CAVE_STEP = 2
         private const val CAVE_MAX_SLOPE = 2
         private const val CAVE_SALT = 0x43415645L
+        const val GODWARS_SIZE = 4
+        const val GODWARS_MARGIN = 3
+        private const val GODWARS_ONE_IN = 2
+        private const val GODWARS_START_RADIUS = 40
+        private const val GODWARS_SEARCH_RINGS = 30
+        private const val GODWARS_STEP = 3
+        private const val GODWARS_MAX_SLOPE = 2
+        private const val GODWARS_SALT = 0x47574453L
         private const val ALTAR_SHIFT = 16
         private const val ALTAR_PEAK_SHIFT = 24
         private const val ALTAR_ALONG = 0.8

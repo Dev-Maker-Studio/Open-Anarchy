@@ -75,6 +75,9 @@ fun startHostileMobs() {
 fun hostileIdsFor(biome: Biome, level: Int): List<Int> =
     byLevel[biome].orEmpty().filter { NPCDefinitions.getDefs(it).combatLevel <= level }
 
+fun hostileIdsAt(biome: Biome, x: Int, y: Int): List<Int> =
+    SpawnAreas.ids(biome.name, x, y)?.asList() ?: SpawnAreas.kept(biome.name, hostileIdsFor(biome, threatLevel(x, y)))
+
 private fun rollSpawn(chunkId: Int): Boolean {
     val (chunkX, chunkY, _) = MapUtils.decode(Structure.CHUNK, chunkId)
     val multiplier = if (generator.biomeAt(chunkX * CHUNK_TILES, chunkY * CHUNK_TILES) == Biome.WILDERNESS) WILDERNESS_SPAWN_MULTIPLIER else 1.0
@@ -109,7 +112,7 @@ private fun canSpawnAt(tile: Tile): Boolean =
 private fun spawnHostile(tile: Tile) {
     val biome = generator.biomeAt(tile.x, tile.y)
     val level = threatLevel(tile)
-    val id = hostileIdsFor(biome, level).randomOrNull() ?: return
+    val id = hostileIdsAt(biome, tile.x, tile.y).randomOrNull() ?: return
     spawned.add(scaledHostile(id, tile, biome, level))
 }
 

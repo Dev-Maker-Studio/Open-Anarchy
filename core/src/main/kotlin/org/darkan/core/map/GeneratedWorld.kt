@@ -105,6 +105,17 @@ object GeneratedWorld {
         x >= caveX - margin && x < caveX + WorldGenerator.CAVE_SIZE + margin && y >= caveY - margin && y < caveY + WorldGenerator.CAVE_SIZE + margin
     }
 
+    val godwarsSites: List<WorldGenerator.GodwarsSite> by lazy {
+        if (!EnvVars.generateMaps) emptyList()
+        else generator.godwarsSites().filter { site ->
+            cities.none { it.covers(site.x, site.y, CAVE_CITY_DISTANCE) } && dungeons.none { it.entranceTouches(site.x, site.y, CAVE_ENTRANCE_DISTANCE) }
+        }
+    }
+
+    fun godwarsAt(x: Int, y: Int, margin: Int = 0): WorldGenerator.GodwarsSite? = godwarsSites.firstOrNull { site ->
+        x >= site.x - margin && x < site.x + WorldGenerator.GODWARS_SIZE + margin && y >= site.y - margin && y < site.y + WorldGenerator.GODWARS_SIZE + margin
+    }
+
     val instanceRegions: MutableSet<Int> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     fun onRoad(x: Int, y: Int): Boolean = EnvVars.generateMaps && generator.onRoad(x, y)

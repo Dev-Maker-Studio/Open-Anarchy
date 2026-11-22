@@ -9,7 +9,7 @@ import java.util.Collections
 import org.darkan.core.gameval.gen.Npc
 import world.gregs.voidps.type.Tile
 
-class NexArena {
+class NexArena(private val home: Tile = HOME) {
     private val players: MutableList<Player> = Collections.synchronizedList(ArrayList())
     var nex: Nex? = null
         private set
@@ -51,15 +51,15 @@ class NexArena {
 
     private fun startWar() {
         if (playersCount < 1 || nex != null) return
-        val summoned = World.spawnNPC(Npc.godwars2_zaros_avatar, HOME, true, true) as? Nex ?: return
+        val summoned = World.spawnNPC(Npc.godwars2_zaros_avatar, home, true, true) as? Nex ?: return
         summoned.arena = this
         nex = summoned
     }
 
     companion object {
+        private val HOME = Tile.of(2924, 5202, 0)
+
         @JvmStatic
         val globalInstance = NexArena()
-
-        private val HOME = Tile.of(2924, 5202, 0)
     }
 }

@@ -1,6 +1,8 @@
 package org.darkan.core.dungeon
 
+import org.darkan.core.EnvVars
 import org.darkan.core.city.City
+import org.darkan.core.map.WorldWindow
 import world.gregs.voidps.cache.source.codec.WorldGenerator
 import world.gregs.voidps.cache.source.codec.WorldGenerator.Biome
 import java.util.Random
@@ -25,6 +27,11 @@ object DungeonSites {
     private const val CITY_DISTANCE = 60
     private const val LODESTONE_DISTANCE = WorldGenerator.LODESTONE_RADIUS + 8
     private const val SPAWN_DISTANCE = 150
+    private const val NUMBER_MARK = "_"
+    private const val FIRST_NUMBER = 1
+    private const val FIRST_OUTER = 2
+    private const val NUMBER_SALT = 104729L
+    private const val EDGE_MARGIN = 160
 
     private val biomeThemes = linkedMapOf(
         Biome.PLAINS to DungeonTheme.FORTRESS,
@@ -41,7 +48,11 @@ object DungeonSites {
         Biome.WINTER to "Frostbite Cavern", Biome.MOUNTAIN to "Stonejaw Depths", Biome.VOLCANO to "Cinder Maw",
     )
 
-    fun origins(cities: List<City>): List<String> = cities.map { CITY_ORIGIN + it.id } + biomeThemes.keys.map { BIOME_ORIGIN + it.name.lowercase() }
+    fun origins(cities: List<City>): List<String> = cities.map { CITY_ORIGIN + it.id } +
+        biomeThemes.keys.map { BIOME_ORIGIN + it.name.lowercase() } +
+        (FIRST_OUTER..EnvVars.dungeonsPerBiome).flatMap { number -> biomeThemes.keys.map { BIOME_ORIGIN + it.name.lowercase() + NUMBER_MARK + number } }
+
+    private fun numberOf(origin: String): Int = origin.substringAfter(NUMBER_MARK, "").toIntOrNull() ?: FIRST_NUMBER
 
     fun find(
         origin: String, generator: WorldGenerator, cities: List<City>, lodestones: List<Pair<Int, Int>>, spawnX: Int, spawnY: Int, low: Int, high: Int
@@ -50,8 +61,8 @@ object DungeonSites {
             val city = cities.firstOrNull { it.id == origin.removePrefix(CITY_ORIGIN) } ?: return null
             return citySite(origin, generator, city)
         }
-        val biome = biomeThemes.keys.firstOrNull { it.name.equals(origin.removePrefix(BIOME_ORIGIN), ignoreCase = true) } ?: return null
-        return biomeSite(origin, biome, generator, cities, lodestones, spawnX, spawnY, low, high)
+        val biome = biomeThemes.keys.firstOrNull { it.name.equals(origin.removePrefix(BIOME_ORIGIN).substringBefore(NUMBER_MARK), ignoreCase = true) } ?: return null
+        return biomeSite(origin, biome, numberOf(origin), generator, cities, lodestones, spawnX, spawnY, low, high)
     }
 
     fun underBuilding(city: City, x: Int, y: Int): Boolean = city.buildings.any { it.touches(x, y, x, y, BUILDING_MARGIN) }
@@ -74,20 +85,27 @@ object DungeonSites {
     }
 
     private fun biomeSite(
-        origin: String, biome: Biome, generator: WorldGenerator, cities: List<City>, lodestones: List<Pair<Int, Int>>,
-        spawnX: Int, spawnY: Int, low: Int, high: Int
+        origin: String, biome: Biome, number: Int, generator: WorldGenerator, cities: List<City>, lodestones: List<Pair<Int, Int>>,
+        spawnX: Int, spawnY: Int, mapLow: Int, mapHigh: Int
     ): DungeonSite? {
         val theme = biomeThemes.getValue(biome)
-        val random = Random(WorldGenerator.DEFAULT_SEED * SALT + biome.ordinal)
+        val outer = number > FIRST_NUMBER
+        val low = if (outer) EDGE_MARGIN else mapLow
+        val high = if (outer) WorldWindow.WINDOW_TILES - EDGE_MARGIN else mapHigh
+        val inner = (mapHigh - mapLow) / 2
+        val band = (WorldWindow.WINDOW_TILES / 2 - EDGE_MARGIN - inner) / maxOf(1, EnvVars.dungeonsPerBiome - FIRST_NUMBER)
+        val nearest = if (outer) inner + (number - FIRST_OUTER) * band else SPAWN_DISTANCE
+        val farthest = if (outer) nearest + band else Int.MAX_VALUE
+        val random = Random(WorldGenerator.DEFAULT_SEED * SALT + biome.ordinal + (number - FIRST_NUMBER) * NUMBER_SALT)
         repeat(BIOME_ATTEMPTS) {
             val x = low + random.nextInt(high - low)
             val y = low + random.nextInt(high - low)
             if (generator.biomeAt(x, y) != biome) return@repeat
-            if (maxOf(abs(x - spawnX), abs(y - spawnY)) < SPAWN_DISTANCE) return@repeat
+            if (maxOf(abs(x - spawnX), abs(y - spawnY)) !in nearest until farthest) return@repeat
             if (cities.any { it.covers(x, y, CITY_DISTANCE) }) return@repeat
             if (lodestones.any { (lx, ly) -> abs(lx - x) <= LODESTONE_DISTANCE && abs(ly - y) <= LODESTONE_DISTANCE }) return@repeat
             if (!clear(generator, biome, x, y, theme.entranceWidth, theme.entranceDepth)) return@repeat
-            return DungeonSite(origin, biomeNames.getValue(biome), theme, random.nextLong(), x, y)
+            return DungeonSite(origin, biomeNames.getValue(biome) + if (outer) " $number" else "", theme, random.nextLong(), x, y)
         }
         return null
     }

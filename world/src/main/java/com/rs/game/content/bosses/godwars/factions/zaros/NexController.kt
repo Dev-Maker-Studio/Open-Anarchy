@@ -1,27 +1,34 @@
 package com.rs.game.content.bosses.godwars.factions.zaros
 
 import com.rs.game.content.skills.magic.TeleType
+import com.rs.game.content.world.generated.GodwarsDungeons
 import com.rs.game.model.entity.player.Controller
 import org.darkan.core.gameval.gen.Cs2
 import org.darkan.core.gameval.gen.Interface
 import org.darkan.core.gameval.gen.Varbit
 
-class NexController(@Transient private var arena: NexArena? = null) : Controller() {
-    private fun war() = arena ?: NexArena.globalInstance.also { arena = it }
+class NexController(@Transient private var arena: NexArena? = null, private val dungeon: String? = null) : Controller() {
+    private fun war() = arena ?: (if (dungeon == null) NexArena.globalInstance else GodwarsDungeons.byId(dungeon)?.nexArena)?.also { arena = it }
 
     override fun start() {
-        war().addPlayer(player)
+        war()?.addPlayer(player)
         seal(1)
         sendInterfaces()
     }
 
     override fun logout(): Boolean {
-        war().removePlayer(player)
+        war()?.removePlayer(player)
+        dungeon?.let(GodwarsDungeons::byId)?.let { player.setTile(it.surface) }
         return false
     }
 
     override fun login(): Boolean {
-        war().addPlayer(player)
+        if (dungeon != null) {
+            GodwarsDungeons.byId(dungeon)?.let { player.tele(it.surface) }
+            seal(0)
+            return true
+        }
+        war()?.addPlayer(player)
         seal(1)
         sendInterfaces()
         return false
@@ -46,7 +53,7 @@ class NexController(@Transient private var arena: NexArena? = null) : Controller
     override fun forceClose() = remove()
 
     private fun remove() {
-        war().removePlayer(player)
+        war()?.removePlayer(player)
         seal(0)
         player.interfaceManager.closeFadingInterface()
     }

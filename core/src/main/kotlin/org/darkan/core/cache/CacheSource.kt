@@ -47,6 +47,7 @@ object CacheSource {
             CityLabels.write(directory, GeneratedWorld.cities)
             MapCodec.reserved = DungeonTerrain.regions(GeneratedWorld.dungeons) + DungeonTerrain.templateRegions(directory)
             DungeonTerrain.write(directory, GeneratedWorld.dungeons)
+            GodwarsTerrain.write(directory)
         }
         val output = File(EnvVars.cacheBuildPath)
         logInfo("Building cache from source tree ${directory.absolutePath} into ${output.absolutePath}")
