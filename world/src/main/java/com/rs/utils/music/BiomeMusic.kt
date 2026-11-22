@@ -63,8 +63,28 @@ object BiomeMusic {
         ),
         Biome.RUNE_ESSENCE to listOf(
             Midi.rune_mechanics, Midi.stillness, Midi.dreamstate, Midi.inspiration, Midi.mellow, Midi.arrival, Midi.venture, Midi.venture2
+        ),
+        Biome.CAVE to listOf(
+            Midi.cavern, Midi.midi_325, Midi.midi_357, Midi.midi_389, Midi.midi_678, Midi.subterranea, Midi.midi_448,
+            Midi.midi_322, Midi.midi_278, Midi.chamber, Midi.dunjun, Midi.midi_632, Midi.intrepid, Midi.midi_595
+        ),
+        Biome.FORTRESS to listOf(
+            Midi.knightmare, Midi.royale, Midi.midi_160, Midi.midi_67, Midi.midi_214, Midi.midi_439, Midi.midi_537,
+            Midi.midi_558, Midi.midi_560, Midi.midi_339, Midi.regal, Midi.midi_63, Midi.cursed
+        ),
+        Biome.SEWER to listOf(
+            Midi.midi_144, Midi.midi_361, Midi.midi_481, Midi.midi_482, Midi.midi_489, Midi.midi_490, Midi.malady,
+            Midi.stagnant, Midi.midi_342, Midi.lumbcat_farm, Midi.midi_573
         )
     )
+
+    private val bossFights = listOf(Midi.showdown, Midi.midi_727, Midi.surok_king_battle_music, Midi.vkq3_decision_time_boss_battle)
+
+    @JvmStatic
+    fun bossSongs(): List<Int> = bossFights.filter { Music.getSong(it) != null }
+
+    @JvmStatic
+    fun bossSong(): Int = bossSongs().randomOrNull() ?: NO_SONG
 
     @JvmStatic
     fun generatedSongs(biome: Biome): List<Int> = generated[biome].orEmpty().filter { Music.getSong(it) != null }

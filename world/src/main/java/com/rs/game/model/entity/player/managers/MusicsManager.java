@@ -8,6 +8,7 @@ import org.darkan.core.model.Rights;
 import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
+import com.rs.game.content.world.generated.DungeonBoss;
 import com.rs.utils.music.Biome;
 import com.rs.utils.music.BiomeMusic;
 import com.rs.utils.music.Genre;
@@ -39,6 +40,7 @@ public final class MusicsManager {
     private transient boolean shuffleOn;
     private transient Biome playingBiome;
     private transient long combatMusicUntil;
+    private transient long bossMusicUntil;
     private final transient ArrayDeque<Integer> biomeQueue = new ArrayDeque<>();
     private static final long COMBAT_MUSIC_LINGER_MS = 15000;
 
@@ -104,9 +106,22 @@ public final class MusicsManager {
         return combatMusicUntil > System.currentTimeMillis();
     }
 
-    public void onTargetedBy(NPC npc) {
-        if (!player.hasStarted())
+    public void onBossFight(int song) {
+        if (!player.hasStarted() || song == BiomeMusic.NO_SONG)
             return;
+        combatMusicUntil = System.currentTimeMillis() + COMBAT_MUSIC_LINGER_MS;
+        bossMusicUntil = combatMusicUntil;
+        if (playingMusic != song)
+            playSongWithoutUnlocking(song);
+    }
+
+    public void onTargetedBy(NPC npc) {
+        if (!player.hasStarted() || bossMusicUntil > System.currentTimeMillis())
+            return;
+        if (npc instanceof DungeonBoss boss) {
+            onBossFight(boss.getFightSong());
+            return;
+        }
         int song = BiomeMusic.combatSong(npc.getDefinitions().getCombatLevel(), player.getSkills().getCombatLevelWithSummoning());
         if (song == BiomeMusic.NO_SONG)
             return;
