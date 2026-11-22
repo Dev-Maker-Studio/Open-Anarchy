@@ -38,6 +38,8 @@ private const val MISSING = -1
 private const val DEFAULT_MAX_ALIVE = 12
 private const val MUSIC_TICKS = 5
 private const val MUSIC_RADIUS = 14
+private const val MINION_ATTACK_TICKS = 3
+private const val MINION_SIGHT = 14
 
 class BossAbility(
     val type: String, val everyTicks: Int?, val radius: Int?, val damage: Double?, val atHealth: List<Int>?, val belowHealth: Int?,
@@ -95,6 +97,27 @@ object DungeonBosses {
         val level = DungeonMobs.bossLevel(dungeon, definition)
         return DungeonBoss(definition, id, slot.tile, level.toDouble() / DungeonMobs.native(id), level, slot)
     }
+}
+
+class DungeonMinion(id: Int, home: Tile, scale: Double, level: Int) : DungeonMob(id, home, scale, level, null) {
+
+    init {
+        setForceMultiAttacked(true)
+        setNoDistanceCheck(true)
+    }
+
+    override fun requiresSlayerLevel(): Boolean = false
+
+    override fun getAttackSpeed(): Int = MINION_ATTACK_TICKS
+
+    override fun processNPC() {
+        if (!isDead && !hasFinished()) nearestPlayer().let { if (it == null) combat.removeTarget() else if (combat.target !== it) combat.setTarget(it) }
+        super.processNPC()
+    }
+
+    private fun nearestPlayer(): Player? =
+        World.players.filter { it.hasStarted() && !it.hasFinished() && !it.isDead && it.plane == plane && Utils.getDistance(it.tile, tile) <= MINION_SIGHT }
+            .minByOrNull { Utils.getDistance(it.tile, tile) }
 }
 
 class DungeonBoss(private val definition: BossDefinition, id: Int, home: Tile, scale: Double, private val level: Int, slot: DungeonSlot) :
@@ -182,18 +205,16 @@ class DungeonBoss(private val definition: BossDefinition, id: Int, home: Tile, s
 
     private fun summon(ability: BossAbility) {
         val id = ability.npc?.let(DungeonBosses::npcId) ?: return
-        minions.removeAll { it.hasFinished() || it.isDead }
-        val room = (ability.maxAlive ?: DEFAULT_MAX_ALIVE) - minions.size
-        if (ability.everyTicks != null && room <= 0) return
+        minions.removeAll { it.hasFinished() }
+        val room = (ability.maxAlive ?: DEFAULT_MAX_ALIVE) - minions.count { !it.isDead }
+        val count = (ability.count ?: DEFAULT_COUNT).let { if (ability.everyTicks != null) minOf(it, room) else it }
+        if (count <= 0) return
         shout(ability)
         val minionLevel = (level * MINION_FACTOR).toInt().coerceAtLeast(1)
-        val target = combat.target
-        repeat(ability.count ?: DEFAULT_COUNT) {
+        repeat(count) {
             val spot = (0 until MINION_ATTEMPTS).map { tile.transform(Utils.randomInclusive(-MINION_REACH, MINION_REACH), Utils.randomInclusive(-MINION_REACH, MINION_REACH), 0) }
                 .firstOrNull { World.floorAndWallsFree(it, 1) } ?: return@repeat
-            val minion = DungeonMob(id, spot, minionLevel.toDouble() / DungeonMobs.native(id), minionLevel, null)
-            if (target != null) minion.combat.setTarget(target)
-            minions += minion
+            minions += DungeonMinion(id, spot, minionLevel.toDouble() / DungeonMobs.native(id), minionLevel)
         }
     }
 

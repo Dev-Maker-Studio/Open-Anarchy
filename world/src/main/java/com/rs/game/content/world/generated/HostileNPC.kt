@@ -19,11 +19,15 @@ private const val RESTORE_TICKS = 100
 private const val RESTORE_STEP = 1
 private const val HAMMER_MAX_LEVEL = 10
 private const val HAMMER_CHANCE = 0.2
+private const val STATLESS = 1
+private const val LEVEL_HITPOINTS = 10
 
 open class HostileNPC(id: Int, tile: Tile, val scale: Double, private val level: Int) : NPC(id, tile, null, true) {
 
-    private val scaledLevels: Map<NPCCombatDefinitions.Skill, Int> =
-        NPCCombatDefinitions.getDefs(id).levels.mapValues { (_, value) -> maxOf(1, (value * scale).toInt()) }
+    private val scaledLevels: Map<NPCCombatDefinitions.Skill, Int> = NPCCombatDefinitions.getDefs(id).let { defs ->
+        if (defs.hitpoints <= STATLESS && defs.levels.values.all { it <= 0 }) NPCCombatDefinitions.generateLevels(level, level).mapValues { (_, value) -> maxOf(1, value) }
+        else defs.levels.mapValues { (_, value) -> maxOf(1, (value * scale).toInt()) }
+    }
 
     init {
         setLevels(scaledLevels.toMutableMap())
@@ -32,9 +36,12 @@ open class HostileNPC(id: Int, tile: Tile, val scale: Double, private val level:
         hitpoints = maxHitpoints
     }
 
-    override fun getMaxHitpoints(): Int = (super.getMaxHitpoints() * (if (scale > 0.0) scale else UNSCALED)).toInt()
+    override fun getMaxHitpoints(): Int = scaled(super.getMaxHitpoints(), level * LEVEL_HITPOINTS)
 
-    override fun getMaxHit(): Int = (super.getMaxHit() * (if (scale > 0.0) scale else UNSCALED)).toInt()
+    override fun getMaxHit(): Int = scaled(super.getMaxHit(), level)
+
+    private fun scaled(native: Int, statless: Int): Int =
+        if (native <= STATLESS) maxOf(statless, 1) else (native * (if (scale > 0.0) scale else UNSCALED)).toInt().coerceAtLeast(1)
 
     override fun processNPC() {
         val restoring = tickCounter % RESTORE_TICKS == 0L
