@@ -1,7 +1,9 @@
 package com.rs.utils.music
 
 import org.darkan.core.EnvVars
+import com.google.gson.Gson
 import org.darkan.core.gameval.gen.Midi
+import java.io.File
 import java.util.ArrayDeque
 import java.util.Deque
 
@@ -15,6 +17,17 @@ object BiomeMusic {
     private val PLAINS_PARENTS = listOf("Misthalin", "Asgarnia", "Kandarin")
     private val EXCLUDED_WORDS = listOf("altar", "guild", "tutorial", "barbarian assault", "pest control", "void knight", "runespan", "safe room", "stronghold of player safety")
 
+    private const val BANNED_PATH = "./data/music/banned.json"
+
+    private class BannedSong(val id: Int, val name: String?)
+
+    val banned: Set<Int> by lazy {
+        File(BANNED_PATH).takeIf { it.isFile }?.let { Gson().fromJson(it.readText(), Array<BannedSong>::class.java) }.orEmpty().mapTo(HashSet()) { it.id }
+    }
+
+    @JvmStatic
+    fun playable(song: Int): Boolean = song !in banned && Music.getSong(song) != null
+
     private val pools: Map<Biome, List<Int>> by lazy {
         val byBiome = HashMap<Biome, MutableSet<Int>>()
         for (genre in Music.getGenres()) {
@@ -25,7 +38,7 @@ object BiomeMusic {
         val plains = byBiome.getOrPut(Biome.PLAINS) { LinkedHashSet() }
         for (parent in PLAINS_PARENTS)
             Music.getParent(parent)?.let { plains.addAll(it.songs.toList()) }
-        byBiome.mapValues { (_, songs) -> songs.filter { Music.getSong(it) != null } }
+        byBiome.mapValues { (_, songs) -> songs.filter(::playable) }
     }
 
     private val generated: Map<Biome, List<Int>> = mapOf(
@@ -81,13 +94,13 @@ object BiomeMusic {
     private val bossFights = listOf(Midi.showdown, Midi.midi_727, Midi.surok_king_battle_music, Midi.vkq3_decision_time_boss_battle)
 
     @JvmStatic
-    fun bossSongs(): List<Int> = bossFights.filter { Music.getSong(it) != null }
+    fun bossSongs(): List<Int> = bossFights.filter(::playable)
 
     @JvmStatic
     fun bossSong(): Int = bossSongs().randomOrNull() ?: NO_SONG
 
     @JvmStatic
-    fun generatedSongs(biome: Biome): List<Int> = generated[biome].orEmpty().filter { Music.getSong(it) != null }
+    fun generatedSongs(biome: Biome): List<Int> = generated[biome].orEmpty().filter(::playable)
 
     @JvmStatic
     fun songsOf(biome: Biome): List<Int> {
@@ -116,10 +129,11 @@ object BiomeMusic {
         if (npcLevel * PERCENT < playerLevel * THREAT_PERCENT)
             return NO_SONG
         val gap = npcLevel - playerLevel
-        return when {
+        val song = when {
             gap <= NEAR_LEVEL_GAP -> Midi.attack3
             gap <= FAR_LEVEL_GAP -> Midi.armageddon
             else -> Midi.godslayer
         }
+        return if (song in banned) NO_SONG else song
     }
 }
