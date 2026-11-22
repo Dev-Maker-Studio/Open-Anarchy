@@ -86,7 +86,7 @@ object BiomeMusic {
             Midi.midi_558, Midi.midi_560, Midi.midi_339, Midi.regal, Midi.midi_63, Midi.cursed
         ),
         Biome.SEWER to listOf(
-            Midi.midi_144, Midi.midi_361, Midi.midi_481, Midi.midi_482, Midi.midi_489, Midi.midi_490, Midi.malady,
+            Midi.midi_144, Midi.midi_361, Midi.midi_481, Midi.midi_482, Midi.midi_490, Midi.malady,
             Midi.stagnant, Midi.midi_342, Midi.lumbcat_farm, Midi.midi_573
         )
     )
