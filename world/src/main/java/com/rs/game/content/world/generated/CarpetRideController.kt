@@ -4,18 +4,16 @@ import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.Teleport
 import com.rs.game.model.entity.player.Controller
+import com.rs.game.model.entity.player.Equipment
 import org.darkan.core.gameval.gen.Bas
 import org.darkan.core.gameval.gen.Spotanim
 import org.darkan.core.map.GeneratedWorld
 import world.gregs.voidps.type.Tile
 
 private const val GROUND = 0
-private const val MOUNT_TICKS = 6
-private const val DISMOUNT_TICKS = 2
 private const val FLIGHT_LOOP_TICKS = 8
 private const val QUEUED_STEPS = 6
 private const val FULL_RUN_ENERGY = 100.0
-private const val NOT_LANDING = -1
 
 class CarpetRideController(
     private val originX: Int,
@@ -36,9 +34,6 @@ class CarpetRideController(
     @Transient
     private var landingQueued = false
 
-    @Transient
-    private var dismountAt = NOT_LANDING
-
     override fun start() {
         runEnergy = player.runEnergy
         running = player.run
@@ -47,23 +42,18 @@ class CarpetRideController(
         player.setInvulnerable(true)
         player.setRunHidden(true)
         player.appearance.setBAS(Bas.magic_carpet_flight)
-        player.spotAnim(Spotanim.magic_carpet_spotanim_mount)
+        player.appearance.hideWorn(Equipment.WEAPON)
+        player.spotAnim(Spotanim.magic_carpet_spotanim_flight)
     }
 
     override fun process() {
         tick++
-        if (tick < MOUNT_TICKS) return
-        if (dismountAt != NOT_LANDING) {
-            if (tick >= dismountAt) removeController()
-            return
-        }
         if (player.x == destinationX && player.y == destinationY) {
             player.resetWalkSteps()
-            player.spotAnim(Spotanim.magic_carpet_spotanim_dismount)
-            dismountAt = tick + DISMOUNT_TICKS
+            removeController()
             return
         }
-        if ((tick - MOUNT_TICKS) % FLIGHT_LOOP_TICKS == 0) player.spotAnim(Spotanim.magic_carpet_spotanim_flight)
+        if (tick % FLIGHT_LOOP_TICKS == 0) player.spotAnim(Spotanim.magic_carpet_spotanim_flight)
         if (player.runEnergy < FULL_RUN_ENERGY) player.runEnergy = FULL_RUN_ENERGY
         if (!player.run) player.setRunHidden(true)
         while (player.walkSteps.size < QUEUED_STEPS && queueStep()) continue
@@ -100,15 +90,14 @@ class CarpetRideController(
     }
 
     override fun logout(): Boolean {
-        if (dismountAt == NOT_LANDING) {
-            player.resetWalkSteps()
-            player.tile = origin()
-        }
+        player.resetWalkSteps()
+        player.tile = origin()
         return true
     }
 
     override fun onRemove() {
         player.appearance.setBAS(-1)
+        player.appearance.showWorn(Equipment.WEAPON)
         player.spotAnim(-1)
         player.setInvulnerable(false)
         player.setRunHidden(running)
