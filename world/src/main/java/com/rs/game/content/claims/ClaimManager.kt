@@ -25,7 +25,7 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
 object ClaimManager {
-    const val STARTING_TILES = 100
+    const val STARTING_TILES = 0
 
     private const val NORTH = 1
     private const val EAST = 2
@@ -282,10 +282,6 @@ object ClaimManager {
             allowDestroy = editing?.allowDestroy ?: false,
             allowPvp = editing?.allowPvp ?: false
         )
-        if (ownedTiles(player.username, editing) + candidate.tileCount > player.claimTileAllowance) {
-            player.sendMessage("You can claim at most ${player.claimTileAllowance} tiles; that would make ${ownedTiles(player.username, editing) + candidate.tileCount}.")
-            return
-        }
         if (GeneratedWorld.roadTouches(candidate.minX, candidate.minY, candidate.maxX, candidate.maxY)) {
             player.sendMessage("Roads can't be claimed; that claim would cover one.")
             return
