@@ -7,11 +7,16 @@ import com.rs.game.content.bosses.godwars.factions.zaros.NexArena
 import com.rs.game.content.bosses.godwars.factions.zaros.NexController
 import com.rs.game.content.skills.magic.Magic.sendNormalTeleportNoType
 import com.rs.game.content.skills.magic.TeleType
+import com.rs.game.content.world.generated.GodwarsDungeon
+import com.rs.game.content.world.generated.GodwarsDungeons
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.player.Controller
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.gameobject.GameObject
 import org.darkan.core.Constants
+import org.darkan.core.EnvVars
+import org.darkan.core.gameval.gen.Loc
+import org.darkan.core.gameval.gen.Seq
 import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.game.model.item.ItemTooltips
@@ -31,6 +36,12 @@ fun mapGWDEntranceAndExit() {
                 player.sendMessage("A rope would help here.")
             return@onObjectClick
         }
+        val dungeon = GodwarsDungeons.entranceAt(obj.x, obj.y)
+        if (dungeon != null) {
+            player.faceObject(obj)
+            GodwarsDungeons.enter(player, dungeon)
+            return@onObjectClick
+        }
         player.schedule {
             player.lock()
             player.faceObject(obj)
@@ -47,20 +58,64 @@ fun mapGWDEntranceAndExit() {
     onObjectClick(26293) { (player) -> player.useStairs(828, Tile.of(2916, 3746, 0)) }
 }
 
-class GodwarsController : Controller() {
-    private val killcount = IntArray(5)
+class GodwarsController(private val dungeon: String? = null) : Controller() {
+    private val killcount = IntArray(GodFaction.entries.size)
     private var lastPrayerRecharge: Long = 0
 
-    override fun start() = sendInterfaces()
-    override fun logout() = false
+    private val place: GodwarsDungeon? get() = dungeon?.let(GodwarsDungeons::byId)
+
+    val sourceX: Int get() = place?.sourceX(player.x) ?: player.x
+    val sourceY: Int get() = place?.sourceY(player.y) ?: player.y
+
+    fun tile(x: Int, y: Int, plane: Int): Tile = place?.tile(x, y, plane) ?: Tile.of(x, y, plane)
+
+    override fun start() {
+        if (dungeon != null) {
+            player.getO<List<Number>>(KILLS_KEY + dungeon)?.forEachIndexed { faction, kills -> if (faction < killcount.size) killcount[faction] = kills.toInt() }
+            player.sendMessage("Your kills in this dungeon are remembered between visits.")
+        }
+        sendInterfaces()
+    }
+
+    override fun logout(): Boolean {
+        place?.let { player.setTile(it.surface) }
+        return false
+    }
 
     override fun login(): Boolean {
+        if (dungeon != null) {
+            place?.let { player.tele(it.surface) }
+            player.interfaceManager.removeOverlay(true)
+            return true
+        }
         sendInterfaces()
         return false
     }
 
+    private fun inside(tile: Tile): Boolean = if (dungeon != null) place?.contains(tile) == true else isAtGodwars(tile)
+
+    private fun storeKills() {
+        if (dungeon != null) player.set(KILLS_KEY + dungeon, killcount.toList())
+    }
+
+    private fun spend(faction: GodFaction) {
+        killcount[faction.ordinal] -= BOSS_ROOM_KILLS
+        storeKills()
+        updateKillcount()
+    }
+
+    private fun instanceDoor(obj: GameObject): Boolean {
+        if (dungeon == null || obj.id !in INSTANCE_DOORS) return true
+        player.sendMessage("Boss instances are not offered in this dungeon.")
+        return false
+    }
+
+    override fun processObjectClick3(obj: GameObject): Boolean = instanceDoor(obj)
+
+    override fun processObjectClick4(obj: GameObject): Boolean = instanceDoor(obj)
+
     override fun process() {
-        if (!isAtGodwars(player.nextTile ?: player.tile)) {
+        if (!inside(player.nextTile ?: player.tile)) {
             remove()
             removeController()
         }
@@ -68,6 +123,11 @@ class GodwarsController : Controller() {
     }
 
     override fun processObjectClick1(obj: GameObject): Boolean {
+        val exit = place
+        if (exit != null && obj.id == Loc.godwars_entrance_rope_bottom) {
+            player.useStairs(Seq.human_reachforladder, exit.surface)
+            return false
+        }
         if (obj.id == 26287 || obj.id == 26286 || obj.id == 26288 || obj.id == 26289) {
             if (lastPrayerRecharge >= System.currentTimeMillis()) {
                 player.sendMessage("You must wait a total of 10 minutes before being able to recharge your prayer points.")
@@ -83,30 +143,29 @@ class GodwarsController : Controller() {
             return false
         }
         if (obj.id == 26444) {
-            if (player.skills.getLevel(Constants.AGILITY) >= 70) player.useStairs(828, Tile.of(2914, 5300, 1), 1, 2)
+            if (player.skills.getLevel(Constants.AGILITY) >= 70) player.useStairs(828, tile(2914, 5300, 1), 1, 2)
             else player.sendMessage("You need an Agility level of 70 to maneuver this obstacle.")
             return false
         }
 
         if (obj.id == 26445) {
-            if (player.skills.getLevel(Constants.AGILITY) >= 70) player.useStairs(828, Tile.of(2920, 5274, 0), 1, 2)
+            if (player.skills.getLevel(Constants.AGILITY) >= 70) player.useStairs(828, tile(2920, 5274, 0), 1, 2)
             else player.sendMessage("You need an Agility level of 70 to maneuver this obstacle.")
             return false
         }
 
-        if (obj.id == 26427 && player.x >= 2908) {
+        if (obj.id == 26427 && sourceX >= 2908) {
             if (killcount[GodFaction.SARADOMIN.ordinal] >= 40) {
-                player.tele(Tile.of(2907, 5265, 0))
-                killcount[GodFaction.SARADOMIN.ordinal] -= 40
-                updateKillcount()
+                player.tele(tile(2907, 5265, 0))
+                spend(GodFaction.SARADOMIN)
             } else player.sendMessage("This door is locked by Saradomin and requires that you kill 40 of his minions before it is unlocked.")
             return false
         }
 
         if (obj.id == 26303) {
             if (player.skills.getLevel(Skills.RANGE) >= 70) {
-                val withinArmadyl = player.y < 5276
-                val tile: Tile = Tile.of(2871, if (withinArmadyl) 5279 else 5269, 2)
+                val withinArmadyl = sourceY < 5276
+                val tile: Tile = this.tile(2871, if (withinArmadyl) 5279 else 5269, 2)
                 player.lock()
                 player.schedule {
                     wait(1)
@@ -129,29 +188,26 @@ class GodwarsController : Controller() {
         }
 
 
-        if (obj.id == 26426 && player.y <= 5295) {
+        if (obj.id == 26426 && sourceY <= 5295) {
             if (killcount[GodFaction.ARMADYL.ordinal] >= 40) {
-                player.tele(Tile.of(2839, 5296, 2))
-                killcount[GodFaction.ARMADYL.ordinal] -= 40
-                updateKillcount()
+                player.tele(tile(2839, 5296, 2))
+                spend(GodFaction.ARMADYL)
             } else player.sendMessage("This door is locked by Armadyl and requires that you kill 40 of his minions before it is unlocked.")
             return false
         }
 
-        if (obj.id == 26428 && player.y >= 5332) {
+        if (obj.id == 26428 && sourceY >= 5332) {
             if (killcount[GodFaction.ZAMORAK.ordinal] >= 40) {
-                player.tele(Tile.of(2925, 5331, 2))
-                killcount[GodFaction.ZAMORAK.ordinal] -= 40
-                updateKillcount()
+                player.tele(tile(2925, 5331, 2))
+                spend(GodFaction.ZAMORAK)
             } else player.sendMessage("This door is locked by Zamorak and requires that you kill 40 of his minions before it is unlocked.")
             return false
         }
 
-        if (obj.id == 26425 && player.x <= 2863) {
+        if (obj.id == 26425 && sourceX <= 2863) {
             if (killcount[GodFaction.BANDOS.ordinal] >= 40) {
-                player.tele(Tile.of(2864, 5354, 2))
-                killcount[GodFaction.BANDOS.ordinal] -= 40
-                updateKillcount()
+                player.tele(tile(2864, 5354, 2))
+                spend(GodFaction.BANDOS)
             } else player.sendMessage("This door is locked by Bandos and requires that you kill 40 of his minions before it is unlocked.")
             return false
         }
@@ -159,12 +215,12 @@ class GodwarsController : Controller() {
         if (obj.id == 26384) {
             if (player.skills.getLevel(Constants.STRENGTH) >= 70) {
                 if (player.inventory.containsItem(2347, 1)) {
-                    if (player.x == 2851) {
+                    if (sourceX == 2851) {
                         player.sendMessage("You bang on the door with your hammer.")
-                        player.useStairs(11033, Tile.of(2850, 5333, 2), 1, 2)
-                    } else if (player.x == 2850) {
+                        player.useStairs(11033, tile(2850, 5333, 2), 1, 2)
+                    } else if (sourceX == 2850) {
                         player.sendMessage("You bang on the door with your hammer.")
-                        player.useStairs(11033, Tile.of(2851, 5333, 2), 1, 2)
+                        player.useStairs(11033, tile(2851, 5333, 2), 1, 2)
                     }
                 } else player.sendMessage("You need a hammer to be able to hit the gong to request entry.")
             } else player.sendMessage("You need a Strength level of 70 to enter this area.")
@@ -172,50 +228,50 @@ class GodwarsController : Controller() {
         }
 
         if (obj.id == 57211) {
-            if (player.y == 5279) {
+            if (sourceY == 5279) {
                 val key = player.inventory.getItemById(20120)
                 if (key != null && key.getMetaData("frozenKeyCharges") != null && key.getMetaDataI("frozenKeyCharges") > 1) {
-                    player.useStairs(828, Tile.of(2885, 5275, 2), 1, 2)
+                    player.useStairs(828, tile(2885, 5275, 2), 1, 2)
                     key.addMetaData("frozenKeyCharges", key.getMetaDataI("frozenKeyCharges") - 1)
                     if (key.getMetaData("frozenKeyCharges") as Int == 1) player.sendMessage("Your frozen key breaks. You will have to repair it on a repair stand.")
                     else player.sendMessage("A part of your key chips off. It looks like it will still work.")
                 } else player.sendMessage("You require a frozen key with enough charges to enter.")
-            } else player.useStairs(828, Tile.of(2885, 5279, 2), 1, 2)
+            } else player.useStairs(828, tile(2885, 5279, 2), 1, 2)
             return false
         }
 
         if (obj.id == 57260) {
-            player.useStairs(828, Tile.of(2886, 5274, 2), 1, 2)
+            player.useStairs(828, tile(2886, 5274, 2), 1, 2)
             return false
         }
 
         if (obj.id == 57254) {
-            player.useStairs(828, Tile.of(2855, 5221, 0), 1, 2)
+            player.useStairs(828, tile(2855, 5221, 0), 1, 2)
             return false
         }
 
         if (obj.id == 57234) {
-            if (player.x == 2859) player.tele(player.transform(3, 0, 0))
-            else if (player.x == 2862) player.tele(player.transform(-3, 0, 0))
+            if (sourceX == 2859) player.tele(player.transform(3, 0, 0))
+            else if (sourceX == 2862) player.tele(player.transform(-3, 0, 0))
             return false
         }
 
         if (obj.id == 57258) {
             if (killcount[GodFaction.ZAROS.ordinal] >= 40 || player.equipment.wearingFullCeremonial()) {
                 if (player.equipment.wearingFullCeremonial()) player.sendMessage("The door somehow recognizes your relevance to the area and allows you to pass through.")
-                player.tele(Tile.of(2900, 5204, 0))
+                player.tele(tile(2900, 5204, 0))
             } else player.sendMessage("This door is locked by the power of Zaros. You will need to kill at least 40 of his followers before the door will open.")
             return false
         }
 
         if (obj.id == 57225) {
-            val globalInstance: NexArena = NexArena.globalInstance
+            val globalInstance: NexArena = if (dungeon == null) NexArena.globalInstance else place?.nexArena ?: return false
             player.startConversation {
                 simple("The room beyond this point is a prison! There is no way out other than death or teleport. Only those who endure dangerous encounters should proceed.")
                 options("There are currently " + globalInstance.playersCount + " people fighting.<br>Do you wish to join them?") {
                     opExec("Climb down.") {
-                        player.tele(Tile.of(2911, 5204, 0))
-                        player.controllerManager.startController(NexController(globalInstance))
+                        player.tele(tile(2911, 5204, 0))
+                        player.controllerManager.startController(NexController(globalInstance, dungeon))
                     }
                     op("Stay here.")
                 }
@@ -226,10 +282,11 @@ class GodwarsController : Controller() {
     }
 
     override fun processObjectClick2(obj: GameObject): Boolean {
-        if (obj.id == 26286) sendNormalTeleportNoType(player, Tile.of(2922, 5345, 2))
-        else if (obj.id == 26287) sendNormalTeleportNoType(player, Tile.of(2912, 5268, 0))
-        else if (obj.id == 26288) sendNormalTeleportNoType(player, Tile.of(2842, 5266, 2))
-        else if (obj.id == 26289) sendNormalTeleportNoType(player, Tile.of(2837, 5355, 2))
+        if (!instanceDoor(obj)) return false
+        if (obj.id == 26286) sendNormalTeleportNoType(player, tile(2922, 5345, 2))
+        else if (obj.id == 26287) sendNormalTeleportNoType(player, tile(2912, 5268, 0))
+        else if (obj.id == 26288) sendNormalTeleportNoType(player, tile(2842, 5266, 2))
+        else if (obj.id == 26289) sendNormalTeleportNoType(player, tile(2837, 5355, 2))
         return true
     }
 
@@ -245,6 +302,7 @@ class GodwarsController : Controller() {
     }
 
     override fun onTeleported(type: TeleType) {
+        if (dungeon != null) return
         remove()
         removeController()
     }
@@ -259,18 +317,23 @@ class GodwarsController : Controller() {
 
     fun sendKill(faction: GodFaction) {
         killcount[faction.ordinal]++
+        storeKills()
         updateKillcount()
     }
 
     fun remove() {
         player.interfaceManager.removeOverlay(true)
-        player.sendMessage("The souls of those you have slain leave you as you exit the dungeon.")
+        player.sendMessage(if (dungeon == null) "The souls of those you have slain leave you as you exit the dungeon." else "The souls of those you have slain here will await your return to this dungeon.")
     }
 
     companion object {
         val GWD_REGIONS = setOf(11345, 11346, 11347, 11601, 11602, 11603)
         @JvmStatic
-        fun isAtGodwars(teleTile: Tile) = GWD_REGIONS.contains(teleTile.getRegionId())
+        fun isAtGodwars(teleTile: Tile) = !EnvVars.generateMaps && GWD_REGIONS.contains(teleTile.getRegionId())
+
+        private const val KILLS_KEY = "godwarsKills:"
+        private const val BOSS_ROOM_KILLS = 40
+        private val INSTANCE_DOORS = setOf(Loc.loc_26425, Loc.loc_26426, Loc.loc_26427, Loc.loc_26428, Loc.loc_57225)
     }
 }
 
