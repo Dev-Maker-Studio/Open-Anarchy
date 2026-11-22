@@ -2,8 +2,7 @@ package com.rs.game.content.quests.area
 
 import com.rs.game.content.world.generated.DungeonBosses
 import com.rs.game.content.world.generated.DungeonMobs
-import com.rs.game.content.world.generated.hostileIdsFor
-import com.rs.game.content.world.generated.threatLevel
+import com.rs.game.content.world.generated.hostileIdsAt
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.cache.NPCDefinitions
 import org.darkan.core.city.BuildingBuilder
@@ -75,7 +74,7 @@ object AreaQuestPlanner {
             val x = city.centerX + dx * (city.halfSize + reach)
             val y = city.centerY + dy * (city.halfSize + reach)
             val biome = GeneratedWorld.generator.biomeAt(x, y)
-            if (biome == Biome.OCEAN) emptyList() else hostileIdsFor(biome, threatLevel(x, y)).map(::mobName)
+            if (biome == Biome.OCEAN) emptyList() else hostileIdsAt(biome, x, y).map(::mobName)
         }
     }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { it.key }
 

@@ -70,6 +70,7 @@ open class HostileNPC(id: Int, tile: Tile, val scale: Double, private val level:
         super.drop(killer, verifyCombatDefs)
         AreaQuests.onKill(killer, this)
         if (level < HAMMER_MAX_LEVEL && Math.random() < HAMMER_CHANCE) sendDrop(killer, Item(Obj.hammer, 1))
+        LevelDrops.roll(id, level).forEach { super.sendDrop(killer, it) }
     }
 
     override fun sendDrop(player: Player, item: Item) {

@@ -1,0 +1,20 @@
+{
+  "id": 10699,
+  "name": "Jelly",
+  "byName": false,
+  "ranges": [
+    {
+      "min": 30,
+      "max": 999,
+      "drops": [
+        {
+          "id": 4131,
+          "min": 1,
+          "max": 1,
+          "chance": 1,
+          "outOf": 20
+        }
+      ]
+    }
+  ]
+}
