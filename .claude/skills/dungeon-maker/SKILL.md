@@ -73,7 +73,9 @@ Themes live in `core/.../dungeon/DungeonTheme.kt`. Every loc and npc there is a 
 - Base level is the threat level at the entrance: 1 at the centre of the sector plus 1 for every 200 tiles away from it.
 - A mob's level is the base level times 0.8 at the entrance rising to 1.2 at the boss.
 - The boss's level is the base level times 1.2 times its own `level` factor.
-- Only respawn points make mobs in a dungeon. Random hostile spawns, wildlife, weather and biome music are switched off there.
+- Only respawn points make mobs in a dungeon. Random hostile spawns, wildlife and weather are switched off there.
+- Each theme has its own song list (`Biome.CAVE`, `FORTRESS`, `SEWER` in `BiomeMusic.generated`), which replaces the biome music. A boss fight plays one of the four songs in `BiomeMusic.bossFights`.
+- A boss ignores Slayer level requirements; normal mobs keep them.
 - A dead mob comes back at its respawn point after 5 minutes (500 ticks). A mob that only left because the dungeon emptied and unloaded comes back at once when someone returns.
 - Claims, building and destroying are refused in a dungeon.
 
@@ -103,3 +105,4 @@ Never restart worlds 123 or the lobby for dungeon work.
 | Entrances, exits, `::dungeon` | `world/.../generated/Dungeons.kt` |
 | Respawn points and levels | `world/.../generated/DungeonMobs.kt` |
 | Bosses | `world/.../generated/DungeonBosses.kt` |
+| Music | `world/.../utils/music/BiomeMusic.kt`, `world/.../generated/GeneratedMusic.kt` |

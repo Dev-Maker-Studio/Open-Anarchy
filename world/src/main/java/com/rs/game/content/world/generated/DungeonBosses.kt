@@ -7,6 +7,7 @@ import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.tasks.WorldTasks
+import com.rs.utils.music.BiomeMusic
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.Utils
 import org.darkan.core.gameval.gen.Npc
@@ -35,6 +36,8 @@ private const val PERCENT = 100
 private const val GROUND_LEVEL = 0
 private const val MISSING = -1
 private const val DEFAULT_MAX_ALIVE = 12
+private const val MUSIC_TICKS = 5
+private const val MUSIC_RADIUS = 14
 
 class BossAbility(
     val type: String, val everyTicks: Int?, val radius: Int?, val damage: Double?, val atHealth: List<Int>?, val belowHealth: Int?,
@@ -106,6 +109,9 @@ class DungeonBoss(private val definition: BossDefinition, id: Int, home: Tile, s
     private var fightTicks = 0
     private var idleTicks = 0
 
+    var fightSong = BiomeMusic.bossSong()
+        private set
+
     init {
         setPermName(definition.name)
         setForceMultiAttacked(true)
@@ -120,6 +126,8 @@ class DungeonBoss(private val definition: BossDefinition, id: Int, home: Tile, s
 
     override val dropsCoins: Boolean get() = true
 
+    override fun requiresSlayerLevel(): Boolean = false
+
     override fun processNPC() {
         super.processNPC()
         if (isDead || hasFinished()) return
@@ -128,7 +136,7 @@ class DungeonBoss(private val definition: BossDefinition, id: Int, home: Tile, s
             return
         }
         idleTicks = 0
-        fightTicks++
+        if (fightTicks++ % MUSIC_TICKS == 0) playFightSong()
         val health = hitpoints * PERCENT / maxHitpoints
         for (ability in abilities) when (ability.type) {
             SLAM -> if (fightTicks % (ability.everyTicks ?: DEFAULT_EVERY) == 0) slam(ability)
@@ -139,6 +147,11 @@ class DungeonBoss(private val definition: BossDefinition, id: Int, home: Tile, s
             }
             ENRAGE -> if (health <= (ability.belowHealth ?: 0) && used.add(ability to 0)) enrage(ability)
         }
+    }
+
+    private fun playFightSong() {
+        World.players.filter { it.hasStarted() && !it.hasFinished() && it.plane == plane && Utils.getDistance(it.tile, tile) <= MUSIC_RADIUS }
+            .forEach { it.musicsManager.onBossFight(fightSong) }
     }
 
     private fun shout(ability: BossAbility) {
@@ -196,6 +209,7 @@ class DungeonBoss(private val definition: BossDefinition, id: Int, home: Tile, s
         fightTicks = 0
         idleTicks = 0
         hitpoints = maxHitpoints
+        fightSong = BiomeMusic.bossSong()
     }
 
     override fun sendDeath(source: Entity) {

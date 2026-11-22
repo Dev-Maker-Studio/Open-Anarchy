@@ -359,6 +359,10 @@ public class NPC extends Entity {
         };
 	}
 
+	protected boolean requiresSlayerLevel() {
+		return true;
+	}
+
 	@Override
 	public void handlePreHit(final Hit hit) {
 		if (capDamage != -1 && hit.getDamage() > capDamage)
@@ -370,7 +374,7 @@ public class NPC extends Entity {
 			return;
 		if (source instanceof Player player) {
 			SlayerMonsters thisMonster = SlayerMonsters.forId(getId());
-			if (thisMonster != null)
+			if (thisMonster != null && requiresSlayerLevel())
 				if (player.getSkills().getLevel(Constants.SLAYER) < thisMonster.getRequirement()) {
 					hit.setDamage(0);
 					player.sendMessage("You do not have the slayer level required to damage this monster.");
